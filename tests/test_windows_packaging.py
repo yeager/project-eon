@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 import unittest
 
 
@@ -51,6 +52,21 @@ class WindowsPackagingTests(unittest.TestCase):
         self.assertIn("$relative -notin $approved", workflow)
         self.assertIn(".Replace('\\', '/')", workflow)
         self.assertIn("'^(libpng.+|zlib.*)\\.dll$'", workflow)
+
+    def test_ci_font_allowlist_is_exactly_the_reviewed_bundle(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
+        match = re.search(r'^\s*\$fonts = @\(([^\n]+)\)$', workflow, re.MULTILINE)
+        self.assertIsNotNone(match)
+        staged_fonts = set(re.findall(r'"([^"]+)"', match.group(1)))
+        reviewed_fonts = {
+            path.name for path in (ROOT / "assets" / "fonts").iterdir() if path.is_file()
+        }
+        self.assertEqual(staged_fonts, reviewed_fonts)
+        self.assertIn("README.md", staged_fonts)
+        self.assertIn("OFL-1.1.txt", staged_fonts)
+        # The recursive copy is safe only because approval remains per-file.
+        self.assertNotIn('$required += "assets/fonts/*"', workflow)
+        self.assertNotIn('$approved += "assets/fonts/*"', workflow)
 
     def test_ci_discovers_cmake_generated_runtime_dlls_before_ctest(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")

@@ -16,25 +16,24 @@ class MillenniumAmigaProvenancePanelTests(unittest.TestCase):
         for fact in (
             "amiga_bootstrap->plan",
             "amiga_bootstrap->opaque_invocation_boundary",
-            "amiga_bootstrap->resident_evidence.entry",
-            "amiga_bootstrap->resident_evidence",
             "plan.first_stage.disk_offset",
+            "plan.first_stage.length",
+            "plan.first_stage.destination",
             "plan.resident_stage.disk_offset",
             "handoff.first_stage_invocation_address",
-            "resident.result_word_address",
-            "evidence.independent_entry.entry_address",
-            "evidence.post_negative_d3_continuation.terminal_jump_address",
+            "handoff.first_stage_target",
         ):
             with self.subTest(fact=fact):
                 self.assertIn(fact, panel)
-        self.assertIn("opaque first stage", panel)
+        self.assertIn("native Amiga boundary", panel)
         self.assertIn("NO CALL RETURN OR RUNTIME STATE", panel)
         self.assertNotIn("millennium_amiga_session->", panel)
 
     def test_cli_report_consumes_session_snapshot(self) -> None:
         report = SOURCE[SOURCE.index("void report_millennium_amiga("):
                         SOURCE.index("void report_millennium_atari_root_inventory(")]
-        self.assertIn("live_bootstrap.resident_evidence()", report)
+        self.assertIn("bootstrap.plan()", report)
+        self.assertIn("bootstrap.opaque_invocation_boundary()", report)
         self.assertNotIn("parse_millennium_amiga_resident_", report)
 
 

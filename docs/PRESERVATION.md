@@ -935,7 +935,7 @@ name as a semantic property of the original program.
 
 | Corpus | Supplied leaf media | Container fact | Admitted entry evidence | Documentation/control status |
 | --- | --- | --- | --- | --- |
-| Millennium Amiga | Six ADFs: five 901,120-byte images and one 698,368-byte image | `DOS\0` is present, but the usable program path is raw-sector data; the valid Razor filesystem has no game files. | The Defjam-family bootstrap requests `$24200..$923ff` to `$41000`, then `$16400..$423ff` to `$68000`; the shared resident span is hash-identified. | There is no live standalone manual recognised by the bounded filesystem readers.  Visible function-key trainer text occurs only in altered variants and is not original control evidence. |
+| Millennium Amiga | Six ADFs: five 901,120-byte images and one 698,368-byte image | `DOS\0` is present, but the usable program path is raw-sector data; the valid Razor filesystem has no game files. | The Defjam bootstrap requests ADF `+$6e000`/`0x24200` to `$41000`, then `+$2c000`/`0x16400` to `$68000`; the first transfer is materialized natively and stops at its `$41000` entry. | There is no live standalone manual recognised by the bounded filesystem readers. Visible function-key trainer text occurs only in altered variants and is not original control evidence. |
 | Deuteros Amiga | Clean system/data ADFs plus comparative alternate, save, and modified images | The clean system disk is `DOS\0`; clean data disk is `DEU\0`, whose logical block 880 is custom raw data rather than an AmigaDOS root. | The clean system boot path loads `$5800` to `$20000` and has entry `$21734`; title-stage transfer remains separately bounded. | A genuine on-disk text block contains load/save prompts, but no caller-connected input binding is yet recovered. |
 | Millennium Atari ST | Two physical-dump `.stx` images, one save image, and four one-disk `.st` variants | `.stx` is retained as a physical-media container and is not silently converted to a flat FAT image.  Five of the seven supplied images have a valid FAT12 volume. | The hash-identified Equinox FAT12 image admits a fully relocated native `MILENIUM.TOS` image and an exact read-only `MILL22A.inf` compatibility load. Native control follows `JSR $2a500`; an explicit typed SR observation selects either exact branch at `$2aa88`. A typed XBIOS selector-2 result then advances both paths from `$2a520` through the exact result store to selector 3 at `$2a52e`. The original Disk 1 STX has a bounded sector index, but no executable handoff has yet been linked to its physical loader bytes. | Original physical-dump bytes contain visible mouse/keyboard and prompt text, but no code-to-input map has been recovered. |
 | Deuteros Atari ST | Eleven 737,280/1,056,768-byte `.st` images | The 737,280-byte game-media candidates have a BPB-shaped boot sector, but their apparent root records are not a live FAT12 namespace: entries carry impossible cluster/size combinations.  The raw protected boot chain is authoritative. | The hash-identified raw chain reaches the first and second stages through explicit nine-sector reads; its XBIOS callback and state selection remain boundaries. | The supplied game-media variants contain no standalone manual.  Embedded prompts are preserved as raw text only; a separate 1,056,768-byte development/tools disk is excluded from game-control evidence. |
@@ -1765,541 +1765,39 @@ does not infer missing files or mutate image data.
 
 ### Millennium Amiga raw-loader evidence
 
-When the verified Defjam-family Amiga release is selected, the launcher shows
-the two raw ADF-range transfers plus the caller-side A3 handoffs and resident
-entry/result-cell operands. The values are queried from one
-`MillenniumAmigaBootstrapSession` after its load-plan, resident, and opaque
-invocation checks have succeeded. This is a numeric provenance panel only: it
-does not transform the first raw stage, call it, read its return, or substitute
-a DOS title/screen for the native Amiga path.
+The hash-identified Defjam ADF has SHA-256
+`8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c`.
+The relocated bootstrap's common reader at `$661da` copies `D7` to `D2`,
+chunks `D0`, and calls `$66216`. That routine writes `D0` to
+`IORequest+$24` (io_Length), `D1` to `+$28` (io_Data), and `D2` to
+`+$2c` (io_Offset). Earlier documentation inverted length and offset; all
+raw-resident mappings derived from that inversion have been revoked.
 
-The same session now owns one immutable resident-evidence snapshot: the
-resident entry, splitter, static staging chains, independent negative-`D3`
-chain, and separately bounded external/terminal paths are all parsed from the
-same hash-identified Defjam ADF before either CLI or launcher reports them.
-The panel exposes only compact entry and terminal-ABI provenance. It does not
-turn these records into a call graph, infer a returned value, tick a runtime,
-or draw an Amiga screen.
+The authoritative caller-connected transfers are:
 
-Millennium's usable game media are not AmigaDOS files.  In the supplied Defjam
-image (ADF SHA-256
-`8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c`), the
-checksummed boot block first loads 0x400 bytes from disk offset `0x400` to
-memory `0x70000`.  The recovered 68000 first-stage code then issues these raw
-`trackdisk.device` reads:
-
-All six supplied Millennium Amiga images nevertheless share one independently
-validated resident raw interval: disk `+0x16400`, length `0x2c000`, linear
-destination `$68000`, SHA-256
-`d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e`.
-`parse_millennium_amiga_shared_resident_layout` validates that exact range
-directly from each original image—even the shorter Defjam `[u]` image, whose
-complete resident interval remains present. This permits platform evidence to
-be shared without claiming its divergent bootstrap or opaque first-stage raw
-representation
-is equivalent to Defjam's loader, and without executing, unpacking, or
-substituting any variant.
-
-| Disk offset | Bytes | Destination | Observed continuation |
+| Disk offset | Length | Destination | SHA-256 |
 | ---: | ---: | ---: | --- |
-| `0x24200` | `0x6e000` | `0x41000` | Call loaded stage |
-| `0x16400` | `0x2c000` | `0x68000` | Jump to `0x68000` |
+| `0x6e000` | `0x24200` | `$41000` | `df97c7f6cd622b16b9ffb57bc562906e349c18c56ed8abeb564c6f411e64891c` |
+| `0x2c000` | `0x16400` | `$68000` | `3337a21984346f06f295c9cfbb89d2a0c0d622853dd2e11cf14a5c5cc29a276f` |
 
-The exact caller-side continuation is now independently fail-closed as well.
-The 132 original bytes at loader address `$7029e` / ADF `+0x69e` hash to
-`b8ca18e61e5372ba4387abd69f6796435671465ddaf48cd3a3e4b41e2528efdc`.
-They contain the literal first read setup, indirect `JSR (A3)` at `$702e4`
-after `A3` is loaded with `$41000`, then the resident read setup and terminal
-indirect `JMP (A3)` at `$70320` after `A3` is loaded with `$68000`.
-`MillenniumAmigaBootstrapOpaqueInvocationBoundary` checks the complete span,
-both handoff addresses, and both already-bounded targets. It does not invoke
-either target, infer that the first opaque stage returns to `$702e6`, interpret
-the device calls, or treat the linear source bytes of the loaded stages as
-their executable runtime representation.
+This correction is also structurally proved: the first range ends at
+`$65200`, before the live relocated loader at `$66032`. The reversed
+interpretation would overwrite the reader while it was executing.
 
-An earlier relocator in that same bootstrap makes the distinction between raw
-source addresses and runtime addresses material. The 66 original bytes at ADF
-`+$400..+$441` hash to
-`341e6cff049ff9cda953ad0c91f9a064ed2d2cdc1782b417f27ecad7c9b279b4`.
-They derive `D1 = $66400 - $66032 = $3ce`, start a `MOVE.B (A5)+,(A3)+`
-loop with `A5=$70032` and `A3=$66032`, then use `DBRA D1` before `JMP
-$6629e`. A 68000 `DBRA` runs the loop for the initial low word plus one, so
-the literal transfer comprises `0x3cf` bytes and reads through source
-`$70400` inclusive. The preceding boot I/O request established only the
-half-open range `$70000..$70400` (exactly `0x400` bytes), making that final
-source byte unproven.
+After a typed successful trackdisk return, the native runtime atomically maps
+the exact `0x24200` source bytes to `$41000..$651ff`. The stage begins
+`BRA.W $410bc`. Its first `0xe0` bytes hash to
+`943b1fd0b5f3aa7734aae09e64d139348f9876615ef4df94fb22f9e05851fd77`
+and statically establish the register-save/vector setup through `ILLEGAL` at
+`$410de`, which uses exception vector address `$10`. Native execution stops
+at `$41000`: the register-save effects, exception handler outcome, transformed
+continuation, second-stage runtime representation, input, graphics, and
+gameplay remain unproven.
 
-`MillenniumAmigaBootstrapRelocationBoundary` validates the exact bytes and
-records the otherwise useful static correspondence `$6629e ← $7029e`: the
-latter is the source address of the already documented raw continuation.
-It deliberately returns no relocated image and does not report `$6629e` as a
-runnable PC. Project Eon must not take the adjacent ADF byte, assume a
-trackdisk over-read/allocation convention, or fabricate the missing value.
-Recovering an emulator trace or a fully documented device-buffer contract for
-that byte is required before this relocation can become executable evidence.
-
-The relocator now also has a hash-admitted manual-recomp session, without
-weakening that boundary. `MillenniumAmigaBootstrapRelocatorSession` accepts
-only the complete Defjam ADF SHA-256
-`8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c`
-and the exact 1024-byte bootstrap range at disk `+$400`, SHA-256
-`c31e59f83d6825a2da7a6fd5e3297a322993b0483105794fca449d97d3861e06`.
-It records the instruction-defined word write `$70000: $dff104 := $0024`
-and reconstructs only the 974 copy iterations whose sources
-`$70032..$703ff` are inside that authenticated load. Each copy effect retains
-instruction `$70036`, source address, destination address, and exact byte.
-The 975th iteration remains an explicit typed observation of source `$70400`;
-the session never reads adjacent disk offset `+$800` as a substitute. Only
-after that observation does it expose the exact terminal-jump boundary
-`$7003c -> $6629e`. Wrong order or addresses are rejected, and no OS/device
-result, post-jump behavior, or meaning of the hardware write is inferred.
-
-This was selected from the remaining Millennium `discovered-unmapped`
-candidates because it is the largest candidate with a declared runtime base
-and a direct, instruction-complete path. The nested Defjam release still
-lists this 1024-byte stage as unmapped in older generated candidate sidecars;
-the direct-container inventory already records its byte-complete span. The
-session establishes semantic coverage of the relocator, not a claim that the
-nested report metadata has been regenerated and not active runtime
-reachability. Spanish DOS and Atari boot sectors retain unproven runtime entry
-bases, while aggregate disk-container candidates are containers rather than
-additional executable images.
-
-The latter hand-off places `0xa8d398fb` in `d6` immediately before the jump.
-`MillenniumAmigaLoadPlan` recognizes the actual instruction sequence, derives
-the two lengths from its immediate values (`0x1600 * 0x50` and
-`0x1600 * 2 * 0x10`), and bounds both ranges against the ADF. It deliberately
-does not claim those ranges are filesystem files, decompress them, or write
-them to a cache. The alternate supplied crack images alter boot/loader code;
-they remain separately fingerprinted media rather than assumed equivalent
-executables.
-
-When the Amiga Millennium launcher target is selected, Project Eon creates a
-bounded session only for the exact Defjam ADF above. It validates this load
-plan, first verifies the whole ADF's SHA-256 identity, then validates its
-shared resident range, resident entry, exact caller-side opaque
-handoff, and the source-only first-stage anchors directly from the original
-disk bytes. The session stops before the opaque first-stage invocation or any
-AmigaOS behavior: the added records are diagnostics, not an attempt to decode
-or execute the stage. Other recognised Amiga images remain preservation
-evidence but are not silently substituted for Defjam's path.
-
-For a reproducible chain of custody, the parser also reports a SHA-256 for
-each exact raw source range (including the bootstrap). These are fingerprints
-of immutable bytes read directly from the supplied ADF, not hashes of an
-unpacked representation. The command-line verifier exposes them so a future
-analysis can identify the exact input range before making any claim about the
-runtime representation at that RAM address.
-
-The raw Defjam first-stage source itself has shared AmigaOS/input text anchors:
-within the `0x6e000` source span (SHA-256
-`5ed30d5fe99c0dfc905bbe639d626be558f022514c83bc5ff287ad91014ccf7a`),
-`exec.library`, `graphics.library`, and `input.device` occur at stage offsets
-`+0x4a3dc`, `+0x4a648`, and `+0x4a936` (ADF `+0x6e5dc`, `+0x6e848`, and
-`+0x6eb36`). The shared source windows `+0x4a5b0`/`0x160` (SHA-256
-`97bb8cbe026ac3bba2c19cc296bc7cef00fbd0c8095c678f4cc303761b8b8309`) and
-`+0x4a900`/`0x220` (SHA-256
-`ee84336cbf4665bcd2bc48d054c024a20e4c5faaaf26cd5fdcc78e6b8f3931c9`) also
-contain table-like keyboard characters. These are source-only facts: nearby
-absolute references in the raw bytes do not map to the source's nominal
-`$41000 + offset` address. Without an output mapping for the opaque invocation,
-they establish no entry point, scan-code mapping, input behavior, graphics
-resource, or display mode and are never used by the SDL runtime.
-
-`MillenniumAmigaFirstStageSourceAnchorBoundary` makes this source-only
-evidence fail closed. It requires the exact first-stage request
-`ADF +0x24200`, `0x6e000` bytes, nominal destination `$41000`, and the full
-source SHA-256 before checking the three NUL-terminated anchors at stage
-offsets `0x4a3dc`, `0x4a648`, and `0x4a936`. It also verifies the two cited
-source windows at `+0x4a5b0`/`0x160` and `+0x4a900`/`0x220` by their exact
-hashes. This does not convert the source into an executable stage, establish
-that the indirect call returns, model library/device calls, or expose an input
-layout to the runtime; it only preserves reproducible input-media evidence.
-
-The destination `0x68000` begins with a separate, directly verifiable resident
-entry gate: `JSR $787d4`, test byte `d3`, conditionally OR `0x0100` into `d0`,
-then store the resulting word at `0x7b75a` and return. The call target lies
-inside the first RAM stage (`0x41000..0xaefff`), but the mapping from its
-preceding raw stage invocation to runtime bytes is unknown; its corresponding
-raw disk bytes are not treated as an executable or an inferred compression format.
-`MillenniumAmigaResidentEntry` therefore records only the literal gate and
-fails closed if any opcode, target range, or return instruction differs.
-
-The Defjam boot window ADF `+$6a0..+$717` (120 bytes, SHA-256
-`7f5a6cc8b273e8c3f15dc24d62812fe5daa3aba64720760c17c7c040d20ce49b`) proves
-the exact request `$24200`, length `$1600 × $50 = $6e000`, destination
-`$41000`, followed directly by `JSR (A3)` with `A3=$41000`. It contains no
-caller-connected copy, XOR, decrunch, table, or bitstream loop. The raw source
-hashes to `5ed30d5fe99c0dfc905bbe639d626be558f022514c83bc5ff287ad91014ccf7a`
-and begins `18 c2 fc ff`; its F-line word precludes treating it as direct raw
-68000 code. Project Eon therefore records an opaque raw-stage invocation, not
-a proven transform algorithm or source-to-output mapping.
-
-The next complete resident subroutine starts at `0x68016`. It takes three
-successive words beginning at `A1+0x36`; for each, original `LSL`, `ROXL`, and
-`LSR` instructions preserve the lower 15 bits in `0x7b764`, `0x7b766`, and
-`0x7b768`, while the former high bit is written as a byte to `0x7b776`,
-`0x7b777`, and `0x7b778`. It then calls `0x7ba12`; its return path reads the
-last word/byte pair and conditionally negates the word. This is a byte-exact
-control/data-flow profile only. Project Eon calls it
-`MillenniumAmigaResidentWordSplitter`, does not assign gameplay meaning to the
-values, and fails closed on any changed opcode or RAM operand. Its proven
-pre-helper operation is also available as an in-memory transform: for three
-already-resident source words it emits the exact three low-15-bit words and
-three `0`/`1` former-high-bit bytes. It neither reads nor writes game media.
-
-This is deliberately not an implementation of the full subroutine. No raw
-resident caller of `0x68016` has been recovered, and the `JSR 0x7ba12` target
-does not yet have a validated executable boundary in the supplied raw range.
-After that call the original reloads `0x7b768` and `0x7b778`, conditionally
-negates the word when the byte is nonzero, then returns; the helper may have
-changed either location. Project Eon therefore does not claim a final return
-value or invoke this transform from gameplay.
-
-For preservation, Project Eon records the exact raw-media mapping that would
-correspond to that helper address if the resident request were viewed as a
-linear byte mapping: `$7ba12 - $68000 + $16400 =` disk offset `0x29e12`.
-All five supplied Millennium Amiga variants share its first 32 bytes,
-`0001200080ac00000100088042000001010080ac000001002080420000010010`,
-whose SHA-256 is
-`eb11f5c5dfda4234b0214599bffec09402deff2435c58d57db1f7ab84c07c434`.
-This is a reproducible raw-byte boundary only—not evidence that those bytes
-are the helper's original executable representation. The loader invokes an
-unrecovered transform before the resident entry; no decompressor, helper
-semantics, caller, or media write is inferred from this fingerprint.
-
-There are two further raw-resident helper staging callsites at `$69624` and
-`$69b88`. Each sets `A4` to a live runtime source (`$7cc3c` and `$7cc68`,
-respectively), copies three words to `$7b764..$7b768`, then copies three bytes
-to `$7b776..$7b778`. Both call `$7b77e`, clear byte `$7b14e`, and directly call
-`$7ba12`. `MillenniumAmigaResidentHelperStagingCallsite` checks every
-instruction and operand of these common tails in the supplied raw ADF. It
-does not read the runtime sources, infer the `$7b77e` or `$7ba12` effects, or
-execute either call. This preserves a real caller-side staging protocol while
-retaining the helper's unrecovered executable boundary.
-
-Immediately after the original word-splitter return lies a separate gate at
-`$68078`: it literally calls `$7b816`, tests byte `D3`, returns at `$68082`
-when nonzero, and otherwise continues at `$68084`. The target maps linearly to
-raw disk offset `$29c16`; all six supplied variants share its first 32 bytes
-with SHA-256 `a16a4738b0f577643c343b344ba8b6c19d935daf97dd2291c86ddb2b29dcd96c`.
-`MillenniumAmigaResidentPredicateGate` records this exact control split and
-raw provenance only. Neither the target nor continuation is interpreted or
-executed, because the transformed runtime representation remains unrecovered.
-
-The zero-`D3` continuation has one further fully local boundary before its
-next unknown call. At `$68084` it preserves `A1`, compares word `A1+$12` with
-`1`, and branches on inequality from `$6808e` to `$680ca`. The equal path reads
-word `A1+$14`, prepares it, and reaches `JSR $7b90a` at `$68096`.
-`MillenniumAmigaResidentPredicateZeroPathBoundary` verifies those exact bytes
-and fingerprints the in-range raw target at disk `$29d0a` (SHA-256
-`bdb907adb3114dbaa58eb3bbe516ab91ffc4e1bf70e536bd47f497f49c8d5042`). It
-does not provide `A1`, interpret either selector result, enter `$680ca`, or
-execute `$7b90a`.
-
-The inequality target `$680ca` is separate static evidence: it pushes `D0`,
-then `D2`, and reaches the same unknown `JSR $7b90a` at `$680ce`. No
-post-call stack restoration, loop, or target effect is claimed by
-`MillenniumAmigaResidentPredicateNotEqualPathBoundary`.
-
-Separately, resident entry `$68508` begins with two fully local predicates: a
-negative-`D3` branch at `$6850e` to `$68598`, then a byte test of `$7b142`
-whose zero branch at `$68518` reaches `$6854a`. This is recorded by
-`MillenniumAmigaResidentIndependentEntryGate` as byte-exact raw control-flow
-evidence only; neither branch target nor the flag's gameplay meaning is
-inferred.
-
-The negative target is independently hash-locked: `$68598..$685fb` maps
-linearly to ADF `+$16998`, is 100 bytes, and hashes to
-`716e8bf1db5d7cad89a0074cf6fe7cc6a0a66d73379814bac181a5f6c4a9e500` in all
-six supplied Amiga variants. Its parser reports only the external `JMP $7bcf8`
-at `$685ee` and the separately encoded `RTS` at `$685fc`; runtime-dependent
-cells, conditional outcomes, and the external jump are not executed or named.
-The local alternate terminal tail is separately locked at `$685f4..$685fd`
-(ADF `+$169f4`): its ten original bytes are `06 42 28 00 06 43 28 00 4e 75`
-with SHA-256 `5b120eaef941ac336d22e4f76adaeefd8c1d6795d105685f048074edd49c3a6c`.
-`MillenniumAmigaResidentNegativeD3Terminal` records the two encoded `$2800`
-immediates at `$685f4` and `$685f8` and the `RTS` at `$685fc`. It neither
-evaluates the two predecessor predicates nor assigns runtime meaning to their
-register effects.
-
-The adjacent complete local sequence `$685fe..$68619` maps to ADF `+$169fe`,
-is 28 bytes, and has SHA-256
-`a45ff5eca6e3594574b464574fa0aae3027bd2ea11472770708c96f4d21b56cc` across
-all six supplied Amiga variants. It encodes two absolute byte stores to
-`$7b3b5/$7b3bc`, copies D1/D2, tests D0, then records `BNE.S $68612 →
-$68616` with the zero `RTS` at `$68614`. The target encodes `BPL.S $68616 →
-$6861a` and the alternate `RTS` at `$68618`. Project Eon does not choose
-either predicate for a live game, assign gameplay meaning to registers or
-absolute cells, or follow `$6861a` automatically. It does execute this exact
-call-free prefix as a separately opt-in in-memory operation after validating
-the hash-bound terminal record: `CLR.W D0`, its two zero-byte stores,
-`MOVE.W D1,D0`, `MOVE.W D2,D1`, and the two local predicates. The operation
-returns the virtual byte writes, resulting register low words, and exactly one
-stop: zero RTS `$68614`, negative RTS `$68618`, or the unexecuted
-non-negative continuation boundary `$6861a`. Its inputs are caller-supplied
-register values; no original caller, stack, RAM image, or reachability is
-claimed, and it never mutates source media or a host-side Amiga memory map.
-
-The BPL target is bounded independently. The 54 original bytes at
-`$6861a..$6864f` map to ADF `+$16a1a` and hash to
-`d3f6b63090429e11fb3a77e4573817649e2bb7996d06811ea2751078794534ce` in all
-six supplied Amiga variants. They add immediate `$2800` to `D2`, `D3`, and
-`D1`, save `D0-D3/A5`, load `$7d00` into `D6`, form a pair of word sums, and
-encode local `BCC.S $68636 → $6863a`, `BCS.S $68642 → $68650`, and `BMI.S
-$68644 → $68694` branches. The unbranched suffix restores the saved registers
-and encodes `JMP $7bef0` at `$6864a`.
-`MillenniumAmigaResidentPostNegativeD3ContinuationBoundary` hash-locks this
-complete raw span and the literal branch/jump targets.
-`execute_millennium_amiga_resident_post_negative_d3_continuation_prefix`
-now models the 54-byte call-free sequence for controlled register inputs only:
-the three word additions, word-width pair comparison, optional `EXG`/`SUB`/
-`ADDQ`, and the two range tests. It stops at `$68650` or `$68694` when either
-branch leaves the verified span; on the sole fallthrough it reports the exact
-`MOVEM`-restored D0–D3/A5 image and stops before external `$7bef0`. No original
-caller, stack, RAM image, branch target, or external callee is supplied. The
-same two contiguous records are retained by the exact Defjam bootstrap session
-so that this local execution cannot be detached from its hash-verified media.
-
-At `$68d62`, a literal local prefix reaches long conditional branch `$68d6e →
-$68d78`, then unknown `JSR $778f0` at `$68d7c`. This is strict raw control
-flow only; no register, path, target, or continuation meaning is inferred.
-
-If that unknown JSR returns, the next 26 original bytes at `$68d82` / ADF
-`+0x17182` have SHA-256
-`e49e750f78946956c22d4cd80206139d38808d4ecb3b1579906aeaede0db7b77`.
-They load immediate `$2208`, fetch a longword through absolute `$6934e`, add
-`D0.W` to `D5`, store the fetched `D0` to `$7c256`, and reach `JSR $7b342`.
-The linear raw correspondence for that target begins at ADF `+0x29742`; its
-first 32 bytes have SHA-256
-`731d016983d29dcb23abad28f3f0f225bd3708073e8c0c8481a97a50b460cdcf`.
-This records a static post-return boundary, not a claim that `$778f0` returns,
-that absolute RAM is populated, or that `$7b342` is executed or understood.
-
-If both preceding unknown calls return, the six immediately following absolute
-JSRs at `$68d9c..$68dbf` are another static-only boundary. Their 36 original
-bytes have SHA-256
-`08c660de1ed6d0b0f535e451c84450397383a923a1808fa9678d3ae85a8cc17b`:
-they target `$7dba8`, `$7d8a8`, `$7d480`, `$7b594`, `$7d5c8`, and `$7b36c`.
-The corresponding 32-byte linear raw-prefix fingerprints are respectively ADF
-`+0x2bfa8` / `b388a3622caeeccac01d793650e63e192de821abc789ca334b6ba00a1475ca34`,
-`+0x2bca8` / `819055da14479352b3f672e6db10424bdebb90230350b0e8088eb0cb0acbd087`,
-`+0x2b880` / `dbb41359b827129e186a7cf2f4d79c7f45f11f4cbe53e964a0633b7ee7070df5`,
-`+0x29994` / `e9aa8c8f766b3486163339990968f9829d29b69c3c991ed2a7fc71c483d16846`,
-`+0x2b9c8` / `de1fdcc69a46a7f661c191fa69cd64a693053f4026708400ca4bc6defe224c79`,
-and `+0x2976c` / `cbe69ef816a594b6e9c0e8a27d5cacc660920df3a0aebe9a31849c113a3f909f`.
-This proves only an immutable post-return call tail and raw-media
-correspondences: it does not establish any return, transformed executable
-representation, callee semantics, or call execution.
-The identical tail and every target fingerprint are checked against all six
-supplied Amiga variants; their differing bootstrap paths remain separate
-evidence and are not treated as interchangeable executable provenance. One
-shorter supplied dump is checked by direct bounded raw spans, not forced into
-the standard-ADF reader it does not satisfy.
-
-The later common convergence at `$68f48` begins with unknown `JSR $7caa6`.
-Only if that call returns, the following 42 immutable bytes at
-`$68f4e..$68f77` / ADF `+0x1734e` hash to
-`3220d65f197163401c649a36d756ecf3005d2f342b81de5a7d4528f9a45da851`.
-They encode direct calls to `$7d6d2`, `$7780a`, and `$77b34` at `$68f4e`,
-`$68f5a`, and `$68f6c`; literal address loads `$7c21b` and `$7c25c`; and a
-terminal `JMP $7c54e` at `$68f72`. Their respective 32-byte linear raw-prefix
-fingerprints are ADF `+0x2bad2` /
-`4e2f8f40d56a7d2a46f654be0fe5df4edaf4ca6d3d0864cc2c6d41355fa8c5b4`,
-`+0x25c0a` /
-`dc67f3a81c04fbfb92bfdf7a8b88679dc07e3f61e90708198467ce3877ab5beb`,
-`+0x25f34` /
-`cfe704f22abb52092c496fdd49802da1d0a461f95474889a35c259cd47ca42c8`,
-and ADF `+0x2a94e` /
-`502069bdbda2f35899d16237fd1d2aa477be20f0c950231fb71f32583f23de14` for
-the jump target. `MillenniumAmigaResidentSeparatePostExternalCallBoundary`
-validates the raw continuation and all four correspondences for every supplied
-variant. It does not claim `$7caa6` returns, that any later call returns, that
-the absolute cells are live, that the target bytes are their runtime code, or
-that the final jump occurs.
-
-The terminal-jump target itself is retained as a larger source-only recovery
-boundary. The 256 original bytes at `$7c54e` / ADF `+0x2a94e` hash to
-`0149a457e657e18805ff61675e80741fa78d25f201f120498193315804b87eea` across
-all six supplied images. `MillenniumAmigaResidentSeparateTerminalJumpRawTargetBoundary`
-rejects any changed byte in that complete window. It deliberately does not
-decode the bytes as instructions: the established loader transform means the
-linear raw correspondence is provenance, not proof of runtime representation.
-Nor does the boundary claim that the preceding unknown calls return, the
-terminal jump executes, or the target has any recovered semantics.
-
-The next local static control-flow prefix begins at `$68dc0` / ADF `+0x171c0`.
-Its 14 bytes, SHA-256
-`ef2fe6161118a1b0ac6cee838be9a4dc2b0483ba274a213d3ac653ea6f334e3b`, load
-the byte at `$7c255`, compare it with `$0c`, then encode `BCS.W`. The
-68000 word-branch displacement is based at its extension word `$68dcc`, so
-the literal `$0020` resolves exactly to `$68dec` (not `$68dee`). That target
-maps to ADF `+0x171ec`; its first 32 raw bytes have SHA-256
-`13ed782f5463fd93bbd4376777a1c01d8fd636018de8aef52f5710eb0da11a2b` and
-start by setting `A5` from `$7c25c`, testing `A5+$d`, and carrying further
-static branch/call encodings. This records only raw control-flow provenance:
-none of the prior calls are assumed to return, and no live RAM value, target
-semantics, or later call is executed.
-
-The `BNE.W` at `$68e0c` in that target has extension-word base `$68e0e`; its
-literal `$005e` therefore resolves to `$68e6c`. The 36 raw bytes at that
-destination / ADF `+0x1726c` hash to
-`8cb29601f0c76406930e37d44b29853501857c36f3cb833ccdd32e78418597d4` and
-contain two local compare pairs: the `D3` pair branches to `$68e80`/`$68e7e`,
-and the `D2` pair to `$68e90`/`$68e8e`. Its direct continuation at `$68e90`
-maps to ADF `+0x17290`, whose first 32 bytes hash to
-`8a81ad1a39efe0442addd9302b3b0e5e0c0bd72ecaf5904d2fa5e1c2834cd964`.
-This is byte-exact static provenance only: `D2`, `D3`, condition codes, and
-all resulting paths remain runtime-dependent and have no inferred gameplay
-meaning.
-
-The next static prefix at `$68e90` / ADF `+0x17290` is 34 bytes with SHA-256
-`f4a047914e83ab873a037ea16a4f5aaa9a402c38f48a525efc69d9e49cca15a8`.
-It saves/restores `D0`/`D1`, loads literal `D3`/`D2` values, compares the byte
-at `$7c24e` with `D0`, and encodes `BEQ.W` at `$68eae`. Its extension base
-`$68eb0 + $0026` resolves to `$68ed6`, whose 32-byte raw prefix hashes to
-`79871297097662cd29a3659d5399a17c847a8c46d6753e1d968cb27b83c5210b`; the
-fallthrough `$68eb2` prefix hashes to
-`cd83cab5400642c141e3252fd28302a94e7169d1f5bc7a6021cbe78c5daacd02`.
-This is static provenance only: no register contents, comparison result, or
-control-flow path is executed or assigned gameplay meaning.
-
-The taken `BEQ.W` target at `$68ed6` / ADF `+0x172d6` is now independently
-bounded as 30 raw bytes with SHA-256
-`b2d2c6cadc50725eb8b4f0b680c325586ed457b29232481b503f3e337d589341`.
-It encodes an `ADDI.B`, then `BCC.W` at `$68ede` (extension base `$68ee0`,
-literal `$0014`) and another `BCC.W` at `$68eea` (base `$68eec`, literal
-`$0008`), followed by `ADDQ.B`. Both branch encodings and the straight-line
-fallthrough converge at `$68ef4` / ADF `+0x172f4`; the first 32 bytes at that
-convergence hash to
-`93b0d20954d235c624406450161a359968e4f1baefcbaeb47ede08fda0cd1e71`.
-The parser checks the exact 30-byte source and 32-byte convergence prefix
-against all six supplied Amiga variants. This remains static provenance only:
-condition flags, memory-cell meaning, branch decisions, and gameplay effects
-are not recovered or modeled.
-
-The `$68ef4` convergence has a separate 34-byte static prefix at ADF
-`+0x172f4`, SHA-256
-`d63b2de78fbc18f2a4213206d1f05947a604dafc5b23fea56f87b624cb7549ab`.
-It reads/stores a byte, then encodes `BEQ.W` at `$68f02`; its extension base
-`$68f04` plus literal `$0026` resolves to `$68f2a` / ADF `+0x1732a`, whose
-32-byte prefix hashes to
-`ba2a0127999eb628ef05008867728fd31952c6d4b268bdb38f35130bab9973ae`.
-The untaken static fallthrough is `$68f06` / ADF `+0x17306`, with 32-byte
-prefix SHA-256
-`5b3ae299a769dcca25b96b3b588ab65b1c44843abf0ef1288a1a74741dec9993`.
-All three spans are checked across the six supplied Amiga images. This proves
-only byte order, local control-flow encodings, and raw offsets—not flags,
-registers, memory-cell purpose, selected path, or game behavior.
-
-The taken `$68f2a` prefix is 36 bytes at ADF `+0x1732a`, SHA-256
-`a7f4be625a6a39615f0ace12a1a8e013b781575625858b4f0c257d171b0947f3`.
-Its local `BCC.W` encodings at `$68f32` (extension `$68f34 + $0014`) and
-`$68f3e` (`$68f40 + $0008`), plus straight-line fallthrough, all converge at
-`$68f48`. That address begins absolute-long `JSR $7caa6`; the 18-byte raw
-call/following prefix at ADF `+0x17348` hashes to
-`dde319f5e57db52df300956d4e3e59dc6dc7967f0ff582674d502109fcfa2f69`.
-The JSR is an explicit preservation boundary: neither it nor the following
-call is executed, and no call effect, return, flags, cell semantics, or game
-behavior is inferred. Every listed span is checked across all six supplied
-Amiga variants.
-
-The independent fallthrough at `$68f06` / ADF `+0x17306` has a 24-byte raw
-gate, SHA-256
-`4a50d1c5f71ada9a3571e09b00437c51037c3949ff8e57a4b153ea032828d061`.
-Its `BEQ.W` at `$68f1a` uses extension base `$68f1c + $002c` to reach the
-same external-call boundary `$68f48`. Its alternate 12-byte local prefix at
-`$68f1e` / ADF `+0x1731e` hashes to
-`fc1fca692a8fc07b5fd7c502ae2d772eeff63c0c3d33d298f9c4fac414f337da` and
-ends `BRA.W` at `$68f26`, extension `$68f28 + $0020`, likewise at `$68f48`.
-This records only exact raw control-flow encodings; D7, flags, cells, selected
-paths, external call effects, and gameplay behavior remain unmodeled.
-
-At that zero-target `$6854a`, the next isolated static boundary compares `D2`
-with immediate `$0120`; its conditional branch is encoded at `$6854e` and
-targets `$68562`. Project Eon records only this byte-exact comparison/branch
-pair and assigns neither values nor branch meanings to it.
-
-At `$68562`, the branch-target's next exact static prefix reaches a conditional
-branch at `$6856a`, whose encoded target is `$6857a`. This is raw control-flow
-provenance only; Project Eon does not assign comparison or branch semantics.
-
-The next target `$6857a` begins with another fixed-cell test and an encoded
-conditional branch `$68580 → $68586`. This is recorded solely as raw static
-control flow, without assigning meaning to the cell or either path.
-
-At `$68586`, a fixed local register-preparation prefix reaches unknown `JSR
-$7b26a` at `$68590`. This is a boundary only: no register values, target
-effect, or continuation is modeled.
-
-The return-PC tail after that unknown `JSR` is nevertheless immutable source
-evidence. The 104 call-free raw bytes at `$68596..$685fd` / ADF `+0x16996`
-hash to `eeed978d0afd278cc48868c0d2b76205304ddfa80b174d2aac95dc50b80dd551`
-in all six supplied images. They restore a saved register mask, read six
-absolute byte cells (`$7b3b0`, `$7b3b1`, `$7b3b4`, `$7b3ba`, `$7b3bb`, and
-`$7b3bc`), and contain the literal routes to external `JMP $7bcf8` at
-`$685ee`, the already bounded negative path at `$685f4`, its `RTS` at
-`$685fc`, and the separately bounded `$685fe` post-negative prefix.
-`MillenniumAmigaResidentIndependentPostCallTailBoundary` validates those
-bytes and operands only. It does **not** assume `$7b26a` returns, assign
-meaning to the cells or condition flags, execute this tail, or infer which
-route an original run takes.
-
-A separate resident entry at `$68d50` has its own literal load/test and
-conditional branch `$68d58 → $68d62`. This is preserved as an independent
-static gate; no cell, path, or runtime meaning is inferred.
-
-For each of those callers, the static bytes immediately after the final
-`JSR $7ba12` are now also verified, while carefully not treating them as a
-runtime helper return. The first has return-address `0x69656` and begins with
-absolute operands `0x7cc46` and `0x7b764`; the second has `0x69bba` with
-`0x7cc72` and `0x7b764`. This records the exact caller-side continuation
-boundary from the original ADF. Project Eon neither executes `$7ba12`, assumes
-that it returns, reads either source, nor assigns a meaning to the data flow.
-
-The first caller's longer static continuation is now hash-anchored as well:
-86 bytes at `$69656` map to raw disk offset `0x17a56` and SHA-256
-`5f42f9d3078d374f8b4a70fcc59c618abb9381d6b33ef25b3f2967876f0afe7b`.
-Within that raw range, the original encodings at `$696a0` and `$696a6` are
-`JSR $7b77e` and `JSR $7c802`. This is not a claim that `$7ba12` returns or
-that either later call runs: it is a fail-closed static preservation anchor
-for the next caller-side disassembly step.
-
-The second caller has a distinct, shorter continuation and is anchored on its
-own terms: 44 bytes at `$69bba` map to raw disk `0x17fba` with SHA-256
-`5616f19900cb96ebc81edf90d0d17a9cde1644be07657801e243514b05e6ee23`.
-Its final bytes encode `JSR $68d50` at `$69be0`. This remains a static raw-byte
-fact only—not evidence that `$7ba12` returns, that `$68d50` runs, or that any
-live data or helper effect can be reconstructed.
-
-No proven direct caller into either staging entry exists in the original raw
-resident range. A full raw scan of disk `0x16400..0x42400` finds zero literal
-absolute `JSR`, zero literal absolute `JMP`, and zero PC-relative `BSR.W`
-encodings that resolve to either `$69624` or `$69b88`. It additionally finds
-zero fully local `MOVEA.L #entry,An` immediately followed by `JSR (An)` or
-`JMP (An)` pairs. This is a precisely limited negative fact: it excludes only
-those static forms. Wider register-indirect calls, other computed branches,
-transformed first-stage paths, and runtime dispatch remain unproven, so
-Project Eon does not claim that the staging entries are unreachable or
-synthesize callers.
-
-The setup target `$7b77e` is now separately fingerprinted at its linear
-raw-media correspondence, disk offset `0x29b7e`. Its first 32 original bytes
-are `04006e00c200044a00c240007a00c200105200c201005200c200014a00c20800`,
-with SHA-256
-`a695fd5ead90e07075256b1347220afde1a4439dd804cf1a9d445da4411cb52a`.
-As with `$7ba12`, this fingerprint is chain-of-custody evidence, *not* an
-executable decode: the preceding loader transform prevents the raw bytes from
-proving the runtime routine's instruction boundary or semantics.
-
-For callers that already own their six runtime values, the verified six
-`(A4)+` to `(A5)+` transfers are available as the pure in-memory
-`stage_millennium_amiga_resident_helper_pre_setup` operation. It returns the
-three staged words and three staged bytes exactly as they stand immediately
-before `JSR $7b77e`; it does not pretend that this is state before `$7ba12`,
-because `$7b77e` may change any of those fields. No game-media read, unpack,
-or write is involved.
-
+The bootstrap relocation itself remains bounded by its final source-byte
+observation at `$70400`; the exact caller then performs `JSR (A3)` at
+`$662e4` with `A3=$41000`. No emulator or synthetic bytes are used by
+this native transfer.
 ### Deuteros Atari ST protected-media boot chain
 
 The supplied Atari ST collection consists of protected/cracked raw `.st`
@@ -4672,7 +4170,15 @@ cap and is atomic across session and memory state on missing input, detached
 sequence, unexpected boundary, or cap exhaustion. Decoder output effects now
 carry the recovered destination segment explicitly instead of being attributed
 to the child code segment. No additional executable span or semantic claim is
-introduced.
+introduced. On the terminal loop edge, the native session follows the actual
+`$16e8` RET into its first caller. Exact `$1740..$1763` bytes (file offset
+`$1640`, SHA-256
+`d1e04fba870ff3677e495d131b994bfdc1dc6f95af7ea9f7cc4316d48568f115`)
+consume the saved zero table displacement, load the genuine embedded words
+from `$170c/$170e`, copy raw `$1357/$1359` into `$133d/$133f`, and stop at
+the complete `$1764->$0122` private function-six request boundary. These
+caller effects commit in the same transaction as the owned-memory loop. The
+private result and all presentation semantics remain explicit boundaries.
 Its raw value is retained as AX without assigning width or graphics meaning,
 then execution stops before `$13d0` reads `$5050:$0019`. Detached addresses
 or sequences fail before state changes, and the read does not mutate runtime
@@ -7190,12 +6696,28 @@ hash-bound original title-stage span overlaid with every later byte tracked at
 the runtime source, then publishes the destination as one atomic effect batch.
 The sparse runtime-memory ledger need not materialize untouched load bytes
 merely to prove this copy, while earlier admitted mutations remain observable.
-Execution stops before local
-`$37f7a->$37f9a`, whose nested system calls remain opaque. The copied region
+Execution now continues through local `$37f7a->$37f9a`. The complete 152-byte
+routine is independently fixed by SHA-256
+`b076611efd33354e311dc9f64b57454e31cddd69c0749a05034f0d828a5b36c1`.
+Its `$37fac->$208c0` service return is typed; only after that return does one
+atomic batch write word `$000a` to `$1ef16` and long `$0001ef48` to `$1ef22`.
+All Exec boundaries remain explicit and ordered. The common prefix calls
+vectors `-$1ce`, `-$1c2`, and `-$168` with A1 `$1eefa`, `$1eefa`, and
+`$1eed8`. Typed longs at `$20698/$2069c` select whether calls for `$2063e`
+and `$20676` are skipped; both routes then call `-$1c2` with `$205e4` and
+`-$168` with `$2061c`, returning locally at `$38030`. No Exec result is given
+invented semantics.
+
+After the proven RTS to `$37f7e`, a typed runtime read at `$206a0` supplies
+the controller longword. A final atomic batch copies it to `$12ff8` and writes
+profile longword `2` to `$12ffc`, exactly matching the hash-bound 28-byte
+caller tail. The resulting `JMP $12800` is reported as the next bootstrap
+boundary; it is not silently executed by this title-tail API. Wrong order,
+address, vector, argument, comparison source, or replay rejects without
+memory effects, and reset revokes the entire chain. The copied `$9392` region
 is not classified as pixels, game state, or any other inferred semantic.
-Helper register and status-register effects remain opaque. The transition is
-replay-safe, revoked with its owning session, and assigns no rendering or
-gameplay meaning.
+Helper registers, status registers, compared-long meaning and Exec effects
+remain opaque.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

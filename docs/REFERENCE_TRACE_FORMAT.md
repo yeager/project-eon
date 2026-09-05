@@ -132,7 +132,7 @@ similar platform's evidence.
 | `millennium-dos-en-gx-startup-v2` | `millennium-dos-game-flow`, `millennium-dos-gx-overlay` |
 | `millennium-dos-en-title-init-v2` | `millennium-dos-launcher`, `millennium-dos-title-flow` |
 | `deuteros-atari-st-boot-v1` | `deuteros-atari-protected-boot`, `deuteros-atari-first-stage` |
-| `millennium-amiga-en-defjam-bootstrap-v1` | `millennium-amiga-defjam-bootstrap`, `millennium-amiga-shared-resident` |
+| `millennium-amiga-en-defjam-bootstrap-v1` | `millennium-amiga-defjam-bootstrap`, `millennium-amiga-defjam-first-stage-entry` |
 | `deuteros-amiga-en-title-stage-v1` | `deuteros-amiga-main-stage`, `deuteros-amiga-title-handoff` |
 | `deuteros-amiga-en-main-copy-loop-v3` | `deuteros-amiga-main-stage` |
 | `deuteros-amiga-en-title-bridge-v3` | `deuteros-amiga-main-stage`, `deuteros-amiga-title-handoff` |

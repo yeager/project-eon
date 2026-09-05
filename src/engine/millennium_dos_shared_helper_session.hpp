@@ -15,6 +15,6 @@ public:
     void observe_call_return(std::uint16_t,std::uint16_t);
     std::uint16_t selected_offset()const{return selected_offset_;}
 private:
-    MillenniumDosSharedHelperState state_=MillenniumDosSharedHelperState::awaiting_segment;std::uint16_t caller_ax_=0,segment_=0,table_offset_=0,selected_offset_=0;std::vector<MillenniumDosSharedHelperEffect>effects_;
+    MillenniumDosSharedHelperState state_=MillenniumDosSharedHelperState::awaiting_segment;std::uint16_t segment_=0,table_offset_=0,selected_offset_=0;std::vector<MillenniumDosSharedHelperEffect>effects_;
 };
 }

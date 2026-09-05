@@ -23,7 +23,7 @@ class CompleteDisassemblyManifestTests(unittest.TestCase):
     def test_committed_manifest_enumerates_and_covers_the_recognized_corpus(self) -> None:
         totals = TOOL.verify(self.manifest, self.inventory, self.releases)
         self.assertEqual(totals, {"releases": 8, "images": 19,
-                                  "ranges": 21, "bytes": 1124867,
+                              "ranges": 21, "bytes": 764867,
                                   "mapped_candidates": 13,
                                   "unmapped_candidates": 7})
         index = TOOL.render_index(self.manifest, totals)

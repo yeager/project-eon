@@ -263,7 +263,7 @@ Amiga English, and Deuteros Atari Replicants release archives. Their
 identities are in `disassembly-inventory.json`: Millennium's English
 `MILL.COM`, `TITLES.EXE`, `2200AD.EXE`, and `2200GX.EXE` sidecar has 43,060 LF lines; the
 Spanish `IBM.COM`, `TITLES.EXE`, and `2200AD.EXE` FAT12 sidecar has 36,096;
-the Defjam shared-resident range has 55,248; Deuteros's clean
+the corrected Defjam first-stage entry range has 34; Deuteros's clean
 bootstrap/main/title sidecar has 84,352; and the Replicants first-stage
 sidecar has 331. Verify retained local sidecars:
 
@@ -276,8 +276,7 @@ python3 tools/verify_static_control_flow.py \
   --sidecar millennium-dos-spanish-ibm-com-linear=/absolute/millennium-dos-es.json \
   --sidecar millennium-dos-spanish-titles-exe-linear=/absolute/millennium-dos-es.json \
   --sidecar millennium-dos-spanish-2200ad-exe-linear=/absolute/millennium-dos-es.json \
-  --sidecar millennium-amiga-defjam-shared-resident-linear=/absolute/millennium-amiga-defjam.json \
-  --sidecar millennium-amiga-defjam-direct-shared-resident-linear=/absolute/millennium-amiga-defjam-direct.json \
+  --sidecar millennium-amiga-defjam-first-stage-entry-linear=/absolute/millennium-amiga-defjam-first-stage.json \
   --sidecar deuteros-amiga-clean-loaded-spans=/absolute/deuteros-amiga-clean.json \
   --sidecar deuteros-atari-replicants-first-stage-linear=/absolute/deuteros-atari-replicants.json \
   --sidecar millennium-atari-equinox-milenium-tos-image-relative-linear=/absolute/millennium-atari-equinox.json \
@@ -320,18 +319,15 @@ input rather than inferring coverage.
 | Target | CPU / origin | Verified static anchors | What is not yet asserted |
 | --- | --- | --- | --- |
 | Millennium DOS | 8086, flat COM-style images at `$0100` | `MILL.COM` private interrupt setup and sound-selection routine; `TITLES.EXE` availability-poll exit; `2200AD.EXE` action-poll sites | DOS/driver/child return values, code/data classification beyond recovered paths, game execution |
-| Millennium Amiga | Motorola 68000 | bounded ADF loader/raw-stage records | raw-stage invocation results, runtime base and reachable code map |
+| Millennium Amiga | Motorola 68000 | corrected ADF transfers and `$41000..$410df` entry span | `$410de` exception result and transformed continuation |
 | Millennium Atari ST | Motorola 68000 | disk structures and bounded bootstrap session | executable chain/load addresses and TOS/XBIOS returns |
 | Deuteros Amiga | Motorola 68000 | boot to `$12a4e`; main stage disk `+$5800` to `$20000`, entry `$21734`; title stage disk `+$6e000` to `$13000`, entry `$40426` | Exec/graphics/callback returns, display ownership, title/game input and timing |
 | Deuteros Atari ST | Motorola 68000 | Replicants Disk 1 protected boot: disk `+$4ec00` to `$1200`, entry `$9c4`, stage SHA-256 `d20784600c5fe3c8fb2005ec5d162d68ffa8f5a0f65d29fcd8a1d9ede2bafddc`; next stage `$70000`; Disk 2 KILLER_BOOT vector route | XBIOS read result, callback dispatch, RAM vector contents, all control/state semantics |
 
-The same range tool has been run against Millennium Amiga's Defjam system
-disk (`8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c`):
-disk `+0x16400`, length `0x2c000`, maps to `$68000` and hashes to
-`d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e`.
-This establishes a reproducible full byte-coverage candidate listing of the
-shared resident stage; it does not turn its opaque loader handoff, indirect
-calls, or unknown return values into executable Eon behaviour.
+Millennium Amiga's earlier shared-resident listing was revoked after the
+loader's `io_Length` and `io_Offset` registers were found to have been
+inverted. The authoritative first-stage entry is ADF `+0x6e000`, length
+`0xe0`, at `$41000`; it stops at `ILLEGAL $410de`.
 
 ## Reproduced byte-complete candidate reports
 
@@ -346,8 +342,6 @@ proves reachability, code/data classification, an ABI result, or gameplay.
 | --- | --- | --- | --- | ---: |
 | Millennium DOS English | `MILL.COM`, `TITLES.EXE`, `2200AD.EXE`, and `2200GX.EXE`; flat 8086 candidate origins `$0100` | `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | `90d3633bf887f23563d444b43fcc9c94155d34a62203ddf29d485032730d0ce5` | 52,240 |
 | Millennium DOS Spanish | FAT12 `IBM.COM`, `TITLES.EXE`, and `2200AD.EXE`; flat 8086 candidate origins `$0100` | `b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4` | `9d9834ecf9acc62877e4d757d1c0ba1b87d9045fa7f918238f7d8d00171bfd61` | 29,513 |
-| Millennium Amiga English Defjam | system ADF `+0x16400`, length `0x2c000` → `$68000` | `2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400` | `c4eebe04d160ae4fd380cba8906ff7c679cd86978fbfe52d66b24fef1290c66f` | 77,467 |
-| Millennium Amiga English Defjam direct container | byte-identical shared-resident ADF range `+0x16400`, length `0x2c000` → `$68000` | `ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd` | `c4eebe04d160ae4fd380cba8906ff7c679cd86978fbfe52d66b24fef1290c66f` | 77,467 |
 | Millennium Atari ST English Equinox | `MILENIUM.TOS` PRG TEXT+DATA, file `+0x1c`, 49,010 bytes, **image-relative only** | `ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01` | `8c4acf574f52890a407f881e44bf41f4bb51ae5ccc7afd6ad240018bb30cc548` | 17,519 |
 | Millennium Atari ST English Equinox direct container | byte-identical `MILENIUM.TOS` PRG TEXT+DATA, file `+0x1c`, 49,010 bytes, **image-relative only** | `0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69` | `8c4acf574f52890a407f881e44bf41f4bb51ae5ccc7afd6ad240018bb30cc548` | 17,519 |
 | Millennium Atari ST English Equinox | `MILL22A.INF`, file `+0x0`, 7,506 bytes, **image-relative only** | `ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01` | `f8c6e335c1ebb7eb985bccd6baf1c3a106eeb0eca51ec3e6497e1f2efe89b420` | 2,495 |

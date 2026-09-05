@@ -973,7 +973,7 @@ def main() -> int:
             "millennium-dos-launcher", "millennium-dos-title-flow",
         ),
         "millennium-amiga-en-defjam-bootstrap-v1": (
-            "millennium-amiga-defjam-bootstrap", "millennium-amiga-shared-resident",
+            "millennium-amiga-defjam-bootstrap", "millennium-amiga-defjam-first-stage-entry",
         ),
         "deuteros-atari-st-boot-v1": (
             "deuteros-atari-protected-boot", "deuteros-atari-first-stage",
@@ -1267,8 +1267,8 @@ def main() -> int:
             )
         expected_bootstrap = {
             ("millennium", "amiga"): (
-                "bounded launcher bootstrap: resident entry 0x68000, raw resident SHA-256 "
-                "d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e"
+                "corrected raw loader: disk 0x6e000 + 0x24200 -> memory 0x41000; "
+                "disk 0x2c000 + 0x16400 -> memory 0x68000"
             ),
             ("millennium", "atari-st"): (
                 "bounded launcher bootstrap: executed 54 original longword copies and 257 original word "
@@ -1307,26 +1307,18 @@ def main() -> int:
                 f"{inspected.stdout}"
             )
         if game == "millennium" and platform == "amiga":
-            expected_post_negative_d3 = (
-                "post-negative-D3 terminal: entry 0x685fe; byte stores 0x7b3b5/0x7b3bc; "
-                "BNE 0x68612 -> 0x68616, zero RTS 0x68614; BPL 0x68616 -> boundary 0x6861a, "
-                "negative RTS 0x68618; SHA-256 "
-                "a45ff5eca6e3594574b464574fa0aae3027bd2ea11472770708c96f4d21b56cc"
+            expected_first_stage = (
+                "first-stage SHA-256: "
+                "df97c7f6cd622b16b9ffb57bc562906e349c18c56ed8abeb564c6f411e64891c"
             )
-            if expected_post_negative_d3 not in inspected.stdout:
+            if expected_first_stage not in inspected.stdout:
                 raise SystemExit(
-                    "Millennium Amiga post-negative-D3 terminal did not match supplied media:\n"
+                    "Millennium Amiga first-stage transfer did not match supplied media:\n"
                     f"{inspected.stdout}"
                 )
-            expected_post_negative_d3_continuation = (
-                "post-negative-D3 continuation: entry 0x6861a (disk 0x16a1a, 54 bytes); "
-                "BCC 0x68636 -> 0x6863a, BCS 0x68642 -> 0x68650, BMI 0x68644 -> 0x68694; "
-                "terminal JMP 0x6864a -> 0x7bef0; SHA-256 "
-                "d3f6b63090429e11fb3a77e4573817649e2bb7996d06811ea2751078794534ce"
-            )
-            if expected_post_negative_d3_continuation not in inspected.stdout:
+            if "post-negative-D3" in inspected.stdout or "shared resident evidence" in inspected.stdout:
                 raise SystemExit(
-                    "Millennium Amiga post-negative-D3 continuation did not match supplied media:\n"
+                    "Millennium Amiga inspection retained revoked resident evidence:\n"
                     f"{inspected.stdout}"
                 )
         if game == "deuteros" and platform == "amiga":

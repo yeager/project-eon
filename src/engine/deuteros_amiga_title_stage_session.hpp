@@ -402,6 +402,11 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedInputReturnPlan> observe_post_adjusted_input_return(const DeuterosAmigaObservedTitlePostAdjustedInputReturn& o) { return service_batch_boundary_session_.observe_post_adjusted_input_return(o); }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedRepeatedInputReturnPlan> observe_post_adjusted_repeated_input_return(const DeuterosAmigaObservedLocalCallReturn& o) { return service_batch_boundary_session_.observe_post_adjusted_repeated_input_return(o); }
     [[nodiscard]] std::optional<DeuterosAmigaTitleTailCopyPlan> observe_title_tail_copy(const DeuterosAmigaObservedTitleTailCopy& o) { return service_batch_boundary_session_.observe_title_tail_copy(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailSubroutinePlan> advance_title_tail_subroutine() { return service_batch_boundary_session_.advance_title_tail_subroutine(); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailInitialServicePlan> observe_title_tail_initial_service_return(const DeuterosAmigaObservedLocalCallReturn& o) { return service_batch_boundary_session_.observe_title_tail_initial_service_return(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailExecPlan> observe_title_tail_exec_return(const DeuterosAmigaObservedTitleTailExecReturn& o) { return service_batch_boundary_session_.observe_title_tail_exec_return(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailComparePlan> observe_title_tail_compare_longs(const DeuterosAmigaObservedTitleTailCompareLongs& o) { return service_batch_boundary_session_.observe_title_tail_compare_longs(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailBootstrapPlan> observe_title_tail_controller_long(const DeuterosAmigaObservedTitleTailControllerLong& o) { return service_batch_boundary_session_.observe_title_tail_controller_long(o); }
 
 private:
     const AmigaAdf* disk_ = nullptr;

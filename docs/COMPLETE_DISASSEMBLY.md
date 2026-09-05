@@ -2,7 +2,7 @@
 
 Project Eon's complete-disassembly manifest enumerates every executable or
 code image currently identified for all eight recognised release identities.
-It covers 19 hash-bound images, 21 non-overlapping source ranges, and 1,124,867
+It covers 19 hash-bound images, 21 non-overlapping source ranges, and 764,867
 original bytes. “Complete” here means complete mechanical byte coverage of
 those declared ranges. It does not mean that code/data classification,
 reachability, relocations, operating-system calls, or gameplay semantics are

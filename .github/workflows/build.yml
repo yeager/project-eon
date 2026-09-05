@@ -553,7 +553,10 @@ jobs:
           # particular, SDL3_image is linked against the shared libpng built
           # above, so that DLL must reach the installer as well.
           $required = @("project-eon.exe", "SDL3.dll", "SDL3_image.dll", "SDL3_ttf.dll", "assets/cards/millennium.png", "assets/cards/deuteros.png", "assets/cards/dos-platform-v1.png", "assets/cards/amiga-platform-v1.png", "assets/cards/atari-st-platform-v1.png", "assets/cards/original-profile-v1.png", "assets/cards/modern-profile-v1.png", "assets/cards/custom-profile-v1.png", "assets/branding/project-eon-logo-v1.png", "assets/branding/project-eon.ico", "assets/branding/project-eon.icns", "assets/branding/README.md")
-          $fonts = @("NotoSans-Regular.ttf", "NotoSansArabic-Regular.ttf", "NotoSansDevanagari-Regular.ttf", "NotoSansJP-Regular.otf", "NotoSansKR-Regular.otf", "NotoSansSC-Regular.otf", "OFL-1.1.txt")
+          # Keep this an exact manifest rather than allowing assets/fonts/*.
+          # README.md carries the reviewed per-file hashes and provenance and
+          # is intentionally shipped alongside the OFL and font binaries.
+          $fonts = @("NotoSans-Regular.ttf", "NotoSansArabic-Regular.ttf", "NotoSansDevanagari-Regular.ttf", "NotoSansJP-Regular.otf", "NotoSansKR-Regular.otf", "NotoSansSC-Regular.otf", "OFL-1.1.txt", "README.md")
           foreach ($font in $fonts) { $required += "assets/fonts/$font" }
           $catalogs = @("ar", "de", "el", "en_GB", "es", "fi", "fr", "hi", "it", "ja", "ko", "nl", "no", "pl", "pt_BR", "ru", "sv", "tr", "uk", "zh_CN")
           foreach ($catalog in $catalogs) { $required += "po/$catalog.po" }

@@ -160,6 +160,11 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedInputReturnPlan> observe_title_post_adjusted_input_return(const DeuterosAmigaObservedTitlePostAdjustedInputReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_input_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedRepeatedInputReturnPlan> observe_title_post_adjusted_repeated_input_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_repeated_input_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleTailCopyPlan> observe_title_tail_copy(const DeuterosAmigaObservedTitleTailCopy& o) { return title_stage_session_ ? title_stage_session_->observe_title_tail_copy(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailSubroutinePlan> advance_title_tail_subroutine() { return title_stage_session_ ? title_stage_session_->advance_title_tail_subroutine() : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailInitialServicePlan> observe_title_tail_initial_service_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_title_tail_initial_service_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailExecPlan> observe_title_tail_exec_return(const DeuterosAmigaObservedTitleTailExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_title_tail_exec_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailComparePlan> observe_title_tail_compare_longs(const DeuterosAmigaObservedTitleTailCompareLongs& o) { return title_stage_session_ ? title_stage_session_->observe_title_tail_compare_longs(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailBootstrapPlan> observe_title_tail_controller_long(const DeuterosAmigaObservedTitleTailControllerLong& o) { return title_stage_session_ ? title_stage_session_->observe_title_tail_controller_long(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 

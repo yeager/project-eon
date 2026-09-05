@@ -1183,9 +1183,24 @@ int main(int argc, char** argv) {
             owned_memory,{102,4});
         if(!driven.accepted)throw std::runtime_error(driven.error);
         assert(driven.accepted&&driven.returned&&driven.observation_count>0);
-        assert(owned_mode_two.checkpoint().state
-            ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_returned);
-        assert(owned_mode_two.checkpoint().continuation_address==0x16e8);
+        const auto caller_connected=owned_mode_two.checkpoint();
+        assert(caller_connected.state
+            ==eon::MillenniumDosTitleInitializationState::graphics_record_private_interrupt_result_boundary);
+        assert(caller_connected.continuation_address==0x0127);
+        assert(caller_connected.boundary.call_address==0x1764
+            &&caller_connected.boundary.wrapper_address==0x0122
+            &&caller_connected.boundary.interrupt_address==0x0127
+            &&caller_connected.boundary.function==0x0006
+            &&caller_connected.boundary.record_segment==caller_connected.child_code_segment
+            &&caller_connected.boundary.record_offset==0x1349);
+        assert(caller_connected.memory_effects[caller_connected.memory_effects.size()-4].offset==0x1351
+            &&caller_connected.memory_effects[caller_connected.memory_effects.size()-4].value==0x0000);
+        assert(caller_connected.memory_effects[caller_connected.memory_effects.size()-3].offset==0x134f
+            &&caller_connected.memory_effects[caller_connected.memory_effects.size()-3].value==0x0000);
+        assert(caller_connected.memory_effects[caller_connected.memory_effects.size()-2].offset==0x133d
+            &&caller_connected.memory_effects[caller_connected.memory_effects.size()-2].value==0x0001);
+        assert(caller_connected.memory_effects.back().offset==0x133f
+            &&caller_connected.memory_effects.back().value==0x0002);
         assert(owned_memory.checkpoint().applied_batch_count>before.applied_batch_count);
 
         auto missing_mode_two=compact_owned_mode_two;

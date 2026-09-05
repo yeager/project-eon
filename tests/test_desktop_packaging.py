@@ -242,6 +242,10 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("rpmlint --strict", source)
         self.assertIn('--config "$(dirname "$0")/rpmlint.toml"', source)
         self.assertIn("rpm --checksig --nosignature", source)
+        self.assertIn("verify_rpm_manpage", source)
+        self.assertIn("rpm2cpio", source)
+        self.assertIn("project-eon.6.gz", source)
+        self.assertIn("gzip -t", source)
 
         import tomllib
         config = tomllib.loads((ROOT / "packaging" / "rpmlint.toml").read_text(encoding="utf-8"))
@@ -250,6 +254,7 @@ class DesktopPackagingTests(unittest.TestCase):
             "no-packager-tag$",
             "invalid-license MIT$",
         ])
+        self.assertEqual(config["CompressExtension"], "gz")
 
     def test_debian_package_generates_system_dependencies_without_host_sdl(self) -> None:
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")

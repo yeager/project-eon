@@ -95,8 +95,8 @@ def main(argv: list[str] | None = None) -> int:
              "--nested-sha256", "ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd",
              "--member", "Millennium 2.2 (1989)(Software Studios)[cr Defjam - CCS - Spreadpoint].adf",
              "--member-sha256", "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c",
-             "--offset", "0x16400", "--length", "0x2c000", "--address", "0x68000",
-             "--sha256", "d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e",
+             "--offset", "0x6e000", "--length", "0xe0", "--address", "0x41000",
+             "--sha256", "943b1fd0b5f3aa7734aae09e64d139348f9876615ef4df94fb22f9e05851fd77",
              "--output", output_for("millennium-amiga.md")])
         run(["tools/disassemble_m68k_range.py", "--archive", str(args.millennium_amiga_archive),
              "--archive-sha256", "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400",
