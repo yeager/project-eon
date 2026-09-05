@@ -76,8 +76,63 @@ MillenniumAmigaBootstrapRelocatorSession::boundary() const {
         return {0x410fc, 0x10, 0};
     case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_fline_exception:
         return {0x41110, 0x2c, 0};
+    case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_decrypted_block:
+        return {0x41110, 0, 0};
     }
     throw std::runtime_error("Invalid Millennium Amiga bootstrap relocator state");
+}
+
+MillenniumAmigaFirstFlineExecution
+MillenniumAmigaBootstrapRelocatorSession::execute_first_fline_handler(
+    const MillenniumAmigaFirstFlineObservation& observation) {
+    if (state_ != MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_fline_exception
+        || !first_stage_entry_execution_ || !first_stage_illegal_execution_
+        || !second_illegal_execution_
+        || observation.handler_entry_address != 0x411ac
+        || observation.saved_program_counter != 0x41110
+        || (observation.exception_frame_address & 1U) != 0
+        || observation.exception_frame_address < 0x12
+        || observation.exception_frame_address > 0xfffffa
+        || (observation.exception_frame_address - 12 < 0x65200
+            && observation.exception_frame_address + 6 > 0x41000)
+        || first_stage_bytes_.size() != 0x24200
+        || first_stage_bytes_[0x10c] != 0x4a || first_stage_bytes_[0x10d] != 0xcc
+        || first_stage_bytes_[0x10e] != 0xd5 || first_stage_bytes_[0x10f] != 0x33
+        || first_stage_bytes_[0x110] != 0xff || first_stage_bytes_[0x111] != 0x89
+        || first_stage_bytes_[0x112] != 0x60 || first_stage_bytes_[0x113] != 0x76
+        || first_stage_bytes_[0x1ac] != 0x02 || first_stage_bytes_[0x1ad] != 0x7c
+        || first_stage_bytes_[0x1ae] != 0xf8 || first_stage_bytes_[0x1af] != 0xff
+        || first_stage_bytes_[0x1d0] != 0xb1 || first_stage_bytes_[0x1d1] != 0x90
+        || first_stage_bytes_[0x1d6] != 0x4e || first_stage_bytes_[0x1d7] != 0x73) {
+        throw std::runtime_error("Detached Millennium Amiga first F-line handler");
+    }
+
+    MillenniumAmigaFirstFlineExecution result;
+    result.exception_frame_address = observation.exception_frame_address;
+    result.resulting_handler_status_register =
+        static_cast<std::uint16_t>(observation.handler_status_register & 0xf8ffU);
+    result.saved_status_register = observation.saved_status_register;
+    result.saved_program_counter = observation.saved_program_counter;
+    result.temporary_stack_address = observation.exception_frame_address - 12;
+    result.temporary_stack = {{first_stage_illegal_execution_->snapshot[0],
+        first_stage_illegal_execution_->resulting_a0,
+        first_stage_entry_execution_->snapshot[9]}};
+    result.restored_address = second_illegal_execution_->cursor_value;
+    result.restored_value = second_illegal_execution_->saved_ciphertext_value;
+    result.cursor_address = second_illegal_execution_->cursor_address;
+    result.cursor_value = observation.saved_program_counter;
+    result.saved_ciphertext_address = second_illegal_execution_->saved_ciphertext_address;
+    result.saved_ciphertext_value = 0xff896076;
+    result.key_source_address = observation.saved_program_counter - 4;
+    result.key_source_value = 0x4accd533;
+    const auto inverted = ~result.key_source_value;
+    result.xor_key = static_cast<std::uint32_t>((inverted << 16U) | (inverted >> 16U));
+    result.transformed_address = observation.saved_program_counter;
+    result.transformed_value = result.saved_ciphertext_value ^ result.xor_key;
+    result.resulting_stack_pointer = observation.exception_frame_address + 6;
+    first_fline_execution_ = result;
+    state_ = MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_decrypted_block;
+    return result;
 }
 
 MillenniumAmigaSecondIllegalExecution

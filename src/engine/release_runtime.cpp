@@ -292,6 +292,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_amiga_first_stage_entry_sequence_.reset();
     millennium_amiga_first_stage_illegal_sequence_.reset();
     millennium_amiga_second_illegal_sequence_.reset();
+    millennium_amiga_first_fline_sequence_.reset();
     deuteros_amiga_title_load_copy_.reset();
     deuteros_amiga_title_load_copy_generation_ = 0;
     deuteros_amiga_title_command_generation_ = 0;
@@ -506,6 +507,54 @@ ReleaseRuntimeCoordinator::observe_millennium_amiga_second_illegal_handler(
         *millennium_amiga_relocator_=std::move(next);*native_runtime_memory_=std::move(memory);
         millennium_amiga_second_illegal_sequence_=observation.sequence;result.accepted=true;
     }catch(const std::exception& e){result.error=std::string("Second ILLEGAL handler rejected: ")+e.what();}
+    return result;
+}
+
+MillenniumAmigaBootstrapRelocatorObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_amiga_first_fline_handler(
+    const MillenniumAmigaFirstFlineHandlerObservation observation) {
+    MillenniumAmigaBootstrapRelocatorObservationResult result;
+    if (!millennium_amiga_relocator_ || !native_runtime_memory_
+        || !millennium_amiga_second_illegal_sequence_
+        || millennium_amiga_first_fline_sequence_
+        || observation.sequence <= *millennium_amiga_second_illegal_sequence_) {
+        result.error = "First F-line handler requires a later complete exception observation";
+        return result;
+    }
+    try {
+        auto next = *millennium_amiga_relocator_;
+        const auto execution = next.execute_first_fline_handler(observation.exception);
+        NativeRuntimeEffectBatch batch{"millennium-amiga-first-fline-"
+            + std::to_string(millennium_amiga_relocator_generation_), true, {}};
+        batch.effects.reserve(7);
+        for (std::size_t i = 0; i < execution.temporary_stack.size(); ++i) {
+            batch.effects.push_back({batch.effects.size() + 1,
+                {NativeRuntimeAddressSpace::linear, std::nullopt,
+                    execution.temporary_stack_address + i * 4},
+                MemoryTransferElementWidth::longword, NativeRuntimeByteOrder::big_endian,
+                execution.temporary_stack[i]});
+        }
+        const std::array<std::pair<std::uint32_t, std::uint32_t>, 4> writes{{
+            {execution.restored_address, execution.restored_value},
+            {execution.cursor_address, execution.cursor_value},
+            {execution.saved_ciphertext_address, execution.saved_ciphertext_value},
+            {execution.transformed_address, execution.transformed_value},
+        }};
+        for (const auto [address, value] : writes) {
+            batch.effects.push_back({batch.effects.size() + 1,
+                {NativeRuntimeAddressSpace::linear, std::nullopt, address},
+                MemoryTransferElementWidth::longword, NativeRuntimeByteOrder::big_endian, value});
+        }
+        auto memory = *native_runtime_memory_;
+        const auto applied = memory.apply(batch);
+        if (!applied.accepted) { result.error = applied.error; return result; }
+        *millennium_amiga_relocator_ = std::move(next);
+        *native_runtime_memory_ = std::move(memory);
+        millennium_amiga_first_fline_sequence_ = observation.sequence;
+        result.accepted = true;
+    } catch (const std::exception& error) {
+        result.error = std::string("First F-line handler rejected: ") + error.what();
+    }
     return result;
 }
 
@@ -3615,6 +3664,70 @@ DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::observe
     }catch(const std::exception&e){r.error=e.what();}
     return r;
 }
+DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_second_exec_return(
+    const DeuterosAmigaObservedMainStageExecReturn o){
+    DeuterosAmigaTitleDependencyObservationResult r;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()){
+        r.error="Deuteros main-stage second Exec return requires active title session";return r;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        if(!pending.observe_main_stage_second_exec_return(o)){
+            r.error="Deuteros main-stage second Exec return did not match boundary";return r;
+        }
+        if(!deuteros_amiga_->observe_main_stage_second_exec_return(o)){
+            r.error="Deuteros main-stage second Exec return disappeared before commit";return r;
+        }
+        r.accepted=true;
+    }catch(const std::exception&e){r.error=e.what();}
+    return r;
+}
+DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_first_local_return(
+    const DeuterosAmigaObservedLocalCallReturn o){
+    DeuterosAmigaTitleDependencyObservationResult r;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()){
+        r.error="Deuteros main-stage first local return requires active title session";return r;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        if(!pending.observe_main_stage_first_local_return(o)){
+            r.error="Deuteros main-stage first local return did not match boundary";return r;
+        }
+        if(!deuteros_amiga_->observe_main_stage_first_local_return(o)){
+            r.error="Deuteros main-stage first local return disappeared before commit";return r;
+        }
+        r.accepted=true;
+    }catch(const std::exception&e){r.error=e.what();}
+    return r;
+}
+DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_pointer_service_return(
+    const DeuterosAmigaObservedMainStagePointerServiceReturn o){
+    DeuterosAmigaTitleDependencyObservationResult r;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()
+        ||!native_runtime_memory_){
+        r.error="Deuteros main-stage pointer service return requires active native memory";return r;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto plan=pending.observe_main_stage_pointer_service_return(o);
+        if(!plan){r.error="Deuteros main-stage pointer service return did not match boundary";return r;}
+        auto memory=*native_runtime_memory_;
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-main-stage-pointer-service",true,{
+            {1,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->zero_word_destination},
+                MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,0},
+            {2,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->pointer_destinations[0]},
+                MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,o.observed_pointer},
+            {3,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->pointer_destinations[1]},
+                MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,o.observed_pointer}}};
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted){r.error=applied.error;return r;}
+        if(!deuteros_amiga_->observe_main_stage_pointer_service_return(o)){
+            r.error="Deuteros main-stage pointer service return disappeared before commit";return r;
+        }
+        *native_runtime_memory_=std::move(memory);r.accepted=true;
+    }catch(const std::exception&e){r.error=e.what();}
+    return r;
+}
 DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_custom_chip_write(
     const DeuterosAmigaObservedCustomChipWrite observation) {
@@ -3811,10 +3924,12 @@ ReleaseRuntimeCoordinator::millennium_amiga_bootstrap_relocator_checkpoint()cons
         (session.state()==MillenniumAmigaBootstrapRelocatorState::awaiting_opaque_first_stage
             || session.state()==MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_illegal_exception
             || session.state()==MillenniumAmigaBootstrapRelocatorState::awaiting_second_first_stage_illegal_exception
-            || session.state()==MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_fline_exception)
+            || session.state()==MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_fline_exception
+            || session.state()==MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_decrypted_block)
             ? session.first_stage_bytes().size():0,
         session.first_stage_sha256(),session.first_stage_entry_execution(),
-        session.first_stage_illegal_execution(),session.second_illegal_execution()};
+        session.first_stage_illegal_execution(),session.second_illegal_execution(),
+        session.first_fline_execution()};
 }
 
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>

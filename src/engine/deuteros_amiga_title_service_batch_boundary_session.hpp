@@ -1262,6 +1262,24 @@ struct DeuterosAmigaMainStageFirstExecReturnPlan {
     std::uint32_t next_call_address=0,next_return_address=0;
     std::int16_t next_vector=0;
 };
+struct DeuterosAmigaMainStageSecondExecReturnPlan {
+    DeuterosAmigaObservedMainStageExecReturn observation;
+    std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
+};
+struct DeuterosAmigaMainStageFirstLocalReturnPlan {
+    DeuterosAmigaObservedLocalCallReturn observation;
+    std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
+};
+struct DeuterosAmigaObservedMainStagePointerServiceReturn {
+    DeuterosAmigaObservedLocalCallReturn call;
+    std::uint32_t source_address=0,observed_pointer=0;
+};
+struct DeuterosAmigaMainStagePointerServiceReturnPlan {
+    DeuterosAmigaObservedMainStagePointerServiceReturn observation;
+    std::uint32_t zero_word_destination=0;
+    std::array<std::uint32_t,2> pointer_destinations{};
+    std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -3490,6 +3508,36 @@ public:
         main_stage_first_exec_return_=o;last_command_sequence_=o.trace_sequence;
         return DeuterosAmigaMainStageFirstExecReturnPlan{o,0x7fff0,4,0x21758,0x2175c,-0x9c};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageSecondExecReturnPlan>
+    observe_main_stage_second_exec_return(const DeuterosAmigaObservedMainStageExecReturn&o){
+        if(!main_stage_first_exec_return_||main_stage_second_exec_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x21758
+            ||o.vector!=-0x9c||o.return_address!=0x2175c)
+            throw std::runtime_error("Deuteros main-stage second Exec return does not match boundary");
+        main_stage_second_exec_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaMainStageSecondExecReturnPlan{o,0x2175c,0x20068,0x21762};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageFirstLocalReturnPlan>
+    observe_main_stage_first_local_return(const DeuterosAmigaObservedLocalCallReturn&o){
+        if(!main_stage_second_exec_return_||main_stage_first_local_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x2175c
+            ||o.call_target!=0x20068||o.return_address!=0x21762)
+            throw std::runtime_error("Deuteros main-stage first local return does not match boundary");
+        main_stage_first_local_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaMainStageFirstLocalReturnPlan{o,0x21762,0x2013a,0x21768};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStagePointerServiceReturnPlan>
+    observe_main_stage_pointer_service_return(
+        const DeuterosAmigaObservedMainStagePointerServiceReturn&o){
+        if(!main_stage_first_local_return_||main_stage_pointer_service_return_)return std::nullopt;
+        if(o.call.trace_sequence<=last_command_sequence_||o.call.call_address!=0x21762
+            ||o.call.call_target!=0x2013a||o.call.return_address!=0x21768
+            ||o.source_address!=0x20128)
+            throw std::runtime_error("Deuteros main-stage pointer service return does not match boundary");
+        main_stage_pointer_service_return_=o;last_command_sequence_=o.call.trace_sequence;
+        return DeuterosAmigaMainStagePointerServiceReturnPlan{
+            o,0x2012c,{0x20510,0x20c20},0x2177c,0x22a5a,0x21782};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3727,6 +3775,10 @@ private:
     std::vector<std::uint8_t> main_stage_source_bytes_;
     std::optional<DeuterosAmigaObservedMainStageReentryD0> main_stage_reentry_d0_;
     std::optional<DeuterosAmigaObservedMainStageExecReturn> main_stage_first_exec_return_;
+    std::optional<DeuterosAmigaObservedMainStageExecReturn> main_stage_second_exec_return_;
+    std::optional<DeuterosAmigaObservedLocalCallReturn> main_stage_first_local_return_;
+    std::optional<DeuterosAmigaObservedMainStagePointerServiceReturn>
+        main_stage_pointer_service_return_;
     std::vector<std::uint8_t> first_title_exit_source_bytes_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;

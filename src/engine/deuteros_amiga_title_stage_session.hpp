@@ -410,6 +410,9 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleProfileTwoBootstrapPlan> advance_title_profile_two_bootstrap() { return service_batch_boundary_session_.advance_title_profile_two_bootstrap(); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageReentryPrefixPlan> observe_main_stage_reentry_d0(const DeuterosAmigaObservedMainStageReentryD0& o) { return service_batch_boundary_session_.observe_main_stage_reentry_d0(o); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageFirstExecReturnPlan> observe_main_stage_first_exec_return(const DeuterosAmigaObservedMainStageExecReturn& o) { return service_batch_boundary_session_.observe_main_stage_first_exec_return(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageSecondExecReturnPlan> observe_main_stage_second_exec_return(const DeuterosAmigaObservedMainStageExecReturn& o) { return service_batch_boundary_session_.observe_main_stage_second_exec_return(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageFirstLocalReturnPlan> observe_main_stage_first_local_return(const DeuterosAmigaObservedLocalCallReturn& o) { return service_batch_boundary_session_.observe_main_stage_first_local_return(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStagePointerServiceReturnPlan> observe_main_stage_pointer_service_return(const DeuterosAmigaObservedMainStagePointerServiceReturn& o) { return service_batch_boundary_session_.observe_main_stage_pointer_service_return(o); }
 
 private:
     const AmigaAdf* disk_ = nullptr;

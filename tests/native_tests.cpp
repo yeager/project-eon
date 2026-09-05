@@ -3559,6 +3559,44 @@ int main() {
         && second_illegal_execution.fline_instruction_address==0x41110);
     assert((defjam_relocator.boundary()
         == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x41110,0x2c,0}));
+    eon::MillenniumAmigaFirstFlineObservation first_fline_observation;
+    first_fline_observation.handler_entry_address = 0x411ac;
+    first_fline_observation.exception_frame_address = 0x7fef4;
+    first_fline_observation.handler_status_register = 0x2700;
+    first_fline_observation.saved_status_register = 0xa700;
+    first_fline_observation.saved_program_counter = 0x41110;
+    {
+        auto detached = first_fline_observation;
+        detached.saved_program_counter = 0x41112;
+        bool rejected = false;
+        try { static_cast<void>(defjam_relocator.execute_first_fline_handler(detached)); }
+        catch (const std::runtime_error&) { rejected = true; }
+        assert(rejected);
+    }
+    const auto first_fline_execution =
+        defjam_relocator.execute_first_fline_handler(first_fline_observation);
+    assert(first_fline_execution.exception_frame_address == 0x7fef4
+        && first_fline_execution.resulting_handler_status_register == 0x2000
+        && first_fline_execution.saved_status_register == 0xa700
+        && first_fline_execution.saved_program_counter == 0x41110
+        && first_fline_execution.temporary_stack_address == 0x7fee8
+        && first_fline_execution.temporary_stack[0] == 8
+        && first_fline_execution.temporary_stack[1] == 0x41172
+        && first_fline_execution.temporary_stack[2] == 0x200
+        && first_fline_execution.restored_address == 0x410fe
+        && first_fline_execution.restored_value == 0xd503ffe1
+        && first_fline_execution.cursor_address == 0x410b4
+        && first_fline_execution.cursor_value == 0x41110
+        && first_fline_execution.saved_ciphertext_address == 0x410b8
+        && first_fline_execution.saved_ciphertext_value == 0xff896076
+        && first_fline_execution.key_source_address == 0x4110c
+        && first_fline_execution.key_source_value == 0x4accd533
+        && first_fline_execution.xor_key == 0x2accb533
+        && first_fline_execution.transformed_address == 0x41110
+        && first_fline_execution.transformed_value == 0xd545d545
+        && first_fline_execution.resulting_stack_pointer == 0x7fefa);
+    assert((defjam_relocator.boundary()
+        == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x41110,0,0}));
     {
         bool rejected = false;
         try {
@@ -4381,6 +4419,29 @@ int main() {
                 assert(second_illegal_memory&&second_illegal_memory->applied_batch_count==6
                     && second_illegal_memory->checksum!=illegal_memory->checksum);
                 assert(!all_release_runtime.observe_millennium_amiga_second_illegal_handler(second_illegal_observation).accepted);
+                eon::MillenniumAmigaFirstFlineHandlerObservation fline_observation;
+                fline_observation.sequence = 8;
+                fline_observation.exception.handler_entry_address = 0x411ac;
+                fline_observation.exception.exception_frame_address = 0x7fef4;
+                fline_observation.exception.handler_status_register = 0x2700;
+                fline_observation.exception.saved_status_register = 0xa700;
+                fline_observation.exception.saved_program_counter = 0x41110;
+                auto bad_fline = fline_observation;
+                bad_fline.exception.handler_entry_address = 0x411ae;
+                assert(!all_release_runtime.observe_millennium_amiga_first_fline_handler(bad_fline).accepted);
+                assert(all_release_runtime.native_runtime_memory_diagnostics()->checksum
+                    == second_illegal_memory->checksum);
+                assert(all_release_runtime.observe_millennium_amiga_first_fline_handler(fline_observation).accepted);
+                const auto decrypted = all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
+                assert(decrypted
+                    && decrypted->state == eon::MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_decrypted_block
+                    && decrypted->boundary.instruction_address == 0x41110
+                    && decrypted->first_fline_execution
+                    && decrypted->first_fline_execution->transformed_value == 0xd545d545);
+                const auto fline_memory = all_release_runtime.native_runtime_memory_diagnostics();
+                assert(fline_memory && fline_memory->applied_batch_count == 7
+                    && fline_memory->checksum != second_illegal_memory->checksum);
+                assert(!all_release_runtime.observe_millennium_amiga_first_fline_handler(fline_observation).accepted);
             }else{
                 assert(!all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint());
                 assert(all_release_runtime.native_runtime_memory_diagnostics()->initialized_byte_count==0);
@@ -5621,6 +5682,45 @@ int main() {
             assert(after_first_main_exec
                 &&after_first_main_exec->applied_batch_count
                     ==after_main_stage_prefix->applied_batch_count);
+            eon::DeuterosAmigaObservedMainStageExecReturn second_main_exec{
+                runtime_copy_sequence+93,0x21758,-0x9c,0x2175c,0xcafef00d};
+            auto bad_second_main_exec=second_main_exec;bad_second_main_exec.call_address+=2;
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_second_exec_return(
+                bad_second_main_exec).accepted);
+            assert(opening_controller.observe_deuteros_amiga_main_stage_second_exec_return(
+                second_main_exec).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_second_exec_return(
+                second_main_exec).accepted);
+            eon::DeuterosAmigaObservedLocalCallReturn first_main_local{
+                runtime_copy_sequence+94,0x2175c,0x20068,0x21762,0,0};
+            auto bad_first_main_local=first_main_local;bad_first_main_local.call_target+=2;
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_first_local_return(
+                bad_first_main_local).accepted);
+            assert(opening_controller.observe_deuteros_amiga_main_stage_first_local_return(
+                first_main_local).accepted);
+            eon::DeuterosAmigaObservedMainStagePointerServiceReturn pointer_service{
+                {runtime_copy_sequence+95,0x21762,0x2013a,0x21768,0,0},
+                0x20128,0x00045678};
+            auto bad_pointer_service=pointer_service;bad_pointer_service.source_address+=4;
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_pointer_service_return(
+                bad_pointer_service).accepted);
+            assert(opening_controller.observe_deuteros_amiga_main_stage_pointer_service_return(
+                pointer_service).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_pointer_service_return(
+                pointer_service).accepted);
+            const auto after_pointer_service=opening_controller.native_runtime_memory_checkpoint();
+            assert(after_pointer_service
+                &&after_pointer_service->applied_batch_count
+                    ==after_first_main_exec->applied_batch_count+1);
+            assert(runtime_byte(*after_pointer_service,0x2012c)==0);
+            assert(runtime_byte(*after_pointer_service,0x20510)==0x00);
+            assert(runtime_byte(*after_pointer_service,0x20511)==0x04);
+            assert(runtime_byte(*after_pointer_service,0x20512)==0x56);
+            assert(runtime_byte(*after_pointer_service,0x20513)==0x78);
+            assert(runtime_byte(*after_pointer_service,0x20c20)==0x00);
+            assert(runtime_byte(*after_pointer_service,0x20c21)==0x04);
+            assert(runtime_byte(*after_pointer_service,0x20c22)==0x56);
+            assert(runtime_byte(*after_pointer_service,0x20c23)==0x78);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

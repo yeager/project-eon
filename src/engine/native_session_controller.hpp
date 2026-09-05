@@ -294,6 +294,9 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_profile_two_bootstrap();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_reentry_d0(DeuterosAmigaObservedMainStageReentryD0);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_first_exec_return(DeuterosAmigaObservedMainStageExecReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_second_exec_return(DeuterosAmigaObservedMainStageExecReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_first_local_return(DeuterosAmigaObservedLocalCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_pointer_service_return(DeuterosAmigaObservedMainStagePointerServiceReturn);
 
 
     [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission
@@ -317,6 +320,7 @@ public:
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_first_stage_entry(MillenniumAmigaFirstStageEntryObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_first_stage_illegal_handler(MillenniumAmigaFirstStageIllegalHandlerObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_second_illegal_handler(MillenniumAmigaSecondIllegalHandlerObservation);
+    [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_first_fline_handler(MillenniumAmigaFirstFlineHandlerObservation);
     [[nodiscard]] std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint> millennium_amiga_bootstrap_relocator_checkpoint() const;
 
     [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>
