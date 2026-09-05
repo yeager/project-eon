@@ -173,6 +173,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaMainStagePointerServiceReturnPlan> observe_main_stage_pointer_service_return(const DeuterosAmigaObservedMainStagePointerServiceReturn& o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_pointer_service_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageAudioSetupPlan> observe_main_stage_audio_setup(const DeuterosAmigaObservedMainStageAudioSetup& o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_audio_setup(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStage20994ExecEntryPlan> advance_main_stage_20994_exec_entry() { return title_stage_session_ ? title_stage_session_->advance_main_stage_20994_exec_entry() : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStage2099eExecReturnPlan> observe_main_stage_2099e_exec_return(const DeuterosAmigaObservedMainStageExecReturn&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_2099e_exec_return(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 

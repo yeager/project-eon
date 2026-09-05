@@ -19,6 +19,7 @@ enum class MillenniumAmigaBootstrapRelocatorState {
     awaiting_second_first_stage_illegal_exception,
     awaiting_first_stage_trace_exception,
     awaiting_first_stage_decrypted_instruction,
+    awaiting_first_stage_decrypted_memory_write,
 };
 
 struct MillenniumAmigaBootstrapRelocatorBoundary {
@@ -158,6 +159,18 @@ struct MillenniumAmigaTraceBranchChainExecution {
     std::array<MillenniumAmigaFirstTraceExecution,10> decryptions{};
     std::uint32_t terminal_trace_program_counter=0;
 };
+struct MillenniumAmigaTraceRegisterPrefixObservation {
+    std::array<MillenniumAmigaFirstTraceObservation,8> exceptions{};
+};
+struct MillenniumAmigaTraceRegisterPrefixExecution {
+    std::array<MillenniumAmigaFirstTraceExecution,8> decryptions{};
+    std::uint32_t resulting_d0=0, resulting_d1=0;
+    std::uint32_t resulting_a0=0, resulting_a1=0, resulting_a2=0;
+    std::uint16_t resulting_status_register=0;
+    std::uint32_t pending_instruction_address=0;
+    std::uint32_t pending_destination_address=0;
+    std::uint8_t pending_value=0;
+};
 
 // Manual recompilation of the exact, direct Defjam bootstrap relocator at
 // $70000..$70041. The original DBRA reads one byte beyond the authenticated
@@ -211,6 +224,10 @@ public:
     execute_trace_branch_chain(const MillenniumAmigaTraceBranchChainObservation&);
     [[nodiscard]] const std::optional<MillenniumAmigaTraceBranchChainExecution>&
     trace_branch_chain_execution() const { return trace_branch_chain_execution_; }
+    [[nodiscard]] MillenniumAmigaTraceRegisterPrefixExecution
+    execute_trace_register_prefix(const MillenniumAmigaTraceRegisterPrefixObservation&);
+    [[nodiscard]] const std::optional<MillenniumAmigaTraceRegisterPrefixExecution>&
+    trace_register_prefix_execution() const { return trace_register_prefix_execution_; }
 
 private:
     MillenniumAmigaBootstrapRelocatorState state_ =
@@ -227,6 +244,7 @@ private:
     std::optional<MillenniumAmigaSecondIllegalExecution> second_illegal_execution_;
     std::optional<MillenniumAmigaFirstTraceExecution> first_trace_execution_;
     std::optional<MillenniumAmigaTraceBranchChainExecution> trace_branch_chain_execution_;
+    std::optional<MillenniumAmigaTraceRegisterPrefixExecution> trace_register_prefix_execution_;
 };
 
 } // namespace eon

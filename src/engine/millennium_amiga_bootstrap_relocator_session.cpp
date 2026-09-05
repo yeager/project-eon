@@ -78,8 +78,53 @@ MillenniumAmigaBootstrapRelocatorSession::boundary() const {
         return {trace_branch_chain_execution_ ? 0x411d8U : 0x41110U, 0x24, 0x411ac};
     case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_decrypted_instruction:
         return {0x41110, 0, 0};
+    case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_decrypted_memory_write:
+        return {0x411ee,0,0xa183ec32};
     }
     throw std::runtime_error("Invalid Millennium Amiga bootstrap relocator state");
+}
+
+MillenniumAmigaTraceRegisterPrefixExecution
+MillenniumAmigaBootstrapRelocatorSession::execute_trace_register_prefix(
+    const MillenniumAmigaTraceRegisterPrefixObservation& observation){
+    constexpr std::array pcs{0x411d8U,0x411dcU,0x411e2U,0x411e6U,
+        0x411e8U,0x411eaU,0x411ecU,0x411eeU};
+    constexpr std::array statuses{0xa700U,0xa700U,0xa700U,0xa700U,
+        0xa700U,0xa704U,0xa700U,0xa700U};
+    constexpr std::array ciphertexts{0xf076fce0U,0x40e60f89U,0xba0d0eaeU,
+        0x81560ca9U,0x0ca9c14eU,0xc14eec3bU,0xec3b0000U,0x00009f32U};
+    constexpr std::array keys{0x03014e73U,0xf076fce0U,0x0f890008U,
+        0xba0d0eaeU,0x0eae8156U,0x81560ca9U,0x0ca9c14eU,0xc14eec3bU};
+    constexpr std::array transformed{0x41fa001eU,0x43f90000U,0x45fafed8U,
+        0x7007495bU,0x7200301fU,0x32189292U,0xd28af356U,0x13c4a183U};
+    if(state_!=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_trace_exception
+        ||!trace_branch_chain_execution_||boundary().instruction_address!=0x411d8)
+        throw std::runtime_error("Detached Millennium Amiga trace register prefix");
+    MillenniumAmigaTraceRegisterPrefixExecution result;
+    std::uint32_t cursor=0x41142,cipher=0x607ed5c0;
+    for(std::size_t i=0;i<pcs.size();++i){const auto&o=observation.exceptions[i];
+        if(o.handler_entry_address!=0x411ac||o.saved_program_counter!=pcs[i]
+            ||o.saved_status_register!=statuses[i]||o.handler_status_register!=0x2700
+            ||(o.exception_frame_address&1U)!=0||o.exception_frame_address<0x12
+            ||o.exception_frame_address>0xfffffa
+            ||(o.exception_frame_address-12<0x65200&&o.exception_frame_address+6>0x41000))
+            throw std::runtime_error("Detached Millennium Amiga trace register observation");
+        auto&e=result.decryptions[i];e.exception_frame_address=o.exception_frame_address;
+        e.resulting_handler_status_register=0x2000;e.saved_status_register=o.saved_status_register;
+        e.saved_program_counter=o.saved_program_counter;e.temporary_stack_address=o.exception_frame_address-12;
+        e.temporary_stack={{first_stage_illegal_execution_->snapshot[0],first_stage_illegal_execution_->resulting_a0,first_stage_entry_execution_->snapshot[9]}};
+        e.restored_address=cursor;e.restored_value=cipher;e.cursor_address=0x410b4;e.cursor_value=pcs[i];
+        e.saved_ciphertext_address=0x410b8;e.saved_ciphertext_value=ciphertexts[i];
+        e.key_source_address=pcs[i]-4;e.key_source_value=keys[i];const auto inv=~keys[i];e.xor_key=(inv<<16U)|(inv>>16U);
+        e.transformed_address=pcs[i];e.transformed_value=transformed[i];e.resulting_stack_pointer=o.exception_frame_address+6;
+        cursor=pcs[i];cipher=ciphertexts[i];}
+    result.resulting_d0=7;result.resulting_d1=0x41656;result.resulting_a0=0x411fa;
+    result.resulting_a1=8;result.resulting_a2=0x410bc;result.resulting_status_register=0xa700;
+    result.pending_instruction_address=0x411ee;result.pending_destination_address=0xa183ec32;
+    result.pending_value=static_cast<std::uint8_t>(first_stage_illegal_execution_->snapshot[4]);
+    trace_register_prefix_execution_=result;
+    state_=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_decrypted_memory_write;
+    return result;
 }
 
 MillenniumAmigaTraceBranchChainExecution

@@ -1,5 +1,6 @@
 #include "engine/millennium_dos_sixth_function_session.hpp"
 
+#include <array>
 #include <stdexcept>
 
 namespace eon {
@@ -70,10 +71,6 @@ MillenniumDosSixthFunctionBoundary MillenniumDosSixthFunctionSession::boundary()
         result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_byte;
         result.instruction_address = 0xcc80;
         result.runtime_address = 0xda05;
-        break;
-    case MillenniumDosSixthFunctionState::caller_helper_external_continuation:
-        result.kind = MillenniumDosSixthFunctionBoundaryKind::external_continuation;
-        result.instruction_address = 0xcc84;
         break;
     case MillenniumDosSixthFunctionState::awaiting_word:
         result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_word;
@@ -187,7 +184,18 @@ void MillenniumDosSixthFunctionSession::observe_runtime_byte(
     }
     if (state_ == MillenniumDosSixthFunctionState::caller_helper_saved_byte) {
         caller_helper_saved_byte_ = value;
-        state_ = MillenniumDosSixthFunctionState::caller_helper_external_continuation;
+        caller_helper_state_clear_effect_ = MillenniumDosSixthFunctionStateClearEffect{
+            0xda02, 0x0145, 0, 0xda05, value};
+        record_effect(0xda05, 1, 0, value);
+        for (const auto address : std::to_array<std::uint16_t>({
+                 0xdb16, 0xda20, 0xda22, 0xda24, 0xda3b, 0xdb10})) {
+            record_effect(address, 2, std::nullopt, 1);
+        }
+        record_effect(0xda26, 1, std::nullopt, 1);
+        record_effect(0xda42, 1, std::nullopt, 0x80);
+        record_effect(0xdb12, 1, std::nullopt, 9);
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_external_continuation,
+            0xccba, 0x942c);
         return;
     }
     if (state_ == MillenniumDosSixthFunctionState::awaiting_first_byte) {

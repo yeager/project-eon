@@ -1786,8 +1786,8 @@ interpretation would overwrite the reader while it was executing.
 
 After a typed successful trackdisk return, the native runtime atomically maps
 the exact `0x24200` source bytes to `$41000..$651ff`. The stage begins
-`BRA.W $410bc`. Its first `0x1d8` bytes hash to
-`0bac96c92bd1639976b8e4f57c60aca022e170490f9ea0703a96bd99cae965bd`
+`BRA.W $410bc`. Its first `0x1f4` bytes hash to
+`644bab0527fe05e91695e2996768a4b6c1203ebd3fafe35dffa9728c93875f84`
 and statically establish the register-save/vector setup through `ILLEGAL` at
 `$410de`, which uses exception vector address `$10`. A typed register/vector
 observation now advances the native session through the exact `BRA.W`, saved
@@ -1829,7 +1829,11 @@ $41152,$41106,$4116a,$41142`. Each handler restores the preceding ciphertext,
 saves and transforms the current long, and exposes one unconditional `BRA.W`.
 The final branch reaches `$411d8`. All ten frames, temporary stacks, cursor,
 ciphertext, and transformed instruction writes form one atomic batch. The
-trace frame at `$411d8` and subsequent unpacker effects remain external.
+The next eight trace frames decrypt and execute three LEAs, two MOVEQs, the
+genuine table word `$059a`, and `ADD.L A2,D1`, leaving D0=`$7`, D1=`$41656`,
+A0=`$411fa`, A1=`$8`, and A2=`$410bc`. The final pass decrypts `$411ee` to
+`MOVE.B D4,$a183ec32`; that external destination is the next stateful boundary
+and is not written by Eon.
 
 The bootstrap relocation itself remains bounded by its final source-byte
 observation at `$70400`; the exact caller then performs `JSR (A3)` at
@@ -3330,7 +3334,14 @@ prefix at ADF offset `0x6194` has SHA-256
 it clears A1, reloads the Exec base from longword `$0004`, and reaches the
 external call at `$2099e`, vector `-$126`, whose return address is `$209a2`.
 Eon exposes that call as a typed boundary and does not infer its return or
-effects. No memory batch is emitted for the register-only prefix. A wrong entry,
+effects. Its exact typed return is now caller-connected to the next 44 bytes
+(SHA-256 `2dd0b05e3fef1b0fdfb3ab2b9b1324e371f1335247b9424e212b8f50e5c2c5e7`).
+Those instructions write longword `$20982` at `$2095e`, bytes `$7f`, `$04`,
+and `$01` at `$2095d`, `$2095c`, and `$20963`, then preserve the observed D0
+verbatim as a longword at `$20964`. The writes commit as one big-endian batch.
+Execution stops at the next external call `$209ca`, vector `-$162`, return
+`$209ce`; its result and effects remain unknown. No memory batch is emitted
+for the register-only entry prefix. A wrong entry,
 missing/replaced resident stage, replay, or revoked owner produces no partial
 write. All observed results and service effects remain deliberately uninterpreted.
 
