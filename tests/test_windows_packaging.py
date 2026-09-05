@@ -49,6 +49,8 @@ class WindowsPackagingTests(unittest.TestCase):
         self.assertIn("Windows package stage contains unexpected file(s)", workflow)
         self.assertIn("$approved", workflow)
         self.assertIn("$relative -notin $approved", workflow)
+        self.assertIn(".Replace('\\', '/')", workflow)
+        self.assertIn("'^(libpng.+|zlib.*)\\.dll$'", workflow)
 
     def test_ci_discovers_cmake_generated_runtime_dlls_before_ctest(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")

@@ -159,6 +159,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedFinalGatePlan> observe_title_post_adjusted_final_gate(const DeuterosAmigaObservedTitlePostAdjustedFinalGate& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_final_gate(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedInputReturnPlan> observe_title_post_adjusted_input_return(const DeuterosAmigaObservedTitlePostAdjustedInputReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_input_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedRepeatedInputReturnPlan> observe_title_post_adjusted_repeated_input_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_repeated_input_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailCopyPlan> observe_title_tail_copy(const DeuterosAmigaObservedTitleTailCopy& o) { return title_stage_session_ ? title_stage_session_->observe_title_tail_copy(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 

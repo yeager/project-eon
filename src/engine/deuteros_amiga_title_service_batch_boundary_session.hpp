@@ -1171,6 +1171,16 @@ struct DeuterosAmigaTitlePostAdjustedRepeatedInputReturnPlan {
     bool command_43=false,repeats=false,completed=false;
     std::uint32_t next_address=0,next_call_address=0,next_call_target=0,next_return_address=0;
 };
+struct DeuterosAmigaObservedTitleTailCopy {
+    std::uint64_t trace_sequence=0;
+    std::array<DeuterosAmigaObservedLocalCallReturn,2> service_returns{};
+    std::uint32_t source_address=0,destination_address=0;
+};
+struct DeuterosAmigaTitleTailCopyPlan {
+    DeuterosAmigaObservedTitleTailCopy observation;
+    std::vector<std::uint8_t> source_bytes;
+    std::uint32_t local_call_address=0,local_call_target=0,local_return_address=0;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -1205,6 +1215,12 @@ public:
             parse_deuteros_amiga_title_post_exec_pointer_route_profile(disk, plan);
         post_command_service_route_ =
             parse_deuteros_amiga_title_post_exec_service_route_profile(disk, plan);
+        const auto first_title_exit =
+            evaluate_deuteros_amiga_first_title_exit_copy(disk, plan);
+        const auto first_title_exit_source = disk.bytes(
+            first_title_exit.source_disk_offset, first_title_exit.byte_count);
+        first_title_exit_source_bytes_.assign(first_title_exit_source.begin(),
+            first_title_exit_source.end());
         if (to_hex(sha256(at(0x403c8, 30)))
                 != "3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f"
             || to_hex(sha256(at(0x20510, 38)))
@@ -3266,6 +3282,26 @@ public:
             command,!command,command,command?0x40574U:0x40656U,
             command?0U:0x40662U,command?0U:0x1f238U,command?0U:0x40668U};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailCopyPlan> observe_title_tail_copy(const DeuterosAmigaObservedTitleTailCopy&o){
+        if(!post_adjusted_final_gate_||title_tail_copy_)return std::nullopt;
+        const bool selected=post_adjusted_final_gate_->gate_current_word==0
+            &&post_adjusted_final_gate_->gate_secondary_word
+            &&static_cast<std::uint8_t>(*post_adjusted_final_gate_->gate_secondary_word)>=0xb4U
+            &&post_adjusted_final_gate_->gate_tertiary_word
+            &&(static_cast<std::uint8_t>(*post_adjusted_final_gate_->gate_tertiary_word)&1U)!=0;
+        if(!selected)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.service_returns[0].trace_sequence<=last_command_sequence_
+            ||o.service_returns[1].trace_sequence<=o.service_returns[0].trace_sequence
+            ||o.trace_sequence<o.service_returns[1].trace_sequence
+            ||o.service_returns[0].call_address!=0x37f56||o.service_returns[0].call_target!=0x3880a||o.service_returns[0].return_address!=0x37f5c
+            ||o.service_returns[1].call_address!=0x37f5c||o.service_returns[1].call_target!=0x204fa||o.service_returns[1].return_address!=0x37f62
+            ||o.source_address!=0x13006||o.destination_address!=0x66000
+            ||first_title_exit_source_bytes_.size()!=0x9392U)
+            throw std::runtime_error("Deuteros selected title-tail copy does not match boundary");
+        title_tail_copy_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitleTailCopyPlan{o,first_title_exit_source_bytes_,
+            0x37f7a,0x37f9a,0x37f7e};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3492,6 +3528,8 @@ private:
     std::optional<DeuterosAmigaObservedTitlePostAdjustedInputReturn> post_adjusted_input_return_;
     std::uint32_t post_adjusted_repeated_input_iteration_=0;
     bool post_adjusted_repeated_input_completed_=false;
+    std::optional<DeuterosAmigaObservedTitleTailCopy> title_tail_copy_;
+    std::vector<std::uint8_t> first_title_exit_source_bytes_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;
     std::array<std::uint32_t,4> adjusted_c0_families_{};

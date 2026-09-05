@@ -50,8 +50,13 @@ MillenniumAmigaBootstrapRelocatorSession::boundary() const {
     case MillenniumAmigaBootstrapRelocatorState::awaiting_overread_byte:
         return {0x70036, 0x70400, 0x66400};
     case MillenniumAmigaBootstrapRelocatorState::awaiting_terminal_jump:
-    case MillenniumAmigaBootstrapRelocatorState::transferred:
         return {0x7003c, 0, 0x6629e};
+    case MillenniumAmigaBootstrapRelocatorState::awaiting_setup_call_return:
+        return {0x662b2, 0, 0x66128};
+    case MillenniumAmigaBootstrapRelocatorState::awaiting_first_read_return:
+        return {0x662cc, 0, 0x661da};
+    case MillenniumAmigaBootstrapRelocatorState::awaiting_opaque_first_stage:
+        return {0x662e4, 0, 0x41000};
     }
     throw std::runtime_error("Invalid Millennium Amiga bootstrap relocator state");
 }
@@ -76,7 +81,25 @@ void MillenniumAmigaBootstrapRelocatorSession::observe_terminal_jump(
         || instruction_address != 0x7003c || target_address != 0x6629e) {
         throw std::runtime_error("Detached Millennium Amiga bootstrap terminal jump");
     }
-    state_ = MillenniumAmigaBootstrapRelocatorState::transferred;
+    state_ = MillenniumAmigaBootstrapRelocatorState::awaiting_setup_call_return;
+}
+
+void MillenniumAmigaBootstrapRelocatorSession::observe_setup_call_return(
+    const std::uint32_t instruction_address, const std::uint32_t target_address) {
+    if (state_ != MillenniumAmigaBootstrapRelocatorState::awaiting_setup_call_return
+        || instruction_address != 0x662b2 || target_address != 0x66128) {
+        throw std::runtime_error("Detached Millennium Amiga setup-call return");
+    }
+    state_ = MillenniumAmigaBootstrapRelocatorState::awaiting_first_read_return;
+}
+
+void MillenniumAmigaBootstrapRelocatorSession::observe_first_read_return(
+    const std::uint32_t instruction_address, const std::uint32_t target_address) {
+    if (state_ != MillenniumAmigaBootstrapRelocatorState::awaiting_first_read_return
+        || instruction_address != 0x662cc || target_address != 0x661da) {
+        throw std::runtime_error("Detached Millennium Amiga first-read return");
+    }
+    state_ = MillenniumAmigaBootstrapRelocatorState::awaiting_opaque_first_stage;
 }
 
 } // namespace eon

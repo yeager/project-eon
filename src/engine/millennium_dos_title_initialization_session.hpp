@@ -1,11 +1,15 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
 #include <span>
+#include <string>
 #include <string_view>
 #include <vector>
 
 namespace eon {
+
+class NativeRuntimeMemory;
 
 enum class MillenniumDosTitleInitializationState {
     awaiting_entry,
@@ -273,6 +277,18 @@ struct MillenniumDosTitleFarByteObservation {
     std::uint8_t byte=0;
 };
 
+struct MillenniumDosTitleModeTwoDriveRequest {
+    std::uint64_t first_sequence = 0;
+    std::size_t maximum_observations = 0;
+};
+
+struct MillenniumDosTitleModeTwoDriveResult {
+    bool accepted = false;
+    bool returned = false;
+    std::size_t observation_count = 0;
+    std::string error;
+};
+
 struct MillenniumDosTitleDosBoundary {
     std::uint16_t interrupt_address = 0;
     std::uint16_t return_address = 0;
@@ -409,6 +425,8 @@ public:
     void observe_far_words(const MillenniumDosTitleFarWordsObservation&);
     void observe_far_word(const MillenniumDosTitleFarWordObservation&);
     void observe_far_byte(const MillenniumDosTitleFarByteObservation&);
+    [[nodiscard]] MillenniumDosTitleModeTwoDriveResult drive_mode_two_from_owned_memory(
+        NativeRuntimeMemory&, MillenniumDosTitleModeTwoDriveRequest);
     void execute_video_hook_setup(std::uint64_t sequence,
         std::uint16_t call_address, std::uint16_t call_target);
     void execute_post_video_mode_call(std::uint64_t sequence,

@@ -3452,7 +3452,15 @@ int main() {
         == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x7003c,0,0x6629e}));
     defjam_relocator.observe_terminal_jump(0x7003c,0x6629e);
     assert(defjam_relocator.state()
-        == eon::MillenniumAmigaBootstrapRelocatorState::transferred);
+        == eon::MillenniumAmigaBootstrapRelocatorState::awaiting_setup_call_return);
+    assert((defjam_relocator.boundary()
+        == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x662b2,0,0x66128}));
+    defjam_relocator.observe_setup_call_return(0x662b2,0x66128);
+    assert((defjam_relocator.boundary()
+        == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x662cc,0,0x661da}));
+    defjam_relocator.observe_first_read_return(0x662cc,0x661da);
+    assert((defjam_relocator.boundary()
+        == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x662e4,0,0x41000}));
     {
         bool rejected = false;
         try {
@@ -5018,7 +5026,17 @@ int main() {
                 assert(!all_release_runtime.observe_millennium_amiga_bootstrap_relocator_terminal_jump({1,0x7003c,0x6629e,0}).accepted);
                 assert(all_release_runtime.observe_millennium_amiga_bootstrap_relocator_terminal_jump({2,0x7003c,0x6629e,0}).accepted);
                 const auto transferred=all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
-                assert(transferred&&transferred->state==eon::MillenniumAmigaBootstrapRelocatorState::transferred&&transferred->admitted_copy_effect_count==975&&transferred->final_a3==0x66401&&transferred->final_a5==0x70401&&transferred->final_d1==0xffff);
+                assert(transferred&&transferred->state==eon::MillenniumAmigaBootstrapRelocatorState::awaiting_setup_call_return&&transferred->boundary.instruction_address==0x662b2&&transferred->boundary.target_address==0x66128&&transferred->admitted_copy_effect_count==975&&transferred->final_a3==0x66401&&transferred->final_a5==0x70401&&transferred->final_d1==0xffff);
+                assert(!all_release_runtime.observe_millennium_amiga_bootstrap_setup_call_return({2,0x662b2,0x66128,0}).accepted);
+                assert(!all_release_runtime.observe_millennium_amiga_bootstrap_setup_call_return({3,0x662b2,0x66129,0}).accepted);
+                assert(all_release_runtime.observe_millennium_amiga_bootstrap_setup_call_return({3,0x662b2,0x66128,0}).accepted);
+                const auto first_read=all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
+                assert(first_read&&first_read->state==eon::MillenniumAmigaBootstrapRelocatorState::awaiting_first_read_return&&first_read->boundary.instruction_address==0x662cc&&first_read->boundary.target_address==0x661da);
+                assert(!all_release_runtime.observe_millennium_amiga_bootstrap_first_read_return({3,0x662cc,0x661da,0}).accepted);
+                assert(!all_release_runtime.observe_millennium_amiga_bootstrap_first_read_return({4,0x662ce,0x661da,0}).accepted);
+                assert(all_release_runtime.observe_millennium_amiga_bootstrap_first_read_return({4,0x662cc,0x661da,0}).accepted);
+                const auto opaque=all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
+                assert(opaque&&opaque->state==eon::MillenniumAmigaBootstrapRelocatorState::awaiting_opaque_first_stage&&opaque->boundary.instruction_address==0x662e4&&opaque->boundary.target_address==0x41000);
             }else{
                 assert(!all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint());
                 assert(all_release_runtime.native_runtime_memory_diagnostics()->initialized_byte_count==0);
@@ -6125,26 +6143,51 @@ int main() {
                   {runtime_copy_sequence+77,0x405fc,0x1fe6c,0x40602,0,0},
                   {runtime_copy_sequence+78,0x40608,0x1fe7a,0x4060e,0,0}}},
                 {0x1ffc8,0x1ffce,0x22d34},{1,2,3},0x1ffc8,0,
-                0x1ffce,0x00b4,0x1ffd4,0};
+                0x1ffce,0x00b4,0x1ffd4,1};
             auto bad_final_gate=final_gate;bad_final_gate.service_returns[1].call_target+=2;
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_final_gate(bad_final_gate).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_final_gate(final_gate).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_final_gate(final_gate).accepted);
-            eon::DeuterosAmigaObservedTitlePostAdjustedInputReturn input_return{
-                {runtime_copy_sequence+80,0x40638,0x1f238,0x4063e,0x43,0x2000},
-                0x1bf36,0x0101};
-            auto bad_input_return=input_return;bad_input_return.toggle_source_address=0x1bf38;
-            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_input_return(bad_input_return).accepted);
-            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_input_return(input_return).accepted);
-            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_input_return(input_return).accepted);
-            eon::DeuterosAmigaObservedLocalCallReturn repeated_input{
-                runtime_copy_sequence+81,0x40662,0x1f238,0x40668,0x42,0x2000};
-            auto bad_repeated_input=repeated_input;bad_repeated_input.call_address+=2;
-            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_repeated_input_return(bad_repeated_input).accepted);
-            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_repeated_input_return(repeated_input).accepted);
-            repeated_input.trace_sequence=runtime_copy_sequence+82;repeated_input.result_d0=0x43;
-            assert(opening_controller.observe_deuteros_amiga_title_post_adjusted_repeated_input_return(repeated_input).accepted);
-            assert(!opening_controller.observe_deuteros_amiga_title_post_adjusted_repeated_input_return(repeated_input).accepted);
+            // The selected arm must source its complete DBF transfer from the
+            // hash-admitted resident title stage. The observation supplies
+            // only the two opaque helper returns, never replacement bytes.
+            const auto before_title_tail =
+                opening_controller.native_runtime_memory_checkpoint();
+            assert(before_title_tail);
+            eon::DeuterosAmigaObservedTitleTailCopy title_tail{
+                runtime_copy_sequence+82,
+                {{{runtime_copy_sequence+80,0x37f56,0x3880a,0x37f5c,0,0},
+                  {runtime_copy_sequence+81,0x37f5c,0x204fa,0x37f62,0,0}}},
+                0x13006,0x66000};
+            auto bad_title_tail=title_tail;
+            bad_title_tail.service_returns[1].call_target+=2;
+            assert(!opening_controller.observe_deuteros_amiga_title_tail_copy(
+                bad_title_tail).accepted);
+            const auto accepted_title_tail=
+                opening_controller.observe_deuteros_amiga_title_tail_copy(title_tail);
+            assert(accepted_title_tail.accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_tail_copy(
+                title_tail).accepted);
+            const auto after_title_tail =
+                opening_controller.native_runtime_memory_checkpoint();
+            assert(after_title_tail
+                && after_title_tail->applied_batch_count
+                    == before_title_tail->applied_batch_count+1);
+            const auto runtime_byte=[](const eon::NativeRuntimeMemoryCheckpoint& memory,
+                const std::uint64_t address)->std::optional<std::uint8_t>{
+                const auto found=std::find_if(memory.initialized_bytes.begin(),
+                    memory.initialized_bytes.end(),[address](const auto& cell){
+                        return cell.location.address_space
+                                ==eon::NativeRuntimeAddressSpace::linear
+                            && !cell.location.segment
+                            && cell.location.offset==address;
+                    });
+                return found==memory.initialized_bytes.end()
+                    ?std::nullopt:std::optional<std::uint8_t>{found->value};
+            };
+            for(const auto offset:std::array<std::uint32_t,3>{{0,0x4931,0x9391}}){
+                assert(runtime_byte(*after_title_tail,0x66000U+offset));
+            }
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory
@@ -6367,10 +6410,15 @@ int main() {
             {1,0x1458,0x5050,0x0022,0x0010}).accepted);
         assert(!revocation_host.observe_millennium_dos_title_far_byte(
             {2,0x1428,0x5050,0x0023,0xd7}).accepted);
+        assert(!revocation_host.drive_millennium_dos_title_mode_two({3,4}).accepted);
         assert(!revocation_host.observe_millennium_amiga_bootstrap_relocator_overread(
             {1,0x70036,0x70400,0}).accepted);
         assert(!revocation_host.observe_millennium_amiga_bootstrap_relocator_terminal_jump(
             {2,0x7003c,0x6629e,0}).accepted);
+        assert(!revocation_host.observe_millennium_amiga_bootstrap_setup_call_return(
+            {3,0x662b2,0x66128,0}).accepted);
+        assert(!revocation_host.observe_millennium_amiga_bootstrap_first_read_return(
+            {4,0x662cc,0x661da,0}).accepted);
         assert(!revocation_host.observe_deuteros_amiga_title_exec_return(
             {1,4,0x4045a,-0x96,0x4045e,0,0}).accepted);
         assert(!revocation_host.advance_deuteros_amiga_title_local_prefix().accepted);
