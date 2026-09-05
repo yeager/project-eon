@@ -11,6 +11,7 @@ namespace eon {
 
 enum class MillenniumDosOwnedFunctionBoundaryKind {
     runtime_word, runtime_byte, call_return, register_value, local_return,
+    external_continuation,
 };
 
 struct MillenniumDosOwnedFunctionBoundaryDiagnostic {

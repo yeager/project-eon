@@ -23,6 +23,13 @@ enum class MillenniumDosSixthFunctionState {
     returned_by_guard,
     returned,
     restoration_caller_call_return,
+    caller_helper_first_call_return,
+    caller_helper_second_call_return,
+    caller_helper_third_call_return,
+    caller_helper_fourth_call_return,
+    caller_helper_far_offset,
+    caller_helper_far_segment,
+    caller_helper_external_continuation,
     restoration_first_call_return,
     restoration_second_call_return,
     restoration_third_call_return,
@@ -45,6 +52,7 @@ enum class MillenniumDosSixthFunctionBoundaryKind {
     call_return,
     register_bl,
     local_return,
+    external_continuation,
 };
 
 struct MillenniumDosSixthFunctionBoundary {
@@ -80,6 +88,12 @@ public:
     [[nodiscard]] const std::vector<std::uint8_t>& shifted_bl_values() const {
         return shifted_bl_values_;
     }
+    [[nodiscard]] std::optional<std::uint16_t> caller_helper_far_offset() const {
+        return caller_helper_far_offset_;
+    }
+    [[nodiscard]] std::optional<std::uint16_t> caller_helper_far_segment() const {
+        return caller_helper_far_segment_;
+    }
 
     void observe_runtime_word(std::uint16_t instruction_address,
         std::uint16_t runtime_address, std::uint16_t value);
@@ -89,6 +103,7 @@ public:
         std::uint16_t return_address);
     void observe_bl(std::uint16_t shift_address, std::uint8_t value);
     void begin_restoration();
+    void begin_restoration_caller_helper_prefix();
 
 private:
     void enter_call(MillenniumDosSixthFunctionState state,
@@ -108,6 +123,8 @@ private:
     std::size_t wait_iteration_ = 0;
     std::vector<MillenniumDosSixthFunctionEffect> effects_;
     std::vector<std::uint8_t> shifted_bl_values_;
+    std::optional<std::uint16_t> caller_helper_far_offset_;
+    std::optional<std::uint16_t> caller_helper_far_segment_;
 };
 
 } // namespace eon

@@ -56,6 +56,20 @@ MillenniumDosSixthFunctionBoundary MillenniumDosSixthFunctionSession::boundary()
         result.instruction_address = 0x7483;
         result.runtime_address = 0x613a;
         break;
+    case MillenniumDosSixthFunctionState::caller_helper_far_offset:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_word;
+        result.instruction_address = 0xcc73;
+        result.runtime_address = 0x0112;
+        break;
+    case MillenniumDosSixthFunctionState::caller_helper_far_segment:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_word;
+        result.instruction_address = 0xcc73;
+        result.runtime_address = 0x0114;
+        break;
+    case MillenniumDosSixthFunctionState::caller_helper_external_continuation:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::external_continuation;
+        result.instruction_address = 0xcc77;
+        break;
     case MillenniumDosSixthFunctionState::awaiting_word:
         result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_word;
         result.instruction_address = 0x7437;
@@ -117,6 +131,19 @@ void MillenniumDosSixthFunctionSession::observe_runtime_word(
         if (value != 0) state_ = MillenniumDosSixthFunctionState::returned_by_guard;
         else enter_call(MillenniumDosSixthFunctionState::awaiting_display_call_return,
             0x741f, trace_.display_selector_call_address, 0);
+        return;
+    }
+    if (state_ == MillenniumDosSixthFunctionState::caller_helper_far_offset) {
+        caller_helper_far_offset_ = value;
+        state_ = MillenniumDosSixthFunctionState::caller_helper_far_segment;
+        return;
+    }
+    if (state_ == MillenniumDosSixthFunctionState::caller_helper_far_segment) {
+        if (!caller_helper_far_offset_) {
+            throw std::runtime_error("Millennium DOS F6 helper far pointer is detached");
+        }
+        caller_helper_far_segment_ = value;
+        state_ = MillenniumDosSixthFunctionState::caller_helper_external_continuation;
         return;
     }
     if (state_ == MillenniumDosSixthFunctionState::awaiting_word) {
@@ -206,6 +233,23 @@ void MillenniumDosSixthFunctionSession::observe_call_return(
             0x7467, trace_.restoration_first_call_address);
         return;
     }
+    case MillenniumDosSixthFunctionState::caller_helper_first_call_return:
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_second_call_return,
+            0xcc58, 0x4d36, 0x0028);
+        return;
+    case MillenniumDosSixthFunctionState::caller_helper_second_call_return:
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_third_call_return,
+            0xcc5e, 0x0666, 0x00c1);
+        return;
+    case MillenniumDosSixthFunctionState::caller_helper_third_call_return:
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_fourth_call_return,
+            0xcc64, 0x05f1);
+        return;
+    case MillenniumDosSixthFunctionState::caller_helper_fourth_call_return:
+        record_effect(0xcbbe, 2, std::nullopt, 0x080f);
+        record_effect(0xcbe1, 2, std::nullopt, 0x0000);
+        state_ = MillenniumDosSixthFunctionState::caller_helper_far_offset;
+        return;
     case MillenniumDosSixthFunctionState::restoration_first_call_return:
         enter_call(MillenniumDosSixthFunctionState::restoration_second_call_return,
             0x746e, 0x7b47);
@@ -267,6 +311,14 @@ void MillenniumDosSixthFunctionSession::begin_restoration() {
     enter_call(MillenniumDosSixthFunctionState::restoration_caller_call_return,
         trace_.restoration_caller_call_address,
         trace_.restoration_caller_target_address);
+}
+
+void MillenniumDosSixthFunctionSession::begin_restoration_caller_helper_prefix() {
+    if (state_ != MillenniumDosSixthFunctionState::returned) {
+        throw std::runtime_error("Millennium DOS F6 caller-helper prefix is detached");
+    }
+    enter_call(MillenniumDosSixthFunctionState::caller_helper_first_call_return,
+        0xcc4e, 0x408a);
 }
 
 void MillenniumDosSixthFunctionSession::observe_bl(

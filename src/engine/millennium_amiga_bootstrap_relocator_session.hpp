@@ -17,6 +17,7 @@ enum class MillenniumAmigaBootstrapRelocatorState {
     awaiting_opaque_first_stage,
     awaiting_first_stage_illegal_exception,
     awaiting_second_first_stage_illegal_exception,
+    awaiting_first_stage_fline_exception,
 };
 
 struct MillenniumAmigaBootstrapRelocatorBoundary {
@@ -88,6 +89,32 @@ struct MillenniumAmigaFirstStageIllegalExecution {
     std::uint32_t illegal_instruction_address = 0;
 };
 
+struct MillenniumAmigaSecondIllegalObservation {
+    std::uint32_t handler_entry_address = 0;
+    std::uint32_t exception_frame_address = 0;
+    std::uint16_t saved_status_register = 0;
+    std::uint32_t saved_program_counter = 0;
+};
+
+struct MillenniumAmigaSecondIllegalExecution {
+    std::uint32_t exception_frame_address = 0;
+    std::uint16_t resulting_saved_status_register = 0;
+    std::uint32_t resulting_saved_program_counter = 0;
+    std::uint32_t temporary_stack_address = 0;
+    std::array<std::uint32_t, 3> temporary_stack{};
+    std::uint32_t vector_8_value = 0;
+    std::uint32_t vector_9_value = 0;
+    std::uint32_t cursor_address = 0;
+    std::uint32_t cursor_value = 0;
+    std::uint32_t saved_ciphertext_address = 0;
+    std::uint32_t saved_ciphertext_value = 0;
+    std::uint32_t transformed_address = 0;
+    std::uint32_t transformed_value = 0;
+    std::uint32_t resulting_stack_pointer = 0;
+    std::uint32_t branch_target = 0;
+    std::uint32_t fline_instruction_address = 0;
+};
+
 // Manual recompilation of the exact, direct Defjam bootstrap relocator at
 // $70000..$70041. The original DBRA reads one byte beyond the authenticated
 // $400-byte load. That byte remains an explicit observation boundary.
@@ -128,6 +155,10 @@ public:
     execute_first_stage_illegal_handler(const MillenniumAmigaFirstStageIllegalObservation&);
     [[nodiscard]] const std::optional<MillenniumAmigaFirstStageIllegalExecution>&
     first_stage_illegal_execution() const { return first_stage_illegal_execution_; }
+    [[nodiscard]] MillenniumAmigaSecondIllegalExecution
+    execute_second_illegal_handler(const MillenniumAmigaSecondIllegalObservation&);
+    [[nodiscard]] const std::optional<MillenniumAmigaSecondIllegalExecution>&
+    second_illegal_execution() const { return second_illegal_execution_; }
 
 private:
     MillenniumAmigaBootstrapRelocatorState state_ =
@@ -141,6 +172,7 @@ private:
     std::string first_stage_sha256_;
     std::optional<MillenniumAmigaFirstStageEntryExecution> first_stage_entry_execution_;
     std::optional<MillenniumAmigaFirstStageIllegalExecution> first_stage_illegal_execution_;
+    std::optional<MillenniumAmigaSecondIllegalExecution> second_illegal_execution_;
 };
 
 } // namespace eon

@@ -1250,6 +1250,18 @@ struct DeuterosAmigaMainStageReentryPrefixPlan {
     std::uint32_t stack_pointer=0,exec_base_source=0,exec_call_address=0,exec_return_address=0;
     std::int16_t exec_vector=0;
 };
+struct DeuterosAmigaObservedMainStageExecReturn {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t call_address=0;
+    std::int16_t vector=0;
+    std::uint32_t return_address=0,result_d0=0;
+};
+struct DeuterosAmigaMainStageFirstExecReturnPlan {
+    DeuterosAmigaObservedMainStageExecReturn observation;
+    std::uint32_t requested_d0=0,exec_base_source=0;
+    std::uint32_t next_call_address=0,next_return_address=0;
+    std::int16_t next_vector=0;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -3469,6 +3481,15 @@ public:
         return DeuterosAmigaMainStageReentryPrefixPlan{o,0x20976,title_tail_bootstrap_->value,
             0x21704,static_cast<std::uint16_t>(o.result_d0),0x22296,4,0x2174a,0x2174e,-0x96};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageFirstExecReturnPlan>
+    observe_main_stage_first_exec_return(const DeuterosAmigaObservedMainStageExecReturn&o){
+        if(!main_stage_reentry_d0_||main_stage_first_exec_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x2174a
+            ||o.vector!=-0x96||o.return_address!=0x2174e)
+            throw std::runtime_error("Deuteros main-stage first Exec return does not match boundary");
+        main_stage_first_exec_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaMainStageFirstExecReturnPlan{o,0x7fff0,4,0x21758,0x2175c,-0x9c};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3705,6 +3726,7 @@ private:
     bool title_profile_two_bootstrap_advanced_=false;
     std::vector<std::uint8_t> main_stage_source_bytes_;
     std::optional<DeuterosAmigaObservedMainStageReentryD0> main_stage_reentry_d0_;
+    std::optional<DeuterosAmigaObservedMainStageExecReturn> main_stage_first_exec_return_;
     std::vector<std::uint8_t> first_title_exit_source_bytes_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;
