@@ -289,6 +289,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_amiga_relocator_terminal_sequence_.reset();
     millennium_amiga_setup_return_sequence_.reset();
     millennium_amiga_first_read_return_sequence_.reset();
+    millennium_amiga_first_stage_entry_sequence_.reset();
     deuteros_amiga_title_load_copy_.reset();
     deuteros_amiga_title_load_copy_generation_ = 0;
     deuteros_amiga_title_command_generation_ = 0;
@@ -355,6 +356,59 @@ void ReleaseRuntimeCoordinator::reset() {
     admission_ = ReleaseRuntimeAdmission::unselected;
     rejection_ = ReleaseRuntimeRejection::none;
     rejection_detail_.clear();
+}
+
+MillenniumAmigaBootstrapRelocatorObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_amiga_first_stage_entry(
+    const MillenniumAmigaFirstStageEntryObservation observation) {
+    MillenniumAmigaBootstrapRelocatorObservationResult result;
+    if (!millennium_amiga_relocator_ || !native_runtime_memory_
+        || !millennium_amiga_first_read_return_sequence_
+        || millennium_amiga_first_stage_entry_sequence_
+        || observation.sequence <= *millennium_amiga_first_read_return_sequence_) {
+        result.error = "First-stage entry requires the later materialized Defjam stage";
+        return result;
+    }
+    try {
+        const auto opcode = native_runtime_memory_->read_byte(
+            {NativeRuntimeAddressSpace::linear,std::nullopt,0x41000});
+        if (!opcode || *opcode != 0x60) {
+            result.error = "First-stage entry is detached from owned native memory";
+            return result;
+        }
+        auto next = *millennium_amiga_relocator_;
+        const auto execution = next.execute_first_stage_entry(observation.registers);
+        NativeRuntimeEffectBatch batch{"millennium-amiga-first-stage-entry-"+
+            std::to_string(millennium_amiga_relocator_generation_),true,{}};
+        batch.effects.reserve(18);
+        for (std::size_t i=0;i<execution.snapshot.size();++i) {
+            batch.effects.push_back({batch.effects.size()+1,
+                {NativeRuntimeAddressSpace::linear,std::nullopt,
+                    execution.snapshot_address+i*4},
+                MemoryTransferElementWidth::longword,
+                NativeRuntimeByteOrder::big_endian,execution.snapshot[i]});
+        }
+        batch.effects.push_back({batch.effects.size()+1,
+            {NativeRuntimeAddressSpace::linear,std::nullopt,
+                execution.transient_stack_address},
+            MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,
+            execution.installed_vector_value});
+        batch.effects.push_back({batch.effects.size()+1,
+            {NativeRuntimeAddressSpace::linear,std::nullopt,
+                execution.installed_vector_address},
+            MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,
+            execution.installed_vector_value});
+        auto memory = *native_runtime_memory_;
+        const auto applied = memory.apply(batch);
+        if (!applied.accepted) { result.error=applied.error; return result; }
+        *millennium_amiga_relocator_=std::move(next);
+        *native_runtime_memory_=std::move(memory);
+        millennium_amiga_first_stage_entry_sequence_=observation.sequence;
+        result.accepted=true;
+    } catch (const std::exception& error) {
+        result.error=std::string("First-stage entry rejected: ")+error.what();
+    }
+    return result;
 }
 
 MillenniumDosPostOverlayObservationResult ReleaseRuntimeCoordinator::complete_millennium_dos_handler(
@@ -1674,6 +1728,16 @@ EON_SIXTH_FORWARD(observe_millennium_dos_sixth_function_bl,
     observe_bl(observation.shift_address, observation.value),
     "Sixth-function BL observation")
 #undef EON_SIXTH_FORWARD
+
+MillenniumDosSixthFunctionObservationResult
+ReleaseRuntimeCoordinator::begin_millennium_dos_sixth_function_restoration() {
+    MillenniumDosSixthFunctionObservationResult result;
+    if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_sixth_function
+        ||!millennium_dos_sixth_function_){result.error="Sixth-function restoration requires the active session";return result;}
+    try{millennium_dos_sixth_function_->begin_restoration();result.accepted=true;}
+    catch(const std::exception& exception){result.error=std::string("Sixth-function restoration rejected: ")+exception.what();}
+    return result;
+}
 
 std::optional<MillenniumDosSixthFunctionCheckpoint>
 ReleaseRuntimeCoordinator::millennium_dos_sixth_function_checkpoint() const {
@@ -3341,6 +3405,45 @@ DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::observe
 DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_tail_exec_return(const DeuterosAmigaObservedTitleTailExecReturn o){DeuterosAmigaTitleDependencyObservationResult r;if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()){r.error="Deuteros title-tail Exec return requires active title session";return r;}try{auto p=*deuteros_amiga_->title_stage_session();if(!p.observe_title_tail_exec_return(o)){r.error="Deuteros title-tail Exec return did not match boundary";return r;}if(!deuteros_amiga_->observe_title_tail_exec_return(o)){r.error="Deuteros title-tail Exec return disappeared before commit";return r;}r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
 DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_tail_compare_longs(const DeuterosAmigaObservedTitleTailCompareLongs o){DeuterosAmigaTitleDependencyObservationResult r;if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()){r.error="Deuteros title-tail comparison requires active title session";return r;}try{auto p=*deuteros_amiga_->title_stage_session();if(!p.observe_title_tail_compare_longs(o)){r.error="Deuteros title-tail comparison did not match boundary";return r;}if(!deuteros_amiga_->observe_title_tail_compare_longs(o)){r.error="Deuteros title-tail comparison disappeared before commit";return r;}r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
 DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_tail_controller_long(const DeuterosAmigaObservedTitleTailControllerLong o){DeuterosAmigaTitleDependencyObservationResult r;if(!active_||!deuteros_amiga_||!native_runtime_memory_||!deuteros_amiga_->title_stage_session()){r.error="Deuteros title-tail controller read requires active title session";return r;}try{auto p=*deuteros_amiga_->title_stage_session();const auto plan=p.observe_title_tail_controller_long(o);if(!plan){r.error="Deuteros title-tail controller read did not match boundary";return r;}auto m=*native_runtime_memory_;std::uint32_t resident_value=0;bool resident_complete=true;for(std::uint32_t i=0;i<4;++i){const auto byte=m.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,static_cast<std::uint64_t>(o.source_address+i)});if(!byte){resident_complete=false;break;}resident_value=(resident_value<<8U)|*byte;}if(resident_complete&&resident_value!=o.value){r.error="Deuteros title-tail controller observation disagrees with owned memory";return r;}NativeRuntimeEffectBatch b{"deuteros-amiga-title-tail-bootstrap",true,{{1,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->controller_destination},MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,plan->controller_value},{2,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->profile_destination},MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,plan->profile_value}}};const auto a=m.apply(b);if(!a.accepted){r.error=a.error;return r;}if(!deuteros_amiga_->observe_title_tail_controller_long(o)){r.error="Deuteros title-tail controller read disappeared before commit";return r;}*native_runtime_memory_=std::move(m);r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
+DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::advance_deuteros_amiga_title_profile_two_bootstrap(){
+    DeuterosAmigaTitleDependencyObservationResult r;
+    if(!active_||!deuteros_amiga_||!native_runtime_memory_||!deuteros_amiga_->title_stage_session()){
+        r.error="Deuteros profile-two bootstrap requires active title session";return r;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto plan=pending.advance_title_profile_two_bootstrap();
+        if(!plan){r.error="Deuteros profile-two bootstrap did not match boundary";return r;}
+        auto memory=*native_runtime_memory_;
+        const auto read_big32=[&](const std::uint32_t address)->std::optional<std::uint32_t>{
+            std::uint32_t value=0;
+            for(std::uint32_t i=0;i<4;++i){
+                const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,
+                    static_cast<std::uint64_t>(address+i)});
+                if(!byte)return std::nullopt;
+                value=(value<<8U)|*byte;
+            }
+            return value;
+        };
+        if(read_big32(plan->controller_cell)!=plan->controller_value
+            ||read_big32(plan->profile_cell)!=plan->profile_value){
+            r.error="Deuteros profile-two bootstrap cells disagree with owned memory";return r;
+        }
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-profile-two-main-stage-load",true,{}};
+        batch.effects.reserve(plan->source_bytes.size());
+        for(std::size_t i=0;i<plan->source_bytes.size();++i)
+            batch.effects.push_back({i+1,{NativeRuntimeAddressSpace::linear,std::nullopt,
+                static_cast<std::uint64_t>(plan->destination_address)+i},MemoryTransferElementWidth::byte,
+                NativeRuntimeByteOrder::big_endian,plan->source_bytes[i]});
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted){r.error=applied.error;return r;}
+        if(!deuteros_amiga_->advance_title_profile_two_bootstrap()){
+            r.error="Deuteros profile-two bootstrap disappeared before commit";return r;
+        }
+        *native_runtime_memory_=std::move(memory);r.accepted=true;
+    }catch(const std::exception&e){r.error=e.what();}
+    return r;
+}
 DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_custom_chip_write(
     const DeuterosAmigaObservedCustomChipWrite observation) {
@@ -3534,9 +3637,10 @@ ReleaseRuntimeCoordinator::millennium_amiga_bootstrap_relocator_checkpoint()cons
         millennium_amiga_relocator_generation_,session.state(),session.boundary(),
         session.copy_effects().size(),session.custom_chip_effect(),session.final_a3(),
         session.final_a5(),session.final_d1(),
-        session.state()==MillenniumAmigaBootstrapRelocatorState::awaiting_opaque_first_stage
+        (session.state()==MillenniumAmigaBootstrapRelocatorState::awaiting_opaque_first_stage
+            || session.state()==MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_illegal_exception)
             ? session.first_stage_bytes().size():0,
-        session.first_stage_sha256()};
+        session.first_stage_sha256(),session.first_stage_entry_execution()};
 }
 
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>

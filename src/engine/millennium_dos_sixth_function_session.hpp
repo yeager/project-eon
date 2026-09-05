@@ -22,6 +22,20 @@ enum class MillenniumDosSixthFunctionState {
     awaiting_wait_bl,
     returned_by_guard,
     returned,
+    restoration_first_call_return,
+    restoration_second_call_return,
+    restoration_third_call_return,
+    restoration_fourth_call_return,
+    restoration_runtime_byte,
+    restoration_fifth_call_return,
+    restoration_sixth_call_return,
+    restoration_seventh_call_return,
+    restoration_eighth_call_return,
+    restoration_ninth_call_return,
+    restoration_tenth_call_return,
+    restoration_eleventh_call_return,
+    restoration_twelfth_call_return,
+    restoration_returned,
 };
 
 enum class MillenniumDosSixthFunctionBoundaryKind {
@@ -51,8 +65,8 @@ struct MillenniumDosSixthFunctionEffect {
     constexpr bool operator==(const MillenniumDosSixthFunctionEffect&) const = default;
 };
 
-// Typed manual recompilation of the exact English $7415..$7454 handler.
-// It does not include the separately entered $7455 restoration routine.
+// Typed manual recompilation of the exact English $7415..$7454 handler and
+// its separately entered complete $7455..$74aa restoration routine.
 class MillenniumDosSixthFunctionSession {
 public:
     explicit MillenniumDosSixthFunctionSession(
@@ -73,6 +87,7 @@ public:
     void observe_call_return(std::uint16_t call_address,
         std::uint16_t return_address);
     void observe_bl(std::uint16_t shift_address, std::uint8_t value);
+    void begin_restoration();
 
 private:
     void enter_call(MillenniumDosSixthFunctionState state,

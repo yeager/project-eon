@@ -13,8 +13,9 @@ constexpr std::array<std::uint8_t, 20> signature{{
 
 std::uint16_t le16(std::span<const std::uint8_t> bytes, std::size_t offset) {
     if (offset + 2 > bytes.size()) throw std::runtime_error("Truncated VOC 16-bit field");
-    return static_cast<std::uint16_t>(bytes[offset])
-        | (static_cast<std::uint16_t>(bytes[offset + 1]) << 8U);
+    return static_cast<std::uint16_t>(
+        static_cast<std::uint16_t>(bytes[offset])
+        | (static_cast<std::uint32_t>(bytes[offset + 1]) << 8U));
 }
 
 std::uint32_t le24(std::span<const std::uint8_t> bytes, std::size_t offset) {

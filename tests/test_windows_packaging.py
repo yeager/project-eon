@@ -36,7 +36,12 @@ class WindowsPackagingTests(unittest.TestCase):
     def test_ci_installs_the_final_artifact_and_smoke_tests_the_loader(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
         self.assertIn("Verify installed Inno Setup package and runtime closure", workflow)
-        self.assertIn("/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-", workflow)
+        for switch in ("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-"):
+            self.assertIn(f'"{switch}"', workflow)
+        self.assertIn("Start-Process -FilePath $installers[0].FullName", workflow)
+        self.assertIn("-ArgumentList $installerArguments -Wait -PassThru", workflow)
+        self.assertIn("$installerProcess.ExitCode", workflow)
+        self.assertNotIn("& $installers[0].FullName /VERYSILENT", workflow)
         self.assertIn("installed package lacks staged file", workflow)
         self.assertIn("Get-FileHash -Algorithm SHA256", workflow)
         self.assertIn("installed package must not create a game-data directory", workflow)

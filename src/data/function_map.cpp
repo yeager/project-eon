@@ -15,7 +15,7 @@ namespace {
 // Keep this table in exact source order with docs/function-map.json.  Every
 // source hash names an existing, separately hash-checked original leaf or
 // stage.  The descriptions deliberately retain unknown ABI/state boundaries.
-constexpr std::array<FunctionMapEntry, 101> entries{{
+constexpr std::array<FunctionMapEntry, 102> entries{{
     {"millennium-atari-en-prg-entry", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
      "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
      "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686",
@@ -133,8 +133,8 @@ constexpr std::array<FunctionMapEntry, 101> entries{{
      "millennium-amiga-defjam-direct-first-stage-entry", Game::millennium, Platform::amiga, "en", "m68000",
      "df97c7f6cd622b16b9ffb57bc562906e349c18c56ed8abeb564c6f411e64891c",
      "ADF+0x6e000", "$41000", "verified-static",
-     "register-save execution, the ILLEGAL exception at $410de, vector-$10 handler effects, and transformed continuation remain unproven",
-     "native exact materialization at first-stage entry", "PRESERVATION.md#millennium-amiga-raw-loader-evidence",
+     "the ILLEGAL exception frame/result and transformed continuation remain unproven",
+     "native register/vector setup through first exception boundary", "PRESERVATION.md#millennium-amiga-raw-loader-evidence",
      "943b1fd0b5f3aa7734aae09e64d139348f9876615ef4df94fb22f9e05851fd77"},
     {"millennium-dos-en-launcher-driver-request", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
      "millennium-dos-launcher", Game::millennium, Platform::dos, "en", "i8086",
@@ -270,8 +270,8 @@ constexpr std::array<FunctionMapEntry, 101> entries{{
      "millennium-dos-game-flow", Game::millennium, Platform::dos, "en", "i8086",
      "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57",
      "2200AD.EXE+0x7315", "$7415", "verified-static",
-     "action production, native call returns, state effects, rendering, and handler semantics remain unproven",
-     "diagnostics only", "PRESERVATION.md#main-loop-action-dispatch",
+     "the entering caller and helper semantics remain unproven; exact $7455..$74aa restoration span SHA-256 990dfec0e40229d70d100b1e6d4174f069eed46f95dacbc1d958334314a68525",
+     "native handler and explicit restoration through $74aa", "PRESERVATION.md#main-loop-action-dispatch",
      "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57"},
     {"millennium-dos-en-f7-handler", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
      "millennium-dos-game-flow", Game::millennium, Platform::dos, "en", "i8086",
@@ -483,6 +483,13 @@ constexpr std::array<FunctionMapEntry, 101> entries{{
      "$208c0 and five or seven Exec calls require ordered typed returns; compared longs and controller pointer are typed runtime observations; $12800 bootstrap dispatch is the next boundary",
      "native selected-tail subroutine through profile-two bootstrap writes", "PRESERVATION.md#deuteros-amiga-title-input-and-bootstrap-handoff",
      "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03"},
+    {"deuteros-amiga-en-title-profile-two-main-stage-reentry", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+     "deuteros-amiga-clean-main-stage", Game::deuteros, Platform::amiga, "en", "m68000",
+     "a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6",
+     "ADF+0x5800 via $12800->$12a4e->$12b44->$12b1c", "$21734", "verified-static",
+     "profile-two cells must be owned by the caller-connected title tail; bootstrap reset/table/branch are opcode validated; execution stops at the reloaded main-stage entry",
+     "native atomic profile-two main-stage reload", "PRESERVATION.md#deuteros-amiga-title-input-and-bootstrap-handoff",
+     "a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6"},
     {"deuteros-amiga-en-title-repeated-local-service", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
      "deuteros-amiga-clean-title-handoff", Game::deuteros, Platform::amiga, "en", "m68000",
      "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03",

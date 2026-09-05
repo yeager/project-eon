@@ -198,6 +198,11 @@ GEMDOS compatibility service, and follows its native JSR/JMP chain to
 `$2aa88`. It stops before `MOVE SR,D0`; the original status/privilege value and
 the resulting branch remain explicit observations.
 
+The corrected Millennium Amiga first stage is native from `$41000` through
+its register-save and vector setup. It stops at `ILLEGAL $410de`; continue
+only with a typed, frame-complete illegal-instruction exception entry and do
+not restore any revoked raw-resident mapping.
+
 | Rank | Work package | Exact current evidence | Required acceptance evidence | Status / boundary |
 | --- | --- | --- | --- | --- |
 | 1 | Millennium DOS: capture the launcher/title/`2200AD.EXE` handoff and private DOS ABI | English DOS release `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`; CLI-validated diagnostics-only title-init v2 profile binds the `MILL.COM:0x02cf` driver-load, setup-site `0x0209`/actual-`INT` `0x020c`, `TITLES.EXE:0x0127` request, and two raw returns at `$0129`; v6 additionally binds `svga_s3`/`ega` machine-profile selection to its exact config, while the genuine EGA diagnostic still requested `mcga.bin` and hit the console-capped `INT 6` boundary; v7 records IVT `INT 91h` endpoint `087e:0000`, v8 records a normal-core transfer to it, v9 binds the first raw caller re-entry (`AX=$0101`, `FLAGS=$7202`), v11 terminates the host recorder only after the complete twice-observed `INT 6` diagnostic receipt matches byte-for-byte, and v12 independently repeats an immediate predecessor at `f000:ca60` outside the recognised original-image map. The verified v13 no-input preflight ends at the same eight-record `INT 6` receipt (SHA-256 `8d01223e76a7f5b8497c7a2d8c727452a6d25928002eff06df8265c460e851e7`) with no host-key receipt or title poll; [read-only physical capture runner](MILLENNIUM_DOS_CAPTURE.md#safe-capture-procedure); [external recorder status](MILLENNIUM_DOS_DOSBOX_X_RECORDER.md#prototype-status) | Hash-bound genuine trace of each interrupt, EXEC/far-return and driver result through one navigable state | The title-init prefix and physical capture route have strict contracts. The v12 predecessor is an emulator callback boundary, and the v13 preflight has no physical receipt; neither is guest-code input, rendering, audio, EXEC, or game-state evidence. |
@@ -418,9 +423,12 @@ then atomically copies exactly `$9392` hash-bound original-stage bytes from
 the sparse runtime ledger. No caller-supplied replacement bytes are accepted.
 Local `$37f7a->$37f9a` is now caller-connected through its initial service,
 the five-call equal or seven-call unequal Exec route, typed comparison and
-the exact profile-two bootstrap writes. Continue by connecting its reported
-`$12800` jump to the already recovered bootstrap dispatcher; keep that
-transition atomic and retain all Exec results as typed boundaries.
+the exact profile-two bootstrap writes. Its `$12800` jump now follows the
+opcode-validated `$12a4e` dispatcher, `$12b44->$12b1c` profile route and
+atomically reloads all `$4200` genuine main-stage bytes at `$20000`, stopping
+at `$21734`. Continue with a re-entry session that owns the exact incoming A1
+controller and D0 mode stores before the first main-stage service boundary;
+do not assign a gameplay meaning to profile two.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

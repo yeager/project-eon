@@ -201,6 +201,7 @@ EON_HOST_SIXTH_PROXY(observe_millennium_dos_sixth_function_byte, MillenniumDosSi
 EON_HOST_SIXTH_PROXY(observe_millennium_dos_sixth_function_call_return, MillenniumDosSixthFunctionCallReturnObservation)
 EON_HOST_SIXTH_PROXY(observe_millennium_dos_sixth_function_bl, MillenniumDosSixthFunctionBlObservation)
 #undef EON_HOST_SIXTH_PROXY
+MillenniumDosSixthFunctionObservationResult RuntimeHost::begin_millennium_dos_sixth_function_restoration(){if(revoking())return{false,"Sixth-function restoration rejected during source revocation"};return NativeSessionController::begin_millennium_dos_sixth_function_restoration();}
 
 std::optional<MillenniumDosSixthFunctionCheckpoint>
 RuntimeHost::millennium_dos_sixth_function_checkpoint() const {
@@ -421,6 +422,7 @@ EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_tail_initial_service_return
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_tail_exec_return,(const DeuterosAmigaObservedTitleTailExecReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_tail_compare_longs,(const DeuterosAmigaObservedTitleTailCompareLongs o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_tail_controller_long,(const DeuterosAmigaObservedTitleTailControllerLong o),(o))
+EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_profile_two_bootstrap,(),())
 #undef EON_HOST_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -458,6 +460,7 @@ MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millenni
 MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millennium_amiga_bootstrap_relocator_terminal_jump(const MillenniumAmigaBootstrapRelocatorObservation o){if(revoking())return{false,"Relocator observation rejected during source revocation"};return NativeSessionController::observe_millennium_amiga_bootstrap_relocator_terminal_jump(o);}
 MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millennium_amiga_bootstrap_setup_call_return(const MillenniumAmigaBootstrapRelocatorObservation o){if(revoking())return{false,"Setup return rejected during source revocation"};return NativeSessionController::observe_millennium_amiga_bootstrap_setup_call_return(o);}
 MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millennium_amiga_bootstrap_first_read_return(const MillenniumAmigaBootstrapRelocatorObservation o){if(revoking())return{false,"First-read return rejected during source revocation"};return NativeSessionController::observe_millennium_amiga_bootstrap_first_read_return(o);}
+MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millennium_amiga_first_stage_entry(const MillenniumAmigaFirstStageEntryObservation o){if(revoking())return{false,"First-stage entry rejected during source revocation"};return NativeSessionController::observe_millennium_amiga_first_stage_entry(o);}
 std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint> RuntimeHost::millennium_amiga_bootstrap_relocator_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_amiga_bootstrap_relocator_checkpoint();}
 
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>

@@ -1228,6 +1228,16 @@ struct DeuterosAmigaTitleTailBootstrapPlan {
     std::uint32_t controller_destination=0,controller_value=0;
     std::uint32_t profile_destination=0,profile_value=0,jump_target=0;
 };
+struct DeuterosAmigaTitleProfileTwoBootstrapPlan {
+    std::uint32_t controller_cell=0,controller_value=0;
+    std::uint32_t profile_cell=0,profile_value=0;
+    std::uint32_t reset_entry=0,dispatcher_address=0,profile_table_address=0;
+    std::uint32_t selected_profile_routine=0,resolved_profile_routine=0;
+    std::uint32_t source_disk_offset=0,destination_address=0,byte_count=0;
+    std::uint32_t entry_address=0;
+    std::string source_sha256;
+    std::vector<std::uint8_t> source_bytes;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -1266,6 +1276,21 @@ public:
             evaluate_deuteros_amiga_first_title_exit_copy(disk, plan);
         first_title_exit_subroutine_ =
             parse_deuteros_amiga_first_title_exit_subroutine_profile(disk, plan);
+        const auto title_profile=parse_deuteros_amiga_title_stage(disk,plan);
+        const auto main_stage=disk.bytes(plan.main_stage.disk_offset,plan.main_stage.length);
+        constexpr std::string_view main_stage_hash=
+            "a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6";
+        if(title_profile.title_exit_controller_address!=0x12800
+            ||title_profile.title_exit_profile_slot_address!=0x12ffc
+            ||title_profile.title_exit_profile_table_address!=0x12a36
+            ||title_profile.bootstrap_profile_table_entries[2]!=0x12b44
+            ||title_profile.title_exit_resolved_profile!=0
+            ||title_profile.title_exit_main_stage_entry_address!=plan.main_stage.entry_address
+            ||plan.main_stage.disk_offset!=0x5800||plan.main_stage.length!=0x4200
+            ||plan.main_stage.destination!=0x20000||plan.main_stage.entry_address!=0x21734
+            ||to_hex(sha256(main_stage))!=main_stage_hash)
+            throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
+        main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
             first_title_exit.source_disk_offset, first_title_exit.byte_count);
         first_title_exit_source_bytes_.assign(first_title_exit_source.begin(),
@@ -3413,6 +3438,16 @@ public:
         title_tail_bootstrap_=o;last_command_sequence_=o.trace_sequence;
         return DeuterosAmigaTitleTailBootstrapPlan{o,0x12ff8,o.value,0x12ffc,2,0x12800};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleProfileTwoBootstrapPlan>
+    advance_title_profile_two_bootstrap(){
+        if(!title_tail_bootstrap_||title_profile_two_bootstrap_advanced_)return std::nullopt;
+        title_profile_two_bootstrap_advanced_=true;
+        return DeuterosAmigaTitleProfileTwoBootstrapPlan{0x12ff8,title_tail_bootstrap_->value,
+            0x12ffc,2,0x12800,0x12a4e,0x12a36,0x12b44,0x12b1c,
+            0x5800,0x20000,0x4200,0x21734,
+            "a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6",
+            main_stage_source_bytes_};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3646,6 +3681,8 @@ private:
     std::size_t title_tail_exec_index_=0;
     bool title_tail_compare_pending_=false,title_tail_subroutine_returned_=false;
     std::optional<DeuterosAmigaObservedTitleTailControllerLong> title_tail_bootstrap_;
+    bool title_profile_two_bootstrap_advanced_=false;
+    std::vector<std::uint8_t> main_stage_source_bytes_;
     std::vector<std::uint8_t> first_title_exit_source_bytes_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;

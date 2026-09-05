@@ -605,9 +605,17 @@ jobs:
             throw "expected exactly one generated Windows installer, found $($installers.Count)"
           }
           $installRoot = Join-Path $env:RUNNER_TEMP ("project-eon-inno-" + [guid]::NewGuid().ToString("N"))
-          & $installers[0].FullName /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- "/DIR=$installRoot"
-          if ($LASTEXITCODE -ne 0) {
-            throw "Inno Setup installer failed with exit status $LASTEXITCODE"
+          # PowerShell does not reliably wait for a native GUI executable
+          # invoked with &, leaving $LASTEXITCODE unset on hosted runners.
+          # Wait for the installer process tree and inspect its real exit code.
+          $installerArguments = @(
+            "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-",
+            "/DIR=`"$installRoot`""
+          )
+          $installerProcess = Start-Process -FilePath $installers[0].FullName `
+            -ArgumentList $installerArguments -Wait -PassThru
+          if ($installerProcess.ExitCode -ne 0) {
+            throw "Inno Setup installer failed with exit status $($installerProcess.ExitCode)"
           }
 
           # Inno must preserve every staged Project Eon file byte-for-byte.

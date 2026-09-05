@@ -74,8 +74,10 @@ MillenniumDosGameplayScreen parse_millennium_dos_gameplay_screen(
         }
     }
     const auto palette_auxiliary = palette_tail.subspan(dac_bytes);
+    const auto palette_resource_offset = static_cast<std::size_t>(
+        palette_bytes.data() - gx_lib.data());
     result.palette_resource_auxiliary = MillenniumDosGameplayOpaqueRange{
-        static_cast<std::uint32_t>(palette_bytes.data() - gx_lib.data() + bitmap_header_size
+        static_cast<std::uint32_t>(palette_resource_offset + bitmap_header_size
             + result.palette_resource.encoded_span + dac_bytes),
         static_cast<std::uint32_t>(palette_auxiliary.size()),
         to_hex(sha256(palette_auxiliary)),
@@ -89,8 +91,10 @@ MillenniumDosGameplayScreen parse_millennium_dos_gameplay_screen(
     result.canvas_logical_to_dac.assign(canvas_tail.begin(),
         canvas_tail.begin() + static_cast<std::ptrdiff_t>(canvas_count));
     const auto canvas_auxiliary = canvas_tail.subspan(canvas_count);
+    const auto canvas_resource_offset = static_cast<std::size_t>(
+        canvas_bytes.data() - gx_lib.data());
     result.canvas_auxiliary = MillenniumDosGameplayOpaqueRange{
-        static_cast<std::uint32_t>(canvas_bytes.data() - gx_lib.data() + bitmap_header_size
+        static_cast<std::uint32_t>(canvas_resource_offset + bitmap_header_size
             + result.canvas.encoded_span + canvas_count),
         static_cast<std::uint32_t>(canvas_auxiliary.size()),
         to_hex(sha256(canvas_auxiliary)),

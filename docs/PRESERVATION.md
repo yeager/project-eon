@@ -1789,10 +1789,12 @@ the exact `0x24200` source bytes to `$41000..$651ff`. The stage begins
 `BRA.W $410bc`. Its first `0xe0` bytes hash to
 `943b1fd0b5f3aa7734aae09e64d139348f9876615ef4df94fb22f9e05851fd77`
 and statically establish the register-save/vector setup through `ILLEGAL` at
-`$410de`, which uses exception vector address `$10`. Native execution stops
-at `$41000`: the register-save effects, exception handler outcome, transformed
-continuation, second-stage runtime representation, input, graphics, and
-gameplay remain unproven.
+`$410de`, which uses exception vector address `$10`. A typed register/vector
+observation now advances the native session through the exact `BRA.W`, saved
+`A6`, `MOVEM.L D0-A7`, saved-register patch, vector read, `PEA`, and vector
+installation. The final register table, transient stack cell, and vector
+write are committed atomically. Execution stops at `$410de`: the exception
+frame/result and transformed continuation remain unproven.
 
 The bootstrap relocation itself remains bounded by its final source-byte
 observation at `$70400`; the exact caller then performs `JSR (A3)` at
@@ -6718,6 +6720,21 @@ memory effects, and reset revokes the entire chain. The copied `$9392` region
 is not classified as pixels, game state, or any other inferred semantic.
 Helper registers, status registers, compared-long meaning and Exec effects
 remain opaque.
+
+The profile-two handoff is now connected to the recovered bootstrap rather
+than ending at its reported jump. Advancement first requires the session-owned
+longwords at `$12ff8/$12ffc` to equal the typed controller and profile `2`.
+The clean ADF's `$12800` reset, `$12a4e` dispatcher, table `$12a36`, profile
+routine `$12b44`, and its `BRA.B $12b1c` are revalidated through the complete
+hash-locked title-stage profile. Profile zero supplies decoded-disk source
+`+$5800`, destination `$20000`, byte count `$4200`, and entry `$21734`.
+The exact 16,896 source bytes hash to
+`a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6`
+and are installed as one atomic native-memory batch. No caller may supply or
+replace those bytes. Failure, an altered owned profile/controller cell, or a
+replay leaves the previous title memory unchanged. The resulting state stops
+at the genuine main-stage entry: entry registers, its first service calls and
+the meaning of the selected title exit remain separate boundaries.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently
