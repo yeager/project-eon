@@ -137,7 +137,9 @@ class RecoveryMapTests(unittest.TestCase):
             expected_runtime_status = (
                 "trace-gated sparse GX startup session"
                 if entry["parser_profile_id"] == "millennium-dos-gx-overlay"
-                else "native two-ILLEGAL and first Line-F handlers through transformed $41110"
+                else "native profile-two re-entry through $2099e Exec boundary"
+                if entry["parser_profile_id"] == "deuteros-amiga-clean-main-stage"
+                else "native traced ADDX and unconditional branch chain through $411d8"
                 if entry["parser_profile_id"] in {
                     "millennium-amiga-defjam-first-stage-entry",
                     "millennium-amiga-defjam-direct-first-stage-entry",

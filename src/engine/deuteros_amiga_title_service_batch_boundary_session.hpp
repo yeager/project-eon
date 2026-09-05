@@ -1280,6 +1280,25 @@ struct DeuterosAmigaMainStagePointerServiceReturnPlan {
     std::array<std::uint32_t,2> pointer_destinations{};
     std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
 };
+struct DeuterosAmigaObservedMainStageAudioSetup {
+    std::array<DeuterosAmigaObservedLocalCallReturn,3> service_returns{};
+    std::array<std::uint32_t,2> pointer_root_addresses{};
+    std::array<std::uint32_t,2> observed_final_pointers{};
+};
+struct DeuterosAmigaMainStageAudioSetupPlan {
+    DeuterosAmigaObservedMainStageAudioSetup observation;
+    std::array<std::uint32_t,4> custom_register_addresses{};
+    std::array<std::uint16_t,4> custom_register_values{};
+    std::array<std::uint32_t,2> pointer_destinations{};
+    std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
+};
+struct DeuterosAmigaMainStage20994ExecEntryPlan {
+    std::uint32_t caller_address=0,entry_address=0,caller_return_address=0;
+    std::uint32_t a1_value=0,exec_base_source=0;
+    std::uint32_t exec_call_address=0,exec_return_address=0;
+    std::int16_t exec_vector=0;
+    std::string source_sha256;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -1330,7 +1349,9 @@ public:
             ||title_profile.title_exit_main_stage_entry_address!=plan.main_stage.entry_address
             ||plan.main_stage.disk_offset!=0x5800||plan.main_stage.length!=0x4200
             ||plan.main_stage.destination!=0x20000||plan.main_stage.entry_address!=0x21734
-            ||to_hex(sha256(main_stage))!=main_stage_hash)
+            ||to_hex(sha256(main_stage))!=main_stage_hash
+            ||to_hex(sha256(main_stage.subspan(0x994,14)))
+                !="a5c916b3959fe074f18e12a12d0488a38b2c8b638079fb05d1ad3a0739848001")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
@@ -3538,6 +3559,35 @@ public:
         return DeuterosAmigaMainStagePointerServiceReturnPlan{
             o,0x2012c,{0x20510,0x20c20},0x2177c,0x22a5a,0x21782};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageAudioSetupPlan>
+    observe_main_stage_audio_setup(const DeuterosAmigaObservedMainStageAudioSetup&o){
+        if(!main_stage_pointer_service_return_||main_stage_audio_setup_)return std::nullopt;
+        static constexpr std::array<std::array<std::uint32_t,3>,3> expected{{
+            {{0x2177c,0x22a5a,0x21782}},{{0x21782,0x22bea,0x21788}},
+            {{0x21788,0x22bea,0x2178e}}}};
+        auto sequence=last_command_sequence_;
+        for(std::size_t i=0;i<expected.size();++i){
+            const auto& call=o.service_returns[i];
+            if(call.trace_sequence<=sequence||call.call_address!=expected[i][0]
+                ||call.call_target!=expected[i][1]||call.return_address!=expected[i][2])
+                throw std::runtime_error("Deuteros main-stage audio service return does not match boundary");
+            sequence=call.trace_sequence;
+        }
+        if(o.pointer_root_addresses!=std::array<std::uint32_t,2>{0x12e00,0x12f00})
+            throw std::runtime_error("Deuteros main-stage audio pointer roots do not match boundary");
+        main_stage_audio_setup_=o;last_command_sequence_=sequence;
+        return DeuterosAmigaMainStageAudioSetupPlan{o,
+            {0xdff040,0xdff042,0xdff09a,0xdff096},{0x7fff,0x7fff,0xc000,0x87ff},
+            {0x2197a,0x2197e},0x217d8,0x20994,0x217de};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStage20994ExecEntryPlan>
+    advance_main_stage_20994_exec_entry(){
+        if(!main_stage_audio_setup_||main_stage_audio_service_entered_)return std::nullopt;
+        main_stage_audio_service_entered_=true;
+        return DeuterosAmigaMainStage20994ExecEntryPlan{0x217d8,0x20994,0x217de,
+            0,4,0x2099e,0x209a2,-0x126,
+            "a5c916b3959fe074f18e12a12d0488a38b2c8b638079fb05d1ad3a0739848001"};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3779,6 +3829,8 @@ private:
     std::optional<DeuterosAmigaObservedLocalCallReturn> main_stage_first_local_return_;
     std::optional<DeuterosAmigaObservedMainStagePointerServiceReturn>
         main_stage_pointer_service_return_;
+    std::optional<DeuterosAmigaObservedMainStageAudioSetup> main_stage_audio_setup_;
+    bool main_stage_audio_service_entered_=false;
     std::vector<std::uint8_t> first_title_exit_source_bytes_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;

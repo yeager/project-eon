@@ -43,14 +43,17 @@ It calls `$cc4e`, discards one stack word after the typed return at `$74c4`,
 and tail-jumps to `$7455`. The runtime therefore admits restoration through
 this caller boundary; it does not bypass the opaque call.
 
-The caller helper is now opened through its exact `$cc4e..$cc76` prefix
-(41-byte SHA-256
-`872a3e7d2dc2d87c6d39a09be80edb6847c966d00e4847f5f060a20758225289`).
+The caller helper is now opened through its exact `$cc4e..$cc83` prefix
+(54-byte SHA-256
+`f8dc92ce14d22794746ddc391e19fbf0edc3522ebb188d972f3dcb33b6dcb76e`).
 The typed path follows calls to `$408a`, `$4d36` with `AX=$0028`, `$0666` with
 `AX=$00c1`, and `$05f1`; records the literal word writes `$cbbe := $080f` and
-`$cbe1 := 0`; then observes the far pointer loaded from `$0112:$0114`. It stops
-before the `REP STOSW` at `$cc7c`, because the observed destination and owned
-memory effects have not yet been connected.
+`$cbe1 := 0`; then observes the far pointer loaded from `$0112:$0114`. The
+bounded `$cc77..$cc7d` sequence owns `DI` from that pointer, `CX=$0528`, and
+`AX=0`, and records the resulting 1,320-word (2,640-byte) far clear without assigning
+meaning to its destination. After restoring `ES=CS`, it observes the next
+external byte at `$da05` (`$cc80`) and stops before the subsequent host-state
+clear beginning at `$cc84`.
 
 The typed session exposes only addresses, call targets, proved register values,
 and memory effects. In particular, the byte read at `$613a` is not assigned a

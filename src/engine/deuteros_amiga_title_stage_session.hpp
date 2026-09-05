@@ -413,6 +413,8 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaMainStageSecondExecReturnPlan> observe_main_stage_second_exec_return(const DeuterosAmigaObservedMainStageExecReturn& o) { return service_batch_boundary_session_.observe_main_stage_second_exec_return(o); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageFirstLocalReturnPlan> observe_main_stage_first_local_return(const DeuterosAmigaObservedLocalCallReturn& o) { return service_batch_boundary_session_.observe_main_stage_first_local_return(o); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStagePointerServiceReturnPlan> observe_main_stage_pointer_service_return(const DeuterosAmigaObservedMainStagePointerServiceReturn& o) { return service_batch_boundary_session_.observe_main_stage_pointer_service_return(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageAudioSetupPlan> observe_main_stage_audio_setup(const DeuterosAmigaObservedMainStageAudioSetup& o) { return service_batch_boundary_session_.observe_main_stage_audio_setup(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStage20994ExecEntryPlan> advance_main_stage_20994_exec_entry() { return service_batch_boundary_session_.advance_main_stage_20994_exec_entry(); }
 
 private:
     const AmigaAdf* disk_ = nullptr;
