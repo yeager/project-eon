@@ -488,6 +488,7 @@ if(BUILD_TESTING)
             src/engine/millennium_dos_title_child_compatibility_service.cpp
             src/engine/millennium_dos_title_initialization_session.cpp
             src/engine/millennium_dos_paragraph_arena.cpp
+            src/engine/native_runtime_memory.cpp
             src/data/sha256.cpp)
         target_include_directories(eon-millennium-dos-title-exec-entry-test PRIVATE src)
         if(MSVC)
@@ -690,7 +691,7 @@ set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Amusements/Games")
 set(CPACK_RPM_PACKAGE_URL "https://github.com/yeager/project-eon")
 set(CPACK_RPM_PACKAGE_DESCRIPTION
-    "Preservation-first SDL3 re-implementation launcher for Millennium 2.2 and Deuteros.\n Project Eon reads user-supplied original media in place.\n It never distributes game data.")
+    "Preservation-first SDL3 launcher for Millennium 2.2 and Deuteros.\nProject Eon reads user-supplied original media in place.\nNo commercial game data is included in this package.")
 set(CPACK_RPM_PACKAGE_RELEASE "1")
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 # Match the package payload compressor to the policy-compressed manual page.

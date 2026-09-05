@@ -4664,6 +4664,15 @@ runtime owns the exact half-byte shifts, `DX` and `BX` loop edges, destination
 advance, atomic byte write, and final register restoration. A genuine first
 lookup resolves `$4000:$0170` value `$7a` through `$5050:$409a` value zero;
 no lookup-table, palette, planar, or pixel semantics are claimed.
+When all requested bytes are present in owned native memory, the coordinator
+can now drive this same typed loop through `$16e8` without external byte
+callbacks. DOS aliases are compared by the exact 20-bit physical address;
+contradictory aliases are rejected. The operation uses a caller-supplied finite
+cap and is atomic across session and memory state on missing input, detached
+sequence, unexpected boundary, or cap exhaustion. Decoder output effects now
+carry the recovered destination segment explicitly instead of being attributed
+to the child code segment. No additional executable span or semantic claim is
+introduced.
 Its raw value is retained as AX without assigning width or graphics meaning,
 then execution stops before `$13d0` reads `$5050:$0019`. Detached addresses
 or sequences fail before state changes, and the read does not mutate runtime
@@ -7170,8 +7179,23 @@ A D0 low byte other than `$43` repeats at `$40656`; `$43` exits through
 helper effects remain observation-driven. Each hardware word is committed as
 one atomic native-memory effect, without assigning a renderer or gameplay
 meaning to it.
-SR remain opaque. The transition is replay-safe, revoked with its owning
-session, and assigns no rendering or gameplay meaning.
+
+The selected `$4062c->$37f56` tail is admitted separately. Its exact 40-byte
+prefix at ADF `$92f56` hashes to
+`51b8d6875ea6d0c35557c358d4fe22e4cac6cff79ead9df604d213cab1adfe1c`.
+Typed returns are required for `$37f56->$3880a` and `$37f5c->$204fa`. The
+caller then performs its literal DBF copy of exactly `$9392` bytes from
+runtime `$13006` to `$66000`; the coordinator sources the bytes from the
+hash-bound original title-stage span overlaid with every later byte tracked at
+the runtime source, then publishes the destination as one atomic effect batch.
+The sparse runtime-memory ledger need not materialize untouched load bytes
+merely to prove this copy, while earlier admitted mutations remain observable.
+Execution stops before local
+`$37f7a->$37f9a`, whose nested system calls remain opaque. The copied region
+is not classified as pixels, game state, or any other inferred semantic.
+Helper register and status-register effects remain opaque. The transition is
+replay-safe, revoked with its owning session, and assigns no rendering or
+gameplay meaning.
 
 The renderer-facing consequence remains bounded by known pixels rather than
 claiming a complete title frame. After the existing v4/v5 trace independently

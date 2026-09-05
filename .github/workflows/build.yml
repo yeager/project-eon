@@ -267,7 +267,9 @@ jobs:
           - arch: arm64
             runner: macos-14
           - arch: x86_64
-            runner: macos-13
+            # GitHub retired the macos-13 Intel image. Keep the Intel package
+            # native instead of cross-compiling it on an arm64 runner.
+            runner: macos-15-intel
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Install dependencies
@@ -566,8 +568,10 @@ jobs:
           # installer even if it is not recognised as game media.
           $approved = @("project-eon.exe", "SDL3.dll", "SDL3_image.dll", "SDL3_ttf.dll", "README.md", "LICENSE") + $required
           $unexpected = Get-ChildItem dist -Recurse -File | Where-Object {
-            $relative = $_.FullName.Substring((Resolve-Path dist).Path.Length).TrimStart('\', '/')
-            $relative -notin $approved -and $relative -notmatch '^(libpng|zlib).+\.dll$'
+            # The manifest uses portable forward slashes while FullName uses
+            # the Windows directory separator. Normalize before comparing.
+            $relative = $_.FullName.Substring((Resolve-Path dist).Path.Length).TrimStart('\', '/').Replace('\', '/')
+            $relative -notin $approved -and $relative -notmatch '^(libpng.+|zlib.*)\.dll$'
           }
           if ($unexpected) {
             throw "Windows package stage contains unexpected file(s): $($unexpected.FullName -join ', ')"
@@ -607,7 +611,7 @@ jobs:
           # The uninstaller is intentionally extra, but no staged file may be
           # absent, renamed, or changed during the installer round trip.
           foreach ($source in Get-ChildItem dist -Recurse -File) {
-            $relative = $source.FullName.Substring((Resolve-Path dist).Path.Length).TrimStart('\', '/')
+            $relative = $source.FullName.Substring((Resolve-Path dist).Path.Length).TrimStart('\', '/').Replace('\', '/')
             $installed = Join-Path $installRoot $relative
             if (-not (Test-Path -LiteralPath $installed -PathType Leaf)) {
               throw "installed package lacks staged file: $relative"

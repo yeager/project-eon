@@ -50,7 +50,9 @@ genuine ordered runtime observations. Mode two now owns its genuine `$1647`,
 continue there without assigning lookup or pixel semantics.
 The full typed `$16b3..$16e8` nested byte-pair loop is native, including
 lookup boundaries, atomic destination writes, repeated row/column edges, and
-return. Continue from its ordered source/lookup observations toward the first
+return. It can now consume bytes directly from owned native memory, including
+physical-equivalent DOS segment aliases, under a finite transactional cap.
+Continue by caller-connecting the resulting `$16e8` return toward the first
 complete admitted destination state; do not infer pixel or palette meaning.
 The other-value branch owns the second descriptor and first two raw words plus
 their product and subtraction; continue at `$13e9`, source `$3c80:$0001`. Do not assign
@@ -408,6 +410,12 @@ selects exact colour word `$00f0` or `$0f00`. The repeated `$40662->$1f238`
 returns are now observation-driven: each iteration atomically writes the
 selected word to `$dff180`, non-`$43` repeats at `$40656`, and `$43` exits
 through `$40670` to the recovered `$40574` loop.
+The alternate selected gate now types returns from `$3880a` and `$204fa`,
+then atomically copies exactly `$9392` hash-bound original-stage bytes from
+`$13006` to `$66000`, overlaying any earlier admitted source mutations from
+the sparse runtime ledger. No caller-supplied replacement bytes are accepted.
+Continue at local `$37f7a->$37f9a`; its nested system calls remain
+separate typed boundaries.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

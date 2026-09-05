@@ -1,12 +1,14 @@
 #include "engine/millennium_dos_title_exec_entry_session.hpp"
 #include "engine/millennium_dos_title_child_compatibility_service.hpp"
 #include "engine/millennium_dos_title_initialization_session.hpp"
+#include "engine/native_runtime_memory.hpp"
 #include "engine/millennium_dos_paragraph_arena.hpp"
 
 #include <cassert>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <map>
 #include <stdexcept>
 #include <vector>
 
@@ -853,6 +855,7 @@ int main(int argc, char** argv) {
         &&contradictory_first_loop_descriptor.checkpoint().memory_effects.size()==18970);
     other_success.observe_far_words(
         {92,0x13aa,0x3481,0x000f,0x0503,0x1f02});
+    auto compact_owned_mode_two=other_success;
     const auto first_title_record=other_success.checkpoint();
     assert(first_title_record.state
             ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_record_word_read_boundary
@@ -1136,6 +1139,66 @@ int main(int argc, char** argv) {
     assert(mode_two_source.far_byte_boundary.source_offset==0x0170);
     assert(mode_two_source.memory_effects[mode_two_header_effect_count].offset==0x14df);
     assert(mode_two_source.memory_effects[mode_two_header_effect_count].value==0x4020);
+    {
+        compact_owned_mode_two.observe_far_word({93,0x13cd,0x5050,0x001b,0x0002});
+        compact_owned_mode_two.observe_far_word({94,0x13d0,0x5050,0x0019,0x0001});
+        compact_owned_mode_two.observe_far_word({95,0x13e2,0x5050,0x0017,0x0001});
+        compact_owned_mode_two.observe_far_byte({96,0x13e9,0x5050,0x0004,0xfe});
+        compact_owned_mode_two.observe_far_byte({97,0x13f2,0x5050,0x0007,0x01});
+        compact_owned_mode_two.observe_far_byte({98,0x1419,0x5050,0x001f,0x7a});
+        compact_owned_mode_two.observe_far_byte({99,0x1647,0x5050,0x0003,0x48});
+        compact_owned_mode_two.observe_far_byte({100,0x1653,0x5050,0x0004,0x00});
+        compact_owned_mode_two.observe_far_word({101,0x1657,0x5050,0x001d,0x4000});
+        const auto compact_source=compact_owned_mode_two.checkpoint();
+        assert(compact_source.state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_source_byte_boundary);
+        auto owned_mode_two=compact_owned_mode_two;
+        eon::NativeRuntimeMemory owned_memory;
+        std::map<eon::NativeRuntimeLocation,std::uint8_t> final_bytes;
+        for(const auto& effect:compact_source.memory_effects){
+            const auto segment=effect.explicit_segment?effect.segment:compact_source.child_code_segment;
+            const auto location=eon::NativeRuntimeLocation{
+                eon::NativeRuntimeAddressSpace::dos_segmented,segment,effect.offset};
+            final_bytes[location]=static_cast<std::uint8_t>(effect.value);
+            if(effect.width==eon::MillenniumDosTitleInitializationEffectWidth::word){
+                auto high=location;++high.offset;
+                final_bytes[high]=static_cast<std::uint8_t>(effect.value>>8U);
+            }
+        }
+        // The compact test owns two bytes at the normalized first-buffer
+        // addresses. Their value is the already admitted raw payload byte;
+        // this exercises segmented aliasing, not a substitute game asset.
+        final_bytes[{eon::NativeRuntimeAddressSpace::dos_segmented,0x4000,0x0170}]=0x7a;
+        final_bytes[{eon::NativeRuntimeAddressSpace::dos_segmented,0x4000,0x0171}]=0x7a;
+        final_bytes[{eon::NativeRuntimeAddressSpace::dos_segmented,0x5050,0x409a}]
+            =title_library.at(0x459a);
+        eon::NativeRuntimeEffectBatch seed{"millennium-dos-mode-two-owned-test",true,{}};
+        for(const auto& [location,value]:final_bytes)
+            seed.effects.push_back({seed.effects.size()+1,location,
+                eon::MemoryTransferElementWidth::byte,
+                eon::NativeRuntimeByteOrder::little_endian,value});
+        assert(owned_memory.apply(seed).accepted);
+        const auto before=owned_memory.checkpoint();
+        const auto driven=owned_mode_two.drive_mode_two_from_owned_memory(
+            owned_memory,{102,4});
+        if(!driven.accepted)throw std::runtime_error(driven.error);
+        assert(driven.accepted&&driven.returned&&driven.observation_count>0);
+        assert(owned_mode_two.checkpoint().state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_returned);
+        assert(owned_mode_two.checkpoint().continuation_address==0x16e8);
+        assert(owned_memory.checkpoint().applied_batch_count>before.applied_batch_count);
+
+        auto missing_mode_two=compact_owned_mode_two;
+        eon::NativeRuntimeMemory missing_memory;
+        const auto missing_before=missing_mode_two.checkpoint();
+        const auto rejected_drive=missing_mode_two.drive_mode_two_from_owned_memory(
+            missing_memory,{102,4});
+        assert(!rejected_drive.accepted&&!rejected_drive.returned
+            &&rejected_drive.observation_count==0);
+        assert(missing_mode_two.checkpoint().last_sequence==missing_before.last_sequence
+            &&missing_mode_two.checkpoint().memory_effects.size()==missing_before.memory_effects.size());
+        assert(missing_memory.diagnostics().initialized_byte_count==0);
+    }
     mode_two_extension.observe_far_byte({106,0x16b3,0x4000,0x0170,0x7a});
     assert(mode_two_extension.checkpoint().state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_first_lookup_byte_boundary);

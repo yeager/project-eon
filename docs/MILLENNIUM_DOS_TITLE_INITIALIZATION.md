@@ -571,6 +571,18 @@ edges and the `$16e8` return. The first tested pair uses already produced
 bytes at `$4000:$0170/$0171` and genuine lookup byte zero at
 `$5050:$409a`; this is execution evidence, not a pixel interpretation.
 
+The runtime coordinator can now finish this loop without one host callback
+per byte when every requested source byte is already owned by native runtime
+memory. It resolves equivalent 8086 `segment:offset` aliases by their physical
+address, rejects contradictory aliases, preserves the exact typed state-machine
+transitions, and commits each instruction-defined output before it can feed a
+later read. The drive is transactional: a missing byte, detached sequence,
+unadmitted state, or exhausted finite observation cap leaves both the session
+and runtime memory unchanged. The first admitted automatic test finishes a
+compact two-byte row at exactly `$16e8`; the lookup byte comes from the genuine
+`TITLE.LIB` leaf. This is native execution of the hash-bound loop, not an
+emulator or an inferred graphics decoder.
+
 The ordered second-record word at `$3c80:$0016` now enters `$13d0`. Exact
 bytes `$13d0..$13e1` perform the unsigned multiplication and atomically store
 the raw inputs at `CS:$1357/$1359` and low product at `CS:$133b`. Execution

@@ -9,7 +9,9 @@ namespace eon {
 enum class MillenniumAmigaBootstrapRelocatorState {
     awaiting_overread_byte,
     awaiting_terminal_jump,
-    transferred,
+    awaiting_setup_call_return,
+    awaiting_first_read_return,
+    awaiting_opaque_first_stage,
 };
 
 struct MillenniumAmigaBootstrapRelocatorBoundary {
@@ -55,6 +57,10 @@ public:
     void observe_overread_byte(std::uint32_t instruction_address,
         std::uint32_t source_address, std::uint8_t value);
     void observe_terminal_jump(std::uint32_t instruction_address,
+        std::uint32_t target_address);
+    void observe_setup_call_return(std::uint32_t instruction_address,
+        std::uint32_t target_address);
+    void observe_first_read_return(std::uint32_t instruction_address,
         std::uint32_t target_address);
 
 private:

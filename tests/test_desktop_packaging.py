@@ -272,6 +272,9 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("CPACK_RPM_PACKAGE_URL", cmake)
         self.assertIn("CPACK_RPM_FILE_NAME RPM-DEFAULT", cmake)
         self.assertIn('set(CPACK_RPM_COMPRESSION_TYPE "gzip")', cmake)
+        self.assertIn("share/man/man6/project-eon.6", cmake)
+        self.assertIn("COMMAND gzip -9n -f", cmake)
+        self.assertIn("No commercial game data is included in this package.", cmake)
         self.assertIn("CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION", cmake)
         self.assertIn("create_symlink", cmake)
         self.assertIn("CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS", cmake)
@@ -279,6 +282,8 @@ class DesktopPackagingTests(unittest.TestCase):
 
     def test_ci_validates_macos_archive_and_windows_runtime_stage(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("runner: macos-15-intel", workflow)
+        self.assertNotIn("runner: macos-13", workflow)
         self.assertIn('-DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }}', workflow)
         self.assertIn('built_architectures=$(lipo -archs "$APP/Contents/MacOS/ProjectEon")', workflow)
         self.assertIn('macOS bundle architecture mismatch: expected ${{ matrix.arch }}', workflow)
