@@ -14,8 +14,9 @@ std::uint16_t little16(std::span<const std::uint8_t> bytes, std::size_t offset) 
     if (offset > bytes.size() || bytes.size() - offset < 2) {
         throw std::runtime_error("Truncated STX field");
     }
-    return static_cast<std::uint16_t>(bytes[offset])
-        | static_cast<std::uint16_t>(bytes[offset + 1]) << 8U;
+    return static_cast<std::uint16_t>(
+        static_cast<std::uint16_t>(bytes[offset])
+        | (static_cast<std::uint32_t>(bytes[offset + 1]) << 8U));
 }
 
 std::uint32_t little32(std::span<const std::uint8_t> bytes, std::size_t offset) {

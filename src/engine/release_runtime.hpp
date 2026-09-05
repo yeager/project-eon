@@ -141,6 +141,10 @@ struct MillenniumAmigaBootstrapPresentationSnapshot {
 };
 struct MillenniumAmigaBootstrapRelocatorObservation { std::uint64_t sequence=0; std::uint32_t instruction_address=0; std::uint32_t source_or_target_address=0; std::uint8_t value=0; };
 struct MillenniumAmigaBootstrapRelocatorObservationResult { bool accepted=false; std::string error; };
+struct MillenniumAmigaFirstStageEntryObservation {
+    std::uint64_t sequence=0;
+    MillenniumAmigaFirstStageRegisterObservation registers;
+};
 struct MillenniumAmigaBootstrapRelocatorCheckpoint {
     std::uint64_t generation=0;
     MillenniumAmigaBootstrapRelocatorState state=MillenniumAmigaBootstrapRelocatorState::awaiting_overread_byte;
@@ -150,6 +154,7 @@ struct MillenniumAmigaBootstrapRelocatorCheckpoint {
     std::uint32_t final_a3=0, final_a5=0, final_d1=0;
     std::size_t materialized_first_stage_byte_count=0;
     std::string first_stage_sha256;
+    std::optional<MillenniumAmigaFirstStageEntryExecution> first_stage_entry_execution;
 };
 
 // Immutable Millennium Atari ST bootstrap provenance.  It reports only the
@@ -813,6 +818,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_tail_exec_return(DeuterosAmigaObservedTitleTailExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_tail_compare_longs(DeuterosAmigaObservedTitleTailCompareLongs);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_tail_controller_long(DeuterosAmigaObservedTitleTailControllerLong);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_profile_two_bootstrap();
 
 
     // Active-session transition for a complete, already validated v4/v5
@@ -837,6 +843,7 @@ public:
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_bootstrap_relocator_terminal_jump(MillenniumAmigaBootstrapRelocatorObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_bootstrap_setup_call_return(MillenniumAmigaBootstrapRelocatorObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_bootstrap_first_read_return(MillenniumAmigaBootstrapRelocatorObservation);
+    [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_first_stage_entry(MillenniumAmigaFirstStageEntryObservation);
     [[nodiscard]] std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint> millennium_amiga_bootstrap_relocator_checkpoint() const;
 
     [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>
@@ -959,6 +966,7 @@ public:
     observe_millennium_dos_sixth_function_call_return(MillenniumDosSixthFunctionCallReturnObservation observation);
     [[nodiscard]] MillenniumDosSixthFunctionObservationResult
     observe_millennium_dos_sixth_function_bl(MillenniumDosSixthFunctionBlObservation observation);
+    [[nodiscard]] MillenniumDosSixthFunctionObservationResult begin_millennium_dos_sixth_function_restoration();
     [[nodiscard]] std::optional<MillenniumDosSixthFunctionCheckpoint>
     millennium_dos_sixth_function_checkpoint() const;
     [[nodiscard]] MillenniumDosEighthFunctionObservationResult
@@ -1100,6 +1108,7 @@ private:
     std::optional<std::uint64_t> millennium_amiga_relocator_terminal_sequence_;
     std::optional<std::uint64_t> millennium_amiga_setup_return_sequence_;
     std::optional<std::uint64_t> millennium_amiga_first_read_return_sequence_;
+    std::optional<std::uint64_t> millennium_amiga_first_stage_entry_sequence_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::optional<MillenniumAtariConfigConsumerSession> millennium_atari_config_consumer_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;

@@ -24,10 +24,31 @@ consumed by `SHR BL,1` at `$7450`. An odd pre-shift BL repeats the call and an
 even pre-shift BL returns at `$7454`. Both shifted values and the loop index
 are diagnostic facts, not interpretations of the opaque call.
 
-The separately entered restoration routine beginning at `$7455` is outside
-this boundary because no edge from this handler has been proven. The session
-does not assign gameplay meaning or host input to the table record, infer
-opaque call behaviour, mutate original media or saves, or claim dispatcher
-handoff or parity. Runtime integration must preserve authenticated executable
-ownership, require the proven `$76f1` dispatch observation, and revoke the
-session when its backing media is released.
+## Recovered restoration boundary
+
+The separately entered restoration routine occupies executable offset
+`0x7355`, is 86 bytes long, and has SHA-256
+`990dfec0e40229d70d100b1e6d4174f069eed46f95dacbc1d958334314a68525`.
+Admission requires those exact bytes in place.
+
+The restoration routine puts the three values saved by `$742b`, `$7431`, and
+`$7437` back at `$75a8`, `$75ae`, and `$75ac`. It then follows every statically
+proved call boundary at `$7467`, `$746e`, `$7471`, `$7474`, `$747d`, `$7487`,
+`$748d`, `$749b`, `$749e`, `$74a1`, `$74a4`, and `$74a7`, including the observed
+byte read from `$613a` at `$7483`, before returning at `$74aa`.
+
+The typed session exposes only addresses, call targets, proved register values,
+and memory effects. In particular, the byte read at `$613a` is not assigned a
+gameplay or pixel meaning. Calling the restoration before the completed F6
+handler, repeating it, or submitting a detached observation is rejected without
+committing another effect. The release coordinator, native controller, runtime
+host, and launcher facade all expose the same transition, and source revocation
+continues to reject observations at the host boundary.
+
+## Remaining uncertainty
+
+The caller that chooses to enter `$7455` is not yet proved. Consequently the
+runtime requires an explicit caller-side transition after the admitted `$7454`
+return. Helper internals reached by the twelve calls remain separate recovery
+boundaries; this work does not infer their rendering, timing, or gameplay
+semantics.

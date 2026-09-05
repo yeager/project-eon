@@ -11,15 +11,17 @@ namespace {
 bool has_bytes(const std::span<const std::uint8_t> bytes, const std::size_t offset,
                const std::span<const std::uint8_t> expected) {
     return offset <= bytes.size() && expected.size() <= bytes.size() - offset
-        && std::equal(expected.begin(), expected.end(), bytes.begin() + offset);
+        && std::equal(expected.begin(), expected.end(),
+            bytes.begin() + static_cast<std::ptrdiff_t>(offset));
 }
 
 std::uint16_t little16(const std::span<const std::uint8_t> bytes, const std::size_t offset) {
     if (offset > bytes.size() || bytes.size() - offset < 2) {
         throw std::runtime_error("Truncated Millennium DOS video-driver dispatch table");
     }
-    return static_cast<std::uint16_t>(bytes[offset])
-        | static_cast<std::uint16_t>(bytes[offset + 1] << 8U);
+    return static_cast<std::uint16_t>(
+        static_cast<std::uint16_t>(bytes[offset])
+        | (static_cast<std::uint32_t>(bytes[offset + 1]) << 8U));
 }
 
 } // namespace

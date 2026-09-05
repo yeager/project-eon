@@ -407,6 +407,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleTailExecPlan> observe_title_tail_exec_return(const DeuterosAmigaObservedTitleTailExecReturn& o) { return service_batch_boundary_session_.observe_title_tail_exec_return(o); }
     [[nodiscard]] std::optional<DeuterosAmigaTitleTailComparePlan> observe_title_tail_compare_longs(const DeuterosAmigaObservedTitleTailCompareLongs& o) { return service_batch_boundary_session_.observe_title_tail_compare_longs(o); }
     [[nodiscard]] std::optional<DeuterosAmigaTitleTailBootstrapPlan> observe_title_tail_controller_long(const DeuterosAmigaObservedTitleTailControllerLong& o) { return service_batch_boundary_session_.observe_title_tail_controller_long(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleProfileTwoBootstrapPlan> advance_title_profile_two_bootstrap() { return service_batch_boundary_session_.advance_title_profile_two_bootstrap(); }
 
 private:
     const AmigaAdf* disk_ = nullptr;

@@ -165,6 +165,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleTailExecPlan> observe_title_tail_exec_return(const DeuterosAmigaObservedTitleTailExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_title_tail_exec_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleTailComparePlan> observe_title_tail_compare_longs(const DeuterosAmigaObservedTitleTailCompareLongs& o) { return title_stage_session_ ? title_stage_session_->observe_title_tail_compare_longs(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleTailBootstrapPlan> observe_title_tail_controller_long(const DeuterosAmigaObservedTitleTailControllerLong& o) { return title_stage_session_ ? title_stage_session_->observe_title_tail_controller_long(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleProfileTwoBootstrapPlan> advance_title_profile_two_bootstrap() { return title_stage_session_ ? title_stage_session_->advance_title_profile_two_bootstrap() : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 

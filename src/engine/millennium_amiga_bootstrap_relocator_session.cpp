@@ -70,8 +70,48 @@ MillenniumAmigaBootstrapRelocatorSession::boundary() const {
         return {0x662cc, 0, 0x661da};
     case MillenniumAmigaBootstrapRelocatorState::awaiting_opaque_first_stage:
         return {0x662e4, 0, 0x41000};
+    case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_illegal_exception:
+        return {0x410de, 0x10, 0};
     }
     throw std::runtime_error("Invalid Millennium Amiga bootstrap relocator state");
+}
+
+MillenniumAmigaFirstStageEntryExecution
+MillenniumAmigaBootstrapRelocatorSession::execute_first_stage_entry(
+    const MillenniumAmigaFirstStageRegisterObservation& observation) {
+    if (state_ != MillenniumAmigaBootstrapRelocatorState::awaiting_opaque_first_stage
+        || observation.instruction_address != 0x41000
+        || observation.stack_pointer < 4
+        || (observation.stack_pointer - 4 < 0x14)
+        || (observation.stack_pointer - 4 < 0x4108a
+            && observation.stack_pointer > 0x4104a)
+        || first_stage_bytes_.size() != 0x24200
+        || first_stage_bytes_[0] != 0x60 || first_stage_bytes_[1] != 0x00
+        || first_stage_bytes_[2] != 0x00 || first_stage_bytes_[3] != 0xba
+        || first_stage_bytes_[0xbc] != 0x2f || first_stage_bytes_[0xbd] != 0x0e
+        || first_stage_bytes_[0xde] != 0x4a || first_stage_bytes_[0xdf] != 0xfc) {
+        throw std::runtime_error("Detached Millennium Amiga first-stage entry");
+    }
+    MillenniumAmigaFirstStageEntryExecution result;
+    result.branch_target = 0x410bc;
+    result.snapshot_address = 0x4104a;
+    for (std::size_t i = 0; i < observation.data.size(); ++i) result.snapshot[i] = observation.data[i];
+    for (std::size_t i = 0; i < observation.address.size(); ++i) result.snapshot[8+i] = observation.address[i];
+    // MOVEM first stores the temporary A6=$4104a, then MOVE.L (A7)+,-8(A6)
+    // restores the original A6 into that exact saved-register slot.
+    result.snapshot[14] = observation.address[6];
+    result.snapshot[15] = observation.stack_pointer - 4;
+    result.transient_stack_address = observation.stack_pointer - 4;
+    result.original_a6 = observation.address[6];
+    result.installed_vector_address = 0x10;
+    result.installed_vector_value = 0x410e0;
+    result.resulting_d0 = observation.exception_vector_10;
+    result.resulting_a6 = 0x4108a;
+    result.resulting_stack_pointer = observation.stack_pointer;
+    result.illegal_instruction_address = 0x410de;
+    first_stage_entry_execution_ = result;
+    state_ = MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_illegal_exception;
+    return result;
 }
 
 void MillenniumAmigaBootstrapRelocatorSession::observe_overread_byte(

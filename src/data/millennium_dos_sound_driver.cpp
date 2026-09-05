@@ -12,7 +12,8 @@ namespace {
 bool has_bytes(const std::span<const std::uint8_t> bytes, const std::size_t offset,
     const std::span<const std::uint8_t> expected) {
     return offset <= bytes.size() && expected.size() <= bytes.size() - offset
-        && std::equal(expected.begin(), expected.end(), bytes.begin() + offset);
+        && std::equal(expected.begin(), expected.end(),
+            bytes.begin() + static_cast<std::ptrdiff_t>(offset));
 }
 
 } // namespace
