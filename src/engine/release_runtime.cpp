@@ -290,6 +290,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_amiga_setup_return_sequence_.reset();
     millennium_amiga_first_read_return_sequence_.reset();
     millennium_amiga_first_stage_entry_sequence_.reset();
+    millennium_amiga_first_stage_illegal_sequence_.reset();
     deuteros_amiga_title_load_copy_.reset();
     deuteros_amiga_title_load_copy_generation_ = 0;
     deuteros_amiga_title_command_generation_ = 0;
@@ -407,6 +408,53 @@ ReleaseRuntimeCoordinator::observe_millennium_amiga_first_stage_entry(
         result.accepted=true;
     } catch (const std::exception& error) {
         result.error=std::string("First-stage entry rejected: ")+error.what();
+    }
+    return result;
+}
+
+MillenniumAmigaBootstrapRelocatorObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_amiga_first_stage_illegal_handler(
+    const MillenniumAmigaFirstStageIllegalHandlerObservation observation) {
+    MillenniumAmigaBootstrapRelocatorObservationResult result;
+    if (!millennium_amiga_relocator_ || !native_runtime_memory_
+        || !millennium_amiga_first_stage_entry_sequence_
+        || millennium_amiga_first_stage_illegal_sequence_
+        || observation.sequence <= *millennium_amiga_first_stage_entry_sequence_) {
+        result.error = "ILLEGAL handler requires a later complete exception observation";
+        return result;
+    }
+    try {
+        auto next = *millennium_amiga_relocator_;
+        const auto execution = next.execute_first_stage_illegal_handler(observation.exception);
+        NativeRuntimeEffectBatch batch{"millennium-amiga-first-stage-illegal-"+
+            std::to_string(millennium_amiga_relocator_generation_),true,{}};
+        batch.effects.reserve(12);
+        batch.effects.push_back({1,{NativeRuntimeAddressSpace::linear,std::nullopt,
+            execution.exception_frame_address},MemoryTransferElementWidth::word,
+            NativeRuntimeByteOrder::big_endian,execution.saved_status_register});
+        batch.effects.push_back({2,{NativeRuntimeAddressSpace::linear,std::nullopt,
+            execution.exception_frame_address+2},MemoryTransferElementWidth::longword,
+            NativeRuntimeByteOrder::big_endian,execution.saved_program_counter});
+        for (std::size_t i=0;i<execution.snapshot.size();++i) {
+            batch.effects.push_back({batch.effects.size()+1,
+                {NativeRuntimeAddressSpace::linear,std::nullopt,
+                    execution.snapshot_address+i*4},
+                MemoryTransferElementWidth::longword,
+                NativeRuntimeByteOrder::big_endian,execution.snapshot[i]});
+        }
+        batch.effects.push_back({batch.effects.size()+1,
+            {NativeRuntimeAddressSpace::linear,std::nullopt,0x10},
+            MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,
+            execution.installed_vector_value});
+        auto memory=*native_runtime_memory_;
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted){result.error=applied.error;return result;}
+        *millennium_amiga_relocator_=std::move(next);
+        *native_runtime_memory_=std::move(memory);
+        millennium_amiga_first_stage_illegal_sequence_=observation.sequence;
+        result.accepted=true;
+    } catch (const std::exception& error) {
+        result.error=std::string("First-stage ILLEGAL handler rejected: ")+error.what();
     }
     return result;
 }
@@ -3444,6 +3492,42 @@ DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::advance
     }catch(const std::exception&e){r.error=e.what();}
     return r;
 }
+DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_reentry_d0(
+    const DeuterosAmigaObservedMainStageReentryD0 o){
+    DeuterosAmigaTitleDependencyObservationResult r;
+    if(!active_||!deuteros_amiga_||!native_runtime_memory_||!deuteros_amiga_->title_stage_session()){
+        r.error="Deuteros main-stage re-entry requires active title session";return r;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto plan=pending.observe_main_stage_reentry_d0(o);
+        if(!plan){r.error="Deuteros main-stage re-entry did not match boundary";return r;}
+        auto memory=*native_runtime_memory_;
+        std::vector<std::uint8_t> resident_stage;resident_stage.reserve(0x4200);
+        for(std::uint32_t i=0;i<0x4200;++i){
+            const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,
+                static_cast<std::uint64_t>(0x20000U+i)});
+            if(!byte){r.error="Deuteros main-stage re-entry lacks complete owned stage";return r;}
+            resident_stage.push_back(*byte);
+        }
+        if(to_hex(sha256(resident_stage))
+            !="a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6"){
+            r.error="Deuteros main-stage re-entry owned stage hash changed";return r;
+        }
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-main-stage-reentry-prefix",true,{
+            {1,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->controller_destination},
+                MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,plan->controller_value},
+            {2,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->mode_destination},
+                MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,plan->mode_value}}};
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted){r.error=applied.error;return r;}
+        if(!deuteros_amiga_->observe_main_stage_reentry_d0(o)){
+            r.error="Deuteros main-stage re-entry disappeared before commit";return r;
+        }
+        *native_runtime_memory_=std::move(memory);r.accepted=true;
+    }catch(const std::exception&e){r.error=e.what();}
+    return r;
+}
 DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_custom_chip_write(
     const DeuterosAmigaObservedCustomChipWrite observation) {
@@ -3638,9 +3722,11 @@ ReleaseRuntimeCoordinator::millennium_amiga_bootstrap_relocator_checkpoint()cons
         session.copy_effects().size(),session.custom_chip_effect(),session.final_a3(),
         session.final_a5(),session.final_d1(),
         (session.state()==MillenniumAmigaBootstrapRelocatorState::awaiting_opaque_first_stage
-            || session.state()==MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_illegal_exception)
+            || session.state()==MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_illegal_exception
+            || session.state()==MillenniumAmigaBootstrapRelocatorState::awaiting_second_first_stage_illegal_exception)
             ? session.first_stage_bytes().size():0,
-        session.first_stage_sha256(),session.first_stage_entry_execution()};
+        session.first_stage_sha256(),session.first_stage_entry_execution(),
+        session.first_stage_illegal_execution()};
 }
 
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>

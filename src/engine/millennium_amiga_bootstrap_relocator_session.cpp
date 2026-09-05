@@ -72,8 +72,47 @@ MillenniumAmigaBootstrapRelocatorSession::boundary() const {
         return {0x662e4, 0, 0x41000};
     case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_illegal_exception:
         return {0x410de, 0x10, 0};
+    case MillenniumAmigaBootstrapRelocatorState::awaiting_second_first_stage_illegal_exception:
+        return {0x410fc, 0x10, 0};
     }
     throw std::runtime_error("Invalid Millennium Amiga bootstrap relocator state");
+}
+
+MillenniumAmigaFirstStageIllegalExecution
+MillenniumAmigaBootstrapRelocatorSession::execute_first_stage_illegal_handler(
+    const MillenniumAmigaFirstStageIllegalObservation& observation) {
+    if (state_ != MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_illegal_exception
+        || !first_stage_entry_execution_
+        || observation.handler_entry_address != 0x410e0
+        || observation.saved_program_counter != 0x410de
+        || (observation.exception_frame_address & 1U) != 0
+        || observation.exception_frame_address > 0xfffffa
+        || observation.exception_frame_address < 0x28
+        || (observation.exception_frame_address < 0x410aa
+            && observation.exception_frame_address + 6 > 0x4104a)
+        || observation.vector_longs[2] != first_stage_entry_execution_->resulting_d0
+        || first_stage_bytes_.size() != 0x24200
+        || first_stage_bytes_[0xe0] != 0x23 || first_stage_bytes_[0xe1] != 0xc0
+        || first_stage_bytes_[0xe6] != 0x4c || first_stage_bytes_[0xe7] != 0xf9
+        || first_stage_bytes_[0xee] != 0x48 || first_stage_bytes_[0xef] != 0xd6
+        || first_stage_bytes_[0xf2] != 0x41 || first_stage_bytes_[0xf3] != 0xfa
+        || first_stage_bytes_[0xfc] != 0x4a || first_stage_bytes_[0xfd] != 0xfc) {
+        throw std::runtime_error("Detached Millennium Amiga first-stage ILLEGAL handler");
+    }
+    MillenniumAmigaFirstStageIllegalExecution result;
+    result.exception_frame_address = observation.exception_frame_address;
+    result.saved_status_register = observation.saved_status_register;
+    result.saved_program_counter = observation.saved_program_counter;
+    result.restored_vector_value = first_stage_entry_execution_->resulting_d0;
+    result.snapshot_address = 0x4108a;
+    result.snapshot = observation.vector_longs;
+    result.installed_vector_value = 0x41172;
+    result.resulting_a0 = 0x41172;
+    result.resulting_stack_pointer = observation.exception_frame_address;
+    result.illegal_instruction_address = 0x410fc;
+    first_stage_illegal_execution_ = result;
+    state_ = MillenniumAmigaBootstrapRelocatorState::awaiting_second_first_stage_illegal_exception;
+    return result;
 }
 
 MillenniumAmigaFirstStageEntryExecution

@@ -47,8 +47,8 @@ struct MillenniumAmigaBootstrapOpaqueInvocationBoundary {
 
 // Exact caller-connected entry of the corrected first trackdisk transfer.
 // The initial BRA reaches a register-save/exception-vector setup and then an
-// ILLEGAL instruction. The exception outcome is deliberately left external;
-// no later bytes are called code until that boundary is recovered.
+// first ILLEGAL instruction, plus the statically verified handler through its
+// second ILLEGAL. The first exception entry remains an explicit typed input.
 struct MillenniumAmigaFirstStageEntryBoundary {
     std::size_t raw_disk_offset = 0;
     std::size_t byte_count = 0;
@@ -59,6 +59,8 @@ struct MillenniumAmigaFirstStageEntryBoundary {
     std::uint32_t branch_target = 0;
     std::uint32_t illegal_instruction_address = 0;
     std::uint32_t exception_vector_address = 0;
+    std::uint32_t illegal_handler_address = 0;
+    std::uint32_t second_illegal_instruction_address = 0;
 };
 
 [[nodiscard]] MillenniumAmigaFirstStageEntryBoundary

@@ -1238,6 +1238,18 @@ struct DeuterosAmigaTitleProfileTwoBootstrapPlan {
     std::string source_sha256;
     std::vector<std::uint8_t> source_bytes;
 };
+struct DeuterosAmigaObservedMainStageReentryD0 {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t entry_address=0,result_d0=0;
+};
+struct DeuterosAmigaMainStageReentryPrefixPlan {
+    DeuterosAmigaObservedMainStageReentryD0 observation;
+    std::uint32_t controller_destination=0,controller_value=0;
+    std::uint32_t mode_destination=0;
+    std::uint16_t mode_value=0;
+    std::uint32_t stack_pointer=0,exec_base_source=0,exec_call_address=0,exec_return_address=0;
+    std::int16_t exec_vector=0;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -3448,6 +3460,15 @@ public:
             "a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6",
             main_stage_source_bytes_};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageReentryPrefixPlan>
+    observe_main_stage_reentry_d0(const DeuterosAmigaObservedMainStageReentryD0&o){
+        if(!title_profile_two_bootstrap_advanced_||main_stage_reentry_d0_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.entry_address!=0x21734)
+            throw std::runtime_error("Deuteros main-stage re-entry D0 does not match boundary");
+        main_stage_reentry_d0_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaMainStageReentryPrefixPlan{o,0x20976,title_tail_bootstrap_->value,
+            0x21704,static_cast<std::uint16_t>(o.result_d0),0x22296,4,0x2174a,0x2174e,-0x96};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3683,6 +3704,7 @@ private:
     std::optional<DeuterosAmigaObservedTitleTailControllerLong> title_tail_bootstrap_;
     bool title_profile_two_bootstrap_advanced_=false;
     std::vector<std::uint8_t> main_stage_source_bytes_;
+    std::optional<DeuterosAmigaObservedMainStageReentryD0> main_stage_reentry_d0_;
     std::vector<std::uint8_t> first_title_exit_source_bytes_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;

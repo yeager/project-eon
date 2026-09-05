@@ -263,7 +263,7 @@ Amiga English, and Deuteros Atari Replicants release archives. Their
 identities are in `disassembly-inventory.json`: Millennium's English
 `MILL.COM`, `TITLES.EXE`, `2200AD.EXE`, and `2200GX.EXE` sidecar has 43,060 LF lines; the
 Spanish `IBM.COM`, `TITLES.EXE`, and `2200AD.EXE` FAT12 sidecar has 36,096;
-the corrected Defjam first-stage entry range has 34; Deuteros's clean
+the corrected Defjam first-stage entry/handler range has 62; Deuteros's clean
 bootstrap/main/title sidecar has 84,352; and the Replicants first-stage
 sidecar has 331. Verify retained local sidecars:
 
@@ -319,7 +319,7 @@ input rather than inferring coverage.
 | Target | CPU / origin | Verified static anchors | What is not yet asserted |
 | --- | --- | --- | --- |
 | Millennium DOS | 8086, flat COM-style images at `$0100` | `MILL.COM` private interrupt setup and sound-selection routine; `TITLES.EXE` availability-poll exit; `2200AD.EXE` action-poll sites | DOS/driver/child return values, code/data classification beyond recovered paths, game execution |
-| Millennium Amiga | Motorola 68000 | corrected ADF transfers and `$41000..$410df` entry span | `$410de` exception result and transformed continuation |
+| Millennium Amiga | Motorola 68000 | corrected ADF transfers and `$41000..$410fd` entry/handler span | second `$410fc` exception entry and transformed continuation |
 | Millennium Atari ST | Motorola 68000 | disk structures and bounded bootstrap session | executable chain/load addresses and TOS/XBIOS returns |
 | Deuteros Amiga | Motorola 68000 | boot to `$12a4e`; main stage disk `+$5800` to `$20000`, entry `$21734`; title stage disk `+$6e000` to `$13000`, entry `$40426` | Exec/graphics/callback returns, display ownership, title/game input and timing |
 | Deuteros Atari ST | Motorola 68000 | Replicants Disk 1 protected boot: disk `+$4ec00` to `$1200`, entry `$9c4`, stage SHA-256 `d20784600c5fe3c8fb2005ec5d162d68ffa8f5a0f65d29fcd8a1d9ede2bafddc`; next stage `$70000`; Disk 2 KILLER_BOOT vector route | XBIOS read result, callback dispatch, RAM vector contents, all control/state semantics |
@@ -327,7 +327,8 @@ input rather than inferring coverage.
 Millennium Amiga's earlier shared-resident listing was revoked after the
 loader's `io_Length` and `io_Offset` registers were found to have been
 inverted. The authoritative first-stage entry is ADF `+0x6e000`, length
-`0xe0`, at `$41000`; it stops at `ILLEGAL $410de`.
+`0xfe`, at `$41000`; a typed first exception reaches the handler and stops at
+the second `ILLEGAL $410fc`.
 
 ## Reproduced byte-complete candidate reports
 

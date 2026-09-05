@@ -1786,15 +1786,24 @@ interpretation would overwrite the reader while it was executing.
 
 After a typed successful trackdisk return, the native runtime atomically maps
 the exact `0x24200` source bytes to `$41000..$651ff`. The stage begins
-`BRA.W $410bc`. Its first `0xe0` bytes hash to
-`943b1fd0b5f3aa7734aae09e64d139348f9876615ef4df94fb22f9e05851fd77`
+`BRA.W $410bc`. Its first `0xfe` bytes hash to
+`0b24024d8af46ad2a9207b18962397bc2ba44f0019a6503cd46823af6221213e`
 and statically establish the register-save/vector setup through `ILLEGAL` at
 `$410de`, which uses exception vector address `$10`. A typed register/vector
 observation now advances the native session through the exact `BRA.W`, saved
 `A6`, `MOVEM.L D0-A7`, saved-register patch, vector read, `PEA`, and vector
 installation. The final register table, transient stack cell, and vector
-write are committed atomically. Execution stops at `$410de`: the exception
-frame/result and transformed continuation remain unproven.
+write are committed atomically.
+
+The next admission is frame-complete rather than an emulated 68000
+exception. It requires the observed handler PC `$410e0`, the six-byte format-0
+frame (saved SR plus saved PC `$410de`), its stack address, and all eight
+vector-table longs read from `$8..$27`. The third long must equal the old
+vector `$10` already retained from entry. The handler restores that vector,
+snapshots the eight longs at `$4108a`, installs `$41172` at vector `$10`, and
+reaches the second `ILLEGAL` at `$410fc`. Frame, snapshot, and vector update
+are one fail-closed memory batch. No second exception entry or continuation
+at `$41172` is inferred.
 
 The bootstrap relocation itself remains bounded by its final source-byte
 observation at `$70400`; the exact caller then performs `JSR (A3)` at
@@ -3267,6 +3276,19 @@ After any of those title exits, the original raw track is loaded again at
 verbatim to longword `$20976` and word `$21704`, install stack `$22296`, then
 request the literal memory ceiling `$7fff0`, then call raw addresses `$20068`
 and `$2013a`.
+
+The profile-two runtime now owns that first entry prefix. It accepts only a
+typed D0 observation at exact entry `$21734`; A1 is not caller-supplied again,
+but comes from the controller longword already admitted at `$206a0`, copied
+through `$12ff8`, and retained by the same title session. Before committing,
+the coordinator reconstructs all `$4200` resident bytes at `$20000` and
+requires their SHA-256 to remain
+`a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6`.
+It then atomically writes A1 to `$20976` and D0.W to `$21704`; stack `$22296`
+is retained as a register result rather than a memory write. Execution stops
+at the first Exec call `$2174a`, vector `-$96`, return `$2174e`. A wrong entry,
+missing/replaced resident stage, replay, or revoked owner produces no partial
+write. The D0 value and Exec result remain deliberately uninterpreted.
 
 The main-stage parser opcode-validates that straight-line path and the first
 recurring loop at `$217f6`. The loop calls `$22a5a`, clears words `$21720` and

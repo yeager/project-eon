@@ -168,6 +168,10 @@ struct MillenniumDosSixthFunctionKeyTrace {
     std::uint16_t restoration_second_source_address = 0;
     std::uint16_t restoration_second_destination_address = 0;
     std::uint16_t restoration_first_call_address = 0;
+    std::uint16_t restoration_caller_address = 0;
+    std::uint16_t restoration_caller_call_address = 0;
+    std::uint16_t restoration_caller_target_address = 0;
+    std::uint16_t restoration_caller_jump_address = 0;
 };
 
 // Exact, non-semantic trace of table record six (raw F7 / $41). Its native

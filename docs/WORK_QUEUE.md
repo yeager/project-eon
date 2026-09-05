@@ -199,9 +199,9 @@ GEMDOS compatibility service, and follows its native JSR/JMP chain to
 the resulting branch remain explicit observations.
 
 The corrected Millennium Amiga first stage is native from `$41000` through
-its register-save and vector setup. It stops at `ILLEGAL $410de`; continue
-only with a typed, frame-complete illegal-instruction exception entry and do
-not restore any revoked raw-resident mapping.
+its register-save/vector setup and a typed, frame-complete first ILLEGAL
+exception entry. Its handler stops at the second `ILLEGAL $410fc`; continue
+only with a typed second exception entry and do not restore revoked mappings.
 
 | Rank | Work package | Exact current evidence | Required acceptance evidence | Status / boundary |
 | --- | --- | --- | --- | --- |
@@ -427,8 +427,11 @@ the exact profile-two bootstrap writes. Its `$12800` jump now follows the
 opcode-validated `$12a4e` dispatcher, `$12b44->$12b1c` profile route and
 atomically reloads all `$4200` genuine main-stage bytes at `$20000`, stopping
 at `$21734`. Continue with a re-entry session that owns the exact incoming A1
-controller and D0 mode stores before the first main-stage service boundary;
-do not assign a gameplay meaning to profile two.
+controller and typed D0 stores before the first main-stage service boundary;
+do not assign a gameplay meaning to profile two. That entry prefix is now
+atomic and stops at Exec vector `-$96` at `$2174a`. Continue with its typed
+return, the literal `$7fff0` request at vector `-$9c`, and the following
+caller-connected `$20068/$2013a` services.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

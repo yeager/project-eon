@@ -3497,6 +3497,36 @@ int main() {
         catch (const std::runtime_error&) { rejected = true; }
         assert(rejected);
     }
+    eon::MillenniumAmigaFirstStageIllegalObservation illegal_observation;
+    illegal_observation.handler_entry_address = 0x410e0;
+    illegal_observation.exception_frame_address = 0x7fefa;
+    illegal_observation.saved_status_register = 0x2700;
+    illegal_observation.saved_program_counter = 0x410de;
+    illegal_observation.vector_longs =
+        {{0x00000008,0x0000000c,0x00f01234,0x00000014,
+          0x00000018,0x0000001c,0x00000020,0x00000024}};
+    {
+        auto wrong = illegal_observation;
+        wrong.vector_longs[2] = 0x410e0;
+        bool rejected = false;
+        try { static_cast<void>(defjam_relocator.execute_first_stage_illegal_handler(wrong)); }
+        catch (const std::runtime_error&) { rejected = true; }
+        assert(rejected);
+    }
+    const auto illegal_execution =
+        defjam_relocator.execute_first_stage_illegal_handler(illegal_observation);
+    assert(illegal_execution.exception_frame_address == 0x7fefa
+        && illegal_execution.saved_status_register == 0x2700
+        && illegal_execution.saved_program_counter == 0x410de
+        && illegal_execution.restored_vector_value == 0x00f01234
+        && illegal_execution.snapshot_address == 0x4108a
+        && illegal_execution.snapshot == illegal_observation.vector_longs
+        && illegal_execution.installed_vector_value == 0x41172
+        && illegal_execution.resulting_a0 == 0x41172
+        && illegal_execution.resulting_stack_pointer == 0x7fefa
+        && illegal_execution.illegal_instruction_address == 0x410fc);
+    assert((defjam_relocator.boundary()
+        == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x410fc,0x10,0}));
     {
         bool rejected = false;
         try {
@@ -3530,12 +3560,14 @@ int main() {
     assert(first_stage_entry.raw_disk_offset == 0x6e000
         && first_stage_entry.byte_count == 0x24200
         && first_stage_entry.destination == 0x41000
-        && first_stage_entry.entry_span_byte_count == 0xe0
+        && first_stage_entry.entry_span_byte_count == 0xfe
         && first_stage_entry.entry_span_sha256
-            == "943b1fd0b5f3aa7734aae09e64d139348f9876615ef4df94fb22f9e05851fd77"
+            == "0b24024d8af46ad2a9207b18962397bc2ba44f0019a6503cd46823af6221213e"
         && first_stage_entry.branch_target == 0x410bc
         && first_stage_entry.illegal_instruction_address == 0x410de
-        && first_stage_entry.exception_vector_address == 0x10);
+        && first_stage_entry.exception_vector_address == 0x10
+        && first_stage_entry.illegal_handler_address == 0x410e0
+        && first_stage_entry.second_illegal_instruction_address == 0x410fc);
     assert(defjam_session.first_stage_entry_boundary().entry_span_sha256
         == first_stage_entry.entry_span_sha256);
     const auto defjam_opaque_invocation =
@@ -4271,6 +4303,29 @@ int main() {
                 const auto entry_memory=all_release_runtime.native_runtime_memory_diagnostics();
                 assert(entry_memory&&entry_memory->initialized_byte_count==0x24200+975+8&&entry_memory->applied_batch_count==4);
                 assert(!all_release_runtime.observe_millennium_amiga_first_stage_entry(entry_observation).accepted);
+                eon::MillenniumAmigaFirstStageIllegalHandlerObservation illegal_observation;
+                illegal_observation.sequence=6;
+                illegal_observation.exception.handler_entry_address=0x410e0;
+                illegal_observation.exception.exception_frame_address=0x7fefa;
+                illegal_observation.exception.saved_status_register=0x2700;
+                illegal_observation.exception.saved_program_counter=0x410de;
+                illegal_observation.exception.vector_longs=
+                    {{8,12,0xf01234,20,24,28,32,36}};
+                auto wrong_illegal=illegal_observation;
+                wrong_illegal.exception.saved_program_counter=0x410e0;
+                assert(!all_release_runtime.observe_millennium_amiga_first_stage_illegal_handler(wrong_illegal).accepted);
+                assert(all_release_runtime.native_runtime_memory_diagnostics()->checksum==entry_memory->checksum);
+                assert(all_release_runtime.observe_millennium_amiga_first_stage_illegal_handler(illegal_observation).accepted);
+                const auto second_illegal=all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
+                assert(second_illegal&&second_illegal->state==eon::MillenniumAmigaBootstrapRelocatorState::awaiting_second_first_stage_illegal_exception
+                    && second_illegal->boundary.instruction_address==0x410fc
+                    && second_illegal->first_stage_illegal_execution
+                    && second_illegal->first_stage_illegal_execution->snapshot[2]==0xf01234
+                    && second_illegal->first_stage_illegal_execution->installed_vector_value==0x41172);
+                const auto illegal_memory=all_release_runtime.native_runtime_memory_diagnostics();
+                assert(illegal_memory&&illegal_memory->initialized_byte_count==0x24200+975+10
+                    && illegal_memory->applied_batch_count==5&&illegal_memory->checksum!=entry_memory->checksum);
+                assert(!all_release_runtime.observe_millennium_amiga_first_stage_illegal_handler(illegal_observation).accepted);
             }else{
                 assert(!all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint());
                 assert(all_release_runtime.native_runtime_memory_diagnostics()->initialized_byte_count==0);
@@ -5479,6 +5534,25 @@ int main() {
             }
             assert(eon::to_hex(eon::sha256(reloaded_main_stage))
                 =="a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6");
+            eon::DeuterosAmigaObservedMainStageReentryD0 reentry_d0{
+                runtime_copy_sequence+91,0x21734,0x12345678};
+            auto bad_reentry_d0=reentry_d0;bad_reentry_d0.entry_address+=2;
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_reentry_d0(
+                bad_reentry_d0).accepted);
+            assert(opening_controller.observe_deuteros_amiga_main_stage_reentry_d0(
+                reentry_d0).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_reentry_d0(
+                reentry_d0).accepted);
+            const auto after_main_stage_prefix=opening_controller.native_runtime_memory_checkpoint();
+            assert(after_main_stage_prefix
+                &&after_main_stage_prefix->applied_batch_count
+                    ==after_main_stage_load->applied_batch_count+1);
+            assert(runtime_byte(*after_main_stage_prefix,0x20976)==0x00);
+            assert(runtime_byte(*after_main_stage_prefix,0x20977)==0xc0);
+            assert(runtime_byte(*after_main_stage_prefix,0x20978)==0xff);
+            assert(runtime_byte(*after_main_stage_prefix,0x20979)==0xee);
+            assert(runtime_byte(*after_main_stage_prefix,0x21704)==0x56);
+            assert(runtime_byte(*after_main_stage_prefix,0x21705)==0x78);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory
@@ -7223,6 +7297,11 @@ int main() {
         assert((admitted_sixth.boundary()
             == eon::MillenniumDosSixthFunctionBoundary{
                 eon::MillenniumDosSixthFunctionBoundaryKind::call_return,
+                0x74c1, std::nullopt, 0xcc4e, std::nullopt, 0}));
+        admitted_sixth.observe_call_return(0x74c1, 0x74c4);
+        assert((admitted_sixth.boundary()
+            == eon::MillenniumDosSixthFunctionBoundary{
+                eon::MillenniumDosSixthFunctionBoundaryKind::call_return,
                 0x7467, std::nullopt, 0x0b0c, std::nullopt, 0}));
         admitted_sixth.observe_call_return(0x7467, 0x746a);
         admitted_sixth.observe_call_return(0x746e, 0x7471);
@@ -8326,6 +8405,10 @@ int main() {
     assert(game_flow.sixth_function_key.restoration_second_source_address == 0x7412);
     assert(game_flow.sixth_function_key.restoration_second_destination_address == 0x75a8);
     assert(game_flow.sixth_function_key.restoration_first_call_address == 0x0b0c);
+    assert(game_flow.sixth_function_key.restoration_caller_address == 0x74c1);
+    assert(game_flow.sixth_function_key.restoration_caller_call_address == 0x74c1);
+    assert(game_flow.sixth_function_key.restoration_caller_target_address == 0xcc4e);
+    assert(game_flow.sixth_function_key.restoration_caller_jump_address == 0x7455);
     auto altered_startup_profile = *game_executable;
     altered_startup_profile[0xd2b4 - 0x100] ^= 0x01;
     bool rejected_altered_startup_profile = false;
@@ -8434,6 +8517,16 @@ int main() {
         rejected_altered_f6_restoration = true;
     }
     assert(rejected_altered_f6_restoration);
+    auto altered_f6_restoration_caller = *game_executable;
+    altered_f6_restoration_caller[0x74c1 - 0x100] ^= 0x01;
+    bool rejected_altered_f6_restoration_caller = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_game_flow(
+            altered_f6_restoration_caller));
+    } catch (const std::runtime_error&) {
+        rejected_altered_f6_restoration_caller = true;
+    }
+    assert(rejected_altered_f6_restoration_caller);
     auto altered_f7_handler = *game_executable;
     altered_f7_handler[0x7521 - 0x100] ^= 0x01;
     bool rejected_altered_f7_handler = false;

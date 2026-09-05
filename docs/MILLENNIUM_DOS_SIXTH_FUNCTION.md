@@ -37,6 +37,12 @@ proved call boundary at `$7467`, `$746e`, `$7471`, `$7474`, `$747d`, `$7487`,
 `$748d`, `$749b`, `$749e`, `$74a1`, `$74a4`, and `$74a7`, including the observed
 byte read from `$613a` at `$7483`, before returning at `$74aa`.
 
+The exact six-byte caller at executable offset `0x73c1` (runtime `$74c1`) has
+SHA-256 `26aa10af6fc9d62f91ab8e1f922622618d61b0f92af3b48e641e8a5ee400a76c`.
+It calls `$cc4e`, discards one stack word after the typed return at `$74c4`,
+and tail-jumps to `$7455`. The runtime therefore admits restoration through
+this caller boundary; it does not bypass the opaque call.
+
 The typed session exposes only addresses, call targets, proved register values,
 and memory effects. In particular, the byte read at `$613a` is not assigned a
 gameplay or pixel meaning. Calling the restoration before the completed F6
@@ -47,8 +53,9 @@ continues to reject observations at the host boundary.
 
 ## Remaining uncertainty
 
-The caller that chooses to enter `$7455` is not yet proved. Consequently the
-runtime requires an explicit caller-side transition after the admitted `$7454`
-return. Helper internals reached by the twelve calls remain separate recovery
+The predecessor that chooses to enter `$74c1` is not yet proved. Consequently
+the runtime requires an explicit caller-side transition after the admitted
+`$7454` return. The stack word discarded at `$74c4`, the `$cc4e` result, and
+helper internals reached by the restoration calls remain separate recovery
 boundaries; this work does not infer their rendering, timing, or gameplay
 semantics.
