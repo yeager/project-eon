@@ -8,3 +8,11 @@ Filters = [
   "no-packager-tag$",
   "invalid-license MIT$",
 ]
+
+# Project Eon deliberately uses the broadly supported .gz convention for
+# manual pages (and Debian requires that same staged file). rpmlint's generic
+# upstream configuration defaults to bz2 without detecting the package's
+# actual distribution policy, so declare the package convention explicitly.
+# This is a format selection, not a diagnostic suppression; the policy script
+# independently verifies the member name and gzip stream before rpmlint runs.
+CompressExtension = "gz"

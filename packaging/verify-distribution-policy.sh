@@ -44,6 +44,32 @@ require_755_directories() {
   fi
 }
 
+verify_rpm_manpage() {
+  local package="$1"
+  local expected="/usr/share/man/man6/project-eon.6.gz"
+  local members
+  require_tool cpio
+  require_tool gzip
+  require_tool rpm2cpio
+  members="$(rpm -qpl "$package")"
+  if ! grep -Fxq "$expected" <<<"$members"; then
+    echo "RPM package lacks its policy-compressed manual page: $expected" >&2
+    return 1
+  fi
+  if grep -Eq '^/usr/share/man/man6/project-eon\.6($|\.(bz2|xz|zst)$)' <<<"$members"; then
+    echo "RPM package contains a conflicting manual-page compression format" >&2
+    return 1
+  fi
+  # Inspect the member bytes instead of trusting its suffix. GNU cpio accepts
+  # the archive's leading ./ spelling while rpm -qpl reports absolute paths.
+  if ! rpm2cpio "$package" \
+      | cpio -i --quiet --to-stdout './usr/share/man/man6/project-eon.6.gz' \
+      | gzip -t; then
+    echo "RPM manual page is not a valid gzip stream: $expected" >&2
+    return 1
+  fi
+}
+
 for package in "$@"; do
   test -f "$package"
   case "$package" in
@@ -60,6 +86,7 @@ for package in "$@"; do
       require_tool rpmlint
       require_tool rpmspec
       require_755_directories rpm "$package"
+      verify_rpm_manpage "$package"
       # Verify the generated package header/payload, then parse the exact
       # CPack-generated spec rather than a disconnected template.
       rpm --checksig --nosignature "$package"

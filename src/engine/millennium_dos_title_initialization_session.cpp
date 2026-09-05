@@ -21,6 +21,42 @@ std::optional<std::uint16_t> latest_local_word(
 }
 }
 
+void MillenniumDosTitleInitializationSession::advance_first_descriptor_mode_two_return() {
+    if (state_ != MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_returned
+        || continuation_address_ != 0x16e8)
+        throw std::runtime_error("Detached Millennium DOS first-descriptor mode-two return");
+
+    // The caller at $173d saved the instruction-derived descriptor-table
+    // displacement (zero for this first invocation). Recover the two source
+    // words and the callee-produced pair before making any mutation so a
+    // missing native input cannot partially commit the caller suffix.
+    const auto first_record_word = latest_local_word(memory_effects_, 0x1357);
+    const auto second_record_word = latest_local_word(memory_effects_, 0x1359);
+    if (!first_record_word || !second_record_word)
+        throw std::runtime_error("Missing Millennium DOS first-descriptor caller words");
+
+    memory_effects_.insert(memory_effects_.end(), {
+        {0x174b, 0x1351, MillenniumDosTitleInitializationEffectWidth::word,
+            first_descriptor_caller_word_},
+        {0x1750, 0x134f, MillenniumDosTitleInitializationEffectWidth::word,
+            first_descriptor_caller_second_word_},
+        {0x175a, 0x133d, MillenniumDosTitleInitializationEffectWidth::word,
+            *first_record_word},
+        {0x175b, 0x133f, MillenniumDosTitleInitializationEffectWidth::word,
+            *second_record_word}});
+    effects_.insert(effects_.end(), {{0x1740,"AX",0},
+        {0x1742,"DS",child_code_segment_},{0x1744,"ES",child_code_segment_},
+        {0x1745,"SI",0x170c},{0x174a,"AX",first_descriptor_caller_word_},
+        {0x174f,"AX",first_descriptor_caller_second_word_},
+        {0x1754,"DI",0x133d},{0x1757,"SI",0x1357},
+        {0x175d,"ES",child_code_segment_},{0x175e,"BX",0x1349},
+        {0x1761,"AX",0x0006}});
+    boundary_={0x1764,0x0122,0x0127,0x91,0x0006,
+        child_code_segment_,0x1349,false,false};
+    continuation_address_=0x0127;
+    state_=MillenniumDosTitleInitializationState::graphics_record_private_interrupt_result_boundary;
+}
+
 MillenniumDosTitleModeTwoDriveResult
 MillenniumDosTitleInitializationSession::drive_mode_two_from_owned_memory(
     NativeRuntimeMemory& runtime_memory,
@@ -51,7 +87,8 @@ MillenniumDosTitleInitializationSession::drive_mode_two_from_owned_memory(
         }
     }
     for (std::size_t count = 0; count < request.maximum_observations; ++count) {
-        if (next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_returned) {
+        if (next.state_ == MillenniumDosTitleInitializationState::graphics_record_private_interrupt_result_boundary
+            && next.boundary_.call_address == 0x1764) {
             result.accepted = true;
             result.returned = true;
             result.observation_count = count;
@@ -106,7 +143,8 @@ MillenniumDosTitleInitializationSession::drive_mode_two_from_owned_memory(
                 physical_bytes[effect_physical]=static_cast<std::uint8_t>(effect.value);
             }
         }
-        if (next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_returned) {
+        if (next.state_ == MillenniumDosTitleInitializationState::graphics_record_private_interrupt_result_boundary
+            && next.boundary_.call_address == 0x1764) {
             result.accepted = true;
             result.returned = true;
             result.observation_count = count + 1;
@@ -412,6 +450,10 @@ MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession
             != encoded_nibble_dispatch_sha) {
         throw std::runtime_error("Unsupported Millennium DOS title initialization media");
     }
+    first_descriptor_caller_word_=static_cast<std::uint16_t>(titles_executable[0x160c])
+        | static_cast<std::uint16_t>(static_cast<std::uint16_t>(titles_executable[0x160d]) << 8U);
+    first_descriptor_caller_second_word_=static_cast<std::uint16_t>(titles_executable[0x160e])
+        | static_cast<std::uint16_t>(static_cast<std::uint16_t>(titles_executable[0x160f]) << 8U);
 }
 
 void MillenniumDosTitleInitializationSession::
@@ -507,7 +549,8 @@ void MillenniumDosTitleInitializationSession::observe_bios_palette_result(
             const auto source=static_cast<std::uint16_t>(0x0477+next_index);
             const auto value=titles_executable[source-0x0100];
             bios_boundary_={selected_followup_call_address_,0x0487,0x0497,0x10,
-                0x1000,static_cast<std::uint16_t>((value<<8U)|next_index),
+                0x1000,static_cast<std::uint16_t>((static_cast<std::uint16_t>(value)<<8U)
+                    |static_cast<std::uint16_t>(next_index)),
                 static_cast<std::uint16_t>(16-next_index),0,0,source,false};
         }
         return;
@@ -1616,8 +1659,9 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
         for(auto it=memory_effects_.rbegin();it!=memory_effects_.rend();++it)
             if(!it->explicit_segment&&it->offset==0x1359){height=it->value;fh=true;break;}
         if(!fcl||!fdx||!fdi||!fbx||!fsi||!fch||!fh||!fes){far_byte_observations_.pop_back();throw std::runtime_error("Missing Millennium DOS mode-two loop context");}
-        auto output=second?static_cast<std::uint8_t>(((observation.byte>>cl)&0x0fU)|ch)
-            :static_cast<std::uint8_t>((observation.byte<<cl)&0xf0U);
+        const auto promoted_byte=static_cast<std::uint16_t>(observation.byte);
+        auto output=second?static_cast<std::uint8_t>(((promoted_byte>>cl)&0x0fU)|ch)
+            :static_cast<std::uint8_t>((static_cast<std::uint32_t>(promoted_byte)<<cl)&0xf0U);
         auto remaining=static_cast<std::uint16_t>(dx-1U);
         effects_.insert(effects_.end(),{{static_cast<std::uint16_t>(second?0x16d0:0x16bb),"AL",observation.byte},
             {static_cast<std::uint16_t>(second?0x16d4:0x16bf),"AL",output},
@@ -1639,7 +1683,7 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
         const auto next_bx=static_cast<std::uint16_t>(bx-1U);
         effects_.insert(effects_.end(),{{0x16de,"CL",next_cl},{0x16e1,"BX",next_bx}});
         last_sequence_=observation.sequence;
-        if(next_bx==0){effects_.insert(effects_.end(),{{0x16e5,"DS",child_code_segment_},{0x16e7,"ES",child_code_segment_}});continuation_address_=0x16e8;state_=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_returned;}
+        if(next_bx==0){effects_.insert(effects_.end(),{{0x16e5,"DS",child_code_segment_},{0x16e7,"ES",child_code_segment_}});continuation_address_=0x16e8;state_=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_returned;advance_first_descriptor_mode_two_return();}
         else {effects_.push_back({0x16ae,"DX",height});far_byte_boundary_={0x16b3,far_byte_observations_[far_byte_observations_.size()-2].source_segment,si,0};continuation_address_=0x16b3;state_=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_source_byte_boundary;}
         return;
     }

@@ -137,6 +137,11 @@ class RecoveryMapTests(unittest.TestCase):
             expected_runtime_status = (
                 "trace-gated sparse GX startup session"
                 if entry["parser_profile_id"] == "millennium-dos-gx-overlay"
+                else "native materialization to entry boundary"
+                if entry["parser_profile_id"] in {
+                    "millennium-amiga-defjam-first-stage-entry",
+                    "millennium-amiga-defjam-direct-first-stage-entry",
+                }
                 else "read-only parser and diagnostics"
             )
             self.assertEqual(entry["runtime_status"], expected_runtime_status)

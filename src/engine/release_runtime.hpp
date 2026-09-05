@@ -137,7 +137,7 @@ struct DeuterosAtariBootstrapPresentationSnapshot {
 struct MillenniumAmigaBootstrapPresentationSnapshot {
     MillenniumAmigaLoadPlan plan;
     MillenniumAmigaBootstrapOpaqueInvocationBoundary opaque_invocation_boundary;
-    MillenniumAmigaResidentEvidenceSnapshot resident_evidence;
+    MillenniumAmigaFirstStageEntryBoundary first_stage_entry_boundary;
 };
 struct MillenniumAmigaBootstrapRelocatorObservation { std::uint64_t sequence=0; std::uint32_t instruction_address=0; std::uint32_t source_or_target_address=0; std::uint8_t value=0; };
 struct MillenniumAmigaBootstrapRelocatorObservationResult { bool accepted=false; std::string error; };
@@ -148,6 +148,8 @@ struct MillenniumAmigaBootstrapRelocatorCheckpoint {
     std::size_t admitted_copy_effect_count=0;
     MillenniumAmigaBootstrapCustomChipEffect custom_chip_effect;
     std::uint32_t final_a3=0, final_a5=0, final_d1=0;
+    std::size_t materialized_first_stage_byte_count=0;
+    std::string first_stage_sha256;
 };
 
 // Immutable Millennium Atari ST bootstrap provenance.  It reports only the
@@ -806,6 +808,11 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_input_return(DeuterosAmigaObservedTitlePostAdjustedInputReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_repeated_input_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_tail_copy(DeuterosAmigaObservedTitleTailCopy);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_tail_subroutine();
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_tail_initial_service_return(DeuterosAmigaObservedLocalCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_tail_exec_return(DeuterosAmigaObservedTitleTailExecReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_tail_compare_longs(DeuterosAmigaObservedTitleTailCompareLongs);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_tail_controller_long(DeuterosAmigaObservedTitleTailControllerLong);
 
 
     // Active-session transition for a complete, already validated v4/v5

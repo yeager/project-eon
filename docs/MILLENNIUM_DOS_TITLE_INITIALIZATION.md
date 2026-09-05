@@ -583,6 +583,17 @@ compact two-byte row at exactly `$16e8`; the lookup byte comes from the genuine
 `TITLE.LIB` leaf. This is native execution of the hash-bound loop, not an
 emulator or an inferred graphics decoder.
 
+The terminal `$16e8` RET is now caller-connected without another runtime
+observation. The exact 36 bytes at `$1740..$1763` (file
+`TITLES.EXE+$1640`, SHA-256
+`d1e04fba870ff3677e495d131b994bfdc1dc6f95af7ea9f7cc4316d48568f115`)
+restore the caller's saved zero table displacement, read the two genuine
+embedded words at `$170c/$170e`, copy the two raw callee-produced words from
+`CS:$1357/$1359` to `CS:$133d/$133f`, and form the original function-six
+request at `$1764->$0122`. All caller writes join the owned-memory drive's
+transaction. The private `INT $91` result remains external, and none of these
+raw words is assigned pixel or field semantics.
+
 The ordered second-record word at `$3c80:$0016` now enters `$13d0`. Exact
 bytes `$13d0..$13e1` perform the unsigned multiplication and atomically store
 the raw inputs at `CS:$1357/$1359` and low product at `CS:$133b`. Execution

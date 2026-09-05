@@ -29,6 +29,19 @@ MillenniumAmigaBootstrapRelocatorSession::MillenniumAmigaBootstrapRelocatorSessi
         || boundary.relocated_continuation_address != 0x6629e) {
         throw std::runtime_error("Unsupported Millennium Amiga bootstrap relocation contract");
     }
+    constexpr std::size_t first_stage_disk_offset = 0x6e000;
+    constexpr std::size_t first_stage_byte_count = 0x24200;
+    constexpr auto first_stage_sha =
+        "df97c7f6cd622b16b9ffb57bc562906e349c18c56ed8abeb564c6f411e64891c";
+    const auto first_stage = disk_image.subspan(first_stage_disk_offset,
+        first_stage_byte_count);
+    first_stage_sha256_ = to_hex(sha256(first_stage));
+    if (first_stage_sha256_ != first_stage_sha
+        || first_stage[0] != 0x60 || first_stage[1] != 0x00
+        || first_stage[2] != 0x00 || first_stage[3] != 0xba) {
+        throw std::runtime_error("Unsupported Millennium Amiga opaque first stage");
+    }
+    first_stage_bytes_.assign(first_stage.begin(), first_stage.end());
 
     custom_chip_effect_ = {0x70000, 0xdff104, 0x0024};
     copy_effects_.reserve(boundary.copy_byte_count);
@@ -94,9 +107,11 @@ void MillenniumAmigaBootstrapRelocatorSession::observe_setup_call_return(
 }
 
 void MillenniumAmigaBootstrapRelocatorSession::observe_first_read_return(
-    const std::uint32_t instruction_address, const std::uint32_t target_address) {
+    const std::uint32_t instruction_address, const std::uint32_t target_address,
+    const std::uint8_t io_error) {
     if (state_ != MillenniumAmigaBootstrapRelocatorState::awaiting_first_read_return
-        || instruction_address != 0x662cc || target_address != 0x661da) {
+        || instruction_address != 0x662cc || target_address != 0x661da
+        || io_error != 0) {
         throw std::runtime_error("Detached Millennium Amiga first-read return");
     }
     state_ = MillenniumAmigaBootstrapRelocatorState::awaiting_opaque_first_stage;

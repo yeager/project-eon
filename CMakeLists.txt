@@ -694,9 +694,10 @@ set(CPACK_RPM_PACKAGE_DESCRIPTION
     "Preservation-first SDL3 launcher for Millennium 2.2 and Deuteros.\nProject Eon reads user-supplied original media in place.\nNo commercial game data is included in this package.")
 set(CPACK_RPM_PACKAGE_RELEASE "1")
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
-# Match the package payload compressor to the policy-compressed manual page.
-# CPack's distribution default may otherwise select bzip2 while the shared
-# Debian/RPM staging rule has correctly produced project-eon.6.gz.
+# Select a deterministic RPM payload compressor independently of the staged
+# .gz manual page. The package policy gate verifies the manual member itself;
+# packaging/rpmlint.toml declares that format to rpmlint rather than relying
+# on its distribution-agnostic bz2 default.
 set(CPACK_RPM_COMPRESSION_TYPE "gzip")
 # These standard filesystem paths are owned by the distribution filesystem
 # package.  CPack must list Project Eon's children without claiming the parent

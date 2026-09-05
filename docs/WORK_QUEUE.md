@@ -52,8 +52,10 @@ The full typed `$16b3..$16e8` nested byte-pair loop is native, including
 lookup boundaries, atomic destination writes, repeated row/column edges, and
 return. It can now consume bytes directly from owned native memory, including
 physical-equivalent DOS segment aliases, under a finite transactional cap.
-Continue by caller-connecting the resulting `$16e8` return toward the first
-complete admitted destination state; do not infer pixel or palette meaning.
+Its `$16e8` return is caller-connected through exact `$1740..$1763`, genuine
+embedded `$170c/$170e` table words, raw callee-word copies, and the complete
+private function-six boundary at `$1764->$0122`. Continue from that typed
+private result; do not infer pixel or palette meaning.
 The other-value branch owns the second descriptor and first two raw words plus
 their product and subtraction; continue at `$13e9`, source `$3c80:$0001`. Do not assign
 graphics or codec semantics to these fields.
@@ -172,7 +174,7 @@ presentation modes. This is infrastructure and current-string coverage, not a
 claim that unrecovered game text has already been extracted.
 
 The mechanical disassembly inventory is complete for all eight declared
-releases: 19 code images, 21 admitted ranges, and 1,124,867 source bytes are
+releases: 19 code images, 21 admitted ranges, and 764,867 source bytes are
 accounted for. This is byte coverage, not semantic recovery or parity.
 
 The active English Millennium DOS path now owns the selected sound-driver
@@ -414,8 +416,11 @@ The alternate selected gate now types returns from `$3880a` and `$204fa`,
 then atomically copies exactly `$9392` hash-bound original-stage bytes from
 `$13006` to `$66000`, overlaying any earlier admitted source mutations from
 the sparse runtime ledger. No caller-supplied replacement bytes are accepted.
-Continue at local `$37f7a->$37f9a`; its nested system calls remain
-separate typed boundaries.
+Local `$37f7a->$37f9a` is now caller-connected through its initial service,
+the five-call equal or seven-call unequal Exec route, typed comparison and
+the exact profile-two bootstrap writes. Continue by connecting its reported
+`$12800` jump to the already recovered bootstrap dispatcher; keep that
+transition atomic and retain all Exec results as typed boundaries.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

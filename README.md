@@ -549,12 +549,13 @@ its filename and reads its 13 root files, including verified `DATA12.BIN`.
 
 Millennium's Amiga media is now distinguished from those filesystem variants:
 the verified Defjam ADF boot chain loads a 1 KiB first stage and then two
-authentic raw disk ranges (`0x24200`/`0x6e000` to `0x41000`, and
-`0x16400`/`0x2c000` to `0x68000`). Project Eon validates this original 68000
+authentic raw disk ranges (`0x6e000`/`0x24200` to `0x41000`, and
+`0x2c000`/`0x16400` to `0x68000`). Project Eon validates this original 68000
 request sequence directly from the in-place ADF; it does not invent files or
 unpack the ranges. Selecting Millennium Amiga creates this hash-locked bounded
-session and validates its resident entry, but stops before the original opaque
-raw-stage invocation rather than inferring an Amiga game loop.
+session, atomically materializes the successful first read, and stops at the
+first-stage entry before its hash-bound register/vector setup rather than
+inferring the `ILLEGAL` exception result or a game loop.
 
 Deuteros' clean Amiga system and data disks are also opened natively as ADF.
 Geometry, boot identifiers, carry-around checksums and arbitrary sectors are

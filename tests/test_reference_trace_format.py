@@ -83,7 +83,7 @@ class ReferenceTraceFormatTests(unittest.TestCase):
             "deuteros-atari-protected-boot", "deuteros-atari-first-stage",
         ),
         "millennium-amiga-en-defjam-bootstrap-v1": (
-            "millennium-amiga-defjam-bootstrap", "millennium-amiga-shared-resident",
+            "millennium-amiga-defjam-bootstrap", "millennium-amiga-defjam-first-stage-entry",
         ),
         "deuteros-amiga-en-title-stage-v1": (
             "deuteros-amiga-main-stage", "deuteros-amiga-title-handoff",

@@ -45,6 +45,26 @@ struct MillenniumAmigaBootstrapOpaqueInvocationBoundary {
     std::uint32_t resident_stage_target = 0;
 };
 
+// Exact caller-connected entry of the corrected first trackdisk transfer.
+// The initial BRA reaches a register-save/exception-vector setup and then an
+// ILLEGAL instruction. The exception outcome is deliberately left external;
+// no later bytes are called code until that boundary is recovered.
+struct MillenniumAmigaFirstStageEntryBoundary {
+    std::size_t raw_disk_offset = 0;
+    std::size_t byte_count = 0;
+    std::uint32_t destination = 0;
+    std::string source_sha256;
+    std::size_t entry_span_byte_count = 0;
+    std::string entry_span_sha256;
+    std::uint32_t branch_target = 0;
+    std::uint32_t illegal_instruction_address = 0;
+    std::uint32_t exception_vector_address = 0;
+};
+
+[[nodiscard]] MillenniumAmigaFirstStageEntryBoundary
+parse_millennium_amiga_first_stage_entry_boundary(
+    const AmigaAdf&, const MillenniumAmigaLoadPlan&);
+
 // The bootstrap block starts at $70000, then contains a byte-copy relocator
 // for its later loader continuation. The original DBRA count copies one byte
 // beyond the preceding, independently recovered $400-byte boot I/O request.

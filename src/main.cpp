@@ -2791,6 +2791,7 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
 }
 
 void report_millennium_amiga(const eon::ReleaseArchive& release) {
+#if 0 // Revoked 2026-09-05: this report inverted io_Length and io_Offset.
     std::size_t shared_resident_images = 0;
     std::optional<eon::MillenniumAmigaSharedResidentLayout> shared_resident;
     for (const auto& asset : eon::inventory_verified_release(release)) {
@@ -3095,6 +3096,24 @@ void report_millennium_amiga(const eon::ReleaseArchive& release) {
         << post_negative_d3_continuation.terminal_jump_target << "; SHA-256 "
         << post_negative_d3_continuation.raw_sha256 << std::dec
         << " (static only; no branch, restore, or jump execution)\n";
+#endif
+    constexpr auto loader_adf_sha256 =
+        "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c";
+    const auto image = eon::extract_verified_release_asset(release, loader_adf_sha256);
+    if (!image) return;
+    const eon::MillenniumAmigaBootstrapSession bootstrap(*image);
+    const auto& plan = bootstrap.plan();
+    const auto& handoff = bootstrap.opaque_invocation_boundary();
+    std::cout << "          corrected raw loader: disk 0x" << std::hex
+        << plan.first_stage.disk_offset << " + 0x" << plan.first_stage.length
+        << " -> memory 0x" << plan.first_stage.destination << "; disk 0x"
+        << plan.resident_stage.disk_offset << " + 0x" << plan.resident_stage.length
+        << " -> memory 0x" << plan.resident_stage.destination << std::dec << '\n'
+        << "          first-stage SHA-256: " << plan.first_stage.raw_sha256 << '\n'
+        << "          caller boundary: JSR (A3) at 0x" << std::hex
+        << handoff.first_stage_invocation_address << " -> 0x"
+        << handoff.first_stage_target << std::dec
+        << " (native transfer admitted; execution stops at the unproven stage boundary)\n";
 }
 
 void report_millennium_atari_root_inventory(const eon::MillenniumAtariRootInventory& inventory) {
@@ -6314,8 +6333,6 @@ int main(int argc, char** argv) {
                     // the opaque first stage or manufacture a screen.
                     const auto& plan = amiga_bootstrap->plan;
                     const auto& handoff = amiga_bootstrap->opaque_invocation_boundary;
-                    const auto& resident = amiga_bootstrap->resident_evidence.entry;
-                    const auto& evidence = amiga_bootstrap->resident_evidence;
                     std::ostringstream ranges;
                     ranges << "ADF+0x" << std::hex << plan.first_stage.disk_offset
                            << "/0x" << plan.first_stage.length << " -> RAM 0x"
@@ -6328,16 +6345,10 @@ int main(int argc, char** argv) {
                     entry << "A3: 0x" << handoff.first_stage_invocation_address << " -> 0x"
                           << handoff.first_stage_target << "; 0x"
                           << handoff.resident_stage_jump_address << " -> 0x"
-                          << handoff.resident_stage_target << "; entry 0x"
-                          << resident.entry_address << " -> 0x" << resident.initializer_address
-                          << "; [0x" << resident.result_word_address << "]";
+                          << handoff.resident_stage_target;
                     draw_text(renderer, 64, 308, entry.str());
-                    std::ostringstream boundaries;
-                    boundaries << "Static resident paths: gate 0x" << std::hex
-                               << evidence.independent_entry.entry_address << "; opaque ABI JMP 0x"
-                               << evidence.post_negative_d3_continuation.terminal_jump_address
-                               << " -> 0x" << evidence.post_negative_d3_continuation.terminal_jump_target;
-                    draw_text(renderer, 64, 324, boundaries.str());
+                    draw_text(renderer, 64, 324,
+                        tr("BOOTSTRAP BOUNDARY"));
                     draw_text(renderer, 64, 340,
                         tr("HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."));
                 } else if (*active_platform == eon::Platform::atari_st) {

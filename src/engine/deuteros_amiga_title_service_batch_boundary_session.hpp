@@ -1182,6 +1182,53 @@ struct DeuterosAmigaTitleTailCopyPlan {
     std::uint32_t local_call_address=0,local_call_target=0,local_return_address=0;
 };
 
+// Caller-connected execution of $37f7a -> $37f9a.  Local instructions are
+// recovered from the hash-admitted title stage; the service at $208c0 and
+// every Exec vector remain ordered, typed ABI boundaries.
+struct DeuterosAmigaObservedTitleTailExecReturn {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t call_address=0,argument_address=0,return_address=0;
+    std::int16_t vector=0;
+    std::uint32_t result_d0=0;
+};
+struct DeuterosAmigaObservedTitleTailCompareLongs {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t first_address=0,first_value=0,second_address=0,second_value=0;
+};
+struct DeuterosAmigaObservedTitleTailControllerLong {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t source_address=0,value=0;
+};
+struct DeuterosAmigaTitleTailSubroutinePlan {
+    std::uint32_t entry_address=0;
+    std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
+};
+struct DeuterosAmigaTitleTailInitialServicePlan {
+    DeuterosAmigaObservedLocalCallReturn observation;
+    std::uint32_t word_destination=0;
+    std::uint16_t word_value=0;
+    std::uint32_t long_destination=0,long_value=0;
+    std::uint32_t next_call_address=0,argument_address=0,return_address=0;
+    std::int16_t vector=0;
+};
+struct DeuterosAmigaTitleTailExecPlan {
+    DeuterosAmigaObservedTitleTailExecReturn observation;
+    bool requires_compare=false,subroutine_returned=false;
+    std::uint32_t next_call_address=0,argument_address=0,return_address=0;
+    std::int16_t next_vector=0;
+};
+struct DeuterosAmigaTitleTailComparePlan {
+    DeuterosAmigaObservedTitleTailCompareLongs observation;
+    bool equal=false;
+    std::uint32_t next_call_address=0,argument_address=0,return_address=0;
+    std::int16_t next_vector=0;
+};
+struct DeuterosAmigaTitleTailBootstrapPlan {
+    DeuterosAmigaObservedTitleTailControllerLong observation;
+    std::uint32_t controller_destination=0,controller_value=0;
+    std::uint32_t profile_destination=0,profile_value=0,jump_target=0;
+};
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
     DeuterosAmigaTitleServiceBatchBoundarySession(
@@ -1217,6 +1264,8 @@ public:
             parse_deuteros_amiga_title_post_exec_service_route_profile(disk, plan);
         const auto first_title_exit =
             evaluate_deuteros_amiga_first_title_exit_copy(disk, plan);
+        first_title_exit_subroutine_ =
+            parse_deuteros_amiga_first_title_exit_subroutine_profile(disk, plan);
         const auto first_title_exit_source = disk.bytes(
             first_title_exit.source_disk_offset, first_title_exit.byte_count);
         first_title_exit_source_bytes_.assign(first_title_exit_source.begin(),
@@ -1285,7 +1334,7 @@ public:
             if (source >= compressed.size())
                 throw std::runtime_error("Truncated Deuteros compressed stream");
             const auto control=compressed[source++];const auto family=control>>6U;
-            ++first_dispatch_family_counts_[family];++first_dispatch_packet_count_;
+            ++first_dispatch_family_counts_[static_cast<std::size_t>(family)];++first_dispatch_packet_count_;
             std::uint32_t count=control&0x3fU;
             std::uint8_t first=0,second=0;
             if (family == 0) {
@@ -1345,7 +1394,7 @@ public:
         while(planes!=0){
             if(source>=second_compressed.size())throw std::runtime_error("Truncated Deuteros second compressed stream");
             const auto control=second_compressed[source++];const auto family=control>>6U;
-            ++second_dispatch_family_counts_[family];++second_dispatch_packet_count_;
+            ++second_dispatch_family_counts_[static_cast<std::size_t>(family)];++second_dispatch_packet_count_;
             std::uint32_t count=control&0x3fU;std::uint8_t first=0,second=0;
             if(family==0){count=control==0?256U:control;for(std::uint32_t i=0;i<count&&planes;++i){
                 if(source+2U>second_compressed.size())throw std::runtime_error("Truncated Deuteros second literal packet");
@@ -1382,7 +1431,7 @@ public:
             while(values.size()/2U<pair_total){
                 if(cursor>=payload.size())throw std::runtime_error("Truncated Deuteros selected dispatch payload");
                 const auto control=payload[cursor++];const auto family=control>>6U;
-                ++families[family];++packets;std::uint32_t count=control&0x3fU;
+                ++families[static_cast<std::size_t>(family)];++packets;std::uint32_t count=control&0x3fU;
                 if(family==0){count=control==0?256U:count;for(std::uint32_t i=0;i<count&&values.size()/2U<pair_total;++i){
                     if(cursor+2U>payload.size())throw std::runtime_error("Truncated Deuteros selected literal packet");
                     emit_pair(payload[cursor],payload[cursor+1U]);cursor+=2U;}continue;}
@@ -1434,7 +1483,7 @@ public:
         while(adjusted_c0_values_.size()/2U<adjusted_pairs){
             if(adjusted_cursor>=adjusted_payload.size())throw std::runtime_error("Truncated Deuteros adjusted payload");
             const auto control=adjusted_payload[adjusted_cursor++];const auto family=control>>6U;
-            ++adjusted_c0_families_[family];++adjusted_c0_packets_;std::uint32_t count=control&0x3fU;
+            ++adjusted_c0_families_[static_cast<std::size_t>(family)];++adjusted_c0_packets_;std::uint32_t count=control&0x3fU;
             if(family==0){count=control==0?256U:control;for(std::uint32_t i=0;i<count&&adjusted_c0_values_.size()/2U<adjusted_pairs;++i){
                 if(adjusted_cursor+2U>adjusted_payload.size())throw std::runtime_error("Truncated Deuteros adjusted literal packet");
                 adjusted_emit(adjusted_payload[adjusted_cursor],adjusted_payload[adjusted_cursor+1U]);adjusted_cursor+=2U;}continue;}
@@ -3302,6 +3351,68 @@ public:
         return DeuterosAmigaTitleTailCopyPlan{o,first_title_exit_source_bytes_,
             0x37f7a,0x37f9a,0x37f7e};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailSubroutinePlan>
+    advance_title_tail_subroutine(){
+        if(!title_tail_copy_||title_tail_subroutine_entered_)return std::nullopt;
+        title_tail_subroutine_entered_=true;
+        return DeuterosAmigaTitleTailSubroutinePlan{first_title_exit_subroutine_.entry_address,
+            0x37fac,first_title_exit_subroutine_.initial_service_address,0x37fb2};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailInitialServicePlan>
+    observe_title_tail_initial_service_return(const DeuterosAmigaObservedLocalCallReturn&o){
+        if(!title_tail_subroutine_entered_||title_tail_initial_service_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x37fac
+            ||o.call_target!=first_title_exit_subroutine_.initial_service_address
+            ||o.return_address!=0x37fb2)
+            throw std::runtime_error("Deuteros title-tail initial service return does not match boundary");
+        title_tail_initial_service_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitleTailInitialServicePlan{o,
+            first_title_exit_subroutine_.first_work_address+first_title_exit_subroutine_.first_work_word_offset,
+            first_title_exit_subroutine_.first_work_word_value,
+            first_title_exit_subroutine_.first_work_address+first_title_exit_subroutine_.first_work_long_offset,
+            first_title_exit_subroutine_.first_work_long_value,0x37fca,0x1eefa,0x37fce,-0x1ce};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailExecPlan>
+    observe_title_tail_exec_return(const DeuterosAmigaObservedTitleTailExecReturn&o){
+        if(!title_tail_initial_service_return_||title_tail_subroutine_returned_||title_tail_compare_pending_)
+            return std::nullopt;
+        constexpr std::array<std::uint32_t,7> calls{{0x37fca,0x37fd8,0x37fe6,0x38002,0x38010,0x3801e,0x3802c}};
+        constexpr std::array<std::uint32_t,7> args{{0x1eefa,0x1eefa,0x1eed8,0x2063e,0x20676,0x205e4,0x2061c}};
+        constexpr std::array<std::uint32_t,7> returns{{0x37fce,0x37fdc,0x37fea,0x38006,0x38014,0x38022,0x38030}};
+        constexpr std::array<std::int16_t,7> vectors{{-0x1ce,-0x1c2,-0x168,-0x1c2,-0x168,-0x1c2,-0x168}};
+        const auto i=title_tail_exec_index_;
+        if(i>=calls.size()||o.trace_sequence<=last_command_sequence_||o.call_address!=calls[i]
+            ||o.argument_address!=args[i]||o.return_address!=returns[i]||o.vector!=vectors[i])
+            throw std::runtime_error("Deuteros title-tail Exec return does not match boundary");
+        last_command_sequence_=o.trace_sequence;
+        if(i==2){title_tail_compare_pending_=true;title_tail_exec_index_=3;
+            return DeuterosAmigaTitleTailExecPlan{o,true,false,0,0,0,0};}
+        ++title_tail_exec_index_;
+        if(i==6){title_tail_subroutine_returned_=true;
+            return DeuterosAmigaTitleTailExecPlan{o,false,true,0,0,0,0};}
+        return DeuterosAmigaTitleTailExecPlan{o,false,false,calls[i+1],args[i+1],returns[i+1],vectors[i+1]};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailComparePlan>
+    observe_title_tail_compare_longs(const DeuterosAmigaObservedTitleTailCompareLongs&o){
+        if(!title_tail_compare_pending_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_
+            ||o.first_address!=first_title_exit_subroutine_.compare_first_address
+            ||o.second_address!=first_title_exit_subroutine_.compare_second_address)
+            throw std::runtime_error("Deuteros title-tail comparison does not match boundary");
+        title_tail_compare_pending_=false;last_command_sequence_=o.trace_sequence;
+        const bool equal=o.first_value==o.second_value;
+        title_tail_exec_index_=equal?5U:3U;
+        return DeuterosAmigaTitleTailComparePlan{o,equal,equal?0x3801eU:0x38002U,
+            equal?0x205e4U:0x2063eU,equal?0x38022U:0x38006U,-0x1c2};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleTailBootstrapPlan>
+    observe_title_tail_controller_long(const DeuterosAmigaObservedTitleTailControllerLong&o){
+        if(!title_tail_subroutine_returned_||title_tail_bootstrap_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.source_address!=0x206a0)
+            throw std::runtime_error("Deuteros title-tail controller read does not match boundary");
+        title_tail_bootstrap_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaTitleTailBootstrapPlan{o,0x12ff8,o.value,0x12ffc,2,0x12800};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3529,6 +3640,12 @@ private:
     std::uint32_t post_adjusted_repeated_input_iteration_=0;
     bool post_adjusted_repeated_input_completed_=false;
     std::optional<DeuterosAmigaObservedTitleTailCopy> title_tail_copy_;
+    DeuterosAmigaFirstTitleExitSubroutineProfile first_title_exit_subroutine_;
+    bool title_tail_subroutine_entered_=false;
+    std::optional<DeuterosAmigaObservedLocalCallReturn> title_tail_initial_service_return_;
+    std::size_t title_tail_exec_index_=0;
+    bool title_tail_compare_pending_=false,title_tail_subroutine_returned_=false;
+    std::optional<DeuterosAmigaObservedTitleTailControllerLong> title_tail_bootstrap_;
     std::vector<std::uint8_t> first_title_exit_source_bytes_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;

@@ -3458,9 +3458,16 @@ int main() {
     defjam_relocator.observe_setup_call_return(0x662b2,0x66128);
     assert((defjam_relocator.boundary()
         == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x662cc,0,0x661da}));
-    defjam_relocator.observe_first_read_return(0x662cc,0x661da);
+    defjam_relocator.observe_first_read_return(0x662cc,0x661da,0);
     assert((defjam_relocator.boundary()
         == eon::MillenniumAmigaBootstrapRelocatorBoundary{0x662e4,0,0x41000}));
+    assert(defjam_relocator.first_stage_bytes().size() == 0x24200);
+    assert(defjam_relocator.first_stage_sha256()
+        == "df97c7f6cd622b16b9ffb57bc562906e349c18c56ed8abeb564c6f411e64891c");
+    assert(defjam_relocator.first_stage_bytes()[0] == 0x60
+        && defjam_relocator.first_stage_bytes()[1] == 0x00
+        && defjam_relocator.first_stage_bytes()[2] == 0x00
+        && defjam_relocator.first_stage_bytes()[3] == 0xba);
     {
         bool rejected = false;
         try {
@@ -3469,863 +3476,45 @@ int main() {
         } catch (const std::runtime_error&) { rejected = true; }
         assert(rejected);
     }
-    const auto& defjam_resident_evidence = defjam_session.resident_evidence();
-    assert(&defjam_session.resident_entry() == &defjam_resident_evidence.entry);
-    assert(defjam_resident_evidence.splitter.entry_address == 0x68016);
-    assert(defjam_resident_evidence.staging_callsites.size() == 2);
-    assert(defjam_resident_evidence.first_post_helper_chain.staging_entry_address == 0x69624);
-    assert(defjam_resident_evidence.second_post_helper_chain.staging_entry_address == 0x69b88);
-    assert(defjam_resident_evidence.separate_post_external_call.terminal_jump_address == 0x68f72);
-    assert(defjam_resident_evidence.separate_terminal_jump_target.target_address == 0x7c54e);
-    assert(defjam_resident_evidence.independent_entry.entry_address == 0x68508);
-    assert(defjam_session.post_negative_d3_terminal().entry_address == 0x685fe);
-    assert(defjam_session.post_negative_d3_continuation().entry_address == 0x6861a);
     assert(defjam_session.plan().loader_magic == 0xa8d398fb);
-    assert(defjam_session.shared_resident().raw_sha256
-        == "d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e");
-    assert(defjam_session.resident_entry().entry_address == 0x68000);
     assert(defjam_session.opaque_invocation_boundary().entry_address == 0x7029e);
     assert(defjam_session.opaque_invocation_boundary().first_stage_target == 0x41000);
     assert(defjam_session.opaque_invocation_boundary().resident_stage_target == 0x68000);
-    assert(defjam_session.first_stage_source_anchors().raw_disk_offset == 0x24200);
-    assert(defjam_session.first_stage_source_anchors().byte_count == 0x6e000);
-    assert(defjam_session.first_stage_source_anchors().sha256
-        == defjam_session.plan().first_stage.raw_sha256);
-    {
-        auto altered = *defjam_adf;
-        altered.back() ^= 0x01;
-        bool rejected = false;
-        try {
-            static_cast<void>(eon::MillenniumAmigaBootstrapSession(std::move(altered)));
-        } catch (const std::runtime_error&) {
-            rejected = true;
-        }
-        assert(rejected);
-    }
-    {
-        auto altered = *defjam_adf;
-        altered[0x436] ^= 1;
-        bool rejected = false;
-        try {
-            static_cast<void>(
-                eon::MillenniumAmigaBootstrapRelocatorSession(altered));
-        } catch (const std::runtime_error&) { rejected = true; }
-        assert(rejected);
-    }
     assert(defjam_plan.bootstrap_loader.disk_offset == 0x400);
     assert(defjam_plan.bootstrap_loader.length == 0x400);
     assert(defjam_plan.bootstrap_loader.destination == 0x70000);
-    assert(defjam_plan.first_stage.disk_offset == 0x24200);
-    assert(defjam_plan.first_stage.length == 0x6e000);
+    // Regression guard for the original IORequest contract: $661da puts D7
+    // in D2 (io_Offset), while D0 is chunked into io_Length.
+    assert(defjam_plan.first_stage.disk_offset == 0x6e000);
+    assert(defjam_plan.first_stage.length == 0x24200);
     assert(defjam_plan.first_stage.destination == 0x41000);
-    assert(defjam_plan.resident_stage.disk_offset == 0x16400);
-    assert(defjam_plan.resident_stage.length == 0x2c000);
+    assert(defjam_plan.resident_stage.disk_offset == 0x2c000);
+    assert(defjam_plan.resident_stage.length == 0x16400);
     assert(defjam_plan.resident_stage.destination == 0x68000);
-    assert(defjam_plan.resident_entry == 0x68000);
-    assert(defjam_plan.loader_magic == 0xa8d398fb);
-    // These source-range fingerprints make the raw loader trace reproducible
-    // without treating either range as an extracted game file.
-    assert(defjam_plan.bootstrap_loader.raw_sha256
-        == "c31e59f83d6825a2da7a6fd5e3297a322993b0483105794fca449d97d3861e06");
     assert(defjam_plan.first_stage.raw_sha256
-        == "5ed30d5fe99c0dfc905bbe639d626be558f022514c83bc5ff287ad91014ccf7a");
+        == "df97c7f6cd622b16b9ffb57bc562906e349c18c56ed8abeb564c6f411e64891c");
     assert(defjam_plan.resident_stage.raw_sha256
-        == "d144abc05f891710dc99b30d87f020bd6e2ff7796ef86a847f07b8d97d55d18e");
+        == "3337a21984346f06f295c9cfbb89d2a0c0d622853dd2e11cf14a5c5cc29a276f");
+    const auto first_stage_entry =
+        eon::parse_millennium_amiga_first_stage_entry_boundary(
+            defjam_loader_disk, defjam_plan);
+    assert(first_stage_entry.raw_disk_offset == 0x6e000
+        && first_stage_entry.byte_count == 0x24200
+        && first_stage_entry.destination == 0x41000
+        && first_stage_entry.entry_span_byte_count == 0xe0
+        && first_stage_entry.entry_span_sha256
+            == "943b1fd0b5f3aa7734aae09e64d139348f9876615ef4df94fb22f9e05851fd77"
+        && first_stage_entry.branch_target == 0x410bc
+        && first_stage_entry.illegal_instruction_address == 0x410de
+        && first_stage_entry.exception_vector_address == 0x10);
+    assert(defjam_session.first_stage_entry_boundary().entry_span_sha256
+        == first_stage_entry.entry_span_sha256);
     const auto defjam_opaque_invocation =
         eon::parse_millennium_amiga_bootstrap_opaque_invocation_boundary(
             defjam_loader_disk, defjam_plan);
-    assert(defjam_opaque_invocation.entry_address == 0x7029e);
-    assert(defjam_opaque_invocation.raw_disk_offset == 0x69e);
-    assert(defjam_opaque_invocation.byte_count == 132);
-    assert(defjam_opaque_invocation.sha256
-        == "b8ca18e61e5372ba4387abd69f6796435671465ddaf48cd3a3e4b41e2528efdc");
     assert(defjam_opaque_invocation.first_stage_invocation_address == 0x702e4);
-    assert(defjam_opaque_invocation.first_stage_target == 0x41000);
-    assert(defjam_opaque_invocation.static_post_first_stage_address == 0x702e6);
-    assert(defjam_opaque_invocation.resident_stage_jump_address == 0x70320);
-    assert(defjam_opaque_invocation.resident_stage_target == 0x68000);
-    const auto defjam_relocation =
-        eon::parse_millennium_amiga_bootstrap_relocation_boundary(
-            defjam_loader_disk, defjam_plan);
-    assert(defjam_relocation.entry_address == 0x70000);
-    assert(defjam_relocation.verified_loaded_start == 0x70000);
-    assert(defjam_relocation.verified_loaded_end_exclusive == 0x70400);
-    assert(defjam_relocation.copy_source_address == 0x70032);
-    assert(defjam_relocation.copy_destination_address == 0x66032);
-    assert(defjam_relocation.copy_byte_count == 0x3cf);
-    assert(defjam_relocation.copy_source_end_inclusive == 0x70400);
-    assert(defjam_relocation.relocated_continuation_address == 0x6629e);
-    assert(defjam_relocation.raw_continuation_source_address == 0x7029e);
-    assert(defjam_relocation.raw_continuation_source_address
-        == defjam_opaque_invocation.entry_address);
-    assert(defjam_relocation.sha256
-        == "341e6cff049ff9cda953ad0c91f9a064ed2d2cdc1782b417f27ecad7c9b279b4");
     assert(defjam_session.relocation_boundary().copy_source_end_inclusive
         == defjam_session.relocation_boundary().verified_loaded_end_exclusive);
-    {
-        auto altered = *defjam_adf;
-        altered[0x436] ^= 0x01;
-        bool rejected = false;
-        try {
-            static_cast<void>(eon::parse_millennium_amiga_bootstrap_relocation_boundary(
-                eon::AmigaAdf(std::move(altered)), defjam_plan));
-        } catch (const std::runtime_error&) {
-            rejected = true;
-        }
-        assert(rejected);
-    }
-    const auto defjam_first_stage_anchors =
-        eon::parse_millennium_amiga_first_stage_source_anchor_boundary(
-            defjam_loader_disk, defjam_plan);
-    assert(defjam_first_stage_anchors.raw_disk_offset == 0x24200);
-    assert(defjam_first_stage_anchors.byte_count == 0x6e000);
-    assert(defjam_first_stage_anchors.sha256
-        == "5ed30d5fe99c0dfc905bbe639d626be558f022514c83bc5ff287ad91014ccf7a");
-    assert((defjam_first_stage_anchors.anchor_stage_offsets
-        == std::array<std::uint32_t, 3>{{0x4a3dc, 0x4a648, 0x4a936}}));
-    assert((defjam_first_stage_anchors.window_stage_offsets
-        == std::array<std::size_t, 2>{{0x4a5b0, 0x4a900}}));
-    assert((defjam_first_stage_anchors.window_byte_counts
-        == std::array<std::size_t, 2>{{0x160, 0x220}}));
-    assert((defjam_first_stage_anchors.window_sha256 == std::array<std::string, 2>{{
-        "97bb8cbe026ac3bba2c19cc296bc7cef00fbd0c8095c678f4cc303761b8b8309",
-        "ee84336cbf4665bcd2bc48d054c024a20e4c5faaaf26cd5fdcc78e6b8f3931c9",
-    }}));
-    {
-        auto altered = *defjam_adf;
-        altered[0x69e] ^= 0x01;
-        bool rejected = false;
-        try {
-            static_cast<void>(eon::parse_millennium_amiga_bootstrap_opaque_invocation_boundary(
-                eon::AmigaAdf(std::move(altered)), defjam_plan));
-        } catch (const std::runtime_error&) {
-            rejected = true;
-        }
-        assert(rejected);
-    }
-    {
-        auto altered = *defjam_adf;
-        altered[0x6e7b0] ^= 0x01;
-        bool rejected = false;
-        try {
-            static_cast<void>(eon::parse_millennium_amiga_first_stage_source_anchor_boundary(
-                eon::AmigaAdf(std::move(altered)), defjam_plan));
-        } catch (const std::runtime_error&) {
-            rejected = true;
-        }
-        assert(rejected);
-    }
-    const auto defjam_resident = eon::parse_millennium_amiga_resident_entry(
-        defjam_loader_disk, defjam_plan);
-    assert(defjam_resident.entry_address == 0x68000);
-    assert(defjam_resident.initializer_address == 0x787d4);
-    assert(defjam_resident.result_word_address == 0x7b75a);
-    assert(defjam_resident.d3_nonzero_or_mask == 0x0100);
-    const auto defjam_splitter = eon::parse_millennium_amiga_resident_word_splitter(
-        defjam_loader_disk, defjam_plan);
-    assert(defjam_splitter.entry_address == 0x68016);
-    assert(defjam_splitter.source_a1_offset == 0x36);
-    assert((defjam_splitter.magnitude_word_addresses
-        == std::array<std::uint32_t, 3>{{0x7b764, 0x7b766, 0x7b768}}));
-    assert((defjam_splitter.sign_byte_addresses
-        == std::array<std::uint32_t, 3>{{0x7b776, 0x7b777, 0x7b778}}));
-    assert(defjam_splitter.helper_address == 0x7ba12);
-    assert(defjam_splitter.signed_word_address == 0x7b768);
-    assert(defjam_splitter.signed_sign_address == 0x7b778);
-    const auto defjam_helper_boundary = eon::parse_millennium_amiga_resident_helper_raw_boundary(
-        defjam_loader_disk, defjam_plan, defjam_splitter);
-    assert(defjam_helper_boundary.helper_address == 0x7ba12);
-    assert(defjam_helper_boundary.raw_disk_offset == 0x29e12);
-    assert((defjam_helper_boundary.raw_prefix == std::array<std::uint8_t, 32>{{
-        0x00, 0x01, 0x20, 0x00, 0x80, 0xac, 0x00, 0x00,
-        0x01, 0x00, 0x08, 0x80, 0x42, 0x00, 0x00, 0x01,
-        0x01, 0x00, 0x80, 0xac, 0x00, 0x00, 0x01, 0x00,
-        0x20, 0x80, 0x42, 0x00, 0x00, 0x01, 0x00, 0x10,
-    }}));
-    assert(defjam_helper_boundary.raw_prefix_sha256
-        == "eb11f5c5dfda4234b0214599bffec09402deff2435c58d57db1f7ab84c07c434");
-    const auto defjam_setup_helper_boundary =
-        eon::parse_millennium_amiga_resident_setup_helper_raw_boundary(
-            defjam_loader_disk, defjam_plan);
-    assert(defjam_setup_helper_boundary.helper_address == 0x7b77e);
-    assert(defjam_setup_helper_boundary.raw_disk_offset == 0x29b7e);
-    assert((defjam_setup_helper_boundary.raw_prefix == std::array<std::uint8_t, 32>{{
-        0x04, 0x00, 0x6e, 0x00, 0xc2, 0x00, 0x04, 0x4a,
-        0x00, 0xc2, 0x40, 0x00, 0x7a, 0x00, 0xc2, 0x00,
-        0x10, 0x52, 0x00, 0xc2, 0x01, 0x00, 0x52, 0x00,
-        0xc2, 0x00, 0x01, 0x4a, 0x00, 0xc2, 0x08, 0x00,
-    }}));
-    assert(defjam_setup_helper_boundary.raw_prefix_sha256
-        == "a695fd5ead90e07075256b1347220afde1a4439dd804cf1a9d445da4411cb52a");
-    const auto defjam_staging_callsites = eon::parse_millennium_amiga_resident_helper_staging_callsites(
-        defjam_loader_disk, defjam_plan, defjam_splitter);
-    assert(defjam_staging_callsites[0].entry_address == 0x69624);
-    assert(defjam_staging_callsites[0].source_address == 0x7cc3c);
-    assert(defjam_staging_callsites[1].entry_address == 0x69b88);
-    assert(defjam_staging_callsites[1].source_address == 0x7cc68);
-    for (const auto& callsite : defjam_staging_callsites) {
-        assert(callsite.magnitude_destination == 0x7b764);
-        assert(callsite.sign_destination == 0x7b776);
-        assert(callsite.setup_helper_address == 0x7b77e);
-        assert(callsite.clear_byte_address == 0x7b14e);
-        assert(callsite.helper_address == 0x7ba12);
-        assert(callsite.post_helper_magnitude_address == 0x7b764);
-    }
-    assert(defjam_staging_callsites[0].post_helper_return_address == 0x69656);
-    assert(defjam_staging_callsites[0].post_helper_source_address == 0x7cc46);
-    assert(defjam_staging_callsites[1].post_helper_return_address == 0x69bba);
-    assert(defjam_staging_callsites[1].post_helper_source_address == 0x7cc72);
-    const auto defjam_first_post_helper_chain =
-        eon::parse_millennium_amiga_resident_first_post_helper_static_chain(
-            defjam_loader_disk, defjam_plan, defjam_staging_callsites[0]);
-    assert(defjam_first_post_helper_chain.staging_entry_address == 0x69624);
-    assert(defjam_first_post_helper_chain.static_start_address == 0x69656);
-    assert(defjam_first_post_helper_chain.raw_disk_offset == 0x17a56);
-    assert(defjam_first_post_helper_chain.byte_count == 86);
-    assert(defjam_first_post_helper_chain.sha256
-        == "5f42f9d3078d374f8b4a70fcc59c618abb9381d6b33ef25b3f2967876f0afe7b");
-    assert(defjam_first_post_helper_chain.next_setup_call_address == 0x696a0);
-    assert(defjam_first_post_helper_chain.next_setup_target == 0x7b77e);
-    assert(defjam_first_post_helper_chain.following_call_address == 0x696a6);
-    assert(defjam_first_post_helper_chain.following_target == 0x7c802);
-    const auto defjam_second_post_helper_chain =
-        eon::parse_millennium_amiga_resident_second_post_helper_static_chain(
-            defjam_loader_disk, defjam_plan, defjam_staging_callsites[1]);
-    assert(defjam_second_post_helper_chain.staging_entry_address == 0x69b88);
-    assert(defjam_second_post_helper_chain.static_start_address == 0x69bba);
-    assert(defjam_second_post_helper_chain.raw_disk_offset == 0x17fba);
-    assert(defjam_second_post_helper_chain.byte_count == 44);
-    assert(defjam_second_post_helper_chain.sha256
-        == "5616f19900cb96ebc81edf90d0d17a9cde1644be07657801e243514b05e6ee23");
-    assert(defjam_second_post_helper_chain.static_call_address == 0x69be0);
-    assert(defjam_second_post_helper_chain.static_call_target == 0x68d50);
-    const auto defjam_staging_reachability =
-        eon::parse_millennium_amiga_resident_staging_direct_reachability_boundary(
-            defjam_loader_disk, defjam_plan, defjam_staging_callsites);
-    assert((defjam_staging_reachability.staging_entry_addresses
-        == std::array<std::uint32_t, 2>{{0x69624, 0x69b88}}));
-    assert((defjam_staging_reachability.absolute_jsr_counts == std::array<std::uint32_t, 2>{}));
-    assert((defjam_staging_reachability.absolute_jmp_counts == std::array<std::uint32_t, 2>{}));
-    assert((defjam_staging_reachability.pc_relative_bsr_word_counts == std::array<std::uint32_t, 2>{}));
-    assert((defjam_staging_reachability.local_immediate_register_jsr_counts
-        == std::array<std::uint32_t, 2>{}));
-    assert((defjam_staging_reachability.local_immediate_register_jmp_counts
-        == std::array<std::uint32_t, 2>{}));
-    assert(defjam_staging_reachability.scanned_raw_disk_offset == 0x16400);
-    assert(defjam_staging_reachability.scanned_byte_count == 0x2c000);
-    const auto defjam_predicate_gate = eon::parse_millennium_amiga_resident_predicate_gate(
-        defjam_loader_disk, defjam_plan, defjam_splitter);
-    assert(defjam_predicate_gate.entry_address == 0x68078);
-    assert(defjam_predicate_gate.predicate_address == 0x7b816);
-    assert(defjam_predicate_gate.nonzero_return_address == 0x68082);
-    assert(defjam_predicate_gate.zero_continue_address == 0x68084);
-    assert(defjam_predicate_gate.predicate_raw_disk_offset == 0x29c16);
-    assert((defjam_predicate_gate.predicate_raw_prefix == std::array<std::uint8_t, 32>{{
-        0x00, 0xc2, 0x40, 0x00, 0x6e, 0x00, 0xc2, 0x00,
-        0x04, 0x80, 0x42, 0x00, 0x00, 0xc2, 0x20, 0x00,
-        0x6a, 0x00, 0xc2, 0x00, 0x08, 0x4a, 0x00, 0xc2,
-        0x00, 0x80, 0x62, 0x00, 0xc2, 0x10, 0x00, 0x80,
-    }}));
-    assert(defjam_predicate_gate.predicate_raw_prefix_sha256
-        == "a16a4738b0f577643c343b344ba8b6c19d935daf97dd2291c86ddb2b29dcd96c");
-    const auto defjam_predicate_zero_path =
-        eon::parse_millennium_amiga_resident_predicate_zero_path_boundary(
-            defjam_loader_disk, defjam_plan, defjam_predicate_gate);
-    assert(defjam_predicate_zero_path.entry_address == 0x68084);
-    assert(defjam_predicate_zero_path.selector_a1_offset == 0x12);
-    assert(defjam_predicate_zero_path.selector_compare_value == 1);
-    assert(defjam_predicate_zero_path.selector_not_equal_branch_address == 0x6808e);
-    assert(defjam_predicate_zero_path.selector_not_equal_target == 0x680ca);
-    assert(defjam_predicate_zero_path.equal_path_argument_a1_offset == 0x14);
-    assert(defjam_predicate_zero_path.unknown_call_address == 0x68096);
-    assert(defjam_predicate_zero_path.unknown_call_target == 0x7b90a);
-    assert(defjam_predicate_zero_path.unknown_call_raw_disk_offset == 0x29d0a);
-    assert((defjam_predicate_zero_path.unknown_call_raw_prefix == std::array<std::uint8_t, 32>{{
-        0x42, 0x00, 0x00, 0xc2, 0x02, 0x00, 0x42, 0x00,
-        0x42, 0x04, 0x42, 0x00, 0xc2, 0x10, 0x08, 0x42,
-        0x00, 0xc2, 0x00, 0x10, 0x82, 0x4b, 0x00, 0x00,
-        0x00, 0x50, 0x00, 0xa7, 0x81, 0xac, 0x00, 0x00,
-    }}));
-    assert(defjam_predicate_zero_path.unknown_call_raw_prefix_sha256
-        == "bdb907adb3114dbaa58eb3bbe516ab91ffc4e1bf70e536bd47f497f49c8d5042");
-    const auto defjam_predicate_not_equal_path =
-        eon::parse_millennium_amiga_resident_predicate_not_equal_path_boundary(
-            defjam_loader_disk, defjam_plan, defjam_predicate_zero_path);
-    assert(defjam_predicate_not_equal_path.entry_address == 0x680ca);
-    assert(defjam_predicate_not_equal_path.pushed_first_register == 0);
-    assert(defjam_predicate_not_equal_path.pushed_second_register == 2);
-    assert(defjam_predicate_not_equal_path.unknown_call_address == 0x680ce);
-    assert(defjam_predicate_not_equal_path.unknown_call_target == 0x7b90a);
-    const auto defjam_independent_entry =
-        eon::parse_millennium_amiga_resident_independent_entry_gate(
-            defjam_loader_disk, defjam_plan);
-    assert(defjam_independent_entry.entry_address == 0x68508);
-    assert(defjam_independent_entry.negative_d3_branch_address == 0x6850e);
-    assert(defjam_independent_entry.negative_d3_target == 0x68598);
-    assert(defjam_independent_entry.flag_test_address == 0x68512);
-    assert(defjam_independent_entry.flag_address == 0x7b142);
-    assert(defjam_independent_entry.flag_zero_branch_address == 0x68518);
-    assert(defjam_independent_entry.flag_zero_target == 0x6854a);
-    const auto defjam_negative_d3 = eon::parse_millennium_amiga_resident_negative_d3_continuation(
-        defjam_loader_disk, defjam_plan, defjam_independent_entry);
-    assert(defjam_negative_d3.entry_address == 0x68598);
-    assert(defjam_negative_d3.external_jump_address == 0x685ee);
-    assert(defjam_negative_d3.external_jump_target == 0x7bcf8);
-    assert(defjam_negative_d3.return_address == 0x685fc);
-    const auto defjam_negative_d3_terminal = eon::parse_millennium_amiga_resident_negative_d3_terminal(
-        defjam_loader_disk, defjam_plan, defjam_negative_d3);
-    assert(defjam_negative_d3_terminal.entry_address == 0x685f4);
-    assert(defjam_negative_d3_terminal.first_add_immediate == 0x2800);
-    assert(defjam_negative_d3_terminal.second_add_address == 0x685f8);
-    assert(defjam_negative_d3_terminal.second_add_immediate == 0x2800);
-    assert(defjam_negative_d3_terminal.return_address == 0x685fc);
-    const auto defjam_post_negative_d3 =
-        eon::parse_millennium_amiga_resident_post_negative_d3_terminal(
-            defjam_loader_disk, defjam_plan, defjam_negative_d3_terminal);
-    assert(defjam_post_negative_d3.entry_address == 0x685fe);
-    assert((defjam_post_negative_d3.absolute_byte_store_addresses
-        == std::array<std::uint32_t, 2>{{0x7b3b5, 0x7b3bc}}));
-    assert(defjam_post_negative_d3.d0_test_address == 0x68610);
-    assert(defjam_post_negative_d3.nonzero_branch_address == 0x68612);
-    assert(defjam_post_negative_d3.nonzero_branch_target == 0x68616);
-    assert(defjam_post_negative_d3.zero_return_address == 0x68614);
-    assert(defjam_post_negative_d3.nonnegative_branch_address == 0x68616);
-    assert(defjam_post_negative_d3.nonnegative_branch_target == 0x6861a);
-    assert(defjam_post_negative_d3.negative_return_address == 0x68618);
-    assert(defjam_post_negative_d3.raw_sha256
-        == "a45ff5eca6e3594574b464574fa0aae3027bd2ea11472770708c96f4d21b56cc");
-    // Execute only the fully local $685fe prefix after binding it to the
-    // supplied Defjam bytes.  These are controlled register inputs, not a
-    // claim that an original caller reaches this independent entry.
-    const auto local_zero = eon::execute_millennium_amiga_resident_post_negative_d3_terminal_prefix(
-        defjam_post_negative_d3, {0xaabbccdd, 0x11220000, 0x33445566});
-    assert(local_zero.d0 == 0xaabb0000);
-    assert(local_zero.d1 == 0x11225566);
-    assert(local_zero.d2 == 0x33445566);
-    assert((local_zero.absolute_byte_writes == std::array<std::uint8_t, 2>{{0, 0}}));
-    assert(local_zero.stop == eon::MillenniumAmigaResidentPostNegativeD3TerminalStop::zero_return);
-    assert(local_zero.next_address == 0x68614);
-    const auto local_negative = eon::execute_millennium_amiga_resident_post_negative_d3_terminal_prefix(
-        defjam_post_negative_d3, {0, 0x12348001, 0x56789abc});
-    assert(local_negative.d0 == 0x00008001);
-    assert(local_negative.d1 == 0x12349abc);
-    assert(local_negative.stop
-        == eon::MillenniumAmigaResidentPostNegativeD3TerminalStop::negative_return);
-    assert(local_negative.next_address == 0x68618);
-    const auto local_continue = eon::execute_millennium_amiga_resident_post_negative_d3_terminal_prefix(
-        defjam_post_negative_d3, {0, 0x12340001, 0x56789abc});
-    assert(local_continue.stop
-        == eon::MillenniumAmigaResidentPostNegativeD3TerminalStop::nonnegative_continuation_boundary);
-    assert(local_continue.next_address == 0x6861a);
-    {
-        auto detached_terminal = defjam_post_negative_d3;
-        detached_terminal.raw_sha256[0] = '0';
-        bool rejected = false;
-        try {
-            static_cast<void>(
-                eon::execute_millennium_amiga_resident_post_negative_d3_terminal_prefix(
-                    detached_terminal, {}));
-        } catch (const std::runtime_error&) {
-            rejected = true;
-        }
-        assert(rejected);
-    }
-    const auto defjam_post_negative_d3_continuation =
-        eon::parse_millennium_amiga_resident_post_negative_d3_continuation_boundary(
-            defjam_loader_disk, defjam_plan, defjam_post_negative_d3);
-    assert(defjam_post_negative_d3_continuation.entry_address == 0x6861a);
-    assert((defjam_post_negative_d3_continuation.add_immediates
-        == std::array<std::uint16_t, 3>{{0x2800, 0x2800, 0x2800}}));
-    assert(defjam_post_negative_d3_continuation.range_base_immediate == 0x7d00);
-    assert(defjam_post_negative_d3_continuation.compare_branch_address == 0x68636);
-    assert(defjam_post_negative_d3_continuation.compare_branch_target == 0x6863a);
-    assert(defjam_post_negative_d3_continuation.low_range_branch_address == 0x68642);
-    assert(defjam_post_negative_d3_continuation.low_range_branch_target == 0x68650);
-    assert(defjam_post_negative_d3_continuation.negative_range_branch_address == 0x68644);
-    assert(defjam_post_negative_d3_continuation.negative_range_branch_target == 0x68694);
-    assert(defjam_post_negative_d3_continuation.terminal_jump_address == 0x6864a);
-    assert(defjam_post_negative_d3_continuation.terminal_jump_target == 0x7bef0);
-    assert(defjam_post_negative_d3_continuation.raw_disk_offset == 0x16a1a);
-    assert(defjam_post_negative_d3_continuation.byte_count == 54);
-    assert(defjam_post_negative_d3_continuation.raw_sha256
-        == "d3f6b63090429e11fb3a77e4573817649e2bb7996d06811ea2751078794534ce");
-    // The BPL target is now a bounded, call-free execution prefix.  It keeps
-    // word-width arithmetic and both unresolved branches explicit rather
-    // than treating the terminal external jump as a host call.
-    const auto continuation_external =
-        eon::execute_millennium_amiga_resident_post_negative_d3_continuation_prefix(
-            defjam_post_negative_d3_continuation,
-            {0xaabbccdd, 0x12340002, 0x56780001, 0x00000040, 0x11110000, 0x22220000, 0x33445566});
-    assert(continuation_external.d1 == 0x12342802);
-    assert(continuation_external.d2 == 0x56782801);
-    assert(continuation_external.d3 == 0x00002840);
-    assert(continuation_external.d6 == 0x1111a502);
-    assert(continuation_external.d7 == 0x2222a501);
-    assert((continuation_external.restored_registers
-        == std::array<std::uint32_t, 5>{{0xaabbccdd, 0x12340002, 0x56780001, 0x00000040, 0x33445566}}));
-    assert(continuation_external.stop
-        == eon::MillenniumAmigaResidentPostNegativeD3ContinuationStop::external_jump_boundary);
-    assert(continuation_external.next_address == 0x7bef0);
-    const auto continuation_low_range =
-        eon::execute_millennium_amiga_resident_post_negative_d3_continuation_prefix(
-            defjam_post_negative_d3_continuation, {0, 0, 0, 0xd800});
-    assert(continuation_low_range.d3 == 0);
-    assert(continuation_low_range.stop
-        == eon::MillenniumAmigaResidentPostNegativeD3ContinuationStop::low_range_branch_boundary);
-    assert(continuation_low_range.next_address == 0x68650);
-    const auto continuation_negative_range =
-        eon::execute_millennium_amiga_resident_post_negative_d3_continuation_prefix(
-            defjam_post_negative_d3_continuation, {0, 0, 0, 0x6000});
-    assert(continuation_negative_range.d3 == 0x8800);
-    assert(continuation_negative_range.stop
-        == eon::MillenniumAmigaResidentPostNegativeD3ContinuationStop::negative_range_branch_boundary);
-    assert(continuation_negative_range.next_address == 0x68694);
-    const auto continuation_pair_fallthrough =
-        eon::execute_millennium_amiga_resident_post_negative_d3_continuation_prefix(
-            defjam_post_negative_d3_continuation, {0, 0x12340000, 0x56781000, 0x40});
-    assert(continuation_pair_fallthrough.d1 == 0x56781001);
-    assert(continuation_pair_fallthrough.d2 == 0x12342800);
-    {
-        auto detached_continuation = defjam_post_negative_d3_continuation;
-        detached_continuation.terminal_jump_target = 0;
-        bool rejected = false;
-        try {
-            static_cast<void>(
-                eon::execute_millennium_amiga_resident_post_negative_d3_continuation_prefix(
-                    detached_continuation, {}));
-        } catch (const std::runtime_error&) {
-            rejected = true;
-        }
-        assert(rejected);
-    }
-    {
-        auto altered = *defjam_adf;
-        altered[0x16a1a] ^= 0x01;
-        bool rejected = false;
-        try {
-            static_cast<void>(
-                eon::parse_millennium_amiga_resident_post_negative_d3_continuation_boundary(
-                    eon::AmigaAdf(std::move(altered)), defjam_plan, defjam_post_negative_d3));
-        } catch (const std::runtime_error&) {
-            rejected = true;
-        }
-        assert(rejected);
-    }
-    const auto defjam_independent_zero_target =
-        eon::parse_millennium_amiga_resident_independent_zero_target_boundary(
-            defjam_loader_disk, defjam_plan, defjam_independent_entry);
-    assert(defjam_independent_zero_target.entry_address == 0x6854a);
-    assert(defjam_independent_zero_target.compare_immediate == 0x0120);
-    assert(defjam_independent_zero_target.conditional_branch_address == 0x6854e);
-    assert(defjam_independent_zero_target.conditional_branch_target == 0x68562);
-    const auto defjam_independent_compare_target =
-        eon::parse_millennium_amiga_resident_independent_compare_target_boundary(
-            defjam_loader_disk, defjam_plan, defjam_independent_zero_target);
-    assert(defjam_independent_compare_target.entry_address == 0x68562);
-    assert(defjam_independent_compare_target.conditional_branch_address == 0x6856a);
-    assert(defjam_independent_compare_target.conditional_branch_target == 0x6857a);
-    const auto defjam_independent_branch_target = eon::parse_millennium_amiga_resident_independent_branch_target_boundary(defjam_loader_disk, defjam_plan, defjam_independent_compare_target);
-    assert(defjam_independent_branch_target.entry_address == 0x6857a);
-    assert(defjam_independent_branch_target.conditional_branch_address == 0x68580);
-    assert(defjam_independent_branch_target.conditional_branch_target == 0x68586);
-    const auto defjam_independent_branch_preparation = eon::parse_millennium_amiga_resident_independent_branch_preparation_boundary(defjam_loader_disk, defjam_plan, defjam_independent_branch_target);
-    assert(defjam_independent_branch_preparation.entry_address == 0x68586);
-    assert(defjam_independent_branch_preparation.unknown_call_address == 0x68590);
-    assert(defjam_independent_branch_preparation.unknown_call_target == 0x7b26a);
-    const auto defjam_independent_post_call_tail =
-        eon::parse_millennium_amiga_resident_independent_post_call_tail_boundary(
-            defjam_loader_disk, defjam_plan, defjam_independent_branch_preparation);
-    assert(defjam_independent_post_call_tail.entry_address == 0x68596);
-    assert(defjam_independent_post_call_tail.raw_disk_offset == 0x16996);
-    assert(defjam_independent_post_call_tail.byte_count == 104);
-    assert(defjam_independent_post_call_tail.sha256
-        == "eeed978d0afd278cc48868c0d2b76205304ddfa80b174d2aac95dc50b80dd551");
-    assert((defjam_independent_post_call_tail.absolute_byte_addresses
-        == std::array<std::uint32_t, 6>{{0x7b3b0, 0x7b3b1, 0x7b3b4,
-            0x7b3ba, 0x7b3bb, 0x7b3bc}}));
-    assert(defjam_independent_post_call_tail.external_jump_address == 0x685ee);
-    assert(defjam_independent_post_call_tail.external_jump_target == 0x7bcf8);
-    assert(defjam_independent_post_call_tail.negative_path_address == 0x685f4);
-    assert(defjam_independent_post_call_tail.negative_path_return_address == 0x685fc);
-    assert(defjam_independent_post_call_tail.nonnegative_return_address == 0x685fe);
-    {
-        auto altered = *defjam_adf;
-        altered[0x16996 + 103] ^= 0x01;
-        bool rejected = false;
-        try {
-            static_cast<void>(
-                eon::parse_millennium_amiga_resident_independent_post_call_tail_boundary(
-                    eon::AmigaAdf(std::move(altered)), defjam_plan,
-                    defjam_independent_branch_preparation));
-        } catch (const std::runtime_error&) {
-            rejected = true;
-        }
-        assert(rejected);
-    }
-    const auto defjam_separate_entry = eon::parse_millennium_amiga_resident_separate_entry_gate(defjam_loader_disk, defjam_plan);
-    assert(defjam_separate_entry.entry_address == 0x68d50);
-    assert(defjam_separate_entry.branch_address == 0x68d58);
-    assert(defjam_separate_entry.branch_target == 0x68d62);
-    const auto defjam_separate_branch = eon::parse_millennium_amiga_resident_separate_branch_boundary(defjam_loader_disk, defjam_plan, defjam_separate_entry);
-    assert(defjam_separate_branch.entry_address == 0x68d62);
-    assert(defjam_separate_branch.long_branch_address == 0x68d6e);
-    assert(defjam_separate_branch.long_branch_target == 0x68d78);
-    assert(defjam_separate_branch.unknown_call_address == 0x68d7c);
-    assert(defjam_separate_branch.unknown_call_target == 0x778f0);
-    const auto defjam_separate_post_call = eon::parse_millennium_amiga_resident_separate_post_call_boundary(defjam_loader_disk, defjam_plan, defjam_separate_branch);
-    assert(defjam_separate_post_call.entry_address == 0x68d82);
-    assert(defjam_separate_post_call.raw_disk_offset == 0x17182);
-    assert(defjam_separate_post_call.sha256 == "e49e750f78946956c22d4cd80206139d38808d4ecb3b1579906aeaede0db7b77");
-    assert(defjam_separate_post_call.d0_immediate == 0x2208);
-    assert(defjam_separate_post_call.a5_source_address == 0x6934e);
-    assert(defjam_separate_post_call.stored_d0_address == 0x7c256);
-    assert(defjam_separate_post_call.following_call_address == 0x68d96);
-    assert(defjam_separate_post_call.following_call_target == 0x7b342);
-    assert(defjam_separate_post_call.following_target_raw_disk_offset == 0x29742);
-    assert(defjam_separate_post_call.following_target_prefix_sha256 == "731d016983d29dcb23abad28f3f0f225bd3708073e8c0c8481a97a50b460cdcf");
-    const auto defjam_separate_post_call_tail =
-        eon::parse_millennium_amiga_resident_separate_post_call_tail_boundary(
-            defjam_loader_disk, defjam_plan, defjam_separate_post_call);
-    assert(defjam_separate_post_call_tail.entry_address == 0x68d9c);
-    assert(defjam_separate_post_call_tail.raw_disk_offset == 0x1719c);
-    assert(defjam_separate_post_call_tail.byte_count == 36);
-    assert(defjam_separate_post_call_tail.sha256 == "08c660de1ed6d0b0f535e451c84450397383a923a1808fa9678d3ae85a8cc17b");
-    assert((defjam_separate_post_call_tail.call_addresses
-        == std::array<std::uint32_t, 6>{{0x68d9c, 0x68da2, 0x68da8, 0x68dae, 0x68db4, 0x68dba}}));
-    assert((defjam_separate_post_call_tail.call_targets
-        == std::array<std::uint32_t, 6>{{0x7dba8, 0x7d8a8, 0x7d480, 0x7b594, 0x7d5c8, 0x7b36c}}));
-    assert((defjam_separate_post_call_tail.target_raw_disk_offsets
-        == std::array<std::size_t, 6>{{0x2bfa8, 0x2bca8, 0x2b880, 0x29994, 0x2b9c8, 0x2976c}}));
-    assert((defjam_separate_post_call_tail.target_prefix_sha256
-        == std::array<std::string, 6>{{
-            "b388a3622caeeccac01d793650e63e192de821abc789ca334b6ba00a1475ca34",
-            "819055da14479352b3f672e6db10424bdebb90230350b0e8088eb0cb0acbd087",
-            "dbb41359b827129e186a7cf2f4d79c7f45f11f4cbe53e964a0633b7ee7070df5",
-            "e9aa8c8f766b3486163339990968f9829d29b69c3c991ed2a7fc71c483d16846",
-            "de1fdcc69a46a7f661c191fa69cd64a693053f4026708400ca4bc6defe224c79",
-            "cbe69ef816a594b6e9c0e8a27d5cacc660920df3a0aebe9a31849c113a3f909f",
-        }}));
-    const auto defjam_separate_post_call_tail_branch =
-        eon::parse_millennium_amiga_resident_separate_post_call_tail_branch_boundary(
-            defjam_loader_disk, defjam_plan, defjam_separate_post_call_tail);
-    assert(defjam_separate_post_call_tail_branch.entry_address == 0x68dc0);
-    assert(defjam_separate_post_call_tail_branch.raw_disk_offset == 0x171c0);
-    assert(defjam_separate_post_call_tail_branch.sha256
-        == "ef2fe6161118a1b0ac6cee838be9a4dc2b0483ba274a213d3ac653ea6f334e3b");
-    assert(defjam_separate_post_call_tail_branch.compared_byte_address == 0x7c255);
-    assert(defjam_separate_post_call_tail_branch.compare_immediate == 0x0c);
-    assert(defjam_separate_post_call_tail_branch.conditional_branch_address == 0x68dca);
-    assert(defjam_separate_post_call_tail_branch.conditional_branch_target == 0x68dec);
-    assert(defjam_separate_post_call_tail_branch.target_raw_disk_offset == 0x171ec);
-    assert(defjam_separate_post_call_tail_branch.target_prefix_sha256
-        == "13ed782f5463fd93bbd4376777a1c01d8fd636018de8aef52f5710eb0da11a2b");
-    const auto defjam_separate_comparison =
-        eon::parse_millennium_amiga_resident_separate_comparison_boundary(
-            defjam_loader_disk, defjam_plan, defjam_separate_post_call_tail_branch);
-    assert(defjam_separate_comparison.entry_address == 0x68e6c);
-    assert(defjam_separate_comparison.raw_disk_offset == 0x1726c);
-    assert(defjam_separate_comparison.sha256
-        == "8cb29601f0c76406930e37d44b29853501857c36f3cb833ccdd32e78418597d4");
-    assert(defjam_separate_comparison.preceding_branch_address == 0x68e0c);
-    assert(defjam_separate_comparison.preceding_branch_target == 0x68e6c);
-    assert((defjam_separate_comparison.conditional_branch_addresses
-        == std::array<std::uint32_t, 4>{{0x68e74, 0x68e78, 0x68e84, 0x68e88}}));
-    assert((defjam_separate_comparison.conditional_branch_targets
-        == std::array<std::uint32_t, 4>{{0x68e80, 0x68e7e, 0x68e90, 0x68e8e}}));
-    assert(defjam_separate_comparison.continuation_raw_disk_offset == 0x17290);
-    assert(defjam_separate_comparison.continuation_prefix_sha256
-        == "8a81ad1a39efe0442addd9302b3b0e5e0c0bd72ecaf5904d2fa5e1c2834cd964");
-    const auto defjam_separate_byte_gate =
-        eon::parse_millennium_amiga_resident_separate_byte_gate_boundary(
-            defjam_loader_disk, defjam_plan, defjam_separate_comparison);
-    assert(defjam_separate_byte_gate.entry_address == 0x68e90);
-    assert(defjam_separate_byte_gate.raw_disk_offset == 0x17290);
-    assert(defjam_separate_byte_gate.sha256
-        == "f4a047914e83ab873a037ea16a4f5aaa9a402c38f48a525efc69d9e49cca15a8");
-    assert(defjam_separate_byte_gate.compared_byte_address == 0x7c24e);
-    assert(defjam_separate_byte_gate.conditional_branch_address == 0x68eae);
-    assert(defjam_separate_byte_gate.conditional_branch_target == 0x68ed6);
-    assert(defjam_separate_byte_gate.target_raw_disk_offset == 0x172d6);
-    assert(defjam_separate_byte_gate.target_prefix_sha256
-        == "79871297097662cd29a3659d5399a17c847a8c46d6753e1d968cb27b83c5210b");
-    assert(defjam_separate_byte_gate.fallthrough_raw_disk_offset == 0x172b2);
-    assert(defjam_separate_byte_gate.fallthrough_prefix_sha256
-        == "cd83cab5400642c141e3252fd28302a94e7169d1f5bc7a6021cbe78c5daacd02");
-    const auto defjam_separate_byte_gate_target =
-        eon::parse_millennium_amiga_resident_separate_byte_gate_target_boundary(
-            defjam_loader_disk, defjam_plan, defjam_separate_byte_gate);
-    assert(defjam_separate_byte_gate_target.entry_address == 0x68ed6);
-    assert(defjam_separate_byte_gate_target.raw_disk_offset == 0x172d6);
-    assert(defjam_separate_byte_gate_target.sha256
-        == "b2d2c6cadc50725eb8b4f0b680c325586ed457b29232481b503f3e337d589341");
-    assert((defjam_separate_byte_gate_target.conditional_branch_addresses
-        == std::array<std::uint32_t, 2>{{0x68ede, 0x68eea}}));
-    assert((defjam_separate_byte_gate_target.conditional_branch_targets
-        == std::array<std::uint32_t, 2>{{0x68ef4, 0x68ef4}}));
-    assert(defjam_separate_byte_gate_target.convergence_address == 0x68ef4);
-    assert(defjam_separate_byte_gate_target.convergence_raw_disk_offset == 0x172f4);
-    assert(defjam_separate_byte_gate_target.convergence_prefix_sha256
-        == "93b0d20954d235c624406450161a359968e4f1baefcbaeb47ede08fda0cd1e71");
-    const auto defjam_separate_byte_gate_convergence =
-        eon::parse_millennium_amiga_resident_separate_byte_gate_convergence_boundary(
-            defjam_loader_disk, defjam_plan, defjam_separate_byte_gate_target);
-    assert(defjam_separate_byte_gate_convergence.entry_address == 0x68ef4);
-    assert(defjam_separate_byte_gate_convergence.raw_disk_offset == 0x172f4);
-    assert(defjam_separate_byte_gate_convergence.sha256
-        == "d63b2de78fbc18f2a4213206d1f05947a604dafc5b23fea56f87b624cb7549ab");
-    assert(defjam_separate_byte_gate_convergence.conditional_branch_address == 0x68f02);
-    assert(defjam_separate_byte_gate_convergence.conditional_branch_target == 0x68f2a);
-    assert(defjam_separate_byte_gate_convergence.target_raw_disk_offset == 0x1732a);
-    assert(defjam_separate_byte_gate_convergence.target_prefix_sha256
-        == "ba2a0127999eb628ef05008867728fd31952c6d4b268bdb38f35130bab9973ae");
-    assert(defjam_separate_byte_gate_convergence.fallthrough_raw_disk_offset == 0x17306);
-    assert(defjam_separate_byte_gate_convergence.fallthrough_prefix_sha256
-        == "5b3ae299a769dcca25b96b3b588ab65b1c44843abf0ef1288a1a74741dec9993");
-    const auto defjam_separate_byte_gate_taken_branch =
-        eon::parse_millennium_amiga_resident_separate_byte_gate_taken_branch_boundary(
-            defjam_loader_disk, defjam_plan, defjam_separate_byte_gate_convergence);
-    assert(defjam_separate_byte_gate_taken_branch.entry_address == 0x68f2a);
-    assert(defjam_separate_byte_gate_taken_branch.raw_disk_offset == 0x1732a);
-    assert(defjam_separate_byte_gate_taken_branch.sha256
-        == "a7f4be625a6a39615f0ace12a1a8e013b781575625858b4f0c257d171b0947f3");
-    assert((defjam_separate_byte_gate_taken_branch.conditional_branch_addresses
-        == std::array<std::uint32_t, 2>{{0x68f32, 0x68f3e}}));
-    assert((defjam_separate_byte_gate_taken_branch.conditional_branch_targets
-        == std::array<std::uint32_t, 2>{{0x68f48, 0x68f48}}));
-    assert(defjam_separate_byte_gate_taken_branch.convergence_address == 0x68f48);
-    assert(defjam_separate_byte_gate_taken_branch.external_call_address == 0x68f48);
-    assert(defjam_separate_byte_gate_taken_branch.external_call_target == 0x7caa6);
-    assert(defjam_separate_byte_gate_taken_branch.external_prefix_raw_disk_offset == 0x17348);
-    assert(defjam_separate_byte_gate_taken_branch.external_prefix_sha256
-        == "dde319f5e57db52df300956d4e3e59dc6dc7967f0ff582674d502109fcfa2f69");
-    const auto defjam_separate_byte_gate_fallthrough =
-        eon::parse_millennium_amiga_resident_separate_byte_gate_fallthrough_boundary(
-            defjam_loader_disk, defjam_plan, defjam_separate_byte_gate_convergence);
-    assert(defjam_separate_byte_gate_fallthrough.entry_address == 0x68f06);
-    assert(defjam_separate_byte_gate_fallthrough.raw_disk_offset == 0x17306);
-    assert(defjam_separate_byte_gate_fallthrough.sha256
-        == "4a50d1c5f71ada9a3571e09b00437c51037c3949ff8e57a4b153ea032828d061");
-    assert(defjam_separate_byte_gate_fallthrough.conditional_branch_address == 0x68f1a);
-    assert(defjam_separate_byte_gate_fallthrough.conditional_branch_target == 0x68f48);
-    assert(defjam_separate_byte_gate_fallthrough.other_path_entry_address == 0x68f1e);
-    assert(defjam_separate_byte_gate_fallthrough.other_path_sha256
-        == "fc1fca692a8fc07b5fd7c502ae2d772eeff63c0c3d33d298f9c4fac414f337da");
-    assert(defjam_separate_byte_gate_fallthrough.other_path_branch_address == 0x68f26);
-    assert(defjam_separate_byte_gate_fallthrough.other_path_branch_target == 0x68f48);
-    assert(defjam_separate_byte_gate_fallthrough.convergence_address == 0x68f48);
-    const auto defjam_post_external_call =
-        eon::parse_millennium_amiga_resident_separate_post_external_call_boundary(
-            defjam_loader_disk, defjam_plan, defjam_separate_byte_gate_taken_branch);
-    assert(defjam_post_external_call.entry_address == 0x68f4e);
-    assert(defjam_post_external_call.raw_disk_offset == 0x1734e);
-    assert(defjam_post_external_call.byte_count == 42);
-    assert(defjam_post_external_call.sha256
-        == "3220d65f197163401c649a36d756ecf3005d2f342b81de5a7d4528f9a45da851");
-    assert((defjam_post_external_call.call_addresses
-        == std::array<std::uint32_t, 3>{{0x68f4e, 0x68f5a, 0x68f6c}}));
-    assert((defjam_post_external_call.call_targets
-        == std::array<std::uint32_t, 3>{{0x7d6d2, 0x7780a, 0x77b34}}));
-    assert((defjam_post_external_call.call_target_raw_disk_offsets
-        == std::array<std::size_t, 3>{{0x2bad2, 0x25c0a, 0x25f34}}));
-    assert((defjam_post_external_call.address_literals
-        == std::array<std::uint32_t, 2>{{0x7c21b, 0x7c25c}}));
-    assert(defjam_post_external_call.terminal_jump_address == 0x68f72);
-    assert(defjam_post_external_call.terminal_jump_target == 0x7c54e);
-    assert(defjam_post_external_call.terminal_jump_target_raw_disk_offset == 0x2a94e);
-    assert(defjam_post_external_call.terminal_jump_target_prefix_sha256
-        == "502069bdbda2f35899d16237fd1d2aa477be20f0c950231fb71f32583f23de14");
-    const auto defjam_terminal_jump_raw_target =
-        eon::parse_millennium_amiga_resident_separate_terminal_jump_raw_target_boundary(
-            defjam_loader_disk, defjam_plan, defjam_post_external_call);
-    assert(defjam_terminal_jump_raw_target.jump_address == 0x68f72);
-    assert(defjam_terminal_jump_raw_target.target_address == 0x7c54e);
-    assert(defjam_terminal_jump_raw_target.raw_disk_offset == 0x2a94e);
-    assert(defjam_terminal_jump_raw_target.byte_count == 256);
-    assert(defjam_terminal_jump_raw_target.sha256
-        == "0149a457e657e18805ff61675e80741fa78d25f201f120498193315804b87eea");
-    auto invalid_post_external_call_disk_bytes = *defjam_adf;
-    invalid_post_external_call_disk_bytes[0x1734e] ^= 0x01;
-    bool invalid_post_external_call_rejected = false;
-    try {
-        const eon::AmigaAdf invalid_post_external_call_disk(
-            std::move(invalid_post_external_call_disk_bytes));
-        static_cast<void>(eon::parse_millennium_amiga_resident_separate_post_external_call_boundary(
-            invalid_post_external_call_disk, defjam_plan,
-            defjam_separate_byte_gate_taken_branch));
-    } catch (const std::runtime_error&) {
-        invalid_post_external_call_rejected = true;
-    }
-    assert(invalid_post_external_call_rejected);
-    auto invalid_terminal_jump_raw_target_disk_bytes = *defjam_adf;
-    invalid_terminal_jump_raw_target_disk_bytes[0x2a94e + 255] ^= 0x01;
-    bool invalid_terminal_jump_raw_target_rejected = false;
-    try {
-        const eon::AmigaAdf invalid_terminal_jump_raw_target_disk(
-            std::move(invalid_terminal_jump_raw_target_disk_bytes));
-        static_cast<void>(
-            eon::parse_millennium_amiga_resident_separate_terminal_jump_raw_target_boundary(
-                invalid_terminal_jump_raw_target_disk, defjam_plan, defjam_post_external_call));
-    } catch (const std::runtime_error&) {
-        invalid_terminal_jump_raw_target_rejected = true;
-    }
-    assert(invalid_terminal_jump_raw_target_rejected);
-    // Every supplied Millennium Amiga image shares the verified resident raw
-    // range. One image is shorter than a standard ADF, so check the common
-    // raw bytes directly rather than incorrectly forcing it through the ADF
-    // filesystem abstraction. This neither accepts nor interprets the other
-    // variants' altered boot paths.
-    for (const auto hash : millennium_amiga_hashes) {
-        const auto image = eon::extract_asset_by_sha256(amiga_millennium->path, hash);
-        assert(image);
-        const std::span bytes(*image);
-        assert(bytes.size() >= 0x2bfc8);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x16996, 104)))
-            == defjam_independent_post_call_tail.sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x1719c, 36)))
-            == defjam_separate_post_call_tail.sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x171c0, 14)))
-            == defjam_separate_post_call_tail_branch.sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x171ec, 32)))
-            == defjam_separate_post_call_tail_branch.target_prefix_sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x1726c, 36)))
-            == defjam_separate_comparison.sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x17290, 32)))
-            == defjam_separate_comparison.continuation_prefix_sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x17290, 34)))
-            == defjam_separate_byte_gate.sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x172d6, 30)))
-            == defjam_separate_byte_gate_target.sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x172f4, 32)))
-            == defjam_separate_byte_gate_target.convergence_prefix_sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x172f4, 34)))
-            == defjam_separate_byte_gate_convergence.sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x1732a, 32)))
-            == defjam_separate_byte_gate_convergence.target_prefix_sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x17306, 32)))
-            == defjam_separate_byte_gate_convergence.fallthrough_prefix_sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x1732a, 36)))
-            == defjam_separate_byte_gate_taken_branch.sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x17348, 18)))
-            == defjam_separate_byte_gate_taken_branch.external_prefix_sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x17306, 24)))
-            == defjam_separate_byte_gate_fallthrough.sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x1731e, 12)))
-            == defjam_separate_byte_gate_fallthrough.other_path_sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(0x1734e, 42)))
-            == defjam_post_external_call.sha256);
-        for (std::size_t index = 0;
-             index < defjam_post_external_call.call_target_raw_disk_offsets.size(); ++index) {
-            assert(eon::to_hex(eon::sha256(bytes.subspan(
-                defjam_post_external_call.call_target_raw_disk_offsets[index], 32)))
-                == defjam_post_external_call.call_target_prefix_sha256[index]);
-        }
-        assert(eon::to_hex(eon::sha256(bytes.subspan(
-            defjam_post_external_call.terminal_jump_target_raw_disk_offset, 32)))
-            == defjam_post_external_call.terminal_jump_target_prefix_sha256);
-        assert(eon::to_hex(eon::sha256(bytes.subspan(
-            defjam_terminal_jump_raw_target.raw_disk_offset,
-            defjam_terminal_jump_raw_target.byte_count)))
-            == defjam_terminal_jump_raw_target.sha256);
-        for (std::size_t index = 0;
-             index < defjam_separate_post_call_tail.target_raw_disk_offsets.size(); ++index) {
-            assert(eon::to_hex(eon::sha256(bytes.subspan(
-                defjam_separate_post_call_tail.target_raw_disk_offsets[index], 32)))
-                == defjam_separate_post_call_tail.target_prefix_sha256[index]);
-        }
-    }
-    const auto staged_pre_setup = eon::stage_millennium_amiga_resident_helper_pre_setup(
-        {{0x1020, 0x3040, 0x5060}}, {{0x01, 0x00, 0xff}});
-    assert((staged_pre_setup.magnitude_words
-        == std::array<std::uint16_t, 3>{{0x1020, 0x3040, 0x5060}}));
-    assert((staged_pre_setup.sign_bytes == std::array<std::uint8_t, 3>{{0x01, 0x00, 0xff}}));
-    // These are real, consecutive words from the supplied raw resident range.
-    // They exercise the exact pre-helper LSL/ROXL/LSR data movement without
-    // claiming that this disk position was an original A1 caller.
-    const auto splitter_source = defjam_loader_disk.bytes(
-        defjam_plan.resident_stage.disk_offset + 0x100, 6);
-    const std::array<std::uint16_t, 3> splitter_words{{
-        static_cast<std::uint16_t>((splitter_source[0] << 8U) | splitter_source[1]),
-        static_cast<std::uint16_t>((splitter_source[2] << 8U) | splitter_source[3]),
-        static_cast<std::uint16_t>((splitter_source[4] << 8U) | splitter_source[5]),
-    }};
-    assert((splitter_words == std::array<std::uint16_t, 3>{{0xb146, 0x5279, 0x0007}}));
-    const auto splitter_pre_helper = eon::split_millennium_amiga_resident_words_pre_helper(
-        splitter_words);
-    assert((splitter_pre_helper.magnitude_words
-        == std::array<std::uint16_t, 3>{{0x3146, 0x5279, 0x0007}}));
-    assert((splitter_pre_helper.sign_bytes == std::array<std::uint8_t, 3>{{1, 0, 0}}));
-    auto invalid_first_post_helper_chain_disk_bytes = *defjam_adf;
-    invalid_first_post_helper_chain_disk_bytes[0x17aa0] ^= 0x01;
-    bool invalid_first_post_helper_chain_rejected = false;
-    try {
-        const eon::AmigaAdf invalid_first_post_helper_chain_disk(
-            std::move(invalid_first_post_helper_chain_disk_bytes));
-        static_cast<void>(eon::parse_millennium_amiga_resident_first_post_helper_static_chain(
-            invalid_first_post_helper_chain_disk, defjam_plan, defjam_staging_callsites[0]));
-    } catch (const std::runtime_error&) {
-        invalid_first_post_helper_chain_rejected = true;
-    }
-    assert(invalid_first_post_helper_chain_rejected);
-    auto invalid_second_post_helper_chain_disk_bytes = *defjam_adf;
-    invalid_second_post_helper_chain_disk_bytes[0x17fe0] ^= 0x01;
-    bool invalid_second_post_helper_chain_rejected = false;
-    try {
-        const eon::AmigaAdf invalid_second_post_helper_chain_disk(
-            std::move(invalid_second_post_helper_chain_disk_bytes));
-        static_cast<void>(eon::parse_millennium_amiga_resident_second_post_helper_static_chain(
-            invalid_second_post_helper_chain_disk, defjam_plan, defjam_staging_callsites[1]));
-    } catch (const std::runtime_error&) {
-        invalid_second_post_helper_chain_rejected = true;
-    }
-    assert(invalid_second_post_helper_chain_rejected);
-    auto invalid_staging_reachability_disk_bytes = *defjam_adf;
-    const std::array<std::uint8_t, 6> injected_direct_staging_jsr{{
-        0x4e, 0xb9, 0x00, 0x06, 0x96, 0x24,
-    }};
-    std::copy(injected_direct_staging_jsr.begin(), injected_direct_staging_jsr.end(),
-        invalid_staging_reachability_disk_bytes.begin() + 0x16400);
-    bool invalid_staging_reachability_rejected = false;
-    try {
-        const eon::AmigaAdf invalid_staging_reachability_disk(
-            std::move(invalid_staging_reachability_disk_bytes));
-        static_cast<void>(eon::parse_millennium_amiga_resident_staging_direct_reachability_boundary(
-            invalid_staging_reachability_disk, defjam_plan, defjam_staging_callsites));
-    } catch (const std::runtime_error&) {
-        invalid_staging_reachability_rejected = true;
-    }
-    assert(invalid_staging_reachability_rejected);
-    auto invalid_staging_bsr_reachability_disk_bytes = *defjam_adf;
-    const std::array<std::uint8_t, 4> injected_direct_staging_bsr{{
-        0x61, 0x00, 0x16, 0x22,
-    }};
-    std::copy(injected_direct_staging_bsr.begin(), injected_direct_staging_bsr.end(),
-        invalid_staging_bsr_reachability_disk_bytes.begin() + 0x16400);
-    bool invalid_staging_bsr_reachability_rejected = false;
-    try {
-        const eon::AmigaAdf invalid_staging_bsr_reachability_disk(
-            std::move(invalid_staging_bsr_reachability_disk_bytes));
-        static_cast<void>(eon::parse_millennium_amiga_resident_staging_direct_reachability_boundary(
-            invalid_staging_bsr_reachability_disk, defjam_plan, defjam_staging_callsites));
-    } catch (const std::runtime_error&) {
-        invalid_staging_bsr_reachability_rejected = true;
-    }
-    assert(invalid_staging_bsr_reachability_rejected);
-    auto invalid_staging_register_reachability_disk_bytes = *defjam_adf;
-    const std::array<std::uint8_t, 8> injected_direct_staging_register_jsr{{
-        0x20, 0x7c, 0x00, 0x06, 0x96, 0x24, 0x4e, 0x90,
-    }};
-    std::copy(injected_direct_staging_register_jsr.begin(), injected_direct_staging_register_jsr.end(),
-        invalid_staging_register_reachability_disk_bytes.begin() + 0x16400);
-    bool invalid_staging_register_reachability_rejected = false;
-    try {
-        const eon::AmigaAdf invalid_staging_register_reachability_disk(
-            std::move(invalid_staging_register_reachability_disk_bytes));
-        static_cast<void>(eon::parse_millennium_amiga_resident_staging_direct_reachability_boundary(
-            invalid_staging_register_reachability_disk, defjam_plan, defjam_staging_callsites));
-    } catch (const std::runtime_error&) {
-        invalid_staging_register_reachability_rejected = true;
-    }
-    assert(invalid_staging_register_reachability_rejected);
     bool rejected_non_filesystem = false;
     try {
         const eon::AmigaAdf defjam_disk(*defjam_adf);
@@ -5034,9 +4223,12 @@ int main() {
                 assert(first_read&&first_read->state==eon::MillenniumAmigaBootstrapRelocatorState::awaiting_first_read_return&&first_read->boundary.instruction_address==0x662cc&&first_read->boundary.target_address==0x661da);
                 assert(!all_release_runtime.observe_millennium_amiga_bootstrap_first_read_return({3,0x662cc,0x661da,0}).accepted);
                 assert(!all_release_runtime.observe_millennium_amiga_bootstrap_first_read_return({4,0x662ce,0x661da,0}).accepted);
+                assert(!all_release_runtime.observe_millennium_amiga_bootstrap_first_read_return({4,0x662cc,0x661da,1}).accepted);
                 assert(all_release_runtime.observe_millennium_amiga_bootstrap_first_read_return({4,0x662cc,0x661da,0}).accepted);
                 const auto opaque=all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
-                assert(opaque&&opaque->state==eon::MillenniumAmigaBootstrapRelocatorState::awaiting_opaque_first_stage&&opaque->boundary.instruction_address==0x662e4&&opaque->boundary.target_address==0x41000);
+                assert(opaque&&opaque->state==eon::MillenniumAmigaBootstrapRelocatorState::awaiting_opaque_first_stage&&opaque->boundary.instruction_address==0x662e4&&opaque->boundary.target_address==0x41000&&opaque->materialized_first_stage_byte_count==0x24200&&opaque->first_stage_sha256=="df97c7f6cd622b16b9ffb57bc562906e349c18c56ed8abeb564c6f411e64891c");
+                const auto first_stage_memory=all_release_runtime.native_runtime_memory_diagnostics();
+                assert(first_stage_memory&&first_stage_memory->initialized_byte_count==0x24200+975&&first_stage_memory->applied_batch_count==3);
             }else{
                 assert(!all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint());
                 assert(all_release_runtime.native_runtime_memory_diagnostics()->initialized_byte_count==0);
@@ -6188,6 +5380,48 @@ int main() {
             for(const auto offset:std::array<std::uint32_t,3>{{0,0x4931,0x9391}}){
                 assert(runtime_byte(*after_title_tail,0x66000U+offset));
             }
+            // Continue through the local $37f9a routine. Every nested host
+            // call is explicit; only the recovered local writes are applied.
+            assert(opening_controller.advance_deuteros_amiga_title_tail_subroutine().accepted);
+            assert(!opening_controller.advance_deuteros_amiga_title_tail_subroutine().accepted);
+            eon::DeuterosAmigaObservedLocalCallReturn tail_service{
+                runtime_copy_sequence+83,0x37fac,0x208c0,0x37fb2,0,0};
+            auto bad_tail_service=tail_service;bad_tail_service.call_target+=2;
+            assert(!opening_controller.observe_deuteros_amiga_title_tail_initial_service_return(bad_tail_service).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_tail_initial_service_return(tail_service).accepted);
+            const auto exec_return=[&](const std::uint64_t sequence,const std::uint32_t call,
+                const std::uint32_t argument,const std::int16_t vector,const std::uint32_t ret){
+                return opening_controller.observe_deuteros_amiga_title_tail_exec_return(
+                    eon::DeuterosAmigaObservedTitleTailExecReturn{
+                        sequence,call,argument,ret,vector,0});
+            };
+            assert(exec_return(runtime_copy_sequence+84,0x37fca,0x1eefa,-0x1ce,0x37fce).accepted);
+            assert(exec_return(runtime_copy_sequence+85,0x37fd8,0x1eefa,-0x1c2,0x37fdc).accepted);
+            assert(exec_return(runtime_copy_sequence+86,0x37fe6,0x1eed8,-0x168,0x37fea).accepted);
+            eon::DeuterosAmigaObservedTitleTailCompareLongs tail_compare{
+                runtime_copy_sequence+87,0x20698,0x12345678,0x2069c,0x12345678};
+            auto bad_tail_compare=tail_compare;bad_tail_compare.second_address+=4;
+            assert(!opening_controller.observe_deuteros_amiga_title_tail_compare_longs(bad_tail_compare).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_tail_compare_longs(tail_compare).accepted);
+            // Equal comparison skips the two conditional Exec calls.
+            assert(exec_return(runtime_copy_sequence+88,0x3801e,0x205e4,-0x1c2,0x38022).accepted);
+            assert(exec_return(runtime_copy_sequence+89,0x3802c,0x2061c,-0x168,0x38030).accepted);
+            eon::DeuterosAmigaObservedTitleTailControllerLong controller_long{
+                runtime_copy_sequence+90,0x206a0,0x00c0ffee};
+            auto bad_controller_long=controller_long;bad_controller_long.source_address+=4;
+            assert(!opening_controller.observe_deuteros_amiga_title_tail_controller_long(bad_controller_long).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_tail_controller_long(controller_long).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_title_tail_controller_long(controller_long).accepted);
+            const auto after_title_bootstrap=opening_controller.native_runtime_memory_checkpoint();
+            assert(after_title_bootstrap
+                && after_title_bootstrap->applied_batch_count==after_title_tail->applied_batch_count+2);
+            assert(runtime_byte(*after_title_bootstrap,0x1ef16)==0x00);
+            assert(runtime_byte(*after_title_bootstrap,0x1ef22)==0x00);
+            assert(runtime_byte(*after_title_bootstrap,0x12ff8)==0x00);
+            assert(runtime_byte(*after_title_bootstrap,0x12ff9)==0xc0);
+            assert(runtime_byte(*after_title_bootstrap,0x12ffa)==0xff);
+            assert(runtime_byte(*after_title_bootstrap,0x12ffb)==0xee);
+            assert(runtime_byte(*after_title_bootstrap,0x12fff)==0x02);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

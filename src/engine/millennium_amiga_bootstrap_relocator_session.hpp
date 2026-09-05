@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace eon {
@@ -53,6 +54,12 @@ public:
     [[nodiscard]] std::uint32_t final_a3() const { return final_a3_; }
     [[nodiscard]] std::uint32_t final_a5() const { return final_a5_; }
     [[nodiscard]] std::uint32_t final_d1() const { return final_d1_; }
+    [[nodiscard]] std::span<const std::uint8_t> first_stage_bytes() const {
+        return first_stage_bytes_;
+    }
+    [[nodiscard]] const std::string& first_stage_sha256() const {
+        return first_stage_sha256_;
+    }
 
     void observe_overread_byte(std::uint32_t instruction_address,
         std::uint32_t source_address, std::uint8_t value);
@@ -61,7 +68,7 @@ public:
     void observe_setup_call_return(std::uint32_t instruction_address,
         std::uint32_t target_address);
     void observe_first_read_return(std::uint32_t instruction_address,
-        std::uint32_t target_address);
+        std::uint32_t target_address, std::uint8_t io_error);
 
 private:
     MillenniumAmigaBootstrapRelocatorState state_ =
@@ -71,6 +78,8 @@ private:
     std::uint32_t final_a3_ = 0;
     std::uint32_t final_a5_ = 0;
     std::uint32_t final_d1_ = 0;
+    std::vector<std::uint8_t> first_stage_bytes_;
+    std::string first_stage_sha256_;
 };
 
 } // namespace eon

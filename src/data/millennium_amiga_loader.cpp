@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <stdexcept>
 #include <string_view>
 
@@ -66,7 +67,7 @@ MillenniumAmigaLoadPlan parse_millennium_amiga_load_plan(const AmigaAdf& disk) {
         throw std::runtime_error("Unexpected Millennium Amiga first-stage loader sequence");
     }
     if (first_chunk == 0 || multiplier == 0 || first_chunk > UINT32_MAX / multiplier) {
-        throw std::runtime_error("Invalid Millennium Amiga first-stage length");
+        throw std::runtime_error("Invalid Millennium Amiga first-stage disk offset");
     }
 
     // The following request is issued after calling the first loaded stage.
@@ -85,12 +86,15 @@ MillenniumAmigaLoadPlan parse_millennium_amiga_load_plan(const AmigaAdf& disk) {
         || big32(loader, resident_offset + 22) != 0x000661da) {
         throw std::runtime_error("Unexpected Millennium Amiga resident-stage loader sequence");
     }
-    // add.l d7,d7 doubles the $1600 I/O chunk before the resident request;
-    // the original code then supplies the total length in d0 to the same loop.
+    // $661da copies D7 to D2 before chunking D0. $66216 then stores D0 at
+    // IORequest+$24 (io_Length), D1 at +$28 (io_Data), and D2 at +$2c
+    // (io_Offset). Thus the multiplied D7 value is the disk offset, not the
+    // transfer length. This distinction is essential: reversing the fields
+    // would make the first read overwrite its still-running loader.
     if (resident_chunk == 0 || resident_chunk > UINT32_MAX / 2U) {
         throw std::runtime_error("Invalid Millennium Amiga resident-stage length");
     }
-    const auto resident_length = resident_chunk * 2U * 0x10U;
+    const auto resident_disk_offset = resident_chunk * 2U * 0x10U;
     const auto magic_offset = resident_offset + 54;
     if (big32(loader, magic_offset) != 0xa8d398fb) {
         throw std::runtime_error("Millennium Amiga loader handoff marker not found");
@@ -98,8 +102,8 @@ MillenniumAmigaLoadPlan parse_millennium_amiga_load_plan(const AmigaAdf& disk) {
 
     MillenniumAmigaLoadPlan plan{
         make_stage(disk, bootstrap_disk_offset, bootstrap_length, bootstrap_destination),
-        make_stage(disk, 0x24200, first_chunk * multiplier, 0x41000),
-        make_stage(disk, 0x16400, resident_length, 0x68000),
+        make_stage(disk, first_chunk * multiplier, 0x24200, 0x41000),
+        make_stage(disk, resident_disk_offset, 0x16400, 0x68000),
         0x68000,
         big32(loader, magic_offset),
     };
@@ -139,9 +143,9 @@ parse_millennium_amiga_bootstrap_opaque_invocation_boundary(
     constexpr std::uint32_t resident_jump = 0x70320;
     if (plan.bootstrap_loader.disk_offset != bootstrap_disk_offset
         || plan.bootstrap_loader.destination != bootstrap_destination
-        || plan.first_stage.disk_offset != 0x24200 || plan.first_stage.length != 0x6e000
-        || plan.first_stage.destination != 0x41000 || plan.resident_stage.disk_offset != 0x16400
-        || plan.resident_stage.length != 0x2c000 || plan.resident_stage.destination != 0x68000
+        || plan.first_stage.disk_offset != 0x6e000 || plan.first_stage.length != 0x24200
+        || plan.first_stage.destination != 0x41000 || plan.resident_stage.disk_offset != 0x2c000
+        || plan.resident_stage.length != 0x16400 || plan.resident_stage.destination != 0x68000
         || plan.resident_entry != plan.resident_stage.destination) {
         throw std::runtime_error("Unexpected Millennium Amiga opaque invocation plan");
     }
@@ -158,6 +162,37 @@ parse_millennium_amiga_bootstrap_opaque_invocation_boundary(
     return {entry_address, raw_disk_offset, expected.size(), hash, first_invocation,
         plan.first_stage.destination, static_post_first, resident_jump,
         plan.resident_stage.destination};
+}
+
+MillenniumAmigaFirstStageEntryBoundary
+parse_millennium_amiga_first_stage_entry_boundary(
+    const AmigaAdf& disk, const MillenniumAmigaLoadPlan& plan) {
+    constexpr std::size_t source_offset = 0x6e000;
+    constexpr std::size_t source_size = 0x24200;
+    constexpr std::uint32_t destination = 0x41000;
+    constexpr std::size_t entry_size = 0xe0;
+    constexpr std::string_view source_hash =
+        "df97c7f6cd622b16b9ffb57bc562906e349c18c56ed8abeb564c6f411e64891c";
+    constexpr std::string_view entry_hash =
+        "943b1fd0b5f3aa7734aae09e64d139348f9876615ef4df94fb22f9e05851fd77";
+    if (plan.first_stage.disk_offset != source_offset
+        || plan.first_stage.length != source_size
+        || plan.first_stage.destination != destination
+        || plan.first_stage.raw_sha256 != source_hash) {
+        throw std::runtime_error("Unexpected Millennium Amiga first-stage transfer");
+    }
+    const auto source = disk.bytes(source_offset, source_size);
+    const auto entry = source.first(entry_size);
+    if (to_hex(sha256(source)) != source_hash
+        || to_hex(sha256(entry)) != entry_hash
+        || entry[0] != 0x60 || entry[1] != 0x00
+        || entry[2] != 0x00 || entry[3] != 0xba
+        || entry[0xbc] != 0x2f || entry[0xbd] != 0x0e
+        || entry[0xde] != 0x4a || entry[0xdf] != 0xfc) {
+        throw std::runtime_error("Unexpected Millennium Amiga first-stage entry");
+    }
+    return {source_offset, source_size, destination, std::string(source_hash),
+        entry_size, std::string(entry_hash), 0x410bc, 0x410de, 0x10};
 }
 
 MillenniumAmigaBootstrapRelocationBoundary
@@ -353,7 +388,8 @@ MillenniumAmigaResidentWordSplitter parse_millennium_amiga_resident_word_splitte
     std::size_t offset = prefix.size();
     for (std::size_t index = 0; index < magnitude_addresses.size(); ++index) {
         if (index != 0) {
-            if (!std::equal(next_word.begin(), next_word.end(), bytes.begin() + offset)) {
+            if (!std::equal(next_word.begin(), next_word.end(),
+                    bytes.begin() + static_cast<std::ptrdiff_t>(offset))) {
                 throw std::runtime_error("Unexpected Millennium Amiga resident word-splitter input");
             }
             offset += next_word.size();
@@ -370,12 +406,14 @@ MillenniumAmigaResidentWordSplitter parse_millennium_amiga_resident_word_splitte
             static_cast<std::uint8_t>(sign_addresses[index] >> 8U),
             static_cast<std::uint8_t>(sign_addresses[index]),
         }};
-        if (!std::equal(expected_store.begin(), expected_store.end(), bytes.begin() + offset)) {
+        if (!std::equal(expected_store.begin(), expected_store.end(),
+                bytes.begin() + static_cast<std::ptrdiff_t>(offset))) {
             throw std::runtime_error("Unexpected Millennium Amiga resident word-splitter store");
         }
         offset += expected_store.size();
     }
-    if (!std::equal(tail.begin(), tail.end(), bytes.begin() + offset)) {
+    if (!std::equal(tail.begin(), tail.end(),
+            bytes.begin() + static_cast<std::ptrdiff_t>(offset))) {
         throw std::runtime_error("Unexpected Millennium Amiga resident word-splitter tail");
     }
     return {plan.resident_entry + static_cast<std::uint32_t>(routine_offset), 0x36,
@@ -636,8 +674,9 @@ parse_millennium_amiga_resident_staging_direct_reachability_boundary(
     result.scanned_raw_disk_offset = plan.resident_stage.disk_offset;
     result.scanned_byte_count = plan.resident_stage.length;
     for (std::size_t offset = 0; offset + 2U <= bytes.size(); ++offset) {
-        const auto opcode = static_cast<std::uint16_t>(static_cast<std::uint16_t>(bytes[offset]) << 8U)
-            | bytes[offset + 1U];
+        const auto opcode = static_cast<std::uint16_t>(
+            (static_cast<std::uint16_t>(bytes[offset]) << 8U)
+            | bytes[offset + 1U]);
         if (offset + 6U <= bytes.size()) {
             const auto target = big32(bytes, offset + 2U);
             for (std::size_t index = 0; index < entries.size(); ++index) {
@@ -663,7 +702,8 @@ parse_millennium_amiga_resident_staging_direct_reachability_boundary(
             // that exact immediate form and an immediately following (An)
             // control transfer so the address-register value is fully local.
             if (bytes[offset + 1U] == 0x7cU) {
-                const auto register_index = static_cast<std::uint16_t>((opcode >> 9U) & 7U);
+                const auto register_index = static_cast<std::uint16_t>(
+                    (static_cast<std::uint32_t>(opcode) >> 9U) & 7U);
                 const auto immediate_target = big32(bytes, offset + 2U);
                 const auto transfer = static_cast<std::uint16_t>(
                     (static_cast<std::uint16_t>(bytes[offset + 6U]) << 8U) | bytes[offset + 7U]);

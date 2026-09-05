@@ -442,10 +442,15 @@ public:
 
 private:
     void advance_encoded_record_complete();
+    void advance_first_descriptor_mode_two_return();
     MillenniumDosTitleInitializationState state_ =
         MillenniumDosTitleInitializationState::awaiting_entry;
     std::uint64_t last_sequence_ = 0;
     std::uint16_t child_code_segment_ = 0;
+    // Exact words embedded in the hash-admitted TITLES.EXE caller table at
+    // runtime $170c/$170e (file offsets $160c/$160e).
+    std::uint16_t first_descriptor_caller_word_ = 0;
+    std::uint16_t first_descriptor_caller_second_word_ = 0;
     std::vector<MillenniumDosTitleInitializationRegisterEffect> effects_;
     std::vector<MillenniumDosTitleInitializationMemoryEffect> memory_effects_;
     MillenniumDosTitlePrivateInterruptBoundary boundary_;
