@@ -8036,3 +8036,43 @@ ordered returns, failed-read rejection and final MOVE.W upper-bit preservation.
 Separate genuine-media tests compare both payload spans against their exact
 ADF ranges and reject shortened requests. These tests do not constitute a
 full emulator capture or end-to-end playable-program validation.
+
+### Deuteros loaded main-program native re-entry
+
+The retained `$20000` destination now follows its owned absolute jump to
+`$21734`. Native code verifies that jump, writes incoming A1 to `$20976`,
+writes D0's low word to `$21704`, and records stack top `$22296` as control
+metadata. Fresh typed returns at `$2174a/-$96` and `$21758/-$9c` are required;
+the intervening D0 constant is `$7fff0`. This route does not re-admit old
+one-shot startup receipts or reset the global observation sequence.
+
+The local `$20068` prefix sets A1 to `$20006` and D0 to zero before the
+`$20074/-$228` library call. A zero return reaches the original `$2011a`
+spin. A nonzero return writes `$12fec` and increments `$20054` as a word.
+Its local return continues through `$21762 -> $2013a -> $2008e`: owned
+`$12ff4` and `$12ff0` are copied to `$20128` and `$20124`, respectively,
+then A1 becomes `$12e00`. The next service is `$200b2/-$de`, whose base
+must match owned `$12fec` (the packet's historically named `exec_base`
+field carries that graphics-library base here, not the value at address 4).
+
+After this graphics return, both local RTS continuations are followed:
+`$2012c` is cleared as a word and the owned `$20128` pointer is copied to
+`$20510` and `$20c20`. Native execution stops at `$2177c -> $22a5a`, before
+the subsequent two `$22bea` calls. No display hardware effect or audible
+output follows merely from these pointer stores. All native writes and
+state transitions remain private until the service admission succeeds.
+
+Additional source gates (ADF offset, byte length, SHA-256):
+
+- `$5800`, 6: `1c3c420f68950a319e336a84f65a55bf597afbfd867ad3e2340dfc428c916e11`.
+- `$6f34`, 52: `912d3ca9b43b99a847ede8bf8ed5e5035d3969deef3e46c21b86500d8fb28001`.
+- `$5868`, 36: `2ff9cff593d65f9e3fecfc289cd8d675f7e6309b1e5bb2a27d74605cfecff8ba`.
+- `$588e`, 42: `a501cdbd64433ac21fd1f6f5c04567637ed879757e7073b9dd59f441b1ff11b7`.
+- `$593a`, 16: `178dc6f8e66805b92438b1c049121151d44fb9b6ebb1461f50f7979c488d9aa2`.
+- `$6f68`, 26: `a2e25f24e451a343215982580cb4c81ba8f40628d936cba4575d10383671ea49`.
+
+Controlled continuation tests now exercise all main-program profiles through
+these four service returns, zero/nonzero library results, the controller and
+profile stores, the two buffer roots, the word reset and both final pointer
+copies. They use a private map from the genuine checkpoint and do not claim
+full device emulation or capture-derived gameplay parity.

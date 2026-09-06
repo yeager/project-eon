@@ -7000,6 +7000,32 @@ int main() {
                                                     assert(loaded.next_instruction_address==selected.d1_value);
                                                     assert(loaded.bootstrap_return_destination==0&&loaded.next_call_address==0);
                                                     assert(loaded.d0_value==(0xdead0000U|(profile&0xffffU)));
+                                                    if(!title){
+                                                        const auto controller=loaded.a1_value;
+                                                        auto main=eon::execute_deuteros_amiga_outer_service(loaded,
+                                                            {19,0x21746,4,command_read(4,4),0x2174a,0x2174e,0x11223344,-0x96},command_read,command_write);
+                                                        assert(main.main_stage_stack_top==0x22296&&main.d0_value==0x7fff0);
+                                                        assert(command_read(0x20976,4)==controller&&command_read(0x21704,2)==(profile&0xffffU));
+                                                        main=eon::execute_deuteros_amiga_outer_service(main,
+                                                            {20,0x21754,4,command_read(4,4),0x21758,0x2175c,0,-0x9c},command_read,command_write);
+                                                        assert(main.next_call_address==0x20074&&main.a1_value==0x20006&&main.d0_value==0);
+                                                        const auto library=eon::DeuterosAmigaObservedLoopRequestService{
+                                                            21,0x20070,4,command_read(4,4),0x20074,0x20078,0,-0x228};
+                                                        const auto failed=eon::execute_deuteros_amiga_outer_service(main,library,command_read,command_write);
+                                                        assert(failed.next_instruction_address==0x2011a&&failed.next_call_address==0);
+                                                        auto opened=library;opened.result_d0=0x123400;
+                                                        const auto count=command_read(0x20054,2);
+                                                        main=eon::execute_deuteros_amiga_outer_service(main,opened,command_read,command_write);
+                                                        assert(command_read(0x12fec,4)==opened.result_d0&&command_read(0x20054,2)==((count+1)&0xffffU));
+                                                        assert(main.pending_read_address==0x12fec&&main.next_call_address==0x200b2);
+                                                        assert(command_read(0x20128,4)==command_read(0x12ff4,4));
+                                                        assert(command_read(0x20124,4)==command_read(0x12ff0,4));
+                                                        main=eon::execute_deuteros_amiga_outer_service(main,
+                                                            {22,0x200ac,0x12fec,opened.result_d0,0x200b2,0x200b6,0x98765432,-0xde},command_read,command_write);
+                                                        assert(command_read(0x2012c,2)==0&&command_read(0x20510,4)==command_read(0x20128,4));
+                                                        assert(command_read(0x20c20,4)==command_read(0x20128,4));
+                                                        assert(main.next_call_address==0x2177c&&main.local_call_target==0x22a5a);
+                                                    }
                                                 }
                                                 auto wrong=returned;wrong.vector=-0x1c2;
                                                 bool refused=false;

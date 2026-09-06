@@ -507,6 +507,13 @@ then admits the separate `$12aee`, `$12afc` and `$12b0a` returns. Final RTS
 uses the retained loaded destination rather than the final service's D0.
 Continue native execution at `$20000` or `$13000`; failed/partial device
 effects and profile-five execution remain distinct unfinished paths.
+The loaded `$20000` jump now enters `$21734` natively, stores its actual
+controller/profile, establishes stack metadata and crosses the two ordered
+Exec services. Native `$20068` now handles the graphics-library return and
+its zero-result spin; success continues through `$2013a/$2008e` to the
+typed graphics return and both pointer stores at `$21768/$21772`. Continue
+the reached `$2177c -> $22a5a` and two `$22bea` audio calls. The loaded title
+at `$13000` remains a separate program-entry boundary.
 The unconfigured `$13000` graphics initialization remains separate. Opening
 acquisition now retains the genuine 24-byte bootstrap profile table in owned
 memory from its boot-track source. Tests consume that production checkpoint,

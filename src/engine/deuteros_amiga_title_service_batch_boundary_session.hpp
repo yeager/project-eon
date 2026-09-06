@@ -1410,6 +1410,7 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
     std::uint32_t d1_value=0;
     std::uint32_t bootstrap_stack_top=0;
     std::uint32_t bootstrap_return_destination=0;
+    std::uint32_t main_stage_stack_top=0;
 };
 struct DeuterosAmigaObservedLoopRequestService {
     std::uint64_t trace_sequence=0;
@@ -1417,6 +1418,18 @@ struct DeuterosAmigaObservedLoopRequestService {
     std::uint32_t call_address=0,return_address=0,result_d0=0;
     std::int16_t vector=0;
 };
+inline std::optional<DeuterosAmigaObservedLoopRequestService>
+deuteros_amiga_main_reentry_service_boundary(const DeuterosAmigaMainStageLoopGraphicsPlan&plan){
+    if(plan.next_instruction_address==0x20000)
+        return DeuterosAmigaObservedLoopRequestService{0,0x21746,4,0,0x2174a,0x2174e,0,-0x96};
+    if(plan.next_call_address==0x21758&&plan.next_return_address==0x2175c&&plan.next_vector==-0x9c)
+        return DeuterosAmigaObservedLoopRequestService{0,0x21754,4,0,0x21758,0x2175c,0,-0x9c};
+    if(plan.next_call_address==0x20074&&plan.next_return_address==0x20078&&plan.next_vector==-0x228)
+        return DeuterosAmigaObservedLoopRequestService{0,0x20070,4,0,0x20074,0x20078,0,-0x228};
+    if(plan.next_call_address==0x200b2&&plan.next_return_address==0x200b6&&plan.next_vector==-0xde)
+        return DeuterosAmigaObservedLoopRequestService{0,0x200ac,0x12fec,0,0x200b2,0x200b6,0,-0xde};
+    return std::nullopt;
+}
 struct DeuterosAmigaObservedFrameBuffer {
     std::uint64_t trace_sequence=0;
     std::uint32_t port_instruction=0,port_address=0;
@@ -1467,6 +1480,48 @@ template<class Read,class Write>
 DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
     DeuterosAmigaMainStageLoopGraphicsPlan plan,const DeuterosAmigaObservedLoopRequestService&o,
     Read read,Write write){
+    if(const auto boundary=deuteros_amiga_main_reentry_service_boundary(plan)){
+        if(o.read_instruction!=boundary->read_instruction||o.source_address!=boundary->source_address
+            ||o.call_address!=boundary->call_address||o.return_address!=boundary->return_address
+            ||o.vector!=boundary->vector||read(o.source_address,4)!=o.exec_base)
+            throw std::runtime_error("Deuteros native main re-entry service does not match boundary");
+        plan.a6_value=o.exec_base;plan.next_instruction_address=0;plan.local_call_target=0;
+        if(o.call_address==0x2174a){
+            if(read(0x20000,2)!=0x4ef9||read(0x20002,4)!=0x21734)
+                throw std::runtime_error("Deuteros native main entry jump changed");
+            write(0x20976,MemoryTransferElementWidth::longword,plan.a1_value);
+            write(0x21704,MemoryTransferElementWidth::word,plan.d0_value&0xffffU);
+            plan.main_stage_stack_top=0x22296;plan.d0_value=0x7fff0;
+            plan.next_call_address=0x21758;plan.next_return_address=0x2175c;plan.next_vector=-0x9c;
+            plan.pending_read_instruction=0x21754;plan.pending_read_address=4;
+        }else if(o.call_address==0x21758){
+            plan.a1_value=0x20006;plan.d0_value=0;
+            plan.next_call_address=0x20074;plan.next_return_address=0x20078;plan.next_vector=-0x228;
+            plan.pending_read_instruction=0x20070;plan.pending_read_address=4;
+        }else if(o.call_address==0x20074){
+            plan.d0_value=o.result_d0;
+            if(o.result_d0==0){
+                plan.next_instruction_address=0x2011a;plan.next_call_address=0;plan.next_return_address=0;
+                plan.next_vector=0;plan.pending_read_instruction=0;plan.pending_read_address=0;
+            }else{
+                write(0x12fec,MemoryTransferElementWidth::longword,o.result_d0);
+                write(0x20054,MemoryTransferElementWidth::word,(read(0x20054,2)+1U)&0xffffU);
+                plan.d0_value=read(0x12ff4,4);write(0x20128,MemoryTransferElementWidth::longword,plan.d0_value);
+                plan.d1_value=read(0x12ff0,4);write(0x20124,MemoryTransferElementWidth::longword,plan.d1_value);
+                plan.a1_value=0x12e00;plan.next_call_address=0x200b2;plan.next_return_address=0x200b6;
+                plan.next_vector=-0xde;plan.pending_read_instruction=0x200ac;plan.pending_read_address=0x12fec;
+            }
+        }else{
+            plan.d0_value=o.result_d0;
+            write(0x2012c,MemoryTransferElementWidth::word,0);
+            const auto pointer=read(0x20128,4);
+            write(0x20510,MemoryTransferElementWidth::longword,pointer);
+            write(0x20c20,MemoryTransferElementWidth::longword,pointer);
+            plan.next_call_address=0x2177c;plan.local_call_target=0x22a5a;plan.next_return_address=0x21782;
+            plan.next_vector=0;plan.pending_read_instruction=0;plan.pending_read_address=0;
+        }
+        return plan;
+    }
     const auto load_call=plan.next_call_address;
     if(load_call==0x12ad2||load_call==0x12aee||load_call==0x12afc||load_call==0x12b0a){
         const auto read_site=load_call==0x12ad2?0x12aceU:load_call==0x12aee?0x12aeaU:
@@ -1844,6 +1899,13 @@ public:
                 !="e4826a60a00a9c9ed6797e5636ca0e99f038e10cea9d732ebe53452ca659a658")
             throw std::runtime_error("Unsupported Deuteros bootstrap re-entry route");
         const auto main_stage=disk.bytes(plan.main_stage.disk_offset,plan.main_stage.length);
+        if(to_hex(sha256(disk.bytes(0x5800,6)))!="1c3c420f68950a319e336a84f65a55bf597afbfd867ad3e2340dfc428c916e11"
+            ||to_hex(sha256(disk.bytes(0x6f34,52)))!="912d3ca9b43b99a847ede8bf8ed5e5035d3969deef3e46c21b86500d8fb28001"
+            ||to_hex(sha256(disk.bytes(0x5868,36)))!="2ff9cff593d65f9e3fecfc289cd8d675f7e6309b1e5bb2a27d74605cfecff8ba"
+            ||to_hex(sha256(disk.bytes(0x588e,42)))!="a501cdbd64433ac21fd1f6f5c04567637ed879757e7073b9dd59f441b1ff11b7"
+            ||to_hex(sha256(disk.bytes(0x593a,16)))!="178dc6f8e66805b92438b1c049121151d44fb9b6ebb1461f50f7979c488d9aa2"
+            ||to_hex(sha256(disk.bytes(0x6f68,26)))!="a2e25f24e451a343215982580cb4c81ba8f40628d936cba4575d10383671ea49")
+            throw std::runtime_error("Unsupported Deuteros native main re-entry route");
         constexpr std::string_view main_stage_hash=
             "a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6";
         if(title_profile.title_exit_controller_address!=0x12800
@@ -4473,6 +4535,14 @@ public:
         const DeuterosAmigaMainStageLoopGraphicsPlan&plan){
         if(!main_stage_loop_graphics_plan_)return std::nullopt;
         const auto& current=*main_stage_loop_graphics_plan_;
+        if(const auto boundary=deuteros_amiga_main_reentry_service_boundary(current)){
+            if(o.trace_sequence<=last_command_sequence_||o.read_instruction!=boundary->read_instruction
+                ||o.source_address!=boundary->source_address||o.call_address!=boundary->call_address
+                ||o.return_address!=boundary->return_address||o.vector!=boundary->vector
+                ||plan.a6_value!=o.exec_base)
+                throw std::runtime_error("Deuteros native main re-entry return is invalid or stale");
+            main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
+        }
         const auto load_call=current.next_call_address;
         if(load_call==0x12ad2||load_call==0x12aee||load_call==0x12afc||load_call==0x12b0a){
             const auto read_site=load_call==0x12ad2?0x12aceU:load_call==0x12aee?0x12aeaU:
