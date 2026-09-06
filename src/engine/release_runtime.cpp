@@ -4683,7 +4683,7 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_frame_buffer(const DeuterosAmi
             if(selector==0xff)continue;
             if(selector==0xfe)
                 throw std::runtime_error("Deuteros frame requires its alternate-resource continuation");
-            draw_deuteros_amiga_owned_bitmap(record,read,sprite_write);
+            draw_deuteros_amiga_owned_sprite(record,read,sprite_write);
         }
         if(!sprite_bytes.empty()){
             NativeRuntimeEffectBatch sprite_batch{"deuteros-amiga-frame-sprites-"+frame_id,true,{}};

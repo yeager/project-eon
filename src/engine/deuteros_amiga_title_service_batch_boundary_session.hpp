@@ -1532,8 +1532,12 @@ public:
                 !="6abfc259f7293f1d5155b0f352c03dd6ccfb7dd2757d35ca91e33716bb27230d"
             ||to_hex(sha256(main_stage.subspan(0x1822,0x76)))
                 !="55047c31e4eb79f3c68741aa644f8686203f7f948be1475855e3d79df14c8a27"
-            ||to_hex(sha256(main_stage.subspan(0xc8c,30)))
-                !="788a4592d40da7cbacb0f4beb68af5ef811d42fbad23ac90dacaa2467ca6d695"
+            ||to_hex(sha256(main_stage.subspan(0xc8c,58)))
+                !="8ff4fab0b4a3e04504ee99a0deece00dc0c903f89ceec4dfe95f94a1916b7f62"
+            ||to_hex(sha256(main_stage.subspan(0xcc6,200)))
+                !="ed3de6026c302373de3a7841d87a30ad71611859bafdc4d78fcce24e0ec09eaf"
+            ||to_hex(sha256(main_stage.subspan(0xfb2,130)))
+                !="96e344839df3e0fc7b2106541b7fea45de269e0c14e5d592a4ad3debbfe7448f"
             ||to_hex(sha256(main_stage.subspan(0xd8e,548)))
                 !="01ea72727e1bcbbf64021ac52ad184c31c6841e9cb70e59181348f6a0e9884b8")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
@@ -3951,9 +3955,9 @@ public:
         auto plan=*main_stage_loop_graphics_plan_;
         plan.pending_read_instruction=0;plan.pending_read_address=0;
         plan.a1_value=(counter&1U)?0x12f00:0x12e00;plan.a6_value=a6;
-        // Clear-only paths leave D0's high word zero. Admitted opaque draws
-        // bound the MULU coordinates inside 320x200, also leaving it zero;
-        // their subsequent byte/word operations do not change that high word.
+        // Bounded opaque draws leave D0's high word zero. Masked merge loops
+        // restore nonnegative row counts with MOVEM.W and finish at zero;
+        // fully-above returns retain the decoder's zero high word as well.
         plan.d0_value=counter;
         plan.next_call_address=0x216ee;plan.next_return_address=0x216f2;
         plan.next_vector=-0xde;

@@ -472,8 +472,9 @@ continue through the second buffer/view pass to the outer `$21822` gate.
 The ordered outer port samples and native latch/control logic now re-enter
 the scheduler and select the first sprite. Native opaque rendering now writes
 its exact bitplanes and covers all 142 original resource bitmaps in tests.
-Implement the masked `$20cc6/$20fb2` path next (the following real frame reaches
-it), then saved-scanline/alternate-resource rendering and the distinct `$218cc`, `$21892` and `$21982`
+The masked `$20cc6/$20fb2` cache/merge path now renders the following real
+buffer and is cross-checked on all 142 original bitmaps. Implement
+saved-scanline/alternate-resource rendering next and the distinct `$218cc`, `$21892` and `$21982`
 cleanup/transition routes. Connect
 the separately staged sound descriptors to the `$22bea` consumer without
 claiming that a software descriptor write already started audio hardware.

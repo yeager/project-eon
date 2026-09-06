@@ -6665,9 +6665,19 @@ int main() {
             assert(runtime_byte(*fourth_pass,0x210fd)==181&&runtime_byte(*fourth_pass,0x21110)==0x80);
             const eon::DeuterosAmigaObservedFrameBuffer fourth_frame_buffer{
                 runtime_copy_sequence+125,0x2143a,0xdff01f,5,0x20,0x216a4,0x12ff4,0x80000};
-            const auto masked_boundary=opening_controller.observe_deuteros_amiga_frame_buffer(fourth_frame_buffer);
-            assert(!masked_boundary.accepted&&masked_boundary.error.find("masked or saved-scanline")!=std::string::npos);
-            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==fourth_pass->checksum);
+            assert(opening_controller.observe_deuteros_amiga_frame_buffer(fourth_frame_buffer).accepted);
+            const auto first_masked_memory=opening_controller.native_runtime_memory_checkpoint();
+            assert(first_masked_memory->applied_batch_count==fourth_pass->applied_batch_count+3);
+            std::vector<std::uint8_t> first_masked_planes(32000);
+            for(const auto& cell:first_masked_memory->initialized_bytes)
+                if(cell.location.address_space==eon::NativeRuntimeAddressSpace::linear
+                    &&cell.location.offset>=0x80000&&cell.location.offset<0x87d00)
+                    first_masked_planes[cell.location.offset-0x80000]=cell.value;
+            assert(eon::to_hex(eon::sha256(first_masked_planes))==
+                "4fb915381f0db119da828286b42ed06dadf29486310df04cae2b249e40849f23");
+            assert(runtime_byte(*first_masked_memory,0x20c8a)==0x80&&runtime_byte(*first_masked_memory,0x20c8b)==0);
+            assert(!opening_controller.observe_deuteros_amiga_frame_buffer(fourth_frame_buffer).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==first_masked_memory->checksum);
 
             // Branch-condition tests use private owned-state variations, not
             // claimed captures or substituted source media.
@@ -16015,6 +16025,9 @@ int main() {
         put(0x20128,eon::MemoryTransferElementWidth::longword,0x90000);
         put(0x210fa,eon::MemoryTransferElementWidth::word,0);
         put(0x210fc,eon::MemoryTransferElementWidth::word,0);
+        put(0x20c70,eon::MemoryTransferElementWidth::word,0);
+        put(0x20c72,eon::MemoryTransferElementWidth::word,0);
+        put(0x20c8a,eon::MemoryTransferElementWidth::word,0xffff);
         for(std::size_t index=0;index<first_bitmap_catalog.record_count;++index){
             std::fill(planes.begin(),planes.end(),0);
             put(0x210f8,eon::MemoryTransferElementWidth::word,static_cast<std::uint32_t>(index));
@@ -16031,6 +16044,64 @@ int main() {
                 }
             }
         }
+        const auto background=[&](){
+            std::fill(planes.begin(),planes.end(),0);
+            std::fill_n(planes.begin(),8000,0xff);
+            std::fill_n(planes.begin()+16000,8000,0xff);
+        };
+        for(std::size_t index=0;index<first_bitmap_catalog.record_count;++index){
+            background();
+            put(0x210f8,eon::MemoryTransferElementWidth::word,static_cast<std::uint32_t>(index)|0x8000U);
+            eon::draw_deuteros_amiga_owned_sprite(0x210f8,get,put);
+            const auto expected=eon::decode_deuteros_amiga_bitmap(system_disk,first_bundle,first_indexed_blob,index);
+            for(std::uint32_t y=0;y<200;++y){
+                for(std::uint32_t x=0;x<320;++x){
+                    unsigned color=0;
+                    for(unsigned plane=0;plane<4;++plane)
+                        color|=((planes[plane*8000+y*40+x/8]>>(7-x%8))&1U)<<plane;
+                    const auto source=x<expected.width&&y<expected.height
+                        ?expected.color_indices[y*expected.width+x]:0;
+                    assert(color==(source?source:5));
+                }
+            }
+            const auto cached_frame=planes;
+            // An intervening opaque draw changes the shared dimensions; a
+            // cache hit must restore the masked sprite's own header.
+            put(0x210f8,eon::MemoryTransferElementWidth::word,1);
+            eon::draw_deuteros_amiga_owned_bitmap(0x210f8,get,put);
+            background();
+            put(0x210f8,eon::MemoryTransferElementWidth::word,static_cast<std::uint32_t>(index)|0x8000U);
+            eon::draw_deuteros_amiga_owned_sprite(0x210f8,get,put);
+            assert(planes==cached_frame);
+        }
+        for(const int origin:{-18,-16,-1,190,199}){
+            background();
+            put(0x210f8,eon::MemoryTransferElementWidth::word,0x8001);
+            put(0x210fc,eon::MemoryTransferElementWidth::word,static_cast<std::uint16_t>(origin));
+            eon::draw_deuteros_amiga_owned_sprite(0x210f8,get,put);
+            for(int y=0;y<200;++y){
+                for(int x=0;x<320;++x){
+                    unsigned color=0;
+                    for(unsigned plane=0;plane<4;++plane)
+                        color|=((planes[plane*8000+y*40+x/8]>>(7-x%8))&1U)<<plane;
+                    const auto source_y=y-origin;
+                    const auto source=x<first_bitmap.width&&source_y>=0&&source_y<first_bitmap.height
+                        ?first_bitmap.color_indices[source_y*first_bitmap.width+x]:0;
+                    assert(color==(source?source:5));
+                }
+            }
+        }
+        put(0x210fc,eon::MemoryTransferElementWidth::word,static_cast<std::uint16_t>(-17));
+        bool rejected_zero_loop=false;
+        try{eon::draw_deuteros_amiga_owned_sprite(0x210f8,get,put);}
+        catch(const std::runtime_error&){rejected_zero_loop=true;}
+        assert(rejected_zero_loop);
+        put(0x210fc,eon::MemoryTransferElementWidth::word,0);
+        put(0x210f8,eon::MemoryTransferElementWidth::word,0xc001);
+        bool rejected_saved_scanlines=false;
+        try{eon::draw_deuteros_amiga_owned_sprite(0x210f8,get,put);}
+        catch(const std::runtime_error&){rejected_saved_scanlines=true;}
+        assert(rejected_saved_scanlines);
         std::fill(planes.begin(),planes.end(),0);
         put(0x210f8,eon::MemoryTransferElementWidth::word,1);
         put(0x210fc,eon::MemoryTransferElementWidth::word,190);

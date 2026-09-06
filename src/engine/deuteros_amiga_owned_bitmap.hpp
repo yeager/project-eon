@@ -12,12 +12,13 @@ namespace eon {
 // read-through write overlay so source/destination overlap stays sequential.
 // Masked sprites and the global saved-scanline path are separate routines.
 template<class Read,class Write>
-void draw_deuteros_amiga_owned_bitmap(std::uint32_t record,Read read,Write write){
+void draw_deuteros_amiga_owned_bitmap(std::uint32_t record,Read read,Write write,bool scratch=false){
     using Width=MemoryTransferElementWidth;
     const auto table=read(0x2126e,4);
     const auto data=read(0x21272,4);
-    const auto selector=read(record,2);
-    if((selector&0xa000U)!=0)
+    const auto raw_selector=read(record,2);
+    const auto selector=scratch?(raw_selector&0xffU):raw_selector;
+    if(!scratch&&(selector&0xa000U)!=0)
         throw std::runtime_error("Deuteros sprite requires masked or saved-scanline continuation");
     const auto displacement=(selector<<2U)&0xffffU;
     const auto entry=table+(displacement<0x8000U?displacement:displacement-0x10000U);
@@ -30,8 +31,8 @@ void draw_deuteros_amiga_owned_bitmap(std::uint32_t record,Read read,Write write
     const auto end=data+next_relative;
     if((source&1U)!=0||end-source<4)
         throw std::runtime_error("Deuteros sprite header is unaligned or truncated");
-    const auto x=read(record+2,2),y=read(record+4,2);
-    const auto buffer=read(0x20128,4);
+    const auto x=read(scratch?0x20c70U:record+2,2),y=read(scratch?0x20c72U:record+4,2);
+    const auto buffer=scratch?0x2ad24U:read(0x20128,4);
     if((buffer&1U)!=0||buffer>0x1000000U-0x7d00U)
         throw std::runtime_error("Deuteros sprite buffer is outside native memory");
     const auto words=read(source,2);source+=2;
@@ -89,6 +90,61 @@ void draw_deuteros_amiga_owned_bitmap(std::uint32_t record,Read read,Write write
         }
         if(kind>=0x80U&&emitted<total)source+=2;
     }
+}
+
+// $20cc6 caches a decoded sprite at $2ad24. $20fb2 then uses the OR of
+// its four plane words as coverage; zero-colour pixels preserve the target.
+template<class Read,class Write>
+void draw_deuteros_amiga_owned_masked_bitmap(std::uint32_t record,Read read,Write write){
+    using Width=MemoryTransferElementWidth;
+    const auto selector=read(record,2);
+    if((selector&0xe000U)!=0x8000U)
+        throw std::runtime_error("Deuteros masked selector requires another renderer route");
+    if(selector==read(0x20c8a,2)){
+        write(0x20c10,Width::longword,read(0x20c18,4));
+    }else{
+        write(0x20c8a,Width::word,selector);
+        draw_deuteros_amiga_owned_bitmap(record,read,write,true);
+        write(0x20c18,Width::longword,read(0x20c10,4));
+    }
+    const auto x=read(record+2,2);
+    const auto raw_y=read(record+4,2);
+    const auto y=raw_y<0x8000U?static_cast<std::int32_t>(raw_y):static_cast<std::int32_t>(raw_y)-65536;
+    const auto height=read(0x20c12,2)&0xffU;
+    const auto groups=read(0x20c10,2)>>2U;
+    const auto buffer=read(0x20128,4);
+    if(y<0&&static_cast<std::int32_t>(height)+y<0)return; // Original BPL/RTS.
+    if(groups==0||groups>20||x>20-groups||y>=200||height==0
+        ||(buffer&1U)!=0||buffer>0x1000000U-0x7d00U)
+        throw std::runtime_error("Deuteros masked bitmap geometry is unsupported");
+    const auto skip=y<0?static_cast<std::uint32_t>(-y):0U;
+    if(skip>=height)
+        throw std::runtime_error("Deuteros masked bitmap reaches a zero-height loop");
+    const auto origin=y<0?0U:static_cast<std::uint32_t>(y);
+    const auto rows=std::min(height-skip,200-origin);
+    for(std::uint32_t row=0;row<rows;++row){
+        for(std::uint32_t group=0;group<groups;++group){
+            const auto source=0x2ad24+(skip+row)*40+group*2;
+            const auto target=buffer+(origin+row)*40+(x+group)*2;
+            std::uint32_t coverage=0;
+            for(std::uint32_t plane=0;plane<4;++plane)coverage|=read(source+plane*8000,2);
+            const auto inverse=coverage^0xffffU;
+            for(std::uint32_t plane=0;plane<4;++plane){
+                const auto input=read(source+plane*8000,2);
+                const auto destination=target+plane*8000;
+                write(destination,Width::word,(read(destination,2)|coverage)&(input|inverse));
+            }
+        }
+    }
+}
+
+template<class Read,class Write>
+void draw_deuteros_amiga_owned_sprite(std::uint32_t record,Read read,Write write){
+    const auto selector=read(record,2);
+    if((selector&0x2000U)!=0||(selector&0xc000U)==0xc000U)
+        throw std::runtime_error("Deuteros sprite requires its saved-scanline continuation");
+    if((selector&0x8000U)!=0)draw_deuteros_amiga_owned_masked_bitmap(record,read,write);
+    else draw_deuteros_amiga_owned_bitmap(record,read,write);
 }
 
 } // namespace eon

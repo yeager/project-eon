@@ -3647,8 +3647,8 @@ Frame-clear/count batch identifiers now include the admitted sequence, allowing
 the following even-counter buffer at `$80000` to be cleared and selected
 without colliding with the first frame's batch identifiers. The complete
 second no-draw walk, even view at `$12e00`, and return to `$21822` are tested.
-The outer input gate and opaque sprite-bearing frames are now connected as
-described below; masked and saved-scanline paths remain separate work.
+The outer input gate and opaque/masked sprite-bearing frames are now connected
+as described below; saved-scanline paths remain separate work.
 The genuine first record at resource offset `$382` executes opcode `$13`,
 setting `$2171e` to one, then executes sound arguments `(1,1)` and `(2,2)`
 through the native descriptor routine below. It yields timer one, which the
@@ -3737,11 +3737,38 @@ coordinate `(8,183)`. The complete 32,000-byte planar buffer has SHA-256
 `f80cb36153a70203f4d42d6abb286f0f83038f4b6f7ed83e489915b2f03e91f1`.
 Tests compare all 142 real bitmaps against the independent asset decoder at
 an unclipped origin, and test partial lower-edge clipping of the first sprite.
-The next genuine pass moves that sprite to y=181 and requests a masked second
-sprite; that later failure rolls back both the clear and already evaluated
-opaque writes. Masking, saved scanlines and alternate resources remain explicit
-boundaries. Owned bitplane bytes are not yet proof of a displayed frame,
+The next genuine pass moves that sprite to y=181 and now renders the masked
+second sprite through the route below. Saved scanlines and alternate resources
+remain explicit boundaries. Owned bitplane bytes are not yet proof of a displayed frame,
 palette-library effects, or end-to-end gameplay parity.
+
+The masked route extends the dispatch gate to `$20c8c..$20cc5` (ADF `$648c`,
+58 bytes, SHA-256
+`8ff4fab0b4a3e04504ee99a0deece00dc0c903f89ceec4dfe95f94a1916b7f62`).
+Its cache/position prefix `$20cc6..$20d8d` (ADF `$64c6`, 200 bytes) has SHA-256
+`ed3de6026c302373de3a7841d87a30ad71611859bafdc4d78fcce24e0ec09eaf`;
+the merge routine `$20fb2..$21033` (ADF `$67b2`, 130 bytes) has SHA-256
+`96e344839df3e0fc7b2106541b7fea45de269e0c14e5d592a4ad3debbfe7448f`.
+The native implementation retains the full selector cache key at `$20c8a`,
+decodes its low-byte bitmap index into the original `$2ad24` scratch buffer
+using the owned origin words at `$20c70/$20c72`, and caches the dimension long
+at `$20c18`. A cache hit restores that long to `$20c10` because intervening
+opaque draws overwrite the shared dimension cells.
+
+For each word group, coverage is the OR of the four source plane words.
+Each destination plane becomes `(destination | coverage) & (source | ~coverage)`
+with 16-bit masking. Source rereads and plane stores remain sequential in the
+private overlay. Top/bottom clipping follows the original signed-y path;
+fully-above negative-height results return without drawing, while the original
+zero-height loop case is an explicit unsupported boundary rather than an
+invented no-op. The actual fourth buffer, including the clipped masked image
+at `(112,199)`, has SHA-256
+`4fb915381f0db119da828286b42ed06dadf29486310df04cae2b249e40849f23`.
+Tests cover all 142 original bitmaps over a nonzero background, cache reuse
+after an opaque draw, top/bottom clipping and the zero-height boundary.
+These are native buffer tests, not captured displayed frames or proof of
+graphics-library side effects. Saved-scanline/alternate-resource paths and
+the complete presentation bridge remain to be connected.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,
