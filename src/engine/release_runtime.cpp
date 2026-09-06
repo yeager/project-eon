@@ -4265,19 +4265,51 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_resource_load(
         }
         auto memory=*native_runtime_memory_;
         NativeRuntimeEffectBatch batch{"deuteros-amiga-main-stage-resource-"
-            +std::to_string(o.resource_index),true,{}};
+            +std::to_string(o.resource_index)+"-"+std::to_string(o.trace_sequence),true,{}};
+        const auto read=[&](std::uint32_t address,std::uint32_t width){
+            if((width>1&&(address&1U))||address>0x1000000U-width)
+                throw std::runtime_error("Deuteros resource source is outside aligned native memory");
+            std::uint32_t value=0;
+            for(std::uint32_t i=0;i<width;++i){
+                const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
+                if(!byte)throw std::runtime_error("Deuteros recurring resource source is not owned");
+                value=(value<<8U)|*byte;
+            }
+            return value;
+        };
+        if(plan->recurring){
+            if(read(0x21708+o.resource_index*4U,4)!=transfer->source_disk_offset)
+                throw std::runtime_error("Deuteros owned resource table contradicts supplied media");
+            for(const auto address:{0x21704U,0x21706U})
+                batch.effects.push_back({batch.effects.size()+1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},
+                    MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,o.resource_index});
+        }
         batch.effects.reserve(4U+transfer->payload.size());
-        for(std::size_t i=0;i<4;++i)batch.effects.push_back({i+1,
+        for(std::size_t i=0;i<4;++i)batch.effects.push_back({batch.effects.size()+1,
             {NativeRuntimeAddressSpace::linear,std::nullopt,plan->probe_destination+i},
             MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,
             transfer->payload[i]});
-        for(std::size_t i=0;i<transfer->payload.size();++i)batch.effects.push_back({i+5,
+        for(std::size_t i=0;i<transfer->payload.size();++i)batch.effects.push_back({batch.effects.size()+1,
             {NativeRuntimeAddressSpace::linear,std::nullopt,plan->payload_destination+i},
             MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,
             transfer->payload[i]});
+        if(plan->recurring)batch.effects.push_back({batch.effects.size()+1,
+            {NativeRuntimeAddressSpace::linear,std::nullopt,0xdff016},MemoryTransferElementWidth::byte,
+            NativeRuntimeByteOrder::big_endian,o.retry_port_value});
         const auto applied=memory.apply(batch);
         if(!applied.accepted){r.error=applied.error;return r;}
-        if(!deuteros_amiga_->observe_main_stage_resource_load(o)){
+        std::uint32_t restart_d0=0;
+        if(plan->recurring&&plan->next_call_address==0x21816){
+            std::size_t stores=0;
+            const auto write=[&](std::uint32_t address,MemoryTransferElementWidth width,std::uint32_t value){
+                const auto effect=memory.apply({"deuteros-amiga-resource-restart-"+std::to_string(o.trace_sequence)+
+                    "-"+std::to_string(stores++),true,{{1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},
+                    width,NativeRuntimeByteOrder::big_endian,value}}});
+                if(!effect.accepted)throw std::runtime_error(effect.error);
+            };
+            restart_d0=restart_deuteros_amiga_owned_loop(read,write);
+        }
+        if(!deuteros_amiga_->observe_main_stage_resource_load(o,restart_d0)){
             r.error="Deuteros main-stage resource load disappeared before commit";return r;}
         *native_runtime_memory_=std::move(memory);r.accepted=true;
     }catch(const std::exception&e){r.error=e.what();}

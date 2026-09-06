@@ -1355,6 +1355,7 @@ struct DeuterosAmigaMainStageResourceLoadPlan {
     DeuterosAmigaObservedMainStageResourceLoad observation;
     std::uint32_t probe_destination=0,payload_destination=0;
     std::uint32_t return_address=0,next_call_address=0,next_call_target=0,next_return_address=0;
+    bool recurring=false;
 };
 struct DeuterosAmigaMainStageLoopServiceReturnPlan {
     DeuterosAmigaObservedLocalCallReturn observation;
@@ -1547,6 +1548,26 @@ inline DeuterosAmigaMainStageLoopGraphicsPlan finish_deuteros_amiga_fade_buffers
     return plan;
 }
 
+inline DeuterosAmigaMainStageLoopGraphicsPlan resume_deuteros_amiga_recurring_resource(
+    DeuterosAmigaMainStageLoopGraphicsPlan current,const DeuterosAmigaObservedMainStageResourceLoad&o,
+    std::uint32_t restart_d0){
+    if(current.next_instruction_address!=0x21926||o.resource_index>1
+        ||o.resource_index!=(current.d0_value&0xffffU)||o.loader_address!=0x21932
+        ||o.retry_instruction_address!=0x2196e||o.retry_port_address!=0xdff016
+        ||o.retry_bit!=10||(o.retry_port_value&4U)==0)
+        throw std::runtime_error("Deuteros recurring resource load does not match selection");
+    const bool restart=current.outer_transition_return==0x21854;
+    current.next_instruction_address=restart?0:0x21978;
+    current.next_call_address=restart?0x21816:0;current.local_call_target=restart?0x21276:0;
+    current.next_return_address=restart?0x2181c:0;
+    if(restart){
+        current.d0_value=restart_d0;current.a0_value=0x22aaa;current.a1_value=0x22a98;
+        current.d1_value&=0xffff0000U;current.command_stop.reset();
+        current.command_palette_address=0;current.outer_transition_return=0;current.outer_fade_return=0;
+    }
+    return current;
+}
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>
@@ -1672,6 +1693,8 @@ public:
                 !="d5c8e3beb0a3a7c46521529e2ea9e893475b8e8f1a4dc14cdba972671327d56e"
             ||to_hex(sha256(main_stage.subspan(0x17f6,38)))
                 !="69391ead2846fc91a8f586be0b31ec56ad003bf55bb8b121880c6d32362deadc"
+            ||to_hex(sha256(main_stage.subspan(0x1926,84)))
+                !="4a0160ddf682249e0e9528cf64b55d932aedb923830a1df5a2b950abdea0729b"
             ||to_hex(sha256(main_stage.subspan(0x18fe,40)))
                 !="3c7021b0eaad2abf2832f6ec87569933b1ac93d97a07e584179fc148f707a9fd"
             ||to_hex(sha256(main_stage.subspan(0xa74,28)))
@@ -3988,7 +4011,16 @@ public:
             "cb9046ad20fffc0a52f43431949927b4d159ecc795fe5f62dbbd01accd0684c7"};
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageResourceLoadPlan>
-    observe_main_stage_resource_load(const DeuterosAmigaObservedMainStageResourceLoad&o){
+    observe_main_stage_resource_load(const DeuterosAmigaObservedMainStageResourceLoad&o,std::uint32_t restart_d0=0){
+        if(main_stage_loop_graphics_plan_&&main_stage_loop_graphics_plan_->next_instruction_address==0x21926){
+            if(o.trace_sequence<=last_command_sequence_)
+                throw std::runtime_error("Deuteros recurring resource observation is stale");
+            const auto current=resume_deuteros_amiga_recurring_resource(*main_stage_loop_graphics_plan_,o,restart_d0);
+            if(current.next_call_address==0x21816)reset_main_stage_loop_continuations();
+            main_stage_loop_graphics_plan_=current;last_command_sequence_=o.trace_sequence;
+            return DeuterosAmigaMainStageResourceLoadPlan{o,0x2ad24,0x32a24,0x21978,
+                current.next_call_address,current.local_call_target,current.next_return_address,true};
+        }
         if(!main_stage_cia_a_bit_set_||main_stage_resource_load_)return std::nullopt;
         if(main_stage_cia_a_bit_set_->source_word>1
             ||o.trace_sequence<=last_command_sequence_
@@ -4180,10 +4212,7 @@ public:
             plan.outer_transition_return=0;plan.outer_fade_return=0;
             // Only per-loop state is reset. Preserve source admission and the
             // global observation sequence; bootstrap receipts are historical.
-            main_stage_loop_prepare_body_plan_.reset();
-            main_stage_loop_prepare_return_.reset();main_stage_loop_scheduler_return_.reset();
-            main_stage_loop_graphics_returns_=0;main_stage_loop_request_returned_=false;
-            main_stage_initial_view_caller_=true;
+            reset_main_stage_loop_continuations();
         }
         main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
     }
@@ -4449,6 +4478,12 @@ public:
     }
 
 private:
+    void reset_main_stage_loop_continuations(){
+        main_stage_loop_prepare_body_plan_.reset();
+        main_stage_loop_prepare_return_.reset();main_stage_loop_scheduler_return_.reset();
+        main_stage_loop_graphics_returns_=0;main_stage_loop_request_returned_=false;
+        main_stage_initial_view_caller_=true;
+    }
     bool armed_ = false;
     std::uint64_t preceding_sequence_ = 0;
     std::uint32_t graphics_library_base_ = 0;

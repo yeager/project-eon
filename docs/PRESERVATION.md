@@ -3852,12 +3852,35 @@ MOVEQ zero (clearing all D0 bits) before `$21926`. The 40-byte caller at
 ADF `$70fe` has SHA-256
 `3c7021b0eaad2abf2832f6ec87569933b1ac93d97a07e584179fc148f707a9fd`.
 The later selector store and resource loader are not silently executed.
+The proven resource-zero/resource-one route now explicitly executes the
+selector stores and read-only media transfer described below; other entries
+remain separate preservation boundaries.
 Tests connect both counter exits to these services, reject incorrect bases
 and vectors, exercise both raw wait outcomes and cover selectors 0 through
 4, `$fffe` and `$ffff`. Typed service packets are controlled tests, not
 capture evidence. All request writes and accepted continuations publish
 atomically; missing owned bytes and stale/wrong observations leave the
 committed session unchanged.
+
+Recurring resource loading now admits the reached `$21926..$21979` path
+(ADF `$7126`, 84 bytes, SHA-256
+`4a0160ddf682249e0e9528cf64b55d932aedb923830a1df5a2b950abdea0729b`).
+The selected low word must match the observed resource index and the owned
+`$21708 + index*4` table entry must equal the supplied ADF transfer offset.
+For the two proven entries, native state writes `$21704/$21706`, receives
+the four-byte probe at `$2ad24` and the complete original payload at
+`$32a24`, and records the released bit-10 retry sample at `$2196e/$dff016`.
+Each transfer has a fresh sequence-qualified batch ID. Original archives
+remain read-only and in place; no extraction or installation is performed.
+The retained primary BSR return `$21854` enters the native sound/flag restart
+and fresh `$21276` preparation within the same private transaction. A
+branch-entered route without that known return stops at `$21978`; no return
+address is invented. Bootstrap receipts are not overwritten by recurring
+loads. Tests connect selector outcomes to resource admission, checking both
+known and unknown returns, mismatched selection, held retry samples and
+unproven resource indices. Existing genuine-media tests validate both
+resource payloads. Complete recurring presentation still requires fresh
+external service returns after the new loop preparation.
 
 Sample bytes, latch writes, trace sequence and next boundary publish atomically.
 Wrong bit/address/order or replay leaves committed state unchanged. The test

@@ -16,6 +16,19 @@ struct DeuterosAmigaOuterInputRoute {
     std::uint32_t library=0;
 };
 
+template<class Read,class Write>
+std::uint32_t restart_deuteros_amiga_owned_loop(Read read,Write write){
+    using Width=MemoryTransferElementWidth;
+    std::uint32_t d0=0;
+    write(0x22a30,Width::byte,0);
+    std::uint16_t channels=15;
+    stage_deuteros_amiga_owned_sound(d0,channels,read,write);
+    write(0x21720,Width::word,0);
+    write(0x2171e,Width::word,0);
+    write(0x210f2,Width::word,1);
+    return d0;
+}
+
 // $224a2 restores the owned vector operand and emits raw audio-control
 // writes; $22a5a then resets the software descriptors. These writes alone
 // are not a host-audio acknowledgement or a hardware readback model.
@@ -75,13 +88,7 @@ DeuterosAmigaOuterInputRoute execute_deuteros_amiga_owned_outer_input(
         write(0xbfe001,Width::byte,value);
         if((value&0x40U)==0)return {0x218be,d0};
         // $217f6 re-enters the loop without reloading the original resource.
-        d0=0;
-        write(0x22a30,Width::byte,0);
-        std::uint16_t channels=15;
-        stage_deuteros_amiga_owned_sound(d0,channels,read,write);
-        write(0x21720,Width::word,0);
-        write(0x2171e,Width::word,0);
-        write(0x210f2,Width::word,1);
+        d0=restart_deuteros_amiga_owned_loop(read,write);
         return {0x21816,d0};
     }
     if(instruction==0x222ac){

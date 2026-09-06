@@ -6873,6 +6873,35 @@ int main() {
                             assert(next.a1_value==command_read(0x20976,4));
                             assert(command_read(next.a1_value+28,2)==5&&command_read(next.a1_value+30,1)==0);
                             assert(command_read(0x21704,2)==selector); // Later selection store is a separate routine.
+                            if(next.next_instruction_address==0x21926){
+                                const auto selected=static_cast<std::uint16_t>(next.d0_value);
+                                const eon::DeuterosAmigaObservedMainStageResourceLoad loaded{
+                                    6,selected,0x21932,0x2196e,0xdff016,10,4};
+                                if(selected<=1){
+                                    const auto resumed=eon::resume_deuteros_amiga_recurring_resource(next,loaded,0x32a24);
+                                    assert(resumed.next_call_address==0x21816&&resumed.local_call_target==0x21276);
+                                    assert(resumed.next_return_address==0x2181c&&resumed.d0_value==0x32a24);
+                                    assert(resumed.outer_transition_return==0&&!resumed.command_stop);
+                                    auto branch_entry=next;branch_entry.outer_transition_return=0;
+                                    const auto bounded=eon::resume_deuteros_amiga_recurring_resource(branch_entry,loaded,0);
+                                    assert(bounded.next_instruction_address==0x21978&&bounded.next_call_address==0);
+                                    auto wrong=loaded;wrong.resource_index^=1;
+                                    bool rejected_selection=false;
+                                    try{static_cast<void>(eon::resume_deuteros_amiga_recurring_resource(next,wrong,0));}
+                                    catch(const std::runtime_error&){rejected_selection=true;}
+                                    assert(rejected_selection);
+                                    wrong=loaded;wrong.retry_port_value=0;
+                                    bool rejected_retry=false;
+                                    try{static_cast<void>(eon::resume_deuteros_amiga_recurring_resource(next,wrong,0));}
+                                    catch(const std::runtime_error&){rejected_retry=true;}
+                                    assert(rejected_retry);
+                                }else{
+                                    bool rejected_unproven_resource=false;
+                                    try{static_cast<void>(eon::resume_deuteros_amiga_recurring_resource(next,loaded,0));}
+                                    catch(const std::runtime_error&){rejected_unproven_resource=true;}
+                                    assert(rejected_unproven_resource);
+                                }
+                            }
                         }
                     }
                     bool rejected_counter_replay=false;
