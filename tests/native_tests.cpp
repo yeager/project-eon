@@ -3270,6 +3270,22 @@ int main() {
         return entry.id == "deuteros-amiga-en-channel-request-continuation";
     }));
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
+        return entry.id == "deuteros-amiga-en-channel-request-continuation"
+            && entry.runtime_status == "native caller-connected request, fade, cleanup and loop-restart transaction";
+    }));
+    assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
+        return entry.id == "deuteros-amiga-en-channel-request-first-callee"
+            && entry.runtime_status == "native typed 16-colour fade and ordered dual-palette continuation";
+    }));
+    assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
+        return entry.id == "deuteros-amiga-en-channel-request-second-callee"
+            && entry.runtime_status == "native caller-connected cleanup writes and software-sound reset";
+    }));
+    assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
+        return entry.id == "deuteros-amiga-en-channel-request-adjacent-entry"
+            && entry.runtime_status == "diagnostics only";
+    }));
+    assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-bootstrap-bytekiller"
             && entry.runtime_status == "native bounded ByteKiller decode, four-plane transfer and typed palette return";
     }));
@@ -4121,12 +4137,13 @@ int main() {
         && after_driver_read->applied_batch_count==3);
     const auto vector_memory=admitted_dos_runtime.native_runtime_memory_checkpoint();
     assert(vector_memory);
-    for (const auto [offset,value] : std::array<std::pair<std::uint16_t,std::uint8_t>,4>{
+    for (const auto& expected : std::array<std::pair<std::uint16_t,std::uint8_t>,4>{
             {{0x254,0},{0x255,0},{0x256,0},{0x257,0xe1}}}) {
         assert(std::any_of(vector_memory->initialized_bytes.begin(),
-            vector_memory->initialized_bytes.end(),[&](const auto& byte) {
+            vector_memory->initialized_bytes.end(),[expected](const auto& byte) {
                 return byte.location.address_space==eon::NativeRuntimeAddressSpace::dos_segmented
-                    &&byte.location.segment==0&&byte.location.offset==offset&&byte.value==value;
+                    &&byte.location.segment==0&&byte.location.offset==expected.first
+                    &&byte.value==expected.second;
             }));
     }
     const auto repeated_tick=admitted_dos_runtime.tick_millennium_dos_compatibility_runner();
