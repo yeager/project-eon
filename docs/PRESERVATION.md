@@ -3582,6 +3582,17 @@ reject the transaction rather than fabricating a draw. Both internal memory
 batches and the session transition publish atomically. The supplied opening
 resource takes the four-active/no-draw route and reaches `$216d0`, before its
 view-selection and library call. This is not a displayed-frame or parity claim.
+
+The view-selection prefix is now locally executable from those owned values.
+The 34 bytes at ADF `$6ed0` hash to
+`7c319ba8ad1cc091e22888583653e0edb3657dd007626b4590ca3f000b550585`.
+The counter at `$21696` selects A1 `$12e00` when even or `$12f00` when odd;
+A6 is reloaded from the owned `$12fec` cell. No host-selected view or library
+base is substituted. The admitted preceding no-draw path establishes a zero
+D0 high word, so the counter word is retained exactly. This register-only
+advance changes no memory and stops before the `-$de(A6)` call at `$216ee`,
+return address `$216f2`. Its library effects and following hardware wait
+remain separate from the native prefix.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,

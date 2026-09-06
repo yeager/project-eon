@@ -4652,6 +4652,35 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_frame_buffer(const DeuterosAmi
     return result;
 }
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::advance_deuteros_amiga_view_selection(){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
+        result.error="Deuteros view selection requires active owned memory";return result;
+    }
+    try{
+        const auto read=[&](std::uint32_t address,std::uint32_t width){
+            std::uint32_t value=0;
+            for(std::uint32_t i=0;i<width;++i){
+                const auto byte=native_runtime_memory_->read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
+                if(!byte)throw std::runtime_error("Deuteros view-selection source is not owned");
+                value=(value<<8U)|*byte;
+            }
+            return value;
+        };
+        const auto counter=static_cast<std::uint16_t>(read(0x21696,2));
+        const auto base=read(0x12fec,4);
+        auto pending=*deuteros_amiga_->title_stage_session();
+        if(!pending.advance_main_stage_view_selection(counter,base)){
+            result.error="Deuteros view selection did not match boundary";return result;
+        }
+        if(!deuteros_amiga_->advance_main_stage_view_selection(counter,base)){
+            result.error="Deuteros view selection disappeared before commit";return result;
+        }
+        result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_prepare_return(
     const DeuterosAmigaObservedLocalCallReturn o){
     DeuterosAmigaTitleDependencyObservationResult r;

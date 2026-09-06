@@ -1503,7 +1503,9 @@ public:
             ||to_hex(sha256(main_stage.subspan(0x1698,56)))
                 !="e537c609f36408953a72013a90cb2f44b16769130dffce866ea15e189e8fcf9e"
             ||to_hex(sha256(main_stage.subspan(0x1448,96)))
-                !="6cf485579953c408c31d2409669cc943431ecb878bae5dae7669f03159046f44")
+                !="6cf485579953c408c31d2409669cc943431ecb878bae5dae7669f03159046f44"
+            ||to_hex(sha256(main_stage.subspan(0x16d0,34)))
+                !="7c319ba8ad1cc091e22888583653e0edb3657dd007626b4590ca3f000b550585")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
@@ -3881,6 +3883,20 @@ public:
         last_command_sequence_=o.trace_sequence;
         main_stage_loop_graphics_plan_=plan;
         return plan;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    advance_main_stage_view_selection(std::uint16_t counter,std::uint32_t a6){
+        if(!main_stage_loop_graphics_plan_||main_stage_loop_graphics_plan_->pending_read_instruction!=0x216d0)
+            return std::nullopt;
+        auto plan=*main_stage_loop_graphics_plan_;
+        plan.pending_read_instruction=0;plan.pending_read_address=0;
+        plan.a1_value=(counter&1U)?0x12f00:0x12e00;plan.a6_value=a6;
+        // The admitted no-draw path follows MOVEQ #0,D0 in the clear loop;
+        // its later word moves leave the high word zero.
+        plan.d0_value=counter;
+        plan.next_call_address=0x216ee;plan.next_return_address=0x216f2;
+        plan.next_vector=-0xde;
+        main_stage_loop_graphics_plan_=plan;return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
     advance_main_stage_frame_buffer(const DeuterosAmigaObservedFrameBuffer&o,std::uint16_t next_counter){

@@ -6387,6 +6387,15 @@ int main() {
             assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x216d0);
             assert(!opening_controller.observe_deuteros_amiga_frame_buffer(first_frame_buffer).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_first_frame_buffer->checksum);
+            assert(opening_controller.advance_deuteros_amiga_view_selection().accepted);
+            const auto view_selection_checkpoint=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+            assert(view_selection_checkpoint&&view_selection_checkpoint->stop_before_address==0x216ee
+                &&view_selection_checkpoint->main_stage_loop_graphics->a1_value==0x12f00
+                &&view_selection_checkpoint->main_stage_loop_graphics->a6_value==0x00abcdef
+                &&view_selection_checkpoint->main_stage_loop_graphics->d0_value==1
+                &&view_selection_checkpoint->main_stage_loop_graphics->next_vector==-0xde);
+            assert(!opening_controller.advance_deuteros_amiga_view_selection().accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_first_frame_buffer->checksum);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory
