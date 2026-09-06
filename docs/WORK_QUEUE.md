@@ -486,8 +486,10 @@ wait routes to `$208ba`, retaining the original snapshot at `$12fe4` where
 required. The `$208ba` service now continues through its typed Exec return,
 then either the raw restart wait to `$217f6` or the `$20a74` request writes,
 typed return and native selector increment. Continue the reached `$21926`
-resource loader and `$219f8`/`$21a4c` special transitions, and reconnect the
-restart route at `$217f6` without reusing one-shot bootstrap state.
+resource loader and `$219f8`/`$21a4c` special transitions. The restart route
+at `$217f6` now executes sound/flag reset and re-enters `$21276` using fresh
+per-loop continuation state and effect identifiers. Continue verifying its
+new ordered service returns without reusing previous observations.
 Connect
 the separately staged sound descriptors to the `$22bea` consumer without
 claiming that a software descriptor write already started audio hardware.

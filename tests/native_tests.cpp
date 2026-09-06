@@ -6845,10 +6845,21 @@ int main() {
                         &&service_plan.d0_value==0xdead1234&&service_plan.outer_transition_return==0x21854);
                     if(instruction==0x218a8){
                         assert(service_plan.pending_read_instruction==0x218be&&service_plan.pending_read_address==0xbfe001);
+                        command_write(0x21720,eon::MemoryTransferElementWidth::word,0x1234);
+                        command_write(0x2171e,eon::MemoryTransferElementWidth::word,0x5678);
+                        command_write(0x210f2,eon::MemoryTransferElementWidth::word,99);
+                        const auto restart_counter=command_read(0x21696,2);
                         const auto held=eon::execute_deuteros_amiga_owned_outer_input(0x218be,0,service_plan.d0_value,command_read,command_write);
+                        assert(command_read(0x21720,2)==0x1234&&command_read(0x2171e,2)==0x5678);
+                        assert(command_read(0x210f2,2)==99);
                         const auto released=eon::execute_deuteros_amiga_owned_outer_input(0x218be,0x40,service_plan.d0_value,command_read,command_write);
-                        assert(held.next_instruction==0x218be&&released.next_instruction==0x217f6);
-                        assert(held.d0==0xdead1234&&released.d0==0xdead1234);
+                        assert(held.next_instruction==0x218be&&released.next_instruction==0x21816);
+                        assert(held.d0==0xdead1234&&released.d0==command_read(0x22aaa,4)+0x32a24);
+                        assert(command_read(0x21720,2)==0&&command_read(0x2171e,2)==0);
+                        assert(command_read(0x210f2,2)==1&&command_read(0x21696,2)==restart_counter);
+                        assert(command_read(0x22a30,1)==0);
+                        for(unsigned channel=0;channel<4;++channel)
+                            assert(command_read(0x22a6e + channel*14,4)==released.d0);
                     }else{
                         assert(service_plan.next_call_address==0x218fe&&service_plan.local_call_target==0x20a74
                             &&service_plan.next_return_address==0x21904);

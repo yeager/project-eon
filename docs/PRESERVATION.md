@@ -3819,6 +3819,25 @@ That 14-byte tail at ADF `$70be` has SHA-256
 `d5c8e3beb0a3a7c46521529e2ea9e893475b8e8f1a4dc14cdba972671327d56e`.
 No host key/button meaning is assigned to the sample.
 
+The released-input branch now executes `$217f6..$2181b` (ADF `$6ff6`,
+38 bytes, SHA-256
+`69391ead2846fc91a8f586be0b31ec56ad003bf55bb8b121880c6d32362deadc`)
+natively: sound-zero descriptor staging, clear words `$21720` and `$2171e`,
+set word `$210f2` to one, then enter `$21816->$21276` with return `$2181c`.
+It does not reload media or clear the frame counter. On that reached edge,
+the session discards only the prior loop's prepare/graphics/request/command
+continuations and resets the initial-view caller selection. Historical
+bootstrap receipts, media ownership and the global observation sequence
+remain intact. A fresh `$21276` preparation exposes the fresh `$21310`
+palette boundary rather than the previous loop's caller. Prepare, request,
+ExecBase and record-copy effect batches now use fresh generation/sequence
+identifiers; replay rejection still applies within each admitted batch.
+Controlled restart tests verify that held samples preserve flags and that
+released samples clear both full words, reset all four descriptors, set the
+active count and retain the frame counter. Repeated full end-to-end restart
+presentation still requires its caller-connected external service returns;
+these unit states are not capture evidence.
+
 The transition caller instead reaches `$218fe->$20a74`. The latter's
 28-byte body at ADF `$6274` has SHA-256
 `db700cbcff6287cd6b7cdf212734082006b4efb099a35620c4f6fd83a10b5447`.

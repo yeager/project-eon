@@ -1670,6 +1670,8 @@ public:
                 !="39462818fb46b6471a5da64f7418aa41afb7ab4ca5638bf6f51e633cd91de13d"
             ||to_hex(sha256(main_stage.subspan(0x18be,14)))
                 !="d5c8e3beb0a3a7c46521529e2ea9e893475b8e8f1a4dc14cdba972671327d56e"
+            ||to_hex(sha256(main_stage.subspan(0x17f6,38)))
+                !="69391ead2846fc91a8f586be0b31ec56ad003bf55bb8b121880c6d32362deadc"
             ||to_hex(sha256(main_stage.subspan(0x18fe,40)))
                 !="3c7021b0eaad2abf2832f6ec87569933b1ac93d97a07e584179fc148f707a9fd"
             ||to_hex(sha256(main_stage.subspan(0xa74,28)))
@@ -4028,6 +4030,10 @@ public:
             0x12fec,a6_value,0x21314,0x10,-0xc0,
             "f86946a0b1323b9f85c0ab5259395fa11962961c72ca17bc02ab230bc008dbed"};
         main_stage_loop_prepare_body_plan_=result;
+        // A restart has its own reached $21816 boundary. Once its new body
+        // is prepared, expose the fresh palette call, not the stale caller.
+        if(main_stage_loop_graphics_plan_&&main_stage_loop_graphics_plan_->next_call_address==0x21816)
+            main_stage_loop_graphics_plan_.reset();
         return result;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
@@ -4138,7 +4144,7 @@ public:
             ||o.port_address!=(fade?0xdff01fU:first?0xdff016U:0xbfe001U)||o.bit!=(fade?5:first?10:6))
             throw std::runtime_error("Deuteros outer input does not match boundary");
         const auto next=route.next_instruction;
-        if(release?(next!=0x218be&&next!=0x217f6):fade?(next!=0x222ac&&next!=0x222fc):first?
+        if(release?(next!=0x218be&&next!=0x21816):fade?(next!=0x222ac&&next!=0x222fc):first?
                 (next!=0x222ac&&next!=0x218a8&&next!=0x218e2&&next!=0x2185e)
                 :(next!=0x21380&&next!=0x222ac&&next!=0x218e2))
             throw std::runtime_error("Deuteros outer input route is inconsistent");
@@ -4166,6 +4172,18 @@ public:
             plan.next_instruction_address=0;plan.pending_read_instruction=next;
             plan.pending_read_address=0x2079e;
             plan.a0_value=0x22aaa;plan.a1_value=0x22a98;plan.d1_value&=0xffff0000U;
+        }else if(next==0x21816){
+            plan.next_instruction_address=0;plan.next_call_address=0x21816;
+            plan.local_call_target=0x21276;plan.next_return_address=0x2181c;
+            plan.a0_value=0x22aaa;plan.a1_value=0x22a98;plan.d1_value&=0xffff0000U;
+            plan.command_stop.reset();plan.command_palette_address=0;
+            plan.outer_transition_return=0;plan.outer_fade_return=0;
+            // Only per-loop state is reset. Preserve source admission and the
+            // global observation sequence; bootstrap receipts are historical.
+            main_stage_loop_prepare_body_plan_.reset();
+            main_stage_loop_prepare_return_.reset();main_stage_loop_scheduler_return_.reset();
+            main_stage_loop_graphics_returns_=0;main_stage_loop_request_returned_=false;
+            main_stage_initial_view_caller_=true;
         }
         main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
     }

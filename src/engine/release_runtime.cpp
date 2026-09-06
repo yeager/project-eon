@@ -4337,7 +4337,8 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_loop_prepare_body()
         const auto final_word=read16(plan->final_word_source_address);
         const auto a6=read32(plan->a6_source_address);
         if(!count||!final_word||!a6){r.error="Deuteros loop prepare body source is absent from owned memory";return r;}
-        NativeRuntimeEffectBatch batch{"deuteros-amiga-main-stage-loop-prepare-body",true,{
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-main-stage-loop-prepare-body-"+
+            std::to_string(memory.diagnostics().applied_batch_count),true,{
             {1,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->cleared_word_address},
                 MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,0},
             {2,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->count_destination},
@@ -4409,7 +4410,7 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_graphics_retur
         }
         auto memory=*native_runtime_memory_;
         if(plan->write_count!=0){
-            NativeRuntimeEffectBatch batch{"deuteros-amiga-loop-local-request",true,{}};
+            NativeRuntimeEffectBatch batch{"deuteros-amiga-loop-local-request-"+std::to_string(o.trace_sequence),true,{}};
             for(std::size_t i=0;i<plan->write_count;++i)
                 batch.effects.push_back({i+1,
                     {NativeRuntimeAddressSpace::linear,std::nullopt,plan->write_addresses[i]},
@@ -4447,7 +4448,7 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_loop_request_service(
         if(!pending.advance_main_stage_loop_request_return(o,pointer)){
             result.error="Deuteros loop request service did not match boundary";return result;
         }
-        const auto applied=memory.apply({"deuteros-amiga-loop-exec-base",true,{{
+        const auto applied=memory.apply({"deuteros-amiga-loop-exec-base-"+std::to_string(o.trace_sequence),true,{{
             1,{NativeRuntimeAddressSpace::linear,std::nullopt,4},
             MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,o.exec_base}}});
         if(!applied.accepted){result.error=applied.error;return result;}
@@ -4482,9 +4483,11 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_record_loop(){
             return value;
         };
         std::size_t store_index=0;
+        const auto record_generation=memory.diagnostics().applied_batch_count;
         const auto write=[&](const std::uint32_t address,const MemoryTransferElementWidth width,
             const std::uint32_t value){
-            const auto applied=memory.apply({"deuteros-amiga-record-store-"+std::to_string(store_index++),true,{{
+            const auto applied=memory.apply({"deuteros-amiga-record-store-"+std::to_string(record_generation)+
+                "-"+std::to_string(store_index++),true,{{
                 1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},width,
                 NativeRuntimeByteOrder::big_endian,value}}});
             if(!applied.accepted)throw std::runtime_error(applied.error);
