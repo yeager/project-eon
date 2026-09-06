@@ -1405,6 +1405,7 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
     std::optional<DeuterosAmigaOwnedCommandStop> command_stop=std::nullopt;
     std::uint32_t command_palette_address=0;
     std::uint32_t outer_transition_return=0;
+    std::uint32_t outer_fade_return=0;
 };
 struct DeuterosAmigaObservedLoopRequestService {
     std::uint64_t trace_sequence=0;
@@ -1429,6 +1430,32 @@ struct DeuterosAmigaObservedOuterInput {
     std::uint32_t instruction_address=0,port_address=0;
     std::uint8_t bit=0,value=0;
 };
+
+// Pure continuation over an already admitted graphics return. Memory writes
+// (including the fade counter) belong to the coordinator's private transaction.
+inline DeuterosAmigaMainStageLoopGraphicsPlan resume_deuteros_amiga_fade_palette(
+    DeuterosAmigaMainStageLoopGraphicsPlan plan,const DeuterosAmigaObservedMainStageExecReturn&o,
+    std::uint32_t library,std::optional<std::uint16_t> remaining){
+    if(plan.outer_fade_return==0||(plan.next_call_address!=0x222fc&&plan.next_call_address!=0x22312)
+        ||o.call_address!=plan.next_call_address||o.return_address!=plan.next_return_address||o.vector!=-0xc0)
+        throw std::runtime_error("Deuteros fade palette return does not match boundary");
+    if(plan.next_call_address==0x222fc){
+        plan.a0_value=0x12f12;plan.a1_value=0x12ecc;plan.a6_value=library;
+        plan.d0_value=(o.result_d0&0xffff0000U)|16U;
+        plan.next_call_address=0x22312;plan.next_return_address=0x22316;
+    }else{
+        if(!remaining)throw std::runtime_error("Deuteros fade requires owned counter update");
+        plan.d0_value=o.result_d0;plan.next_vector=0;
+        plan.next_call_address=0;plan.next_return_address=0;
+        if(*remaining!=0){
+            plan.pending_read_instruction=0x222ac;plan.pending_read_address=0xdff01f;
+        }else{
+            plan.next_call_address=0x2231e;plan.next_return_address=0x22324;
+            plan.local_call_target=0x21698;
+        }
+    }
+    return plan;
+}
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -1541,6 +1568,8 @@ public:
                 !="1bb5e5d88bc798b71c2be31317a318b306fe3f9a33d826a371c43146ec668e85"
             ||to_hex(sha256(main_stage.subspan(0x2a5a,16)))
                 !="ec2f836b1613a0aaf24099396c38c467d04c937cafaaeb5d529494491700ecf9"
+            ||to_hex(sha256(main_stage.subspan(0x229c,148)))
+                !="d1a162af50f92b60d03b1da4ab186a547e46d145b0599cfbbeff7fb5af324ac1"
             ||to_hex(sha256(main_stage.subspan(0xc8c,58)))
                 !="8ff4fab0b4a3e04504ee99a0deece00dc0c903f89ceec4dfe95f94a1916b7f62"
             ||to_hex(sha256(main_stage.subspan(0xcc6,200)))
@@ -3997,29 +4026,37 @@ public:
         DeuterosAmigaOuterInputRoute route){
         if(!main_stage_loop_graphics_plan_)return std::nullopt;
         const auto& current=*main_stage_loop_graphics_plan_;
+        const bool fade=current.pending_read_instruction==0x222ac&&current.outer_fade_return!=0;
         const bool first=current.next_instruction_address==0x21822;
-        if(!first&&current.pending_read_instruction!=0x2185e)return std::nullopt;
-        if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=(first?0x21822U:0x2185eU)
-            ||o.port_address!=(first?0xdff016U:0xbfe001U)||o.bit!=(first?10:6))
+        if(!fade&&!first&&current.pending_read_instruction!=0x2185e)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=(fade?0x222acU:first?0x21822U:0x2185eU)
+            ||o.port_address!=(fade?0xdff01fU:first?0xdff016U:0xbfe001U)||o.bit!=(fade?5:first?10:6))
             throw std::runtime_error("Deuteros outer input does not match boundary");
         const auto next=route.next_instruction;
-        if(first?(next!=0x2189a&&next!=0x218d4&&next!=0x218a8&&next!=0x218e2&&next!=0x2185e)
-                :(next!=0x21380&&next!=0x218d4&&next!=0x218e2))
+        if(fade?(next!=0x222ac&&next!=0x222fc):first?
+                (next!=0x222ac&&next!=0x218a8&&next!=0x218e2&&next!=0x2185e)
+                :(next!=0x21380&&next!=0x222ac&&next!=0x218e2))
             throw std::runtime_error("Deuteros outer input route is inconsistent");
         if(route.caller_return!=0&&(!first||route.caller_return!=0x21854
-            ||(next!=0x218d4&&next!=0x218e2)))
+            ||(next!=0x222ac&&next!=0x218e2)))
             throw std::runtime_error("Deuteros outer transition return is inconsistent");
+        if(!fade&&next==0x222ac&&route.fade_return!=0x2189e&&route.fade_return!=0x218d8)
+            throw std::runtime_error("Deuteros fade return is inconsistent");
         auto plan=current;
-        plan.outer_transition_return=route.caller_return;
+        if(!fade){plan.outer_transition_return=route.caller_return;plan.outer_fade_return=route.fade_return;}
         plan.next_instruction_address=route.next_instruction;plan.d0_value=route.d0;
         plan.pending_read_instruction=0;plan.pending_read_address=0;
         plan.next_call_address=0;plan.next_return_address=0;plan.next_vector=0;plan.local_call_target=0;
         if(route.next_instruction==0x2185e){
             plan.next_instruction_address=0;plan.pending_read_instruction=0x2185e;
             plan.pending_read_address=0xbfe001;
-        }else if(next==0x2189a||next==0x218d4){
+        }else if(next==0x222ac){
+            plan.next_instruction_address=0;plan.pending_read_instruction=next;
+            plan.pending_read_address=0xdff01f;
+        }else if(next==0x222fc){
             plan.next_instruction_address=0;plan.next_call_address=next;
-            plan.local_call_target=0x2229c;plan.next_return_address=next+4;
+            plan.next_return_address=0x22300;plan.next_vector=-0xc0;
+            plan.a0_value=0x12e12;plan.a1_value=0x12ecc;plan.a6_value=route.library;
         }else if(next==0x218a8||next==0x218e2){
             plan.next_instruction_address=0;plan.pending_read_instruction=next;
             plan.pending_read_address=0x2079e;
@@ -4041,16 +4078,23 @@ public:
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
     observe_main_stage_command_palette_return(const DeuterosAmigaObservedMainStageExecReturn&o,
-        std::uint32_t library){
-        if(!main_stage_loop_graphics_plan_||!main_stage_loop_graphics_plan_->command_stop)
+        std::uint32_t library,std::optional<std::uint16_t> fade_remaining=std::nullopt){
+        if(!main_stage_loop_graphics_plan_)
             return std::nullopt;
         const auto& current=*main_stage_loop_graphics_plan_;
-        const bool first=current.next_call_address==0x21514;
-        if(!first&&current.next_call_address!=0x2152a)return std::nullopt;
+        const bool fade=current.outer_fade_return!=0
+            &&(current.next_call_address==0x222fc||current.next_call_address==0x22312);
+        if(!fade&&!current.command_stop)return std::nullopt;
+        const bool first=current.next_call_address==(fade?0x222fcU:0x21514U);
+        if(!first&&current.next_call_address!=(fade?0x22312U:0x2152aU))return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.call_address!=current.next_call_address
             ||o.return_address!=current.next_return_address||o.vector!=-0xc0)
             throw std::runtime_error("Deuteros command palette return does not match boundary");
         auto plan=current;
+        if(fade){
+            plan=resume_deuteros_amiga_fade_palette(plan,o,library,fade_remaining);
+            main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
+        }
         if(first){
             plan.a0_value=0x12f12;plan.a1_value=plan.command_palette_address;plan.a6_value=library;
             plan.d0_value=(o.result_d0&0xffff0000U)|0x10U;

@@ -4746,7 +4746,8 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_input(const DeuterosAmig
     try{
         auto pending=*deuteros_amiga_->title_stage_session();
         const auto current=pending.main_stage_loop_graphics_plan();
-        if(!current||(current->next_instruction_address!=0x21822&&current->pending_read_instruction!=0x2185e)){
+        if(!current||(current->next_instruction_address!=0x21822&&current->pending_read_instruction!=0x2185e
+            &&current->pending_read_instruction!=0x222ac)){
             result.error="Deuteros outer input did not match boundary";return result;
         }
         auto memory=*native_runtime_memory_;
@@ -4831,20 +4832,32 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_command_palette_return(const D
         auto pending=*deuteros_amiga_->title_stage_session();
         const auto current=pending.main_stage_loop_graphics_plan();
         std::uint32_t library=0;
-        if(current&&current->next_call_address==0x21514){
+        if(current&&(current->next_call_address==0x21514||current->next_call_address==0x222fc)){
             for(std::uint32_t i=0;i<4;++i){
                 const auto byte=native_runtime_memory_->read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,0x12fec+i});
                 if(!byte)throw std::runtime_error("Deuteros command palette library is not owned");
                 library=(library<<8U)|*byte;
             }
         }
-        if(!pending.observe_main_stage_command_palette_return(o,library)){
+        auto memory=*native_runtime_memory_;
+        std::optional<std::uint16_t> fade_remaining;
+        if(current&&current->outer_fade_return!=0&&current->next_call_address==0x22312){
+            const auto high=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,0x2229a});
+            const auto low=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,0x2229b});
+            if(!high||!low)throw std::runtime_error("Deuteros fade counter is not owned");
+            fade_remaining=static_cast<std::uint16_t>(((static_cast<std::uint32_t>(*high)<<8U)|*low)-8U);
+            const auto applied=memory.apply({"deuteros-amiga-fade-counter-"+std::to_string(o.trace_sequence),true,{{
+                1,{NativeRuntimeAddressSpace::linear,std::nullopt,0x2229a},MemoryTransferElementWidth::word,
+                NativeRuntimeByteOrder::big_endian,*fade_remaining}}});
+            if(!applied.accepted)throw std::runtime_error(applied.error);
+        }
+        if(!pending.observe_main_stage_command_palette_return(o,library,fade_remaining)){
             result.error="Deuteros command palette return did not match boundary";return result;
         }
-        if(!deuteros_amiga_->observe_main_stage_command_palette_return(o,library)){
+        if(!deuteros_amiga_->observe_main_stage_command_palette_return(o,library,fade_remaining)){
             result.error="Deuteros command palette return disappeared before commit";return result;
         }
-        result.accepted=true;
+        *native_runtime_memory_=std::move(memory);result.accepted=true;
     }catch(const std::exception&e){result.error=e.what();}
     return result;
 }

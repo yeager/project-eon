@@ -6691,16 +6691,18 @@ int main() {
             auto outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,4,0xabcd0000,command_read,command_write);
             assert(outer_route.next_instruction==0x2185e&&command_read(0x21721,1)==0);
             outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,0,0xabcd0000,command_read,command_write);
-            assert(outer_route.next_instruction==0x218d4&&outer_route.d0==1&&outer_route.caller_return==0x21854);
+            assert(outer_route.next_instruction==0x222ac&&outer_route.d0==1&&outer_route.caller_return==0x21854);
+            assert(outer_route.fade_return==0x218d8&&command_read(0x2229a,2)==256);
+            assert(command_read(0x207ea,1)==0);
             // A released sample does not clear an already latched flag.
             outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,4,0,command_read,command_write);
-            assert(outer_route.next_instruction==0x218d4&&command_read(0x21721,1)==1);
+            assert(outer_route.next_instruction==0x222ac&&command_read(0x21721,1)==1);
             command_write(0x21696,eon::MemoryTransferElementWidth::word,3);
             outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,4,0xabcd0000,command_read,command_write);
             assert(outer_route.next_instruction==0x2185e&&outer_route.d0==0xabcd0003);
             command_write(0x210f4,eon::MemoryTransferElementWidth::byte,1);
             outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,4,0,command_read,command_write);
-            assert(outer_route.next_instruction==0x2189a&&outer_route.caller_return==0);
+            assert(outer_route.next_instruction==0x222ac&&outer_route.caller_return==0&&outer_route.fade_return==0x2189e);
             command_write(0x21720,eon::MemoryTransferElementWidth::byte,0);
             outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0x40,0xabcd0000,command_read,command_write);
             assert(outer_route.next_instruction==0x21380&&outer_route.d0==0xabcd0000);
@@ -6709,16 +6711,70 @@ int main() {
             command_write(0x21696,eon::MemoryTransferElementWidth::word,2);
             command_write(0x21704,eon::MemoryTransferElementWidth::word,0);
             outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0x40,0xabcd0000,command_read,command_write);
-            assert(outer_route.next_instruction==0x218d4&&outer_route.d0==1&&outer_route.caller_return==0);
+            assert(outer_route.next_instruction==0x222ac&&outer_route.d0==1&&outer_route.caller_return==0);
             assert(command_read(0x21704,2)==1);
             assert(command_read(0x21720,1)==1);
             for(const unsigned selector:{0U,1U,2U,3U,0x102U,0x103U,0xffffU}){
                 command_write(0x21704,eon::MemoryTransferElementWidth::word,selector);
                 outer_route=eon::execute_deuteros_amiga_owned_outer_transition(
                     0x21982,0xabcd0000,command_read,command_write);
-                assert(outer_route.next_instruction==((selector&0xffU)>2?0x21380U:0x218d4U));
+                assert(outer_route.next_instruction==((selector&0xffU)>2?0x21380U:0x222acU));
                 assert(command_read(0x21704,2)==((selector&0xffU)<2?1:selector));
                 if((selector&0xffU)>2)assert(outer_route.d0==(0xabcd0000|selector));
+            }
+            // Exhaust the RGB4 arithmetic domain in controlled palette states.
+            // These values test the instruction semantics, not source assets.
+            for(unsigned step=0;step<32;++step){
+                eon::DeuterosAmigaMainStageLoopGraphicsPlan fade_plan;
+                fade_plan.outer_fade_return=0x218d8;fade_plan.outer_transition_return=0x21854;
+                fade_plan.next_call_address=0x222fc;fade_plan.next_return_address=0x22300;
+                fade_plan.next_vector=-0xc0;fade_plan.a0_value=0x12e12;fade_plan.a1_value=0x12ecc;
+                const eon::DeuterosAmigaObservedMainStageExecReturn first_fade_return{
+                    step*2+1,0x222fc,-0xc0,0x22300,0xabcd1234};
+                auto wrong_return=first_fade_return;wrong_return.return_address=0x22316;
+                bool rejected_fade_order=false;
+                try{static_cast<void>(eon::resume_deuteros_amiga_fade_palette(fade_plan,wrong_return,0x10000,std::nullopt));}
+                catch(const std::runtime_error&){rejected_fade_order=true;}
+                assert(rejected_fade_order);
+                fade_plan=eon::resume_deuteros_amiga_fade_palette(fade_plan,first_fade_return,0x10000,std::nullopt);
+                assert(fade_plan.next_call_address==0x22312&&fade_plan.next_return_address==0x22316);
+                assert(fade_plan.a0_value==0x12f12&&fade_plan.a1_value==0x12ecc&&fade_plan.a6_value==0x10000);
+                assert(fade_plan.d0_value==0xabcd0010);
+                const eon::DeuterosAmigaObservedMainStageExecReturn second_fade_return{
+                    step*2+2,0x22312,-0xc0,0x22316,0x12345678};
+                bool rejected_missing_counter=false;
+                try{static_cast<void>(eon::resume_deuteros_amiga_fade_palette(fade_plan,second_fade_return,0,std::nullopt));}
+                catch(const std::runtime_error&){rejected_missing_counter=true;}
+                assert(rejected_missing_counter);
+                fade_plan=eon::resume_deuteros_amiga_fade_palette(fade_plan,second_fade_return,0,
+                    static_cast<std::uint16_t>(256-(step+1)*8));
+                assert(fade_plan.d0_value==0x12345678&&fade_plan.next_vector==0);
+                assert(fade_plan.outer_fade_return==0x218d8&&fade_plan.outer_transition_return==0x21854);
+                if(step<31)assert(fade_plan.pending_read_instruction==0x222ac&&fade_plan.pending_read_address==0xdff01f);
+                else assert(fade_plan.next_call_address==0x2231e&&fade_plan.local_call_target==0x21698
+                    &&fade_plan.next_return_address==0x22324&&fade_plan.pending_read_instruction==0);
+            }
+            for(unsigned base=0;base<4096;base+=16){
+                for(unsigned index=0;index<16;++index)
+                    command_write(0x12ecc+index*2,eon::MemoryTransferElementWidth::word,base+index);
+                outer_route=eon::execute_deuteros_amiga_owned_outer_input(
+                    0x222ac,0,0xabcdffff,command_read,command_write);
+                assert(outer_route.next_instruction==0x222ac&&outer_route.d0==0xabcdffff);
+                for(unsigned index=0;index<16;++index)assert(command_read(0x12ecc+index*2,2)==base+index);
+                for(unsigned step=0;step<32;++step){
+                    outer_route=eon::execute_deuteros_amiga_owned_outer_input(
+                        0x222ac,0x20,0xabcdffff,command_read,command_write);
+                    assert(outer_route.next_instruction==0x222fc&&outer_route.d0==0xabcd0010);
+                    assert(outer_route.library==command_read(0x12fec,4));
+                    for(unsigned index=0;index<16;++index){
+                        unsigned expected=0;
+                        for(unsigned shift:{0U,4U,8U}){
+                            const auto component=((base+index)>>shift)&15U;
+                            if(component>step+1)expected|=(component-step-1)<<shift;
+                        }
+                        assert(command_read(0x12ecc+index*2,2)==expected);
+                    }
+                }
             }
             command_write(0x2126a,eon::MemoryTransferElementWidth::longword,0);
             for(const unsigned entry:{0x21850U,0x21892U,0x21982U}){

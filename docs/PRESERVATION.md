@@ -3727,8 +3727,8 @@ Both cleanup prefixes are gated independently: `$21892..$218a7` (ADF
 `ad500a8045f2fd575caca0cd20a759ebd75fa2ece38dec837b0a091008d6079a`)
 and `$218cc..$218e1` (ADF `$70cc`, 22 bytes, SHA-256
 `55ced0c423fcf313bbfae51804be04bd5cdd7c72464122d179e7e0abf2e54fc8`).
-Nonzero `$2126a` stops before the exact `$2229c` fade call, preserving its
-call/return addresses. Zero invokes native `$22a5a..$22a69` (ADF `$825a`,
+Nonzero `$2126a` enters the native `$2229c` fade below, preserving its
+return address separately. Zero invokes native `$22a5a..$22a69` (ADF `$825a`,
 16 bytes, SHA-256
 `ec2f836b1613a0aaf24099396c38c467d04c937cafaaeb5d529494491700ecf9`):
 clear byte `$22a30`, select all four channels and tail-call the existing
@@ -3739,6 +3739,27 @@ The primary `$21850` BSR retains its enclosing `$21854` return separately
 from inner call boundaries; branch-entered cleanup has no such return.
 Tests cover byte-versus-word selector distinctions, D0 word preservation,
 all four original reset descriptors, and both fade and counter boundaries.
+
+The fade at `$2229c..$2232f` (ADF `$7a9c`, 148 bytes, SHA-256
+`d1a162af50f92b60d03b1da4ab186a547e46d145b0599cfbbeff7fb5af324ac1`)
+now initializes word `$2229a` to 256 and clears byte `$207ea`. Each ordered
+raw `$222ac/$dff01f` bit-5 observation either remains waiting unchanged or
+advances the 16 owned palette words at `$12ecc`. Each positive RGB4 component
+decreases by one, following the original word/byte arithmetic. D0's upper
+word survives the palette loop. The native plan calls graphics vector
+`-$c0` at `$222fc` (return `$22300`, A0 `$12e12`) and then `$22312`
+(return `$22316`, A0 `$12f12`), retaining A1 `$12ecc` and reading A6 from
+owned `$12fec` for each call. Typed returns are ordered and fresh; only the
+second return permits the private transaction to subtract eight from the
+owned counter. Nonzero repeats the original raw-port wait; zero reaches
+the first `$2231e->$21698` final buffer pass. The second final pass and fade
+return remain separate work. No host timer or assumed vertical-blank cadence
+substitutes for observations, and palette-service side effects remain an
+external contract rather than a claim of displayed graphics.
+Tests exhaust all 4,096 RGB4 words through 32 fade steps, retain colors on
+clear port samples, and exercise both palette-return continuations, missing
+counter rejection, incorrect return rejection and the final buffer boundary.
+These controlled test states and return packets are not capture evidence.
 
 Sample bytes, latch writes, trace sequence and next boundary publish atomically.
 Wrong bit/address/order or replay leaves committed state unchanged. The test

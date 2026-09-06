@@ -12,6 +12,8 @@ struct DeuterosAmigaOuterInputRoute {
     std::uint32_t next_instruction=0;
     std::uint32_t d0=0;
     std::uint32_t caller_return=0;
+    std::uint32_t fade_return=0;
+    std::uint32_t library=0;
 };
 
 // Follow the local cleanup prefix, retaining the primary BSR's return site.
@@ -33,7 +35,11 @@ DeuterosAmigaOuterInputRoute execute_deuteros_amiga_owned_outer_transition(
         throw std::runtime_error("Unsupported Deuteros outer transition instruction");
     const bool restart=instruction==0x21892;
     d0=read(0x2126a,4);
-    if(d0!=0)return {restart?0x2189aU:0x218d4U,d0,caller_return};
+    if(d0!=0){
+        write(0x2229a,Width::word,0x100);
+        write(0x207ea,Width::byte,0);
+        return {0x222ac,d0,caller_return,restart?0x2189eU:0x218d8U};
+    }
     // $22a5a tail-calls the existing native $22ab8 software staging routine.
     d0=0;
     write(0x22a30,Width::byte,0);
@@ -48,6 +54,18 @@ template<class Read,class Write>
 DeuterosAmigaOuterInputRoute execute_deuteros_amiga_owned_outer_input(
     std::uint32_t instruction,std::uint8_t value,std::uint32_t d0,Read read,Write write){
     using Width=MemoryTransferElementWidth;
+    if(instruction==0x222ac){
+        write(0xdff01f,Width::byte,value);
+        if((value&0x20U)==0)return {0x222ac,d0};
+        for(std::uint32_t index=0;index<16;++index){
+            auto color=read(0x12ecc+index*2,2);
+            if(color>=0x100U)color-=0x100U;
+            if((color&0xffU)>=0x10U)color-=0x10U;
+            if((color&15U)!=0)--color;
+            write(0x12ecc+index*2,Width::word,color);
+        }
+        return {0x222fc,(d0&0xffff0000U)|16U,0,0,read(0x12fec,4)};
+    }
     const auto counter_word=[&](){
         const auto counter=read(0x21696,2);
         d0=(d0&0xffff0000U)|counter;
