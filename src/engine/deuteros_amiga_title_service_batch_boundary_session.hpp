@@ -5,6 +5,7 @@
 #include "data/sha256.hpp"
 #include "engine/bounded_memory_transfer.hpp"
 #include "engine/deuteros_amiga_owned_commands.hpp"
+#include "engine/deuteros_amiga_owned_outer_loop.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -1421,6 +1422,11 @@ struct DeuterosAmigaObservedViewWait {
     std::uint32_t instruction_address=0,port_address=0;
     std::uint8_t bit=0,value=0;
 };
+struct DeuterosAmigaObservedOuterInput {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t instruction_address=0,port_address=0;
+    std::uint8_t bit=0,value=0;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -1522,7 +1528,9 @@ public:
             ||to_hex(sha256(main_stage.subspan(0x2ab8,0xd2)))
                 !="592bc54b35e0075154b66abcc615e3bab580626898d3801e2142cdf8bd658614"
             ||to_hex(sha256(main_stage.subspan(0x16a,0x2a)))
-                !="6abfc259f7293f1d5155b0f352c03dd6ccfb7dd2757d35ca91e33716bb27230d")
+                !="6abfc259f7293f1d5155b0f352c03dd6ccfb7dd2757d35ca91e33716bb27230d"
+            ||to_hex(sha256(main_stage.subspan(0x1822,0x76)))
+                !="55047c31e4eb79f3c68741aa644f8686203f7f948be1475855e3d79df14c8a27")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
@@ -3962,6 +3970,32 @@ public:
         plan.next_vector=-0xde;plan.local_call_target=0;
         main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;
         return plan;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    observe_main_stage_outer_input(const DeuterosAmigaObservedOuterInput&o,
+        DeuterosAmigaOuterInputRoute route){
+        if(!main_stage_loop_graphics_plan_)return std::nullopt;
+        const auto& current=*main_stage_loop_graphics_plan_;
+        const bool first=current.next_instruction_address==0x21822;
+        if(!first&&current.pending_read_instruction!=0x2185e)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=(first?0x21822U:0x2185eU)
+            ||o.port_address!=(first?0xdff016U:0xbfe001U)||o.bit!=(first?10:6))
+            throw std::runtime_error("Deuteros outer input does not match boundary");
+        if(first?(route.next_instruction!=0x21850&&route.next_instruction!=0x21892&&route.next_instruction!=0x2185e)
+                :(route.next_instruction!=0x21380&&route.next_instruction!=0x21982))
+            throw std::runtime_error("Deuteros outer input route is inconsistent");
+        auto plan=current;
+        plan.next_instruction_address=route.next_instruction;plan.d0_value=route.d0;
+        plan.pending_read_instruction=0;plan.pending_read_address=0;
+        plan.next_call_address=0;plan.next_return_address=0;plan.next_vector=0;plan.local_call_target=0;
+        if(route.next_instruction==0x2185e){
+            plan.next_instruction_address=0;plan.pending_read_instruction=0x2185e;
+            plan.pending_read_address=0xbfe001;
+        }else if(route.next_instruction==0x21850){
+            plan.next_instruction_address=0;plan.next_call_address=0x21850;
+            plan.local_call_target=0x218cc;plan.next_return_address=0x21854;
+        }
+        main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
     advance_main_stage_command_palette(std::uint32_t palette,std::uint32_t library){

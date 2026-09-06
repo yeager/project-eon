@@ -4711,6 +4711,49 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_view_selection(){
     return result;
 }
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_input(const DeuterosAmigaObservedOuterInput o){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
+        result.error="Deuteros outer input requires active owned memory";return result;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto current=pending.main_stage_loop_graphics_plan();
+        if(!current||(current->next_instruction_address!=0x21822&&current->pending_read_instruction!=0x2185e)){
+            result.error="Deuteros outer input did not match boundary";return result;
+        }
+        auto memory=*native_runtime_memory_;
+        const auto read=[&](std::uint32_t address,std::uint32_t width){
+            if((width>1&&(address&1U))||address>0x1000000U-width)
+                throw std::runtime_error("Deuteros outer input source is outside aligned native memory");
+            std::uint32_t value=0;
+            for(std::uint32_t i=0;i<width;++i){
+                const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
+                if(!byte)throw std::runtime_error("Deuteros outer input source is not owned");
+                value=(value<<8U)|*byte;
+            }
+            return value;
+        };
+        std::size_t stores=0;
+        const auto write=[&](std::uint32_t address,MemoryTransferElementWidth width,std::uint32_t value){
+            const auto applied=memory.apply({"deuteros-amiga-outer-input-"+std::to_string(o.trace_sequence)+
+                "-"+std::to_string(stores++),true,{{
+                1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},width,NativeRuntimeByteOrder::big_endian,value}}});
+            if(!applied.accepted)throw std::runtime_error(applied.error);
+        };
+        const auto route=execute_deuteros_amiga_owned_outer_input(o.instruction_address,o.value,
+            current->d0_value,read,write);
+        if(!pending.observe_main_stage_outer_input(o,route)){
+            result.error="Deuteros outer input route rejected";return result;
+        }
+        if(!deuteros_amiga_->observe_main_stage_outer_input(o,route)){
+            result.error="Deuteros outer input disappeared before commit";return result;
+        }
+        *native_runtime_memory_=std::move(memory);result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::advance_deuteros_amiga_command_palette(){
     DeuterosAmigaTitleDependencyObservationResult result;
     if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){

@@ -6601,6 +6601,71 @@ int main() {
             assert(opening_controller.observe_deuteros_amiga_view_wait(second_view_wait).accepted);
             assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x21822);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
+            const auto before_outer_input=opening_controller.native_runtime_memory_checkpoint();
+            const eon::DeuterosAmigaObservedOuterInput primary_outer_input{
+                runtime_copy_sequence+118,0x21822,0xdff016,10,0};
+            auto bad_outer_input=primary_outer_input;bad_outer_input.bit=2;
+            assert(!opening_controller.observe_deuteros_amiga_outer_input(bad_outer_input).accepted);
+            bad_outer_input=primary_outer_input;bad_outer_input.port_address=0xbfe001;
+            assert(!opening_controller.observe_deuteros_amiga_outer_input(bad_outer_input).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==before_outer_input->checksum);
+            assert(opening_controller.observe_deuteros_amiga_outer_input(primary_outer_input).accepted);
+            assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x2185e);
+            const auto after_primary_input=opening_controller.native_runtime_memory_checkpoint();
+            assert(runtime_byte(*after_primary_input,0x21721)==1&&runtime_byte(*after_primary_input,0xdff016)==0);
+            assert(!opening_controller.observe_deuteros_amiga_outer_input(primary_outer_input).accepted);
+            const eon::DeuterosAmigaObservedOuterInput secondary_outer_input{
+                runtime_copy_sequence+119,0x2185e,0xbfe001,6,0};
+            bad_outer_input=secondary_outer_input;bad_outer_input.trace_sequence=runtime_copy_sequence+118;
+            assert(!opening_controller.observe_deuteros_amiga_outer_input(bad_outer_input).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_primary_input->checksum);
+            assert(opening_controller.observe_deuteros_amiga_outer_input(secondary_outer_input).accepted);
+            assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x21380);
+            const auto after_secondary_input=opening_controller.native_runtime_memory_checkpoint();
+            assert(runtime_byte(*after_secondary_input,0x21720)==1&&runtime_byte(*after_secondary_input,0x21721)==1);
+            assert(!opening_controller.observe_deuteros_amiga_outer_input(secondary_outer_input).accepted);
+            assert(opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
+            const auto third_pass=opening_controller.native_runtime_memory_checkpoint();
+            assert(runtime_byte(*third_pass,0x210f8)==0&&runtime_byte(*third_pass,0x210f9)==1);
+            assert(runtime_byte(*third_pass,0x210fb)==8&&runtime_byte(*third_pass,0x210fd)==0xb7);
+            assert(runtime_byte(*third_pass,0x21101)==0&&runtime_byte(*third_pass,0x21119)==0);
+            assert(runtime_byte(*third_pass,0x21131)==0x4e&&runtime_byte(*third_pass,0x21149)==0x4e);
+            const eon::DeuterosAmigaObservedFrameBuffer third_frame_buffer{
+                runtime_copy_sequence+120,0x2143a,0xdff01f,5,0x20,0x216b0,0x12ff0,0x90000};
+            const auto sprite_boundary=opening_controller.observe_deuteros_amiga_frame_buffer(third_frame_buffer);
+            assert(!sprite_boundary.accepted&&sprite_boundary.error.find("sprite renderer continuation")!=std::string::npos);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==third_pass->checksum);
+
+            // Branch-condition tests use private owned-state variations, not
+            // claimed captures or substituted source media.
+            owned_command_bytes.clear();
+            for(const auto& cell:before_outer_input->initialized_bytes)
+                if(cell.location.address_space==eon::NativeRuntimeAddressSpace::linear)
+                    owned_command_bytes.emplace(static_cast<std::uint32_t>(cell.location.offset),cell.value);
+            command_write(0x2171e,eon::MemoryTransferElementWidth::byte,0);
+            command_write(0x21721,eon::MemoryTransferElementWidth::byte,0);
+            auto outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,4,0xabcd0000,command_read,command_write);
+            assert(outer_route.next_instruction==0x2185e&&command_read(0x21721,1)==0);
+            outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,0,0xabcd0000,command_read,command_write);
+            assert(outer_route.next_instruction==0x21850&&outer_route.d0==0xabcd0002);
+            // A released sample does not clear an already latched flag.
+            outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,4,0,command_read,command_write);
+            assert(outer_route.next_instruction==0x21850&&command_read(0x21721,1)==1);
+            command_write(0x21696,eon::MemoryTransferElementWidth::word,3);
+            outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,4,0xabcd0000,command_read,command_write);
+            assert(outer_route.next_instruction==0x2185e&&outer_route.d0==0xabcd0003);
+            command_write(0x210f4,eon::MemoryTransferElementWidth::byte,1);
+            outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,4,0,command_read,command_write);
+            assert(outer_route.next_instruction==0x21892);
+            command_write(0x21720,eon::MemoryTransferElementWidth::byte,0);
+            outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0x40,0xabcd0000,command_read,command_write);
+            assert(outer_route.next_instruction==0x21380&&outer_route.d0==0xabcd0000);
+            outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0,0xabcd0000,command_read,command_write);
+            assert(outer_route.next_instruction==0x21380&&outer_route.d0==0xabcd0003);
+            command_write(0x21696,eon::MemoryTransferElementWidth::word,2);
+            outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0x40,0xabcd0000,command_read,command_write);
+            assert(outer_route.next_instruction==0x21982&&outer_route.d0==0xabcd0002);
+            assert(command_read(0x21720,1)==1);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

@@ -469,7 +469,10 @@ descriptor staging and the original random routine; the real initial pass
 reaches the second record's palette boundary `$214ee`. The native prefix,
 ordered library-return admission and saved-position scheduler resumption now
 continue through the second buffer/view pass to the outer `$21822` gate.
-Implement that outer input/control continuation and the sprite-bearing path. Connect
+The ordered outer port samples and native latch/control logic now re-enter
+the scheduler and select the first sprite. Implement the sprite-bearing
+frame path next, followed by the distinct `$218cc`, `$21892` and `$21982`
+cleanup/transition routes. Connect
 the separately staged sound descriptors to the `$22bea` consumer without
 claiming that a software descriptor write already started audio hardware.
 Recover the separate sprite and `$22330` paths. Do not reuse unrelated observed bases or assign graphics,

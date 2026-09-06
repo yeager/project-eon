@@ -3647,7 +3647,8 @@ Frame-clear/count batch identifiers now include the admitted sequence, allowing
 the following even-counter buffer at `$80000` to be cleared and selected
 without colliding with the first frame's batch identifiers. The complete
 second no-draw walk, even view at `$12e00`, and return to `$21822` are tested.
-The next outer input gate and sprite-bearing frames remain separate work.
+The outer input gate is now connected as described below; sprite-bearing
+frames remain separate work.
 The genuine first record at resource offset `$382` executes opcode `$13`,
 setting `$2171e` to one, then executes sound arguments `(1,1)` and `(2,2)`
 through the native descriptor routine below. It yields timer one, which the
@@ -3681,6 +3682,31 @@ their original masked timer and byte-threshold/word-displacement branches.
 The native call uses local preservation of the caller's resource/record
 references, not fabricated guest-stack observations. Tests derive the expected
 random timer and new seed from the genuine owned bytes.
+
+The outer input route `$21822..$21897` (ADF `$7022`, length `$76`, SHA-256
+`55047c31e4eb79f3c68741aa644f8686203f7f948be1475855e3d79df14c8a27`)
+now executes native conditional logic from owned state. Two separate ordered
+port observations are admitted only at the reached instructions: `$21822`
+reads `$dff016` with immediate bit 10 (memory byte bit 2, mask `$04`), and
+`$2185e` reads `$bfe001` bit 6. A clear sample sets its original byte latch
+at `$21721` or `$21720`; a released sample does not clear a latched value.
+The `$2171e` gate, high byte of `$210f4`, and low-word parity of `$21696`
+select the original paths. Counter reads preserve D0's upper word.
+The primary route can stop before `$21850->$218cc`, enter `$21892`, or
+require the secondary observation. The secondary route either returns through
+`$2181c` to the native scheduler or stops at `$21982`. Cleanup and transition
+effects beyond those entry boundaries are not invented.
+
+Sample bytes, latch writes, trace sequence and next boundary publish atomically.
+Wrong bit/address/order or replay leaves committed state unchanged. The test
+fixture's two clear samples with the genuine enabled gate re-enter the native
+scheduler: record zero selects sprite 1 at `(8,183)`, records zero/one finish
+their one-tick waits, and records two/three reach timers `$4e`. The following
+buffer attempt now encounters the explicit original-sprite-renderer boundary
+and rolls its private clear back completely. Separate condition tests vary
+only private runtime flags/counter to cover latched release, even/odd paths,
+the transition request and D0 high-word retention. They are not captures and
+do not establish a mapping from host buttons or keys to those port bits.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,
