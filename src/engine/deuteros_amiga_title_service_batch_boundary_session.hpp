@@ -2184,7 +2184,17 @@ enum class DeuterosAmigaMainStageState {
     awaiting_audio_setup,
     awaiting_20994_entry,
     awaiting_2099e_exec_return,
-    startup_continuation,
+    awaiting_209ca_exec_return,
+    awaiting_209f0_exec_return,
+    terminal_209fa_spin,
+    awaiting_cia_a_bit_set,
+    awaiting_initial_resource_load,
+    awaiting_initial_loop_service_return,
+    awaiting_loop_prepare_body,
+    awaiting_first_loop_graphics_return,
+    awaiting_second_loop_graphics_return,
+    awaiting_loop_request_service,
+    loop_runtime_active,
 };
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
@@ -4649,7 +4659,7 @@ public:
             ||o.vector!=-0x126||o.return_address!=0x209a2)
             throw std::runtime_error("Deuteros main-stage $2099e Exec return does not match boundary");
         main_stage_2099e_exec_return_=o;last_command_sequence_=o.trace_sequence;
-        main_stage_state_=DeuterosAmigaMainStageState::startup_continuation;
+        main_stage_state_=DeuterosAmigaMainStageState::awaiting_209ca_exec_return;
         return DeuterosAmigaMainStage2099eExecReturnPlan{o,
             {0x2095e,0x2095d,0x2095c,0x20963,0x20964},
             {0x20982,0x7f,0x04,0x01,o.result_d0},0x209ca,0x209ce,-0x162,
@@ -4658,12 +4668,14 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaMainStage209caExecReturnPlan>
     observe_main_stage_209ca_exec_return(
         const DeuterosAmigaObservedMainStageExecReturn&o){
-        if(!main_stage_2099e_exec_return_||main_stage_209ca_exec_return_)
+        if(!main_stage_2099e_exec_return_||main_stage_209ca_exec_return_
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_209ca_exec_return)
             return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x209ca
             ||o.vector!=-0x162||o.return_address!=0x209ce)
             throw std::runtime_error("Deuteros main-stage $209ca Exec return does not match boundary");
         main_stage_209ca_exec_return_=o;last_command_sequence_=o.trace_sequence;
+        main_stage_state_=DeuterosAmigaMainStageState::awaiting_209f0_exec_return;
         return DeuterosAmigaMainStage209caExecReturnPlan{o,
             {0x20976,0x2092a},{0x2091c,0x20954},
             0x20982,0x2091c,0,0,0x209f0,0x209f4,-0x1bc,
@@ -4672,13 +4684,16 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaMainStage209f0ExecReturnPlan>
     observe_main_stage_209f0_exec_return(
         const DeuterosAmigaObservedMainStageExecReturn&o){
-        if(!main_stage_209ca_exec_return_||main_stage_209f0_exec_return_)
+        if(!main_stage_209ca_exec_return_||main_stage_209f0_exec_return_
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_209f0_exec_return)
             return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x209f0
             ||o.vector!=-0x1bc||o.return_address!=0x209f4)
             throw std::runtime_error("Deuteros main-stage $209f0 Exec return does not match boundary");
         main_stage_209f0_exec_return_=o;last_command_sequence_=o.trace_sequence;
         const bool spin=o.result_d0!=0;
+        main_stage_state_=spin?DeuterosAmigaMainStageState::terminal_209fa_spin:
+            DeuterosAmigaMainStageState::awaiting_cia_a_bit_set;
         return DeuterosAmigaMainStage209f0ExecReturnPlan{o,spin,
             spin?std::array<std::uint32_t,2>{0,0}:
                  std::array<std::uint32_t,2>{0x2094c,0x2093a},
@@ -4693,12 +4708,15 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaMainStageCiaABitSetPlan>
     observe_main_stage_cia_a_bit_set(
         const DeuterosAmigaObservedMainStageCiaABitSet&o){
-        if(!main_stage_209f0_exec_return_||main_stage_cia_a_bit_set_)return std::nullopt;
+        if(!main_stage_209f0_exec_return_||main_stage_cia_a_bit_set_
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_cia_a_bit_set)
+            return std::nullopt;
         if(main_stage_209f0_exec_return_->result_d0!=0)return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=0x217e4
             ||o.port_address!=0xbfe001||o.bit!=1||o.source_word_address!=0x21704)
             throw std::runtime_error("Deuteros main-stage CIA-A bit-set does not match boundary");
         main_stage_cia_a_bit_set_=o;last_command_sequence_=o.trace_sequence;
+        main_stage_state_=DeuterosAmigaMainStageState::awaiting_initial_resource_load;
         return DeuterosAmigaMainStageCiaABitSetPlan{o,
             static_cast<std::uint8_t>(o.prior_port_value|0x02U),
             (o.prior_port_value&0x02U)!=0,
@@ -4717,7 +4735,9 @@ public:
             return DeuterosAmigaMainStageResourceLoadPlan{o,0x2ad24,0x32a24,0x21978,
                 current.next_call_address,current.local_call_target,current.next_return_address,true};
         }
-        if(!main_stage_cia_a_bit_set_||main_stage_resource_load_)return std::nullopt;
+        if(!main_stage_cia_a_bit_set_||main_stage_resource_load_
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_initial_resource_load)
+            return std::nullopt;
         if(main_stage_cia_a_bit_set_->source_word>1
             ||o.trace_sequence<=last_command_sequence_
             ||o.resource_index!=main_stage_cia_a_bit_set_->source_word
@@ -4726,16 +4746,20 @@ public:
             ||(o.retry_port_value&0x04U)==0)
             throw std::runtime_error("Deuteros main-stage resource load does not match caller");
         main_stage_resource_load_=o;last_command_sequence_=o.trace_sequence;
+        main_stage_state_=DeuterosAmigaMainStageState::awaiting_initial_loop_service_return;
         return DeuterosAmigaMainStageResourceLoadPlan{o,0x2ad24,0x32a24,
             0x21978,0x217f8,0x22a5a,0x217fe};
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopServiceReturnPlan>
     observe_main_stage_loop_service_return(const DeuterosAmigaObservedLocalCallReturn&o){
-        if(!main_stage_resource_load_||main_stage_loop_service_return_)return std::nullopt;
+        if(!main_stage_resource_load_||main_stage_loop_service_return_
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_initial_loop_service_return)
+            return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x217f8
             ||o.call_target!=0x22a5a||o.return_address!=0x217fe)
             throw std::runtime_error("Deuteros main-stage first loop service return does not match boundary");
         main_stage_loop_service_return_=o;last_command_sequence_=o.trace_sequence;
+        main_stage_state_=DeuterosAmigaMainStageState::awaiting_loop_prepare_body;
         return DeuterosAmigaMainStageLoopServiceReturnPlan{o,
             {0x21720,0x2171e,0x210f2},{0,0,1},0x21816,0x21276,0x2181c,
             "382932f57f5d3d181f93727198a6f5b7d6fff91522eed0438778a43e8ca417d5"};
@@ -4758,6 +4782,8 @@ public:
             0x12fec,a6_value,0x21314,0x10,-0xc0,
             "f86946a0b1323b9f85c0ab5259395fa11962961c72ca17bc02ab230bc008dbed"};
         main_stage_loop_prepare_body_plan_=result;
+        if(main_stage_state_==DeuterosAmigaMainStageState::awaiting_loop_prepare_body)
+            main_stage_state_=DeuterosAmigaMainStageState::awaiting_first_loop_graphics_return;
         // A restart has its own reached $21816 boundary. Once its new body
         // is prepared, expose the fresh palette call, not the stale caller.
         if(main_stage_loop_graphics_plan_&&main_stage_loop_graphics_plan_->next_call_address==0x21816)
@@ -4792,6 +4818,10 @@ public:
             plan.write_count=4;
         }
         ++main_stage_loop_graphics_returns_;
+        if(main_stage_state_==DeuterosAmigaMainStageState::awaiting_first_loop_graphics_return)
+            main_stage_state_=DeuterosAmigaMainStageState::awaiting_second_loop_graphics_return;
+        else if(main_stage_state_==DeuterosAmigaMainStageState::awaiting_second_loop_graphics_return)
+            main_stage_state_=DeuterosAmigaMainStageState::awaiting_loop_request_service;
         last_command_sequence_=o.trace_sequence;
         main_stage_loop_graphics_plan_=plan;
         return plan;
@@ -5172,7 +5202,10 @@ public:
     advance_main_stage_loop_request_return(const DeuterosAmigaObservedLoopRequestService&o,
         const std::uint32_t optional_pointer){
         if(!main_stage_loop_graphics_plan_||main_stage_loop_graphics_returns_!=2
-            ||main_stage_loop_request_returned_)return std::nullopt;
+            ||main_stage_loop_request_returned_
+            ||(main_stage_state_!=DeuterosAmigaMainStageState::awaiting_loop_request_service
+                &&main_stage_state_!=DeuterosAmigaMainStageState::loop_runtime_active))
+            return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.read_instruction!=0x208b0
             ||o.source_address!=4||o.exec_base<=0xa8||o.exec_base>0xffffff
             ||(o.exec_base&1U)!=0||o.call_address!=0x208b4
@@ -5186,6 +5219,7 @@ public:
         }else plan.next_instruction_address=0x21342;
         main_stage_loop_graphics_plan_=plan;
         main_stage_loop_request_returned_=true;last_command_sequence_=o.trace_sequence;
+        main_stage_state_=DeuterosAmigaMainStageState::loop_runtime_active;
         return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareReturnPlan>

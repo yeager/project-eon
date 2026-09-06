@@ -6177,7 +6177,7 @@ int main() {
                 bad_exec_2099e_return).accepted);
             assert(opening_controller.observe_deuteros_amiga_main_stage_2099e_exec_return(
                 exec_2099e_return).accepted);
-            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::startup_continuation);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_209ca_exec_return);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_2099e_exec_return(
                 exec_2099e_return).accepted);
             const auto after_2099e_return=
@@ -6204,6 +6204,7 @@ int main() {
                 bad_exec_209ca_return).accepted);
             assert(opening_controller.observe_deuteros_amiga_main_stage_209ca_exec_return(
                 exec_209ca_return).accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_209f0_exec_return);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_209ca_exec_return(
                 exec_209ca_return).accepted);
             const auto after_209ca_return=
@@ -6227,6 +6228,7 @@ int main() {
                 bad_exec_209f0_return).accepted);
             assert(opening_controller.observe_deuteros_amiga_main_stage_209f0_exec_return(
                 exec_209f0_return).accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_cia_a_bit_set);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_209f0_exec_return(
                 exec_209f0_return).accepted);
             const auto after_209f0_return=
@@ -6252,6 +6254,7 @@ int main() {
                     ==after_209f0_return->applied_batch_count);
             assert(opening_controller.observe_deuteros_amiga_main_stage_cia_a_bit_set(
                 cia_a_bit_set).accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_initial_resource_load);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_cia_a_bit_set(
                 cia_a_bit_set).accepted);
             const auto after_cia_a_bit_set=
@@ -6271,6 +6274,7 @@ int main() {
                 bad_resource_load).accepted);
             assert(opening_controller.observe_deuteros_amiga_main_stage_resource_load(
                 resource_load).accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_initial_loop_service_return);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_resource_load(
                 resource_load).accepted);
             const auto after_resource_load=opening_controller.native_runtime_memory_checkpoint();
@@ -6296,6 +6300,7 @@ int main() {
                     ==after_resource_load->applied_batch_count);
             assert(opening_controller.observe_deuteros_amiga_main_stage_loop_service_return(
                 loop_service_return).accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_loop_prepare_body);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_loop_service_return(
                 loop_service_return).accepted);
             const auto after_loop_service_return=
@@ -6312,6 +6317,7 @@ int main() {
             const auto loop_prepare_body_result=
                 opening_controller.advance_deuteros_amiga_main_stage_loop_prepare_body();
             assert(loop_prepare_body_result.accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_first_loop_graphics_return);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_loop_prepare_body().accepted);
             const auto after_loop_prepare_body=
                 opening_controller.native_runtime_memory_checkpoint();
@@ -6337,6 +6343,7 @@ int main() {
                 wrong_graphics_return).accepted);
             assert(opening_controller.observe_deuteros_amiga_main_stage_loop_graphics_return(
                 loop_graphics_return).accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_second_loop_graphics_return);
             const auto first_loop_graphics_checkpoint=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
             assert(first_loop_graphics_checkpoint&&first_loop_graphics_checkpoint->stop_before_address==0x2132a
                 &&first_loop_graphics_checkpoint->main_stage_loop_graphics
@@ -6350,6 +6357,7 @@ int main() {
             wrong_graphics_return.trace_sequence=runtime_copy_sequence+106;
             assert(opening_controller.observe_deuteros_amiga_main_stage_loop_graphics_return(
                 wrong_graphics_return).accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_loop_request_service);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_loop_graphics_return(
                 wrong_graphics_return).accepted);
             const auto after_loop_local_request=opening_controller.native_runtime_memory_checkpoint();
@@ -6385,6 +6393,7 @@ int main() {
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_loop_local_request->checksum);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_record_loop().accepted);
             assert(opening_controller.observe_deuteros_amiga_loop_request_service(loop_request_service).accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::loop_runtime_active);
             const auto after_loop_request_service=opening_controller.native_runtime_memory_checkpoint();
             assert(after_loop_request_service&&after_loop_request_service->applied_batch_count
                 ==after_loop_local_request->applied_batch_count+1);

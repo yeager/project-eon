@@ -8058,8 +8058,13 @@ that component independently, while the genuine-media coordinator path
 continues to supply the hash-addressed boundary and profile-five prefix.
 
 The profile-two main-stage startup now also exposes an explicit coarse native
-state machine from the committed `$20000` load through the `$20994` entry and
-typed `$2099e` return. Each accepted boundary advances exactly one state;
+state machine from the committed `$20000` load through the `$20994` entry,
+all three typed Exec returns, CIA-A update, initial resource load, and first
+graphics/request cycle. The `$209f0` result is represented as a proved branch:
+nonzero reaches the original `$209fa` spin, while zero continues toward the
+CIA boundary. The first request-service return hands off to an explicitly
+active recurring-loop state; it is not described as a terminal game state.
+Each accepted boundary advances exactly one state;
 malformed, stale, repeated, or out-of-order calls retain the prior state and
 memory. Instruction-level plan records remain the authority for addresses and
 effects, while the lifecycle checkpoint prevents callers from treating the
