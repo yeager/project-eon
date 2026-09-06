@@ -86,8 +86,36 @@ MillenniumAmigaBootstrapRelocatorSession::boundary() const {
         return {0x4251a,4,custom_chip_exec_prefix_execution_->pending_vector_address};
     case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_setup_call:
         return {0x4252e,0,0x415ea};
+    case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_graphics_allocation:
+        return {0x4164a,4,open_graphics_execution_->pending_vector_address};
     }
     throw std::runtime_error("Invalid Millennium Amiga bootstrap relocator state");
+}
+
+MillenniumAmigaOpenGraphicsExecution
+MillenniumAmigaBootstrapRelocatorSession::execute_open_graphics(
+    const MillenniumAmigaOpenGraphicsObservation& o) {
+    if(state_!=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_setup_call
+        ||!exec_transition_execution_||o.setup_call_address!=0x4252e
+        ||o.setup_call_target!=0x415ea||o.exec_base_source_address!=4
+        ||o.exec_base_value!=custom_chip_exec_prefix_execution_->resulting_a6
+        ||o.exec_base_value<=552
+        ||o.exec_call_address!=0x415f6||o.exec_vector!=-552
+        ||o.exec_return_address!=0x415fa||o.result_d0<=552
+        ||o.result_d0>0xffffff||(o.result_d0&1U)!=0||o.result_a7<4
+        ||o.result_a7>0xfffffc||(o.result_a7&1U)!=0
+        ||first_stage_bytes_[0x98a]!=0||first_stage_bytes_[0x98b]!=0)
+        throw std::runtime_error("Detached Millennium Amiga OpenLibrary observation");
+    MillenniumAmigaOpenGraphicsExecution r;
+    r.observed=o;r.library_name_address=0x41848;r.requested_version=0;
+    r.graphics_base_address=0x41844;r.graphics_base_value=o.result_d0;
+    r.open_count_address=0x4198a;r.open_count_value=1;
+    r.allocation_flags=0x10002;r.allocation_size=0x7d00;
+    r.pending_call_address=0x4164a;r.pending_exec_vector=-198;
+    r.pending_vector_address=o.exec_base_value-198;
+    open_graphics_execution_=r;
+    state_=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_graphics_allocation;
+    return r;
 }
 
 MillenniumAmigaExecTransitionExecution
@@ -116,7 +144,7 @@ MillenniumAmigaBootstrapRelocatorSession::execute_custom_chip_exec_prefix(
     if(state_!=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_custom_chip_write
         ||!bus_error_prefix_execution_||o.instruction_address!=0x42504
         ||o.custom_chip_base!=0xdff000||o.register_offset!=0x0180||o.value!=0x0f00
-        ||o.exec_base_source_address!=4||o.exec_base_value<=150
+        ||o.exec_base_source_address!=4||o.exec_base_value<=552
         ||o.exec_base_value>0xffffff||(o.exec_base_value&1U)!=0)
         throw std::runtime_error("Detached Millennium Amiga custom-chip/ExecBase observation");
     MillenniumAmigaCustomChipExecPrefixExecution r;

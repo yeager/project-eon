@@ -1342,6 +1342,24 @@ struct DeuterosAmigaMainStageCiaABitSetPlan {
     std::uint32_t local_call_address=0,local_call_target=0,local_return_address=0;
     std::string source_sha256;
 };
+struct DeuterosAmigaMainStageLoopServiceReturnPlan {
+    DeuterosAmigaObservedLocalCallReturn observation;
+    std::array<std::uint32_t,3> destination_addresses{};
+    std::array<std::uint16_t,3> values{};
+    std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
+    std::string source_sha256;
+};
+struct DeuterosAmigaMainStageLoopPrepareReturnPlan {
+    DeuterosAmigaObservedLocalCallReturn observation;
+    std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
+    std::string source_sha256;
+};
+struct DeuterosAmigaMainStageLoopSchedulerReturnPlan {
+    DeuterosAmigaObservedLocalCallReturn observation;
+    std::uint32_t next_instruction_address=0,next_address=0;
+    std::uint8_t next_bit=0;
+    std::string next_instruction_sha256;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -1404,7 +1422,13 @@ public:
             ||to_hex(sha256(main_stage.subspan(0x17de,14)))
                 !="bddd50234d5142a95cb582e1829eb49a00a79ff2f3307f8af4de8f880994e3f9"
             ||to_hex(sha256(main_stage.subspan(0x17e4,26)))
-                !="cb9046ad20fffc0a52f43431949927b4d159ecc795fe5f62dbbd01accd0684c7")
+                !="cb9046ad20fffc0a52f43431949927b4d159ecc795fe5f62dbbd01accd0684c7"
+            ||to_hex(sha256(main_stage.subspan(0x17fe,30)))
+                !="382932f57f5d3d181f93727198a6f5b7d6fff91522eed0438778a43e8ca417d5"
+            ||to_hex(sha256(main_stage.subspan(0x181c,6)))
+                !="91c2210c9aae535291275c95f4f39367c59bb37924438e9fa86f461e5dfe3d3a"
+            ||to_hex(sha256(main_stage.subspan(0x1822,8)))
+                !="72c3eb4341f9202ad6480cc45f030df358e2babffbfd8396b80715a86700557a")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
@@ -3706,6 +3730,37 @@ public:
             0x217f8,0x22a5a,0x217fe,
             "cb9046ad20fffc0a52f43431949927b4d159ecc795fe5f62dbbd01accd0684c7"};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopServiceReturnPlan>
+    observe_main_stage_loop_service_return(const DeuterosAmigaObservedLocalCallReturn&o){
+        if(!main_stage_cia_a_bit_set_||main_stage_loop_service_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x217f8
+            ||o.call_target!=0x22a5a||o.return_address!=0x217fe)
+            throw std::runtime_error("Deuteros main-stage first loop service return does not match boundary");
+        main_stage_loop_service_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaMainStageLoopServiceReturnPlan{o,
+            {0x21720,0x2171e,0x210f2},{0,0,1},0x21816,0x21276,0x2181c,
+            "382932f57f5d3d181f93727198a6f5b7d6fff91522eed0438778a43e8ca417d5"};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareReturnPlan>
+    observe_main_stage_loop_prepare_return(const DeuterosAmigaObservedLocalCallReturn&o){
+        if(!main_stage_loop_service_return_||main_stage_loop_prepare_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x21816
+            ||o.call_target!=0x21276||o.return_address!=0x2181c)
+            throw std::runtime_error("Deuteros main-stage loop prepare return does not match boundary");
+        main_stage_loop_prepare_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaMainStageLoopPrepareReturnPlan{o,0x2181c,0x21380,0x21822,
+            "91c2210c9aae535291275c95f4f39367c59bb37924438e9fa86f461e5dfe3d3a"};
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopSchedulerReturnPlan>
+    observe_main_stage_loop_scheduler_return(const DeuterosAmigaObservedLocalCallReturn&o){
+        if(!main_stage_loop_prepare_return_||main_stage_loop_scheduler_return_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x2181c
+            ||o.call_target!=0x21380||o.return_address!=0x21822)
+            throw std::runtime_error("Deuteros main-stage loop scheduler return does not match boundary");
+        main_stage_loop_scheduler_return_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaMainStageLoopSchedulerReturnPlan{o,0x21822,0xdff016,10,
+            "72c3eb4341f9202ad6480cc45f030df358e2babffbfd8396b80715a86700557a"};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3957,6 +4012,9 @@ private:
         main_stage_209f0_exec_return_;
     std::optional<DeuterosAmigaObservedMainStageCiaABitSet>
         main_stage_cia_a_bit_set_;
+    std::optional<DeuterosAmigaObservedLocalCallReturn> main_stage_loop_service_return_;
+    std::optional<DeuterosAmigaObservedLocalCallReturn> main_stage_loop_prepare_return_;
+    std::optional<DeuterosAmigaObservedLocalCallReturn> main_stage_loop_scheduler_return_;
     std::vector<std::uint8_t> first_title_exit_source_bytes_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;

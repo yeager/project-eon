@@ -41,6 +41,9 @@ enum class MillenniumDosSixthFunctionState {
     caller_helper_random_candidate_call_return,
     caller_helper_random_candidate_al,
     caller_helper_random_table_call_return,
+    caller_helper_layout_entry_call_return,
+    caller_helper_layout_refresh_call_return,
+    caller_helper_layout_final_call_return,
     restoration_first_call_return,
     restoration_second_call_return,
     restoration_third_call_return,
@@ -166,6 +169,8 @@ private:
         std::optional<std::uint16_t> known_ax = std::nullopt);
     void record_effect(std::uint16_t address, std::uint8_t width,
         std::optional<std::uint16_t> previous, std::uint16_t value);
+    void enter_caller_helper_layout_entry();
+    void advance_caller_helper_layout();
 
     MillenniumDosSixthFunctionKeyTrace trace_;
     MillenniumDosSixthFunctionState state_ =
@@ -187,6 +192,7 @@ private:
     std::vector<MillenniumDosSixthFunctionBulkEffect> caller_helper_bulk_effects_;
     std::array<std::uint8_t, 0x27> caller_helper_random_table_{};
     std::size_t caller_helper_random_table_entries_ = 0;
+    std::uint8_t caller_helper_layout_remaining_ = 0;
 };
 
 } // namespace eon

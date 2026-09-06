@@ -1854,7 +1854,18 @@ pairs without interpreting privilege state. The intervening D0 literal
 `$7fff0`, second ExecBase read from `$4`, and A1 push to `$65130` are
 byte-proved; its address derives from the observed even 24-bit post-return A7.
 The push commits atomically only after both returns validate, and
-the chain stops before the unresolved `$415ea` call at `$4252e`.
+the chain initially stops before `$415ea` at `$4252e`. A further typed service
+observation now names that local call, the ExecBase reread from `$4`, the
+`OpenLibrary` call at `$415f6` / vector `-$228`, its `$415fa` return, and the
+returned D0, SR and A7. Only a nonzero even 24-bit library base is admitted.
+The exact stage bytes identify `graphics.library`, requested version zero,
+the original zero word at `$4198a`, and `ADDQ.W #1`; consequently the graphics
+base write at `$41844` and resulting open count one commit as one atomic batch.
+The returned ABI value is not synthesized or interpreted. The successful
+local return then enters `$41ae4` / `$4163a`, proves allocation flags `$10002`
+and size `$7d00`, and stops before Exec vector `-$c6` at `$4164a`. ExecBase is
+validated above every reached negative vector offset, so vector-address
+subtraction cannot underflow.
 Frame materialization and
 the A1 save are one atomic batch; the later D0/ExecBase materialization is a
 second atomic batch, and an invalid hardware or ExecBase observation commits
@@ -3397,7 +3408,21 @@ The changed CIA byte and both big-endian words commit as one batch. The owned
 word must agree with resident runtime memory; a mismatch, wrong address/bit,
 replay, or memory failure commits none of the three writes. The CIA operation
 is retained only as raw stateful hardware evidence; no device, audio, timing,
-or gameplay meaning is assigned. No memory batch is emitted for the
+or gameplay meaning is assigned. The ordered typed `$217f8->$22a5a` return
+then admits the exact 30-byte span at `$217fe`, SHA-256
+`382932f57f5d3d181f93727198a6f5b7d6fff91522eed0438778a43e8ca417d5`.
+It atomically clears words `$21720` and `$2171e`, writes word one at `$210f2`,
+and stops at `$21816->$21276` (return `$2181c`). That service's typed return
+emits no effect and advances through the exact six-byte call span, SHA-256
+`91c2210c9aae535291275c95f4f39367c59bb37924438e9fa86f461e5dfe3d3a`,
+to `$2181c->$21380` (return `$21822`). The scheduler return is likewise typed
+without an inferred effect and stops before the `$21822` bit-10 test at raw
+address `$dff016`; that eight-byte opcode is independently hash-bound by
+SHA-256 `72c3eb4341f9202ad6480cc45f030df358e2babffbfd8396b80715a86700557a`.
+Across `$217fe..$21829`, the combined source SHA-256 is
+`5f6f98a368159e3d6415d3be5f1cdf38d38495f55b5ca6b5b212d36dcb9dc732`.
+Wrong call order/address, replay, revoked ownership, or batch failure cannot
+partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,
 missing/replaced resident stage, replay, or revoked owner produces no partial
 write. All observed results and service effects remain deliberately uninterpreted.
@@ -7170,15 +7195,23 @@ revocation destroys the span-backed session before its admitted media owner and
 rejects subsequent observations. See `MILLENNIUM_DOS_SIXTH_FUNCTION.md` for the
 instruction-level evidence and excluded `$7455` restoration routine.
 
-The caller-connected F6 helper is hash-owned through `$cd9c` (file
-`+$cb4e`, 335 bytes, SHA-256
-`2b0d73e35b2e49332d559b32128c425b08a983731e6ba8bc30e33c0dca2a88c4`).
+The caller-connected F6 helper is hash-owned through `$ce0d` (file
+`+$cb4e`, 448 bytes, SHA-256
+`8928e3ce8385e3d766c753905a357bd17c627c861006e492b5b702866fce4592`).
 After the observed `$cd60 -> $cbc0` return it records the literal 39-byte clear
 at `$cb1e`, then consumes explicit AL results from repeated `$cd72 -> $cc23`
 calls. Only the encoded mask/fold, excluded `$03..$08` range, duplicate check,
 and 18 accepted byte writes are owned. Rejections are atomic and retry without
 an effect. The next boundary is the second `$cd9a -> $cbc0` call; neither
 callee is assigned a random-number or timing meaning.
+
+After the second `$cbc0` return, the owned caller walks all 38 remaining bytes
+of the table it just built. Those bytes alone select `$ce83` or `$cea1`; exact
+returns are mandatory and their effects remain external. Seven encoded loop
+positions require `$cde9 -> $cbc0`. The terminal caller block records nine and
+28 one-byte zero stores at stride 12, rooted at `$5dda` and `$6047`, and stops
+at `$ce0b -> $4f08`. Detached returns are rejected before loop state or effects
+advance.
 ### Millennium DOS `$0c6d` / `$0c8b` far-memory copy continuations
 
 The hash-bound `$0bdf` service now owns both mode-1 copy branches through their

@@ -204,8 +204,8 @@ entries. Vector-9 tracing decrypts and executes the exact ADDX plus ten
 unconditional branch steps through `$411d8`, then the deterministic LEA,
 MOVEQ, table-word and ADD register prefix. A typed group-0 frame admits the
 24-bit bus-error route, and a typed custom-chip/ExecBase observation advances
-the deterministic setup. Continue at the internal setup call targeting `$415ea` at
-`$4252e`; do not infer its return.
+the deterministic setup. Continue at the Exec allocation vector `-198` at
+`$4164a`; do not infer its return.
 
 | Rank | Work package | Exact current evidence | Required acceptance evidence | Status / boundary |
 | --- | --- | --- | --- | --- |
@@ -448,9 +448,12 @@ That return now preserves both exact branches: nonzero terminates in the
 `$217de`, loads D1 with `$20000`, and reaches a typed `$217e4` stateful-bit
 observation on `$bfe001`. That observation now atomically sets raw bit 1,
 validates the resident `$21704` source word, mirrors it through local `$21926`
-at `$21704/$21706`, and stops at `$217f8->$22a5a` (return `$217fe`). Continue
-only with that typed local-service return; do not assign audio cadence, vector
-purpose, CIA/input meaning, or pointer semantics.
+at `$21704/$21706`, then accepts ordered typed returns from `$22a5a`, `$21276`,
+and scheduler `$21380`. The first return atomically clears words `$21720` and
+`$2171e` and sets `$210f2` to one; the other returns emit no invented effects.
+Execution stops before the hash-bound `$21822` bit-10 probe at `$dff016`.
+Continue only with a typed hardware-bit observation; do not assign audio
+cadence, scheduler results, CIA/input meaning, or pointer semantics.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

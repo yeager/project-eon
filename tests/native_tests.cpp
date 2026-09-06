@@ -3668,6 +3668,7 @@ int main() {
     assert((defjam_relocator.boundary()==eon::MillenniumAmigaBootstrapRelocatorBoundary{0x42504,0,0xdff180}));
     eon::MillenniumAmigaCustomChipExecBaseObservation custom_exec{0x42504,0xdff000,0x0180,0x0f00,4,0x676000};
     {auto bad=custom_exec;bad.value=0x0f01;bool rejected=false;try{static_cast<void>(defjam_relocator.execute_custom_chip_exec_prefix(bad));}catch(const std::runtime_error&){rejected=true;}assert(rejected);}
+    {auto bad=custom_exec;bad.exec_base_value=552;bool rejected=false;try{static_cast<void>(defjam_relocator.execute_custom_chip_exec_prefix(bad));}catch(const std::runtime_error&){rejected=true;}assert(rejected);}
     const auto custom_prefix=defjam_relocator.execute_custom_chip_exec_prefix(custom_exec);
     assert((custom_prefix.custom_chip_effect==eon::MillenniumAmigaBootstrapCustomChipEffect{0x42504,0xdff180,0x0f00})
         &&custom_prefix.saved_d0_address==0x40ffc&&custom_prefix.saved_d0_value==7
@@ -3683,6 +3684,16 @@ int main() {
         &&exec_path.resulting_sr==0x2000&&exec_path.pending_call_address==0x4252e
         &&exec_path.pending_call_target==0x415ea);
     assert((defjam_relocator.boundary()==eon::MillenniumAmigaBootstrapRelocatorBoundary{0x4252e,0,0x415ea}));
+    eon::MillenniumAmigaOpenGraphicsObservation open_graphics{0x4252e,0x415ea,4,0x676000,0x415f6,-552,0x415fa,0x680000,0x2000,0x65130};
+    {auto bad=open_graphics;bad.exec_vector=-198;bool rejected=false;try{static_cast<void>(defjam_relocator.execute_open_graphics(bad));}catch(const std::runtime_error&){rejected=true;}assert(rejected);}
+    const auto graphics_exec=defjam_relocator.execute_open_graphics(open_graphics);
+    assert(graphics_exec.library_name_address==0x41848&&graphics_exec.requested_version==0
+        &&graphics_exec.graphics_base_address==0x41844&&graphics_exec.graphics_base_value==0x680000
+        &&graphics_exec.open_count_address==0x4198a&&graphics_exec.open_count_value==1
+        &&graphics_exec.allocation_flags==0x10002&&graphics_exec.allocation_size==0x7d00
+        &&graphics_exec.pending_call_address==0x4164a&&graphics_exec.pending_exec_vector==-198
+        &&graphics_exec.pending_vector_address==0x675f3a);
+    assert((defjam_relocator.boundary()==eon::MillenniumAmigaBootstrapRelocatorBoundary{0x4164a,4,0x675f3a}));
     {
         bool rejected = false;
         try {
@@ -4590,6 +4601,17 @@ int main() {
                     &&setup_boundary->exec_transition_execution
                     &&setup_boundary->exec_transition_execution->saved_a1_address==0x65130);
                 assert(all_release_runtime.native_runtime_memory_diagnostics()->applied_batch_count==12);
+                eon::MillenniumAmigaOpenGraphicsRuntimeObservation graphics_observation{14,{0x4252e,0x415ea,4,0x676000,0x415f6,-552,0x415fa,0x680000,0x2000,0x65130}};
+                auto bad_graphics=graphics_observation;bad_graphics.service.result_d0=0;
+                const auto before_graphics=all_release_runtime.native_runtime_memory_diagnostics();
+                assert(!all_release_runtime.observe_millennium_amiga_open_graphics(bad_graphics).accepted);
+                assert(all_release_runtime.native_runtime_memory_diagnostics()->checksum==before_graphics->checksum);
+                assert(all_release_runtime.observe_millennium_amiga_open_graphics(graphics_observation).accepted);
+                const auto allocation_boundary=all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
+                assert(allocation_boundary&&allocation_boundary->boundary.instruction_address==0x4164a
+                    &&allocation_boundary->open_graphics_execution
+                    &&allocation_boundary->open_graphics_execution->open_count_value==1);
+                assert(all_release_runtime.native_runtime_memory_diagnostics()->applied_batch_count==13);
             }else{
                 assert(!all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint());
                 assert(all_release_runtime.native_runtime_memory_diagnostics()->initialized_byte_count==0);
@@ -6003,6 +6025,53 @@ int main() {
             assert(runtime_byte(*after_cia_a_bit_set,0x21705)==0x78);
             assert(runtime_byte(*after_cia_a_bit_set,0x21706)==0x56);
             assert(runtime_byte(*after_cia_a_bit_set,0x21707)==0x78);
+            eon::DeuterosAmigaObservedLocalCallReturn loop_service_return{
+                runtime_copy_sequence+103,0x217f8,0x22a5a,0x217fe,0xabcdef01,0x2700};
+            auto bad_loop_service_return=loop_service_return;
+            bad_loop_service_return.call_target-=2;
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_loop_service_return(
+                bad_loop_service_return).accepted);
+            const auto after_bad_loop_service_return=
+                opening_controller.native_runtime_memory_checkpoint();
+            assert(after_bad_loop_service_return
+                &&after_bad_loop_service_return->applied_batch_count
+                    ==after_cia_a_bit_set->applied_batch_count);
+            assert(opening_controller.observe_deuteros_amiga_main_stage_loop_service_return(
+                loop_service_return).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_loop_service_return(
+                loop_service_return).accepted);
+            const auto after_loop_service_return=
+                opening_controller.native_runtime_memory_checkpoint();
+            assert(after_loop_service_return
+                &&after_loop_service_return->applied_batch_count
+                    ==after_cia_a_bit_set->applied_batch_count+1);
+            assert(runtime_byte(*after_loop_service_return,0x21720)==0x00);
+            assert(runtime_byte(*after_loop_service_return,0x21721)==0x00);
+            assert(runtime_byte(*after_loop_service_return,0x2171e)==0x00);
+            assert(runtime_byte(*after_loop_service_return,0x2171f)==0x00);
+            assert(runtime_byte(*after_loop_service_return,0x210f2)==0x00);
+            assert(runtime_byte(*after_loop_service_return,0x210f3)==0x01);
+            eon::DeuterosAmigaObservedLocalCallReturn loop_prepare_return{
+                runtime_copy_sequence+104,0x21816,0x21276,0x2181c,0x12345678,0};
+            assert(opening_controller.observe_deuteros_amiga_main_stage_loop_prepare_return(
+                loop_prepare_return).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_loop_prepare_return(
+                loop_prepare_return).accepted);
+            eon::DeuterosAmigaObservedLocalCallReturn loop_scheduler_return{
+                runtime_copy_sequence+105,0x2181c,0x21380,0x21822,0x87654321,0};
+            auto bad_loop_scheduler_return=loop_scheduler_return;
+            bad_loop_scheduler_return.return_address+=2;
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_loop_scheduler_return(
+                bad_loop_scheduler_return).accepted);
+            assert(opening_controller.observe_deuteros_amiga_main_stage_loop_scheduler_return(
+                loop_scheduler_return).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_loop_scheduler_return(
+                loop_scheduler_return).accepted);
+            const auto after_loop_scheduler_return=
+                opening_controller.native_runtime_memory_checkpoint();
+            assert(after_loop_scheduler_return
+                &&after_loop_scheduler_return->applied_batch_count
+                    ==after_loop_service_return->applied_batch_count);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory
@@ -7923,6 +7992,55 @@ int main() {
                 == std::optional<std::uint16_t>{0xcbc0}
             && admitted_sixth_helper_prefix.caller_helper_random_table_entries() == 0x12
             && admitted_sixth_helper_prefix.effects().size() == 50);
+        admitted_sixth_helper_prefix.observe_call_return(0xcd9a, 0xcd9d);
+        const auto layout_effects_before_wrong_return =
+            admitted_sixth_helper_prefix.effects();
+        bool wrong_layout_return_rejected = false;
+        try {
+            admitted_sixth_helper_prefix.observe_call_return(0xcdbb, 0xcdbf);
+        } catch (const std::runtime_error&) {
+            wrong_layout_return_rejected = true;
+        }
+        assert(wrong_layout_return_rejected
+            && admitted_sixth_helper_prefix.effects()
+                == layout_effects_before_wrong_return);
+        for (std::uint16_t table_index = 1; table_index <= 0x26; ++table_index) {
+            const bool occupied = table_index == 1 || table_index == 2
+                || (table_index >= 9 && table_index <= 24);
+            const auto entry_boundary = admitted_sixth_helper_prefix.boundary();
+            assert(entry_boundary.instruction_address == (occupied ? 0xcdbb : 0xcdb6)
+                && entry_boundary.call_target
+                    == std::optional<std::uint16_t>{occupied ? 0xcea1 : 0xce83}
+                && entry_boundary.known_ax
+                    == std::optional<std::uint16_t>{table_index});
+            admitted_sixth_helper_prefix.observe_call_return(
+                entry_boundary.instruction_address,
+                static_cast<std::uint16_t>(entry_boundary.instruction_address + 3U));
+            if (table_index == 2 || table_index == 7 || table_index == 12
+                || table_index == 17 || table_index == 22 || table_index == 27
+                || table_index == 32) {
+                assert(admitted_sixth_helper_prefix.boundary().instruction_address
+                        == 0xcde9
+                    && admitted_sixth_helper_prefix.boundary().call_target
+                        == std::optional<std::uint16_t>{0xcbc0});
+                admitted_sixth_helper_prefix.observe_call_return(0xcde9, 0xcdec);
+            }
+        }
+        assert(admitted_sixth_helper_prefix.state()
+                == eon::MillenniumDosSixthFunctionState::caller_helper_layout_final_call_return
+            && admitted_sixth_helper_prefix.boundary().instruction_address == 0xce0b
+            && admitted_sixth_helper_prefix.boundary().call_target
+                == std::optional<std::uint16_t>{0x4f08}
+            && admitted_sixth_helper_prefix.effects().size() == 50
+            && admitted_sixth_helper_prefix.caller_helper_bulk_effects().size() == 7
+            && (admitted_sixth_helper_prefix.caller_helper_bulk_effects()[5]
+                == eon::MillenniumDosSixthFunctionBulkEffect{
+                    eon::MillenniumDosSixthFunctionBulkEffectKind::fill,
+                    0, 0x5dda, 9, 1, 0, 0x000c, 0})
+            && (admitted_sixth_helper_prefix.caller_helper_bulk_effects()[6]
+                == eon::MillenniumDosSixthFunctionBulkEffect{
+                    eon::MillenniumDosSixthFunctionBulkEffectKind::fill,
+                    0, 0x6047, 0x001c, 1, 0, 0x000c, 0}));
         admitted.observe_private_interrupt_return(0x0129, 0);
         admitted.observe_runtime_byte(0xd349, 0xda05, 3);
         admitted.observe_native_call_return(0xd373, 0xd376);

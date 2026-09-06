@@ -177,6 +177,9 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaMainStage209caExecReturnPlan> observe_main_stage_209ca_exec_return(const DeuterosAmigaObservedMainStageExecReturn&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_209ca_exec_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStage209f0ExecReturnPlan> observe_main_stage_209f0_exec_return(const DeuterosAmigaObservedMainStageExecReturn&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_209f0_exec_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageCiaABitSetPlan> observe_main_stage_cia_a_bit_set(const DeuterosAmigaObservedMainStageCiaABitSet&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_cia_a_bit_set(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopServiceReturnPlan> observe_main_stage_loop_service_return(const DeuterosAmigaObservedLocalCallReturn&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_loop_service_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareReturnPlan> observe_main_stage_loop_prepare_return(const DeuterosAmigaObservedLocalCallReturn&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_loop_prepare_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopSchedulerReturnPlan> observe_main_stage_loop_scheduler_return(const DeuterosAmigaObservedLocalCallReturn&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_loop_scheduler_return(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 

@@ -43,9 +43,9 @@ It calls `$cc4e`, discards one stack word after the typed return at `$74c4`,
 and tail-jumps to `$7455`. The runtime therefore admits restoration through
 this caller boundary; it does not bypass the opaque call.
 
-The caller helper is now opened through its exact `$cc4e..$cd9c` span
-(335-byte SHA-256
-`2b0d73e35b2e49332d559b32128c425b08a983731e6ba8bc30e33c0dca2a88c4`).
+The caller helper is now opened through its exact `$cc4e..$ce0d` span
+(448-byte SHA-256
+`8928e3ce8385e3d766c753905a357bd17c627c861006e492b5b702866fce4592`).
 The typed path follows calls to `$408a`, `$4d36` with `AX=$0028`, `$0666` with
 `AX=$00c1`, and `$05f1`; records the literal word writes `$cbbe := $080f` and
 `$cbe1 := 0`; then observes the far pointer loaded from `$0112:$0114`. The
@@ -75,6 +75,15 @@ reproduced until exactly 18 distinct accepted bytes have been written within
 that cleared range. Rejected values commit no memory effect and repeat the
 same typed call. The continuation stops at the second `$cd9a -> $cbc0` call;
 no randomness, clock source, `$cc23` source, or `$cbc0` behavior is inferred.
+
+After that exact return, the caller consumes all 38 remaining bytes of its own
+table. A zero byte selects `$cdb6 -> $ce83`; a nonzero byte selects `$cdbb ->
+$cea1`, with the proved table index or byte exposed as AX. The callees remain
+opaque. Seven statically selected iterations additionally require the exact
+`$cde9 -> $cbc0` return. Once the loop completes, the encoded one-byte zero
+fills cover nine cells from `$5dda` and 28 cells from `$6047`, both at stride
+12. Execution stops at `$ce0b -> $4f08`; no callee behavior or layout meaning
+is inferred.
 
 The typed session exposes only addresses, call targets, proved register values,
 and memory effects. In particular, the byte read at `$613a` is not assigned a

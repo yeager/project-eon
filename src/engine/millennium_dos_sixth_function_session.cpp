@@ -132,6 +132,33 @@ void MillenniumDosSixthFunctionSession::record_effect(
     effects_.push_back({address, width, previous, value});
 }
 
+void MillenniumDosSixthFunctionSession::enter_caller_helper_layout_entry() {
+    const auto table_index = static_cast<std::size_t>(0x27U - caller_helper_layout_remaining_);
+    const auto value = caller_helper_random_table_[table_index];
+    if (value == 0) {
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_layout_entry_call_return,
+            0xcdb6, 0xce83, static_cast<std::uint16_t>(table_index));
+    } else {
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_layout_entry_call_return,
+            0xcdbb, 0xcea1, value);
+    }
+}
+
+void MillenniumDosSixthFunctionSession::advance_caller_helper_layout() {
+    if (--caller_helper_layout_remaining_ != 0) {
+        enter_caller_helper_layout_entry();
+        return;
+    }
+    caller_helper_bulk_effects_.push_back({
+        MillenniumDosSixthFunctionBulkEffectKind::fill,
+        0, 0x5dda, 9, 1, 0, 0x000c, 0});
+    caller_helper_bulk_effects_.push_back({
+        MillenniumDosSixthFunctionBulkEffectKind::fill,
+        0, 0x6047, 0x001c, 1, 0, 0x000c, 0});
+    enter_call(MillenniumDosSixthFunctionState::caller_helper_layout_final_call_return,
+        0xce0b, 0x4f08);
+}
+
 void MillenniumDosSixthFunctionSession::observe_runtime_word(
     const std::uint16_t instruction_address, const std::uint16_t runtime_address,
     const std::uint16_t value) {
@@ -335,6 +362,27 @@ void MillenniumDosSixthFunctionSession::observe_call_return(
         return;
     case MillenniumDosSixthFunctionState::caller_helper_random_candidate_call_return:
         state_ = MillenniumDosSixthFunctionState::caller_helper_random_candidate_al;
+        return;
+    case MillenniumDosSixthFunctionState::caller_helper_random_table_call_return:
+        caller_helper_layout_remaining_ = 0x26;
+        enter_caller_helper_layout_entry();
+        return;
+    case MillenniumDosSixthFunctionState::caller_helper_layout_entry_call_return:
+        if (caller_helper_layout_remaining_ == 0x25
+            || caller_helper_layout_remaining_ == 0x20
+            || caller_helper_layout_remaining_ == 0x1b
+            || caller_helper_layout_remaining_ == 0x16
+            || caller_helper_layout_remaining_ == 0x11
+            || caller_helper_layout_remaining_ == 0x0c
+            || caller_helper_layout_remaining_ == 0x07) {
+            enter_call(MillenniumDosSixthFunctionState::caller_helper_layout_refresh_call_return,
+                0xcde9, 0xcbc0);
+        } else {
+            advance_caller_helper_layout();
+        }
+        return;
+    case MillenniumDosSixthFunctionState::caller_helper_layout_refresh_call_return:
+        advance_caller_helper_layout();
         return;
     case MillenniumDosSixthFunctionState::restoration_first_call_return:
         enter_call(MillenniumDosSixthFunctionState::restoration_second_call_return,
