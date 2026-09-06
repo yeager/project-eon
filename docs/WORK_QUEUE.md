@@ -464,8 +464,10 @@ The zero branch now executes the complete native record construction and
 first processing pass, typed buffer selection, full buffer clear, and initial
 no-draw record walk and owned view selection through `$216ee/-$de`. Continue
 with the now-typed view return and resumable hardware wait into the next
-processing pass; recover its `$214aa` command path and
-the separate sprite, `$22330`, and `$214aa` paths. Do not reuse unrelated observed bases or assign graphics,
+processing pass. Its owned `$214aa` local interpreter now reaches the first
+sound stack-save boundary `$215c0`; connect the retained command position to
+the sound/palette/random continuations and then resume the same record.
+Recover the separate sprite and `$22330` paths. Do not reuse unrelated observed bases or assign graphics,
 audio, scheduler, input, or resource semantics.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,

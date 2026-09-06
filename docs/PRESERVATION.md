@@ -3604,9 +3604,36 @@ return; a set bit follows `$216fc`, the caller RTS at `$214a8`, and the
 initial `$2181c->$21380` continuation. Samples commit the observed byte and
 session state atomically. Replay and changed call metadata commit nothing.
 Tests cover two clear-bit samples followed by release. The next processing
-pass reaches the still-unimplemented `$214aa` command route and rejects
-without changing the previously committed memory. No synthetic wait result,
+pass now executes the owned `$214aa` command route described below. No synthetic wait result,
 displayed frame, or graphics-library side effect is implied.
+
+The owned command interpreter is gated by the complete `$214aa..$21695`
+span (ADF `$6caa`, length `$1ec`, SHA-256
+`2f007bcc643fd3ac70ddbf8f38fdb256c4a81253e11b28862cf596b235ab357a`).
+It reads the transferred command bytes from owned runtime memory and applies
+local selector, position, timer, mode, relative-call/return, alternate-resource,
+input-gate and transition-request stores in original instruction order.
+Dispatch uses `CMP.B`, preserving the full word stored by `MOVE.W`; word
+arithmetic wraps while pointer arithmetic follows the original 32-bit operations.
+Reads must remain aligned, owned and inside the 24-bit address boundary.
+Local command returns revisit the same scheduler record at `$2138e` rather
+than advancing to the next record. A shared 4096-command budget bounds both
+command branches and zero-duration scheduler revisits; exhaustion rejects the
+entire private pass. Store batch identifiers include the starting committed
+batch count so later successful passes cannot collide with the first pass.
+
+Sound, palette and random operations are explicit resumable-position boundaries,
+not implemented service effects: `$215c0` before the sound stack saves,
+`$214ee` before palette MOVEM, and `$2159c`/`$2163a` before random calls.
+The checkpoint retains record address, cursor, D0, the sound D1 low word,
+and scheduler index. It does not claim a recovered stack pointer or D1 high
+word, and admission/resumption of these services remains to be connected.
+The genuine first record at resource offset `$382` executes opcode `$13`,
+setting `$2171e` to one, then decodes sound arguments `(1,1)` and stops at
+`$215c0` with cursor `$32db8`. The second record's real palette operand and
+the third record's real selector/coordinate/wait commands are also tested
+directly from the transferred bytes. These tests are source-data execution,
+not emulator capture or proof of rendered/audio parity.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,

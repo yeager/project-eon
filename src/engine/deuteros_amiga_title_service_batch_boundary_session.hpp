@@ -4,6 +4,7 @@
 #include "data/deuteros_amiga_loader.hpp"
 #include "data/sha256.hpp"
 #include "engine/bounded_memory_transfer.hpp"
+#include "engine/deuteros_amiga_owned_commands.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -1399,6 +1400,7 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
     std::array<MemoryTransferElementWidth,4> write_widths{};
     std::size_t write_count=0;
     std::uint32_t next_instruction_address=0;
+    std::optional<DeuterosAmigaOwnedCommandStop> command_stop=std::nullopt;
 };
 struct DeuterosAmigaObservedLoopRequestService {
     std::uint64_t trace_sequence=0;
@@ -1513,7 +1515,9 @@ public:
             ||to_hex(sha256(main_stage.subspan(0x16d0,34)))
                 !="7c319ba8ad1cc091e22888583653e0edb3657dd007626b4590ca3f000b550585"
             ||to_hex(sha256(main_stage.subspan(0x16f2,12)))
-                !="3ee8aeaeb214bfb7cf210c7575043595d87340370ea8f85eda94eb51d53961a7")
+                !="3ee8aeaeb214bfb7cf210c7575043595d87340370ea8f85eda94eb51d53961a7"
+            ||to_hex(sha256(main_stage.subspan(0x14aa,0x1ec)))
+                !="2f007bcc643fd3ac70ddbf8f38fdb256c4a81253e11b28862cf596b235ab357a")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
@@ -3955,13 +3959,20 @@ public:
         return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
-    advance_main_stage_scheduler_pass(){
+    advance_main_stage_scheduler_pass(std::optional<DeuterosAmigaOwnedCommandStop> stop=std::nullopt){
         if(!main_stage_loop_graphics_plan_||main_stage_loop_graphics_plan_->next_instruction_address!=0x21380)
             return std::nullopt;
         auto plan=*main_stage_loop_graphics_plan_;
         plan.next_instruction_address=0;
         plan.pending_read_instruction=0x2143a;plan.pending_read_address=0xdff01f;
         plan.next_call_address=0x21442;plan.local_call_target=0x21698;plan.next_return_address=0x21448;
+        plan.command_stop=stop;
+        if(stop){
+            plan.next_instruction_address=stop->instruction;
+            plan.pending_read_instruction=0;plan.pending_read_address=0;
+            plan.next_call_address=0;plan.local_call_target=0;plan.next_return_address=0;
+            plan.a0_value=stop->record;plan.a1_value=stop->cursor;plan.d0_value=stop->d0;
+        }
         main_stage_loop_graphics_plan_=plan;return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>

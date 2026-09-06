@@ -6417,8 +6417,86 @@ int main() {
             assert(opening_controller.observe_deuteros_amiga_view_wait(view_wait).accepted);
             assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x21380);
             const auto after_view_release=opening_controller.native_runtime_memory_checkpoint();
+            assert(opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
+            const auto command_checkpoint=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+            assert(command_checkpoint&&command_checkpoint->stop_before_address==0x215c0);
+            assert(command_checkpoint->main_stage_loop_graphics->command_stop);
+            const auto command_stop=*command_checkpoint->main_stage_loop_graphics->command_stop;
+            assert(command_stop.record==0x210f8&&command_stop.cursor==0x32db8);
+            assert(command_stop.scheduler_index==0&&command_stop.d0==0x30001&&command_stop.d1_word==1);
+            const auto after_owned_commands=opening_controller.native_runtime_memory_checkpoint();
+            assert(after_owned_commands->checksum!=after_view_release->checksum);
+            const auto input_gate=std::find_if(after_owned_commands->initialized_bytes.begin(),
+                after_owned_commands->initialized_bytes.end(),[](const auto& cell){
+                    return cell.location.address_space==eon::NativeRuntimeAddressSpace::linear
+                        &&cell.location.offset==0x2171e;
+                });
+            assert(input_gate!=after_owned_commands->initialized_bytes.end()&&input_gate->value==1);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
-            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_view_release->checksum);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_owned_commands->checksum);
+
+            // Exercise other real resource streams without replacing their bytes.
+            // Writes are private presentation-independent scratch state, not captures.
+            std::map<std::uint32_t,std::uint8_t> owned_command_bytes;
+            for(const auto& cell:after_view_release->initialized_bytes)
+                if(cell.location.address_space==eon::NativeRuntimeAddressSpace::linear)
+                    owned_command_bytes.emplace(static_cast<std::uint32_t>(cell.location.offset),cell.value);
+            const auto command_read=[&](std::uint32_t address,std::uint32_t width){
+                if((width>1&&(address&1U))||address>0x1000000U-width)
+                    throw std::runtime_error("Invalid owned command test read");
+                std::uint32_t value=0;
+                for(std::uint32_t j=0;j<width;++j)value=(value<<8U)|owned_command_bytes.at(address+j);
+                return value;
+            };
+            const auto command_write=[&](std::uint32_t address,eon::MemoryTransferElementWidth width,std::uint32_t value){
+                const auto bytes=static_cast<std::uint32_t>(width);
+                for(std::uint32_t j=0;j<bytes;++j)
+                    owned_command_bytes[address+j]=static_cast<std::uint8_t>(value>>((bytes-1-j)*8U));
+            };
+            std::size_t commands_left=4096;
+            const auto palette_stop=eon::execute_deuteros_amiga_owned_commands(
+                0x21110,0x32a24+0x3c+10,0x30000,command_read,command_write,commands_left);
+            assert(palette_stop.instruction==0x214ee&&palette_stop.d0==0x30001);
+            assert(palette_stop.cursor==0x32a24+0x3c+14);
+            const auto wait_stop=eon::execute_deuteros_amiga_owned_commands(
+                0x21128,0x32a24+0x92c+10,0x30000,command_read,command_write,commands_left);
+            assert(wait_stop.instruction==0&&wait_stop.d0==0x30050);
+            assert(command_read(0x21128+6,2)==3&&command_read(0x21128+8,2)==0x50);
+            assert(command_read(0x21128+16,4)==wait_stop.cursor);
+            // The following genuine commands select a sprite, set coordinates,
+            // and yield a 1000-tick wait; execute those exact bytes in sequence.
+            const auto next_wait=eon::execute_deuteros_amiga_owned_commands(
+                0x21128,wait_stop.cursor,0x30000,command_read,command_write,commands_left);
+            assert(next_wait.instruction==0&&command_read(0x21128,2)==0x807c);
+            assert(command_read(0x21128+2,4)==0x000f0075&&command_read(0x21128+8,2)==1000);
+            const auto random_stop=eon::execute_deuteros_amiga_owned_commands(
+                0x21128,next_wait.cursor,0,command_read,command_write,commands_left);
+            assert(random_stop.instruction==0x2159c&&random_stop.cursor==next_wait.cursor+2);
+            auto fourth_stop=eon::execute_deuteros_amiga_owned_commands(
+                0x21140,0x32a24+0xa78+10,0,command_read,command_write,commands_left);
+            assert(fourth_stop.instruction==0&&command_read(0x21140+8,2)==0x50);
+            fourth_stop=eon::execute_deuteros_amiga_owned_commands(
+                0x21140,fourth_stop.cursor,0,command_read,command_write,commands_left);
+            assert(fourth_stop.instruction==0&&command_read(0x21140+6,2)==0x14);
+            fourth_stop=eon::execute_deuteros_amiga_owned_commands(
+                0x21140,fourth_stop.cursor,0,command_read,command_write,commands_left);
+            assert(fourth_stop.instruction==0&&command_read(0x21140,2)==0xfe);
+            assert(command_read(0x21140+12,4)==0x32a24+0xb38);
+            assert(command_read(0x21140+6,2)==5&&command_read(0x21140+8,4)==0x00080044);
+            auto second_cursor=palette_stop.cursor;
+            for(unsigned command_group=0;command_group<4;++command_group){
+                const auto second_stop=eon::execute_deuteros_amiga_owned_commands(
+                    0x21110,second_cursor,0,command_read,command_write,commands_left);
+                assert(second_stop.instruction==0);second_cursor=second_stop.cursor;
+            }
+            assert(command_read(0x21110,2)==0x8000&&command_read(0x21110+2,4)==0x000700c7);
+            assert(command_read(0x21110+6,2)==6&&command_read(0x21110+8,4)==0x0026fffe);
+            assert(command_read(0x21110+12,4)==0);
+            bool command_budget_rejected=false;commands_left=0;
+            try{static_cast<void>(eon::execute_deuteros_amiga_owned_commands(
+                0x21128,next_wait.cursor,0,command_read,command_write,commands_left));}
+            catch(const std::runtime_error&){command_budget_rejected=true;}
+            assert(command_budget_rejected);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

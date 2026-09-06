@@ -4538,31 +4538,41 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_scheduler_pass(){
             return value;
         };
         std::size_t stores=0;
+        const auto pass_id=memory.diagnostics().applied_batch_count;
         const auto write=[&](std::uint32_t address,MemoryTransferElementWidth width,std::uint32_t value){
-            const auto applied=memory.apply({"deuteros-amiga-scheduler-store-"+std::to_string(stores++),true,{{
+            const auto applied=memory.apply({"deuteros-amiga-scheduler-store-"+std::to_string(pass_id)+"-"+std::to_string(stores++),true,{{
                 1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},width,NativeRuntimeByteOrder::big_endian,value}}});
             if(!applied.accepted)throw std::runtime_error(applied.error);
         };
-        const auto command_boundary=[](){
-            throw std::runtime_error("Deuteros scheduler requires the local $214aa command continuation");
-        };
+        std::optional<DeuterosAmigaOwnedCommandStop> command_stop;
+        std::size_t command_budget=4096;
         const auto count=read(0x21248,2);
         for(std::uint32_t i=0;i<(count?count:0x10000U);++i){
             const auto record=0x210f8+i*24U;
-            if(read(record+16,4)==0)continue;
+            // Each local RTS branches back to $2138e for this same record.
+            // The shared budget also bounds zero-duration yielding loops.
+            for(;;){
+            const auto cursor=read(record+16,4);
+            if(cursor==0)break;
             const auto mode=read(record+6,2);
-            const auto timer=[&](){
-                const auto value=read(record+8,2);
-                if(value==0)command_boundary();
-                write(record+8,MemoryTransferElementWidth::word,value-1U);
+            bool revisit=false;
+            const auto command=[&](std::uint32_t d0){
+                auto stop=execute_deuteros_amiga_owned_commands(record,cursor,d0,read,write,command_budget);
+                if(stop.instruction){stop.scheduler_index=i;command_stop=stop;}
+                else revisit=true;
             };
-            if(mode!=0&&(mode&0xffU)==3){timer();continue;}
-            if(mode!=0&&(mode&0xffU)==5){
+            const auto timer=[&](std::uint32_t d0_high){
+                const auto value=read(record+8,2);
+                if(value==0)command(d0_high&0xffff0000U);
+                else write(record+8,MemoryTransferElementWidth::word,value-1U);
+            };
+            if(mode!=0&&(mode&0xffU)==3){timer(cursor);}
+            else if(mode!=0&&(mode&0xffU)==5){
                 if(((read(0x22a20,4)-1U)&0xffffU)==read(record+8,2)
-                    &&read(record+10,2)<read(0x22a16,2))command_boundary();
-                continue;
+                    &&read(record+10,2)<read(0x22a16,2))
+                    command((cursor&0xffff0000U)|read(record+10,2));
             }
-            if(mode!=0&&(mode&0xffU)==6){
+            else if(mode!=0&&(mode&0xffU)==6){
                 const auto value=read(record+12,4);
                 const auto low=value&0xffffU;
                 if((low&0xffU)!=0){
@@ -4571,17 +4581,19 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_scheduler_pass(){
                     write(record+14,MemoryTransferElementWidth::word,value>>16U);
                     write(record+4,MemoryTransferElementWidth::word,
                         (read(record+4,2)+read(record+10,2))&0xffffU);
-                    timer();
+                    timer(value<<16U);
                 }
-                continue;
             }
-            if(mode!=0&&(mode&0xffU)==0x14){
-                if(read(0x2171e,1)!=0&&read(0x21720,2)!=0)command_boundary();
-                continue;
+            else if(mode!=0&&(mode&0xffU)==0x14){
+                if(read(0x2171e,1)!=0&&read(0x21720,2)!=0)
+                    command((cursor&0xffff0000U)|mode);
             }
-            write(record+16,MemoryTransferElementWidth::longword,0);
+            else write(record+16,MemoryTransferElementWidth::longword,0);
+            if(command_stop||!revisit)break;
+            }
+            if(command_stop)break;
         }
-        if(!deuteros_amiga_->advance_main_stage_scheduler_pass()){
+        if(!deuteros_amiga_->advance_main_stage_scheduler_pass(command_stop)){
             result.error="Deuteros scheduler disappeared before commit";return result;
         }
         *native_runtime_memory_=std::move(memory);result.accepted=true;

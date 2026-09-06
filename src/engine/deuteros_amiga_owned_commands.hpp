@@ -1,0 +1,102 @@
+#pragma once
+
+#include "engine/bounded_memory_transfer.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <stdexcept>
+
+namespace eon {
+
+// Registers needed to resume the local $214aa interpreter. A nonzero stop
+// is before an unexecuted instruction, not evidence of a completed service.
+struct DeuterosAmigaOwnedCommandStop {
+    std::uint32_t instruction = 0;
+    std::uint32_t record = 0, cursor = 0, d0 = 0;
+    std::uint16_t d1_word = 0;
+    std::uint32_t scheduler_index = 0;
+};
+
+// Read/write operate on the caller's private owned-memory transaction.
+// This is the recovered game's command language, not a CPU emulator.
+template<class Read, class Write>
+DeuterosAmigaOwnedCommandStop execute_deuteros_amiga_owned_commands(
+    std::uint32_t record, std::uint32_t cursor, std::uint32_t initial_d0, Read read, Write write,
+    std::size_t& remaining_commands) {
+    using Width = MemoryTransferElementWidth;
+    DeuterosAmigaOwnedCommandStop state{0,record,cursor,initial_d0,0,0};
+    const auto word = [&]() {
+        const auto value=read(state.cursor,2); state.cursor+=2; return value;
+    };
+    const auto longword = [&]() {
+        const auto value=read(state.cursor,4); state.cursor+=4; return value;
+    };
+    const auto save_cursor = [&]() { write(record+16,Width::longword,state.cursor); };
+    for (;;) {
+        if (remaining_commands==0)
+            throw std::runtime_error("Deuteros owned command budget exhausted");
+        --remaining_commands;
+        // MOVE.W preserves the upper word; CMP.B dispatches on the low byte.
+        state.d0=(state.d0&0xffff0000U)|word();
+        if ((state.d0&0xffffU)==0) {
+            write(record+6,Width::word,0); return state;
+        }
+        switch (state.d0&0xffU) {
+        case 1:
+            state.d0=(state.d0&0xffff0000U)|word();
+            write(record,Width::word,state.d0&0xffffU); break;
+        case 2:
+            state.d0=longword(); write(record+2,Width::longword,state.d0); break;
+        case 3: case 0x14:
+            write(record+6,Width::word,state.d0&0xffffU);
+            state.d0=(state.d0&0xffff0000U)|word();
+            write(record+8,Width::word,state.d0&0xffffU); save_cursor(); return state;
+        case 4:
+            state.d0=(state.d0&0xffff0000U)|word();
+            state.instruction=0x214ee; return state; // Before MOVEM stack save.
+        case 5: case 6: {
+            const auto mode=state.d0&0xffU;
+            write(record+6,Width::word,state.d0&0xffffU);
+            state.d0=longword(); write(record+8,Width::longword,state.d0);
+            if (mode==6) { state.d0=longword(); write(record+12,Width::longword,state.d0); }
+            save_cursor(); return state;
+        }
+        case 7: case 8: {
+            const auto destination=record+((state.d0&0xffU)==7?2U:4U);
+            state.d0=(state.d0&0xffff0000U)|word();
+            write(destination,Width::word,(read(destination,2)+state.d0)&0xffffU); break;
+        }
+        case 9:
+            state.d0=read(state.cursor,4);
+            state.cursor-=state.d0; break; // SUBA.L uses the operand address.
+        case 0x0a:
+            state.instruction=0x2159c; return state;
+        case 0x0b:
+            state.d0=(state.d0&0xffff0000U)|word();
+            state.d1_word=static_cast<std::uint16_t>(word()); state.instruction=0x215c0; return state;
+        case 0x0c:
+            state.d0=longword(); write(record+20,Width::longword,state.cursor);
+            state.d0+=0x32a24; state.cursor=state.d0; break;
+        case 0x0d:
+            state.cursor=read(record+20,4); break;
+        case 0x0e:
+            state.d0=(state.d0&0xffff0000U)|word();
+            write(0x207ea,Width::byte,state.d0&0xffU); break;
+        case 0x0f:
+            state.d0=longword()+0x32a24;
+            write(record+12,Width::longword,state.d0);
+            write(record,Width::word,0xfe); break;
+        case 0x10:
+            write(0x210f4,Width::word,0xffff);
+            state.d0=0; write(record+6,Width::word,0); return state;
+        case 0x11:
+            state.instruction=0x2163a; return state;
+        case 0x12: case 0x13:
+            write(0x2171e,Width::byte,(state.d0&0xffU)==0x13?1U:0U); break;
+        default:
+            state.d0=0; write(record+6,Width::word,0); return state;
+        }
+    }
+}
+
+} // namespace eon
