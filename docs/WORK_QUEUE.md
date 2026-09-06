@@ -463,7 +463,8 @@ conditional: `$2133c->$22330` when nonzero or local `$21342` when zero.
 The zero branch now executes the complete native record construction and
 first processing pass, typed buffer selection, full buffer clear, and initial
 no-draw record walk and owned view selection through `$216ee/-$de`. Continue
-with that library return and hardware wait, and recover
+with the now-typed view return and resumable hardware wait into the next
+processing pass; recover its `$214aa` command path and
 the separate sprite, `$22330`, and `$214aa` paths. Do not reuse unrelated observed bases or assign graphics,
 audio, scheduler, input, or resource semantics.
 

@@ -6396,6 +6396,29 @@ int main() {
                 &&view_selection_checkpoint->main_stage_loop_graphics->next_vector==-0xde);
             assert(!opening_controller.advance_deuteros_amiga_view_selection().accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_first_frame_buffer->checksum);
+            eon::DeuterosAmigaObservedViewWait view_wait{
+                runtime_copy_sequence+110,
+                eon::DeuterosAmigaObservedMainStageExecReturn{runtime_copy_sequence+109,0x216ee,-0xde,0x216f2,0x12345678},
+                0x216f2,0xdff01f,5,0};
+            auto bad_view_wait=view_wait;bad_view_wait.library_return->vector=-0xc0;
+            assert(!opening_controller.observe_deuteros_amiga_view_wait(bad_view_wait).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_first_frame_buffer->checksum);
+            assert(opening_controller.observe_deuteros_amiga_view_wait(view_wait).accepted);
+            assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x216f2);
+            const auto after_view_wait=opening_controller.native_runtime_memory_checkpoint();
+            assert(!opening_controller.observe_deuteros_amiga_view_wait(view_wait).accepted);
+            view_wait.trace_sequence=runtime_copy_sequence+111;
+            assert(!opening_controller.observe_deuteros_amiga_view_wait(view_wait).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_view_wait->checksum);
+            view_wait.library_return.reset();
+            assert(opening_controller.observe_deuteros_amiga_view_wait(view_wait).accepted);
+            assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x216f2);
+            view_wait.trace_sequence=runtime_copy_sequence+112;view_wait.value=0x20;
+            assert(opening_controller.observe_deuteros_amiga_view_wait(view_wait).accepted);
+            assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x21380);
+            const auto after_view_release=opening_controller.native_runtime_memory_checkpoint();
+            assert(!opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_view_release->checksum);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

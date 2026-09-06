@@ -3593,6 +3593,20 @@ D0 high word, so the counter word is retained exactly. This register-only
 advance changes no memory and stops before the `-$de(A6)` call at `$216ee`,
 return address `$216f2`. Its library effects and following hardware wait
 remain separate from the native prefix.
+
+The first view return and its hardware wait now have ordered typed admission.
+The library return must be exactly `$216ee/-$de->$216f2` and precede the
+sample sequence. The 12-byte wait/RTS span at ADF `$6ef2` has SHA-256
+`3ee8aeaeb214bfb7cf210c7575043595d87340370ea8f85eda94eb51d53961a7`.
+Each sample is the exact bit-5 read at `$216f2/$dff01f`. A clear bit retains
+the wait and requires a fresh sample, without accepting another library
+return; a set bit follows `$216fc`, the caller RTS at `$214a8`, and the
+initial `$2181c->$21380` continuation. Samples commit the observed byte and
+session state atomically. Replay and changed call metadata commit nothing.
+Tests cover two clear-bit samples followed by release. The next processing
+pass reaches the still-unimplemented `$214aa` command route and rejects
+without changing the previously committed memory. No synthetic wait result,
+displayed frame, or graphics-library side effect is implied.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,

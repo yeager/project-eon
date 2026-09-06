@@ -1412,6 +1412,12 @@ struct DeuterosAmigaObservedFrameBuffer {
     std::uint8_t port_bit=0,port_value=0;
     std::uint32_t pointer_instruction=0,pointer_address=0,buffer_address=0;
 };
+struct DeuterosAmigaObservedViewWait {
+    std::uint64_t trace_sequence=0;
+    std::optional<DeuterosAmigaObservedMainStageExecReturn> library_return;
+    std::uint32_t instruction_address=0,port_address=0;
+    std::uint8_t bit=0,value=0;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -1505,7 +1511,9 @@ public:
             ||to_hex(sha256(main_stage.subspan(0x1448,96)))
                 !="6cf485579953c408c31d2409669cc943431ecb878bae5dae7669f03159046f44"
             ||to_hex(sha256(main_stage.subspan(0x16d0,34)))
-                !="7c319ba8ad1cc091e22888583653e0edb3657dd007626b4590ca3f000b550585")
+                !="7c319ba8ad1cc091e22888583653e0edb3657dd007626b4590ca3f000b550585"
+            ||to_hex(sha256(main_stage.subspan(0x16f2,12)))
+                !="3ee8aeaeb214bfb7cf210c7575043595d87340370ea8f85eda94eb51d53961a7")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
@@ -3885,6 +3893,36 @@ public:
         return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    observe_main_stage_view_wait(const DeuterosAmigaObservedViewWait&o){
+        if(!main_stage_loop_graphics_plan_)return std::nullopt;
+        const auto& current=*main_stage_loop_graphics_plan_;
+        const bool first=current.pending_read_instruction==0&&current.next_call_address==0x216ee;
+        const bool waiting=current.pending_read_instruction==0x216f2;
+        if(!first&&!waiting)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=0x216f2
+            ||o.port_address!=0xdff01f||o.bit!=5||first!=o.library_return.has_value())
+            throw std::runtime_error("Deuteros view wait does not match boundary");
+        auto plan=current;
+        if(first){
+            const auto& call=*o.library_return;
+            if(call.trace_sequence<=last_command_sequence_||call.trace_sequence>=o.trace_sequence
+                ||call.call_address!=0x216ee||call.return_address!=0x216f2||call.vector!=-0xde)
+                throw std::runtime_error("Deuteros view return does not match boundary");
+            plan.d0_value=call.result_d0;
+        }
+        plan.next_call_address=0;plan.next_return_address=0;plan.next_vector=0;
+        if((o.value&0x20U)==0){
+            plan.pending_read_instruction=0x216f2;plan.pending_read_address=0xdff01f;
+            plan.next_instruction_address=0;
+        }else{
+            plan.pending_read_instruction=0;plan.pending_read_address=0;
+            plan.next_instruction_address=main_stage_initial_view_caller_?0x21380:0x21822;
+            main_stage_initial_view_caller_=false;
+        }
+        main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;
+        return plan;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
     advance_main_stage_view_selection(std::uint16_t counter,std::uint32_t a6){
         if(!main_stage_loop_graphics_plan_||main_stage_loop_graphics_plan_->pending_read_instruction!=0x216d0)
             return std::nullopt;
@@ -4233,6 +4271,7 @@ private:
     std::optional<DeuterosAmigaObservedMainStageResourceLoad> main_stage_resource_load_;
     unsigned main_stage_loop_graphics_returns_=0;
     bool main_stage_loop_request_returned_=false;
+    bool main_stage_initial_view_caller_=true;
     std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> main_stage_loop_graphics_plan_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> main_stage_loop_service_return_;
     std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>

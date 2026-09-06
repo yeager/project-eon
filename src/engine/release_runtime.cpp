@@ -4681,6 +4681,29 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_view_selection(){
     return result;
 }
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_view_wait(const DeuterosAmigaObservedViewWait o){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
+        result.error="Deuteros view wait requires active owned memory";return result;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        if(!pending.observe_main_stage_view_wait(o)){
+            result.error="Deuteros view wait did not match boundary";return result;
+        }
+        auto memory=*native_runtime_memory_;
+        const auto applied=memory.apply({"deuteros-amiga-view-wait-"+std::to_string(o.trace_sequence),true,{{
+            1,{NativeRuntimeAddressSpace::linear,std::nullopt,o.port_address},
+            MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,o.value}}});
+        if(!applied.accepted){result.error=applied.error;return result;}
+        if(!deuteros_amiga_->observe_main_stage_view_wait(o)){
+            result.error="Deuteros view wait disappeared before commit";return result;
+        }
+        *native_runtime_memory_=std::move(memory);result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_prepare_return(
     const DeuterosAmigaObservedLocalCallReturn o){
     DeuterosAmigaTitleDependencyObservationResult r;
