@@ -1538,6 +1538,8 @@ public:
                 !="ed3de6026c302373de3a7841d87a30ad71611859bafdc4d78fcce24e0ec09eaf"
             ||to_hex(sha256(main_stage.subspan(0xfb2,130)))
                 !="96e344839df3e0fc7b2106541b7fea45de269e0c14e5d592a4ad3debbfe7448f"
+            ||to_hex(sha256(main_stage.subspan(0x1034,190)))
+                !="892369e47ef3e15d3637798ac0f7e85208751c8a7d9ada8efb93bb9c0838c411"
             ||to_hex(sha256(main_stage.subspan(0xd8e,548)))
                 !="01ea72727e1bcbbf64021ac52ad184c31c6841e9cb70e59181348f6a0e9884b8")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");

@@ -12,12 +12,13 @@ namespace eon {
 // read-through write overlay so source/destination overlap stays sequential.
 // Masked sprites and the global saved-scanline path are separate routines.
 template<class Read,class Write>
-void draw_deuteros_amiga_owned_bitmap(std::uint32_t record,Read read,Write write,bool scratch=false){
+void draw_deuteros_amiga_owned_bitmap(std::uint32_t record,Read read,Write write,
+    bool scratch=false,bool low_byte_selector=false){
     using Width=MemoryTransferElementWidth;
     const auto table=read(0x2126e,4);
     const auto data=read(0x21272,4);
     const auto raw_selector=read(record,2);
-    const auto selector=scratch?(raw_selector&0xffU):raw_selector;
+    const auto selector=(scratch||low_byte_selector)?(raw_selector&0xffU):raw_selector;
     if(!scratch&&(selector&0xa000U)!=0)
         throw std::runtime_error("Deuteros sprite requires masked or saved-scanline continuation");
     const auto displacement=(selector<<2U)&0xffffU;
@@ -139,10 +140,55 @@ void draw_deuteros_amiga_owned_masked_bitmap(std::uint32_t record,Read read,Writ
 }
 
 template<class Read,class Write>
+void save_deuteros_amiga_owned_scanlines(std::uint32_t record,Read read,Write write){
+    using Width=MemoryTransferElementWidth;
+    const auto rows=read(0x20c12,2)&0xffU;
+    if(rows==0||rows>=200)
+        throw std::runtime_error("Deuteros saved scanlines have unsupported row count");
+    write(0x23024,Width::word,rows);
+    const auto origin=read(record+4,2);
+    write(0x23026,Width::word,origin);
+    write(record,Width::word,0xffff);
+    const auto buffer=read(0x20128,4);
+    if(origin>=200||rows>200-origin||(buffer&1U)||buffer>0x1000000U-32000)
+        throw std::runtime_error("Deuteros saved scanlines exceed the owned frame");
+    for(std::uint32_t plane=0;plane<4;++plane)
+        for(std::uint32_t row=0;row<rows;++row)
+            for(std::uint32_t offset=0;offset<40;offset+=4)
+                write(0x23028+plane*rows*40+row*40+offset,Width::longword,
+                    read(buffer+plane*8000+(origin+row)*40+offset,4));
+}
+
+template<class Read,class Write>
+void restore_deuteros_amiga_owned_scanlines(std::uint32_t record,Read read,Write write){
+    using Width=MemoryTransferElementWidth;
+    const auto stored_rows=read(0x23024,2);
+    // The stored origin is read by the original but is not the destination.
+    static_cast<void>(read(0x23026,2));
+    const auto origin=read(record+4,2);
+    if(stored_rows==0||stored_rows>=200||origin>=200)
+        throw std::runtime_error("Deuteros scanline restore has unsupported geometry");
+    const auto rows=std::min(stored_rows,200-origin);
+    const auto buffer=read(0x20128,4);
+    if((buffer&1U)||buffer>0x1000000U-32000)
+        throw std::runtime_error("Deuteros scanline restore buffer is outside native memory");
+    for(std::uint32_t plane=0;plane<4;++plane)
+        for(std::uint32_t row=0;row<rows;++row)
+            for(std::uint32_t offset=0;offset<40;offset+=4)
+                write(buffer+plane*8000+(origin+row)*40+offset,Width::longword,
+                    read(0x23028+plane*stored_rows*40+row*40+offset,4));
+}
+
+template<class Read,class Write>
 void draw_deuteros_amiga_owned_sprite(std::uint32_t record,Read read,Write write){
     const auto selector=read(record,2);
-    if((selector&0x2000U)!=0||(selector&0xc000U)==0xc000U)
-        throw std::runtime_error("Deuteros sprite requires its saved-scanline continuation");
+    if((selector&0x2000U)!=0){
+        restore_deuteros_amiga_owned_scanlines(record,read,write);return;
+    }
+    if((selector&0xc000U)==0xc000U){
+        draw_deuteros_amiga_owned_bitmap(record,read,write,false,true);
+        save_deuteros_amiga_owned_scanlines(record,read,write);return;
+    }
     if((selector&0x8000U)!=0)draw_deuteros_amiga_owned_masked_bitmap(record,read,write);
     else draw_deuteros_amiga_owned_bitmap(record,read,write);
 }

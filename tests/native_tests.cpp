@@ -16097,11 +16097,35 @@ int main() {
         catch(const std::runtime_error&){rejected_zero_loop=true;}
         assert(rejected_zero_loop);
         put(0x210fc,eon::MemoryTransferElementWidth::word,0);
-        put(0x210f8,eon::MemoryTransferElementWidth::word,0xc001);
-        bool rejected_saved_scanlines=false;
+        for(std::size_t index=0;index<first_bitmap_catalog.record_count;++index){
+            background();
+            put(0x210fc,eon::MemoryTransferElementWidth::word,0);
+            put(0x210f8,eon::MemoryTransferElementWidth::word,0xc000U|index);
+            eon::draw_deuteros_amiga_owned_sprite(0x210f8,get,put);
+            const auto saved_frame=planes;
+            const auto rows=get(0x20c12,2)&0xffU;
+            assert(get(0x210f8,2)==0xffff);
+            assert(get(0x23024,2)==rows&&get(0x23026,2)==0);
+            for(unsigned plane=0;plane<4;++plane)
+                for(unsigned byte=0;byte<rows*40;++byte)
+                    assert(get(0x23028+plane*rows*40+byte,1)==saved_frame[plane*8000+byte]);
+            for(const unsigned origin:{0U,10U,190U,199U}){
+                std::fill(planes.begin(),planes.end(),0);
+                put(0x210fc,eon::MemoryTransferElementWidth::word,origin);
+                eon::draw_deuteros_amiga_owned_sprite(0x210f8,get,put);
+                for(unsigned plane=0;plane<4;++plane)
+                    for(unsigned y=0;y<200;++y)
+                        for(unsigned byte=0;byte<40;++byte)
+                            assert(planes[plane*8000+y*40+byte]==
+                                (y>=origin&&y-origin<rows
+                                    ?saved_frame[plane*8000+(y-origin)*40+byte]:0));
+            }
+        }
+        put(0x23024,eon::MemoryTransferElementWidth::word,0);
+        bool rejected_empty_scanlines=false;
         try{eon::draw_deuteros_amiga_owned_sprite(0x210f8,get,put);}
-        catch(const std::runtime_error&){rejected_saved_scanlines=true;}
-        assert(rejected_saved_scanlines);
+        catch(const std::runtime_error&){rejected_empty_scanlines=true;}
+        assert(rejected_empty_scanlines);
         std::fill(planes.begin(),planes.end(),0);
         put(0x210f8,eon::MemoryTransferElementWidth::word,1);
         put(0x210fc,eon::MemoryTransferElementWidth::word,190);

@@ -3648,7 +3648,23 @@ the following even-counter buffer at `$80000` to be cleared and selected
 without colliding with the first frame's batch identifiers. The complete
 second no-draw walk, even view at `$12e00`, and return to `$21822` are tested.
 The outer input gate and opaque/masked sprite-bearing frames are now connected
-as described below; saved-scanline paths remain separate work.
+as described below; saved-scanline paths are now implemented separately.
+
+The native saved-scanline routines at `$21034..$210f1` (ADF `$6834`,
+190 bytes, SHA-256
+`892369e47ef3e15d3637798ac0f7e85208751c8a7d9ada8efb93bb9c0838c411`)
+are hash-gated alongside the sprite dispatcher. Selectors with bits 15 and
+14 set draw the low-byte bitmap index opaquely, then save full 40-byte rows
+from all four planes into `$23028`. The header at `$23024` stores row count
+and source Y; the record selector becomes `$ffff`. Bit 13 dispatches restore
+before the other flags. Restore uses the record's current Y, not the saved
+origin, and bottom-clips destination rows while retaining the original saved
+row count for source plane stride. This saves the post-draw image, not a
+pre-draw background. Empty, negative and out-of-frame geometry remains an
+explicit boundary rather than reproducing an unbounded DBRA loop.
+Tests exercise all 142 genuine resource bitmaps, full-width saved bytes,
+selector mutation, and restores at Y=0, 10, 190 and 199. These are controlled
+native test states, not capture evidence or proof of a displayed game frame.
 The genuine first record at resource offset `$382` executes opcode `$13`,
 setting `$2171e` to one, then executes sound arguments `(1,1)` and `(2,2)`
 through the native descriptor routine below. It yields timer one, which the
