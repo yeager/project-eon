@@ -204,8 +204,8 @@ entries. Vector-9 tracing decrypts and executes the exact ADDX plus ten
 unconditional branch steps through `$411d8`, then the deterministic LEA,
 MOVEQ, table-word and ADD register prefix. A typed group-0 frame admits the
 24-bit bus-error route, and a typed custom-chip/ExecBase observation advances
-the deterministic setup. Continue at the graphics.library vector `-198` at
-`$41780`; do not infer its return.
+the deterministic setup. Continue at the custom-chip write at
+`$42546`; admit only the exact register and value.
 
 | Rank | Work package | Exact current evidence | Required acceptance evidence | Status / boundary |
 | --- | --- | --- | --- | --- |
@@ -454,11 +454,11 @@ hash-bound `$21276` native-body candidate requires an owned `$32a24` record;
 the caller's typed re-entry D0 supplies that selector through `$21704` and
 `$21926`. Selector zero now drives the exact `$21708` table entry, bounded ADF
 probe/body transfer, and observed released `$2196e` hardware retry into owned
-`$2ad24/$32a24` memory. The `$21276` candidate also requires owned `$12fec`,
-which this path does not yet provide, so it rejects without writes and the
-typed callee return remains in use. Recover the actual `$12fec` writer before
-advancing toward `$21310`; do not reuse an observed graphics-base value or
-assign graphics, audio, scheduler, input, or resource semantics.
+`$2ad24/$32a24` memory. The earlier typed OpenLibrary return now owns `$12fec`
+only through its exact post-return store, so `$21276` can consume both owned
+sources and stop at `$21310`, the first `-$c0(A6)` boundary. Continue with that
+typed vector return; do not reuse unrelated observed bases or assign graphics,
+audio, scheduler, input, or resource semantics.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

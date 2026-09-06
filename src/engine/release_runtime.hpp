@@ -168,6 +168,7 @@ struct MillenniumAmigaExecTransitionRuntimeObservation {std::uint64_t sequence=0
 struct MillenniumAmigaOpenGraphicsRuntimeObservation {std::uint64_t sequence=0;MillenniumAmigaOpenGraphicsObservation service;};
 struct MillenniumAmigaAllocationRuntimeObservation {std::uint64_t sequence=0;MillenniumAmigaAllocationObservation allocation;};
 struct MillenniumAmigaGraphicsInitializationRuntimeObservation {std::uint64_t sequence=0;MillenniumAmigaGraphicsInitializationObservation services;};
+struct MillenniumAmigaViewServiceRuntimeObservation {std::uint64_t sequence=0;MillenniumAmigaViewServiceObservation services;};
 struct MillenniumAmigaBootstrapRelocatorCheckpoint {
     std::uint64_t generation=0;
     MillenniumAmigaBootstrapRelocatorState state=MillenniumAmigaBootstrapRelocatorState::awaiting_overread_byte;
@@ -189,6 +190,7 @@ struct MillenniumAmigaBootstrapRelocatorCheckpoint {
     std::optional<MillenniumAmigaOpenGraphicsExecution> open_graphics_execution;
     std::optional<MillenniumAmigaAllocationConsumerExecution> allocation_consumer_execution;
     std::optional<MillenniumAmigaGraphicsInitializationExecution> graphics_initialization_execution;
+    std::optional<MillenniumAmigaViewServiceExecution> view_service_execution;
 };
 
 // Immutable Millennium Atari ST bootstrap provenance.  It reports only the
@@ -914,6 +916,7 @@ public:
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_open_graphics(MillenniumAmigaOpenGraphicsRuntimeObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_allocation(MillenniumAmigaAllocationRuntimeObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_graphics_initialization(MillenniumAmigaGraphicsInitializationRuntimeObservation);
+    [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_view_services(MillenniumAmigaViewServiceRuntimeObservation);
     [[nodiscard]] std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint> millennium_amiga_bootstrap_relocator_checkpoint() const;
 
     [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>
@@ -1193,6 +1196,7 @@ private:
     std::optional<std::uint64_t> millennium_amiga_open_graphics_sequence_;
     std::optional<std::uint64_t> millennium_amiga_allocation_sequence_;
     std::optional<std::uint64_t> millennium_amiga_graphics_initialization_sequence_;
+    std::optional<std::uint64_t> millennium_amiga_view_service_sequence_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::optional<MillenniumAtariConfigConsumerSession> millennium_atari_config_consumer_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;

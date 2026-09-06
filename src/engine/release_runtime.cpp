@@ -301,6 +301,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_amiga_open_graphics_sequence_.reset();
     millennium_amiga_allocation_sequence_.reset();
     millennium_amiga_graphics_initialization_sequence_.reset();
+    millennium_amiga_view_service_sequence_.reset();
     deuteros_amiga_title_load_copy_.reset();
     deuteros_amiga_title_load_copy_generation_ = 0;
     deuteros_amiga_title_command_generation_ = 0;
@@ -483,6 +484,36 @@ ReleaseRuntimeCoordinator::observe_millennium_amiga_graphics_initialization(
         if(!applied.accepted){result.error=applied.error;return result;}
         *millennium_amiga_relocator_=std::move(next);*native_runtime_memory_=std::move(memory);
         millennium_amiga_graphics_initialization_sequence_=o.sequence;result.accepted=true;
+    }catch(const std::exception& error){result.error=error.what();}
+    return result;
+}
+
+MillenniumAmigaBootstrapRelocatorObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_amiga_view_services(
+    const MillenniumAmigaViewServiceRuntimeObservation o) {
+    MillenniumAmigaBootstrapRelocatorObservationResult result;
+    if(!millennium_amiga_relocator_||!native_runtime_memory_
+        ||!millennium_amiga_graphics_initialization_sequence_
+        ||millennium_amiga_view_service_sequence_
+        ||o.sequence<=*millennium_amiga_graphics_initialization_sequence_){
+        result.error="View services require graphics initialization";return result;}
+    try{
+        auto next=*millennium_amiga_relocator_;const auto x=next.execute_view_services(o.services);
+        for(std::uint32_t i=0;i<x.allocation_size;++i)
+            if(!native_runtime_memory_->read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,x.allocation_begin+i})){
+                result.error="View clear lies outside owned allocation";return result;}
+        NativeRuntimeEffectBatch b{"millennium-amiga-view-services-"+std::to_string(millennium_amiga_relocator_generation_),true,{}};
+        b.effects={{1,{NativeRuntimeAddressSpace::linear,std::nullopt,x.viewport_address+4},MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,x.bitmap_address},
+            {2,{NativeRuntimeAddressSpace::linear,std::nullopt,0x41958},MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,0x14},
+            {3,{NativeRuntimeAddressSpace::linear,std::nullopt,x.saved_stack_address+4},MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,x.saved_stack_value},
+            {4,{NativeRuntimeAddressSpace::linear,std::nullopt,x.saved_stack_address},MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,x.saved_stack_value},
+            {5,{NativeRuntimeAddressSpace::linear,std::nullopt,x.setup_flag_address},MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,x.setup_flag_value}};
+        b.effects.reserve(5U+x.allocation_size);
+        for(std::uint32_t i=0;i<x.allocation_size;++i)b.effects.push_back({b.effects.size()+1,{NativeRuntimeAddressSpace::linear,std::nullopt,x.allocation_begin+i},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,0});
+        auto memory=*native_runtime_memory_;const auto applied=memory.apply(b);
+        if(!applied.accepted){result.error=applied.error;return result;}
+        *millennium_amiga_relocator_=std::move(next);*native_runtime_memory_=std::move(memory);
+        millennium_amiga_view_service_sequence_=o.sequence;result.accepted=true;
     }catch(const std::exception& error){result.error=error.what();}
     return result;
 }
@@ -918,6 +949,8 @@ ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner(){
     auto next=*millennium_dos_sound_driver_load_;
     auto runner=*millennium_dos_compatibility_runner_;
     auto memory=*native_runtime_memory_;
+    auto pending_title_entry=millennium_dos_title_exec_entry_;
+    std::unique_ptr<MillenniumDosTitleSession> pending_title;
     try {
         // These results are properties of the admitted immutable leaf and of
         // Eon's private one-leaf compatibility service. No guest DOS state is
@@ -999,10 +1032,26 @@ ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner(){
                 runner.record_automatic_operation();
                 continue;
             }
+            case MillenniumDosSoundDriverLoadState::title_exec_boundary: {
+                if(!millennium_dos_||!millennium_dos_->title_flow)
+                    throw std::runtime_error("English title flow is unavailable");
+                const auto media=VerifiedReleaseMedia::open(active_->release);
+                const auto mill=media.borrow("4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e");
+                const auto titles=media.borrow("3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6");
+                if(!mill||!titles)
+                    throw std::runtime_error("Exact TITLES.EXE process media is unavailable");
+                pending_title_entry.emplace(*mill,*titles);
+                pending_title=std::make_unique<MillenniumDosTitleSession>(*millennium_dos_->title_flow);
+                // Exact literal request after the observed SP store. This does
+                // not claim that DOS returned or that the child has completed.
+                next.observe_title_exec_request(0x0336,0x4b00,0x068f,0x067a);
+                runner.record_automatic_operation();
+                continue;
+            }
             default:
                 if(next.state()==MillenniumDosSoundDriverLoadState::title_exec_requested
-                    &&millennium_dos_title_exec_entry_
-                    &&millennium_dos_title_exec_entry_->state()
+                    &&pending_title_entry
+                    &&pending_title_entry->state()
                         ==MillenniumDosTitleExecEntryState::awaiting_child_process_entry) {
                     constexpr std::string_view titles_sha =
                         "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
@@ -1029,7 +1078,7 @@ ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner(){
                     }
                     const auto applied=memory.apply(batch);
                     if(!applied.accepted)throw std::runtime_error(applied.error);
-                    auto entry=*millennium_dos_title_exec_entry_;
+                    auto entry=*pending_title_entry;
                     const auto child_entry_sequence=runner.next_sequence();
                     entry.observe_child_process_entry({child_entry_sequence,
                         0x0336,0x4b00,0x068f,0x067a,0x0100,
@@ -1047,13 +1096,15 @@ ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner(){
                     initialization.execute_exact_startup(initialization_sequence,
                         0x1b80,0x1b95,0x0122,0x91);
                     runner.record_automatic_operation();
-                    millennium_dos_title_exec_entry_=std::move(entry);
+                    pending_title_entry=std::move(entry);
                     millennium_dos_title_child_compatibility_.emplace(std::move(child));
                     millennium_dos_title_initialization_.emplace(
                         std::move(initialization));
                     session_snapshot_=make_runtime_session_snapshot(
                         *active_,RuntimeSessionKind::millennium_dos_title);
                 }
+                millennium_dos_title_exec_entry_=std::move(pending_title_entry);
+                if(pending_title)millennium_dos_title_=std::move(pending_title);
                 millennium_dos_sound_driver_load_=std::move(next);
                 millennium_dos_compatibility_runner_=std::move(runner);
                 *native_runtime_memory_=std::move(memory);
@@ -2790,10 +2841,35 @@ DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::name { 
 EON_DEUTEROS_TITLE_ADVANCE(advance_deuteros_amiga_title_local_prefix(), deuteros_amiga_->advance_title_local_prefix())
 EON_DEUTEROS_TITLE_ADVANCE(observe_deuteros_amiga_title_exec_return(const DeuterosAmigaObservedExecReturn o), deuteros_amiga_->observe_title_exec_return(o))
 EON_DEUTEROS_TITLE_ADVANCE(observe_deuteros_amiga_title_open_library_return(const DeuterosAmigaObservedOpenLibraryReturn o), deuteros_amiga_->observe_title_open_library_return(o))
-EON_DEUTEROS_TITLE_ADVANCE(advance_deuteros_amiga_title_post_open_library_local_path(), deuteros_amiga_->advance_title_post_open_library_local_path())
 EON_DEUTEROS_TITLE_ADVANCE(observe_deuteros_amiga_title_display_base(const DeuterosAmigaObservedDisplayBaseRead o), deuteros_amiga_->observe_title_display_base(o))
 EON_DEUTEROS_TITLE_ADVANCE(observe_deuteros_amiga_title_callback_exec_return(const DeuterosAmigaObservedCallbackExecReturn o), deuteros_amiga_->observe_title_callback_exec_return(o))
 #undef EON_DEUTEROS_TITLE_ADVANCE
+
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::advance_deuteros_amiga_title_post_open_library_local_path(){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::deuteros_amiga_title_stage
+        ||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
+        result.error="Deuteros post-OpenLibrary path requires active title memory";return result;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto plan=pending.advance_post_open_library_local_path();
+        if(!plan){result.error="Deuteros post-OpenLibrary path did not match boundary";return result;}
+        auto memory=*native_runtime_memory_;
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-graphics-library-base",true,{{
+            1,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->observed_result_store_address},
+            MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,
+            plan->observed_result_store_value}}};
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted){result.error=applied.error;return result;}
+        if(!deuteros_amiga_->advance_title_post_open_library_local_path()){
+            result.error="Deuteros post-OpenLibrary path disappeared before commit";return result;
+        }
+        *native_runtime_memory_=std::move(memory);result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
 
 DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_service_setup_exec_return(
@@ -4478,7 +4554,7 @@ ReleaseRuntimeCoordinator::millennium_amiga_bootstrap_relocator_checkpoint()cons
         session.first_stage_sha256(),session.first_stage_entry_execution(),
         session.first_stage_illegal_execution(),session.second_illegal_execution(),
         session.first_trace_execution(),session.trace_branch_chain_execution(),session.trace_register_prefix_execution(),
-        session.bus_error_prefix_execution(),session.custom_chip_exec_prefix_execution(),session.exec_transition_execution(),session.open_graphics_execution(),session.allocation_consumer_execution(),session.graphics_initialization_execution()};
+        session.bus_error_prefix_execution(),session.custom_chip_exec_prefix_execution(),session.exec_transition_execution(),session.open_graphics_execution(),session.allocation_consumer_execution(),session.graphics_initialization_execution(),session.view_service_execution()};
 }
 
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>

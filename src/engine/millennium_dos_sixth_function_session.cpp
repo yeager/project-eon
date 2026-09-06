@@ -458,11 +458,11 @@ void MillenniumDosSixthFunctionSession::observe_call_return(
             0xce2f, 0x6baa);
         return;
     case MillenniumDosSixthFunctionState::caller_helper_restore_loop_call_return:
-        enter_call(MillenniumDosSixthFunctionState::caller_helper_dynamic_table_call_return,
-            0xce42, 0xcf57);
-        return;
-    case MillenniumDosSixthFunctionState::caller_helper_dynamic_table_call_return:
         state_ = MillenniumDosSixthFunctionState::caller_helper_dynamic_source_word;
+        return;
+    case MillenniumDosSixthFunctionState::caller_helper_dynamic_first_call_return:
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_dynamic_second_call_return,
+            0xcf7a, 0x3f6a);
         return;
     case MillenniumDosSixthFunctionState::restoration_first_call_return:
         enter_call(MillenniumDosSixthFunctionState::restoration_second_call_return,

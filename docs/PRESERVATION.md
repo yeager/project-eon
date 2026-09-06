@@ -1890,6 +1890,14 @@ cell `$41ae0` is exactly `allocation_base+$7d00`; every derived plane remains
 within the owned allocation. Invalid call order or return metadata commits no
 record or pointer writes. The chain stops before graphics.library vector
 `-$c6` at `$41780`, with A1 request `$41900`; no view/display effect is claimed.
+
+The next bounded continuation accepts four typed graphics.library returns at
+`$41780`, `$417b4`, `$417c6`, and `$417d2`, with vectors -198, -216, -210,
+and -222. It validates the local stack progression (S, S-8, S-4, S), then
+atomically stores the bitmap reference, local setup fields and saved pointers,
+and clears the owned `$7d00`-byte allocation. Library-internal writes are not
+synthesized. Execution stops before `$42546` writes `$c000` to `$dff09a`;
+neither that hardware effect nor a visible display is claimed.
 Frame materialization and
 the A1 save are one atomic batch; the later D0/ExecBase materialization is a
 second atomic batch, and an invalid hardware or ExecBase observation commits
@@ -3458,12 +3466,15 @@ bit 10 set before return. The matching genuine ADF probe and body are then
 copied atomically to `$2ad24` and `$32a24`; wrong selector, retry state, media
 identity, or batch failure writes nothing. The test path explicitly supplies
 selector zero through re-entry D0, rather than choosing a resource in the
-host. The transfer makes `$32a24` owned, but the same live path still lacks an
-owned longword at `$12fec`. The `$21276` body candidate therefore rejects
-atomically before its first write; the test asserts both the present payload
-and exact absent cell, then retains the typed `$21276` return path. Supplying a
-previously observed graphics-base value would not establish ownership and is
-not used as a substitute.
+host. The earlier nonzero OpenLibrary path is also now connected to its exact
+`move.l D0,$12fec` at `$1ed96`: only the already typed `$1ed8c`, vector
+`-$228`, return `$1ed90` result is written, as one big-endian atomic batch when
+the proven local path advances. A zero return retains its original terminal
+loop and never writes the cell. The later main-stage reload does not cover
+`$12fec`, so this owned value survives alongside the transferred `$32a24`
+payload and permits the `$21276` body to reach `$21310`. A previously observed
+graphics-base value is not used as a substitute; ownership comes from the
+actual caller return and store instruction.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,
@@ -4070,7 +4081,7 @@ labels the resulting segment as compatibility provenance; the segment is an
 Eon address-space key, never a claimed DOS capture. One tick performs open,
 exact-length discovery, arena allocation, rewind, complete read, atomic byte
 commit, close, and process-local INT 95h vector installation, then stops at
-the parent-stack read. Arena exhaustion,
+the parent-SP observation. Arena exhaustion,
 zero/overflowing requests, and detached sequences fail without partial state.
 The vector installation is a native compatibility operation: hash-verified
 `MILL.COM:$02fe` leaves DS at the driver allocation, `$0234` zeros DX, and
@@ -4096,6 +4107,19 @@ at the literal title request `$0336`, `AX=$4b00`, `DX=$068f`, parameter block
 at which the production coordinator may construct the already hash-bound
 English title session. It is not an invented EXEC return, title frame, driver
 initialization callback, audio capability, or later game handoff.
+
+Once that SP observation is accepted, the native tick owns the literal EXEC
+request and runs the existing bounded child compatibility service without a
+second external register observation. The 28 original bytes at file
+`+$021c..+$0237` (runtime `$031c..$0337`) have SHA-256
+`9cc0adcb9586fa4913bdd6ced15d67e807245b4d4bf88d67c88b49e72857c9a3`.
+In particular `$032f` is `MOV [$05f7],SP`, a store of the observed register,
+not a read of a previously saved stack word. The exact CS parameter words,
+`BX=$067a`, caller DX `$068f`, and literal AX `$4b00` define the request.
+Pending title objects remain local until successful native-tick commit;
+missing media or child allocation failure cannot publish a partial title
+request. The first private title interrupt remains an external boundary;
+no parent EXEC success return is inferred.
 
 The next owned production boundary is `MillenniumDosTitleExecEntrySession`.
 It is constructed only after that exact `$0336` request and revalidates the
@@ -7265,19 +7289,20 @@ advance.
 
 The exact `$ce0b -> $4f08` return restores the three values observed by the
 original F6 handler, then advances across `$0b0c`, `$7b47` (`AX=$002e`), and
-`$6baa`, plus the literal `$cb9a` clear. Ownership stops at `$ce42 -> $cf57`:
-that local routine immediately follows runtime-derived pointers and words.
-Wrong returns commit none of the restoration effects.
+`$6baa`, plus the literal `$cb9a` clear. The direct local call at `$ce42`
+enters the owned `$cf57` body without a false callee-return observation. Wrong
+external returns commit none of the restoration effects.
 
-The first `$cf57` iteration is locally owned through `$cf79`: its 35 bytes at
+The first `$cf57` iteration is locally owned through `$cf7c`: its 38 bytes at
 file `+$ce57` hash to
-`c5383923d88251142281469eb99b59e074b7020d7ff1392e256e1d3ef6c0064d`.
+`03c26d611fc6e6df65a20e483d304ed0179234640b8964dae324c895568bddae`.
 The genuine 18-byte pointer table at file `+$5e9a` hashes to
 `041c6a544bd1fcdd5823cb6aac8dac8010a43b344d8997d21c3385287ba44e7d`
 and supplies first pointer `$5dd2`. Runtime words `$5dd2` and `$cb88`, then byte
 `$5dd4`, are explicit typed inputs. The exact compare, optional `+2`/`$cb9a`
-write, `$03fe` mask, and `$5dd2` write are reproduced before stopping at
-`$cf77 -> $7908`. Detached input is atomic; later iterations are not inferred.
+write, `$03fe` mask, and `$5dd2` write are reproduced. The `$7908` return is
+typed before stopping at `$cf7a -> $3f6a`. Detached input or return is atomic;
+later iterations are not inferred.
 ### Millennium DOS `$0c6d` / `$0c8b` far-memory copy continuations
 
 The hash-bound `$0bdf` service now owns both mode-1 copy branches through their

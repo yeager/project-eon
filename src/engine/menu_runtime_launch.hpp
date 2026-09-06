@@ -322,6 +322,7 @@ public:
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_open_graphics(MillenniumAmigaOpenGraphicsRuntimeObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_allocation(MillenniumAmigaAllocationRuntimeObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_graphics_initialization(MillenniumAmigaGraphicsInitializationRuntimeObservation);
+    [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_view_services(MillenniumAmigaViewServiceRuntimeObservation);
     [[nodiscard]] std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint> millennium_amiga_bootstrap_relocator_checkpoint() const;
 
     [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>

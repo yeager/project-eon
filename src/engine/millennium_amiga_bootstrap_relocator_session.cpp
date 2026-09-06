@@ -92,8 +92,41 @@ MillenniumAmigaBootstrapRelocatorSession::boundary() const {
         return {0x41666,0x41844,allocation_consumer_execution_->pending_vector_address};
     case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_view_init:
         return {0x41780,0x41844,graphics_initialization_execution_->pending_vector_address};
+    case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_interrupt_control:
+        return {0x42546,0,view_service_execution_->pending_custom_effect.address};
     }
     throw std::runtime_error("Invalid Millennium Amiga bootstrap relocator state");
+}
+
+MillenniumAmigaViewServiceExecution
+MillenniumAmigaBootstrapRelocatorSession::execute_view_services(
+    const MillenniumAmigaViewServiceObservation& o) {
+    constexpr std::array<std::uint32_t,4> calls{0x41780,0x417b4,0x417c6,0x417d2};
+    constexpr std::array<std::int16_t,4> vectors{-198,-216,-210,-222};
+    constexpr std::array<std::uint32_t,4> returns{0x41784,0x417b8,0x417ca,0x417d6};
+    const auto graphics_base=open_graphics_execution_?open_graphics_execution_->graphics_base_value:0;
+    if(state_!=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_view_init
+        ||!graphics_initialization_execution_||o.graphics_base_address!=0x41844
+        ||o.graphics_base_value!=graphics_base||graphics_base<=222)
+        throw std::runtime_error("Detached Millennium Amiga view service observation");
+    for(std::size_t i=0;i<o.returns.size();++i)
+        if(o.returns[i].call_address!=calls[i]||o.returns[i].vector!=vectors[i]
+            ||o.returns[i].return_address!=returns[i]||o.returns[i].result_a7<8
+            ||o.returns[i].result_a7>0xfffffc||(o.returns[i].result_a7&1U)!=0)
+            throw std::runtime_error("Detached Millennium Amiga view service return");
+    const auto stack=o.returns[0].result_a7;
+    if(o.returns[1].result_a7!=stack-8||o.returns[2].result_a7!=stack-4
+        ||o.returns[3].result_a7!=stack)
+        throw std::runtime_error("Contradictory Millennium Amiga view service stack");
+    MillenniumAmigaViewServiceExecution r;r.observed=o;
+    r.viewport_address=0x41900;r.bitmap_address=0x418cc;
+    r.saved_stack_address=stack-8;r.saved_stack_value=0x41892;
+    r.allocation_begin=allocation_consumer_execution_->allocation_begin;
+    r.allocation_size=0x7d00;r.setup_flag_address=0x41ad6;r.setup_flag_value=0;
+    r.pending_custom_effect={0x42546,0xdff09a,0xc000};
+    view_service_execution_=r;
+    state_=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_interrupt_control;
+    return r;
 }
 
 MillenniumAmigaGraphicsInitializationExecution

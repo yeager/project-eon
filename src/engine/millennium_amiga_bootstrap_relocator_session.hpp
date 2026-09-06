@@ -26,6 +26,7 @@ enum class MillenniumAmigaBootstrapRelocatorState {
     awaiting_first_stage_graphics_allocation,
     awaiting_first_stage_graphics_init,
     awaiting_first_stage_view_init,
+    awaiting_first_stage_interrupt_control,
 };
 
 struct MillenniumAmigaBootstrapRelocatorBoundary {
@@ -280,6 +281,18 @@ struct MillenniumAmigaGraphicsInitializationExecution {
     std::uint32_t pending_request_address=0, pending_call_address=0;
     std::int16_t pending_graphics_vector=0; std::uint32_t pending_vector_address=0;
 };
+struct MillenniumAmigaViewServiceObservation {
+    std::uint32_t graphics_base_address=0, graphics_base_value=0;
+    std::array<MillenniumAmigaGraphicsServiceReturn,4> returns{};
+};
+struct MillenniumAmigaViewServiceExecution {
+    MillenniumAmigaViewServiceObservation observed;
+    std::uint32_t viewport_address=0, bitmap_address=0;
+    std::uint32_t saved_stack_address=0, saved_stack_value=0;
+    std::uint32_t allocation_begin=0, allocation_size=0;
+    std::uint32_t setup_flag_address=0; std::uint16_t setup_flag_value=0;
+    MillenniumAmigaBootstrapCustomChipEffect pending_custom_effect;
+};
 
 // Manual recompilation of the exact, direct Defjam bootstrap relocator at
 // $70000..$70041. The original DBRA reads one byte beyond the authenticated
@@ -353,6 +366,8 @@ public:
     [[nodiscard]] const std::optional<MillenniumAmigaAllocationConsumerExecution>& allocation_consumer_execution() const { return allocation_consumer_execution_; }
     [[nodiscard]] MillenniumAmigaGraphicsInitializationExecution execute_graphics_initialization(const MillenniumAmigaGraphicsInitializationObservation&);
     [[nodiscard]] const std::optional<MillenniumAmigaGraphicsInitializationExecution>& graphics_initialization_execution() const { return graphics_initialization_execution_; }
+    [[nodiscard]] MillenniumAmigaViewServiceExecution execute_view_services(const MillenniumAmigaViewServiceObservation&);
+    [[nodiscard]] const std::optional<MillenniumAmigaViewServiceExecution>& view_service_execution() const { return view_service_execution_; }
 
 private:
     MillenniumAmigaBootstrapRelocatorState state_ =
@@ -376,6 +391,7 @@ private:
     std::optional<MillenniumAmigaOpenGraphicsExecution> open_graphics_execution_;
     std::optional<MillenniumAmigaAllocationConsumerExecution> allocation_consumer_execution_;
     std::optional<MillenniumAmigaGraphicsInitializationExecution> graphics_initialization_execution_;
+    std::optional<MillenniumAmigaViewServiceExecution> view_service_execution_;
 };
 
 } // namespace eon

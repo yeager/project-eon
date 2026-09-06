@@ -3723,6 +3723,20 @@ int main() {
         &&graphics_init_exec.pending_graphics_vector==-198
         &&graphics_init_exec.pending_vector_address==0x67ff3a));
     assert((defjam_relocator.boundary()==eon::MillenniumAmigaBootstrapRelocatorBoundary{0x41780,0x41844,0x67ff3a}));
+    eon::MillenniumAmigaViewServiceObservation view_services;
+    view_services.graphics_base_address=0x41844;view_services.graphics_base_value=0x680000;
+    view_services.returns={{{0x41780,-198,0x41784,0,0x2000,0x65130},
+        {0x417b4,-216,0x417b8,0,0x2000,0x65128},
+        {0x417c6,-210,0x417ca,0,0x2000,0x6512c},
+        {0x417d2,-222,0x417d6,0,0x2000,0x65130}}};
+    {auto bad=view_services;bad.returns[2].result_a7=0x65130;bool rejected=false;try{static_cast<void>(defjam_relocator.execute_view_services(bad));}catch(const std::runtime_error&){rejected=true;}assert(rejected);}
+    const auto view_exec=defjam_relocator.execute_view_services(view_services);
+    assert((view_exec.viewport_address==0x41900&&view_exec.bitmap_address==0x418cc
+        &&view_exec.saved_stack_address==0x65128&&view_exec.saved_stack_value==0x41892
+        &&view_exec.allocation_begin==0x10000&&view_exec.allocation_size==0x7d00
+        &&view_exec.setup_flag_address==0x41ad6&&view_exec.setup_flag_value==0
+        &&view_exec.pending_custom_effect==eon::MillenniumAmigaBootstrapCustomChipEffect{0x42546,0xdff09a,0xc000}));
+    assert((defjam_relocator.boundary()==eon::MillenniumAmigaBootstrapRelocatorBoundary{0x42546,0,0xdff09a}));
     {
         bool rejected = false;
         try {
@@ -4027,10 +4041,9 @@ int main() {
     assert(admitted_dos_runtime.native_runtime_memory_diagnostics()->checksum==after_driver_read->checksum);
     assert(!admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverVectorObservation{9,0x0239,0x2595,0}).accepted);
     assert(admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverStackObservation{9,0x032f,0x05f7,0xabcd}).accepted);
-    assert(admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverTitleExecObservation{10,0x0336,0x4b00,0x068f,0x067a}).accepted);
     sound_load_checkpoint=admitted_dos_runtime.millennium_dos_sound_driver_load_checkpoint();
     assert(sound_load_checkpoint
-        && sound_load_checkpoint->state==eon::MillenniumDosSoundDriverLoadState::title_exec_requested
+        && sound_load_checkpoint->state==eon::MillenniumDosSoundDriverLoadState::title_exec_boundary
         && sound_load_checkpoint->admitted_driver_byte_count==9194
         && sound_load_checkpoint->runtime_word_effects.size()==4);
     const auto before_title_child=admitted_dos_runtime.native_runtime_memory_diagnostics();
@@ -4038,7 +4051,7 @@ int main() {
     assert(compatibility_stop && compatibility_stop->last_sequence==14
         && compatibility_stop->external_result_required
         && compatibility_stop->title_exec_requested
-        && compatibility_stop->automatic_operation_count==11
+        && compatibility_stop->automatic_operation_count==12
         && compatibility_stop->paragraph_arena.allocations.size()==2
         && compatibility_stop->paragraph_arena.allocations[1].segment==0xe33f
         && compatibility_stop->paragraph_arena.allocations[1].paragraph_count==455);
@@ -4723,6 +4736,27 @@ int main() {
                     &&count_byte(*graphics_memory,0x41ae2)==0x7d
                     &&count_byte(*graphics_memory,0x41ae3)==0);
                 assert(all_release_runtime.native_runtime_memory_diagnostics()->applied_batch_count==15);
+                eon::MillenniumAmigaViewServiceRuntimeObservation view_observation;view_observation.sequence=17;
+                view_observation.services.graphics_base_address=0x41844;view_observation.services.graphics_base_value=0x680000;
+                view_observation.services.returns={{{0x41780,-198,0x41784,0,0x2000,0x65130},
+                    {0x417b4,-216,0x417b8,0,0x2000,0x65128},
+                    {0x417c6,-210,0x417ca,0,0x2000,0x6512c},
+                    {0x417d2,-222,0x417d6,0,0x2000,0x65130}}};
+                auto bad_view=view_observation;bad_view.services.returns[3].vector=-216;
+                const auto before_view=all_release_runtime.native_runtime_memory_diagnostics();
+                assert(!all_release_runtime.observe_millennium_amiga_view_services(bad_view).accepted);
+                assert(all_release_runtime.native_runtime_memory_diagnostics()->checksum==before_view->checksum);
+                assert(all_release_runtime.observe_millennium_amiga_view_services(view_observation).accepted);
+                const auto view_custom_boundary=all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
+                assert(view_custom_boundary&&view_custom_boundary->boundary.instruction_address==0x42546
+                    &&view_custom_boundary->view_service_execution
+                    &&view_custom_boundary->view_service_execution->pending_custom_effect.value==0xc000);
+                const auto view_memory=all_release_runtime.native_runtime_memory_checkpoint();
+                assert(view_memory&&count_byte(*view_memory,0x10000)==0
+                    &&count_byte(*view_memory,0x17cff)==0
+                    &&count_byte(*view_memory,0x41907)==0xcc
+                    &&count_byte(*view_memory,0x41959)==0x14);
+                assert(all_release_runtime.native_runtime_memory_diagnostics()->applied_batch_count==16);
             }else{
                 assert(!all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint());
                 assert(all_release_runtime.native_runtime_memory_diagnostics()->initialized_byte_count==0);
@@ -5232,6 +5266,8 @@ int main() {
             assert(opening_controller.observe_deuteros_amiga_title_exec_return({11,4,0x40468,-0x9c,0x4046c,0,0x2000}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_open_library_return({12,0x1ed80,0x1ed02,4,0x1ed8c,-0x228,0x1ed90,0x00abcdef,0x2000}).accepted);
             assert(opening_controller.advance_deuteros_amiga_title_post_open_library_local_path().accepted);
+            const auto graphics_base_memory=opening_controller.native_runtime_memory_checkpoint();
+            assert(graphics_base_memory&&graphics_base_memory->applied_batch_count==1);
             assert(opening_controller.observe_deuteros_amiga_title_display_base({13,0x1eda6,0x12ff4,0x00080000}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_custom_chip_write({14,0x40498,0x00dff000,0x40,0x7fff}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_custom_chip_write({15,0x4049e,0x00dff000,0x42,0x7fff}).accepted);
@@ -5297,14 +5333,14 @@ int main() {
             assert(opening_controller.observe_deuteros_amiga_title_load_service_return({38,0x389f4,0x208c0,0x389fa,0x12345678,0x2040}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_load_selector({39,0x389fa,0x12fd8,3}).accepted);
             const auto before_copy_memory=opening_controller.native_runtime_memory_diagnostics();
-            assert(before_copy_memory && before_copy_memory->initialized_byte_count==0 && before_copy_memory->applied_batch_count==0);
+            assert(before_copy_memory && before_copy_memory->initialized_byte_count==4 && before_copy_memory->applied_batch_count==1);
             std::uint32_t runtime_copied=0;
             std::uint64_t runtime_copy_sequence=40;
             while(runtime_copied<0xa20){const auto count=std::min<std::uint32_t>(256,0xa20-runtime_copied);std::vector<std::uint32_t> values;values.reserve(count);for(std::uint32_t i=0;i<count;++i)values.push_back(0x80000000U+runtime_copied+i);assert(opening_controller.observe_deuteros_amiga_title_load_copy_chunk({runtime_copy_sequence++,0x38a28,0x29540+runtime_copied*4U,0x1c482+runtime_copied*4U,runtime_copied,values}).accepted);runtime_copied+=count;}
             const auto completed_copy_memory=opening_controller.native_runtime_memory_checkpoint();
-            assert(completed_copy_memory && completed_copy_memory->initialized_bytes.size()==0xa20*4 && completed_copy_memory->applied_batch_count==1);
+            assert(completed_copy_memory && completed_copy_memory->initialized_bytes.size()==0xa20*4+4 && completed_copy_memory->applied_batch_count==2);
             const auto completed_copy_diagnostics=opening_controller.native_runtime_memory_diagnostics();
-            assert(completed_copy_diagnostics && completed_copy_diagnostics->initialized_byte_count==0xa20*4 && completed_copy_diagnostics->applied_batch_count==1 && completed_copy_diagnostics->checksum!=0);
+            assert(completed_copy_diagnostics && completed_copy_diagnostics->initialized_byte_count==0xa20*4+4 && completed_copy_diagnostics->applied_batch_count==2 && completed_copy_diagnostics->checksum!=0);
             assert(!opening_controller.observe_deuteros_amiga_title_load_copy_chunk({runtime_copy_sequence,0x38a28,0x2bdc0,0x1ed02,0,{1}}).accepted);
             assert(opening_controller.native_runtime_memory_diagnostics()->checksum==completed_copy_diagnostics->checksum);
             assert(opening_controller.observe_deuteros_amiga_title_load_dispatch_table_base({runtime_copy_sequence,0x1fb9a,0x1f97c,0x30000}).accepted);
@@ -5321,7 +5357,7 @@ int main() {
             assert(opening_controller.observe_deuteros_amiga_title_command_eight_mode({runtime_copy_sequence+11,0x1fa76,0x1f98e,1}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_command_eight_scale({runtime_copy_sequence+12,0x1fa80,0x1f994,0x12340003}).accepted);
             const auto command_memory=opening_controller.native_runtime_memory_diagnostics();
-            assert(command_memory && command_memory->initialized_byte_count==0xa20*4+17 && command_memory->applied_batch_count==6 && command_memory->checksum!=completed_copy_diagnostics->checksum);
+            assert(command_memory && command_memory->initialized_byte_count==0xa20*4+21 && command_memory->applied_batch_count==7 && command_memory->checksum!=completed_copy_diagnostics->checksum);
             assert(!opening_controller.observe_deuteros_amiga_title_command_eight_scale({runtime_copy_sequence+13,0x1fa80,0x1f994,0}).accepted);
             assert(opening_controller.native_runtime_memory_diagnostics()->checksum==command_memory->checksum);
             assert(opening_controller.observe_deuteros_amiga_title_command_opcode(
@@ -5360,8 +5396,8 @@ int main() {
                 runtime_planar).accepted);
             const auto planar_memory=opening_controller.native_runtime_memory_checkpoint();
             assert(planar_memory
-                && planar_memory->initialized_bytes.size()==0xa20*4+49
-                && planar_memory->applied_batch_count==7
+                && planar_memory->initialized_bytes.size()==0xa20*4+53
+                && planar_memory->applied_batch_count==8
                 && planar_memory->checksum!=command_memory->checksum);
             const auto memory_byte_at=[&](const std::uint64_t address)->std::optional<std::uint8_t>{
                 const auto found=std::find_if(planar_memory->initialized_bytes.begin(),
@@ -5415,8 +5451,8 @@ int main() {
                 runtime_variant).accepted);
             const auto variant_memory=opening_controller.native_runtime_memory_checkpoint();
             assert(variant_memory
-                && variant_memory->initialized_bytes.size()==0xa20*4+81
-                && variant_memory->applied_batch_count==8
+                && variant_memory->initialized_bytes.size()==0xa20*4+85
+                && variant_memory->applied_batch_count==9
                 && variant_memory->checksum!=planar_memory->checksum);
             assert(opening_controller.observe_deuteros_amiga_title_command_opcode(
                 {runtime_copy_sequence+17,0x1fa0a,0x2ff09,0x21}).accepted);
@@ -6183,23 +6219,18 @@ int main() {
             assert(runtime_byte(*after_loop_service_return,0x210f3)==0x01);
             const auto loop_prepare_body_result=
                 opening_controller.advance_deuteros_amiga_main_stage_loop_prepare_body();
-            assert(!loop_prepare_body_result.accepted);
+            assert(loop_prepare_body_result.accepted);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_loop_prepare_body().accepted);
-            const auto after_rejected_loop_prepare_body=
+            const auto after_loop_prepare_body=
                 opening_controller.native_runtime_memory_checkpoint();
-            assert(after_rejected_loop_prepare_body
-                &&after_rejected_loop_prepare_body->applied_batch_count
-                    ==after_loop_service_return->applied_batch_count);
-            assert(runtime_byte(*after_rejected_loop_prepare_body,0x32a24));
-            assert(!runtime_byte(*after_rejected_loop_prepare_body,0x12fec));
-            eon::DeuterosAmigaObservedLocalCallReturn loop_prepare_return{
-                runtime_copy_sequence+105,0x21816,0x21276,0x2181c,0x12345678,0};
-            assert(opening_controller.observe_deuteros_amiga_main_stage_loop_prepare_return(
-                loop_prepare_return).accepted);
-            eon::DeuterosAmigaObservedLocalCallReturn loop_scheduler_return{
-                runtime_copy_sequence+106,0x2181c,0x21380,0x21822,0x87654321,0};
-            assert(opening_controller.observe_deuteros_amiga_main_stage_loop_scheduler_return(
-                loop_scheduler_return).accepted);
+            assert(after_loop_prepare_body
+                &&after_loop_prepare_body->applied_batch_count
+                    ==after_loop_service_return->applied_batch_count+1);
+            assert(runtime_byte(*after_loop_prepare_body,0x32a24));
+            assert(runtime_byte(*after_loop_prepare_body,0x12fec)==0x00);
+            assert(runtime_byte(*after_loop_prepare_body,0x12fed)==0xab);
+            assert(runtime_byte(*after_loop_prepare_body,0x12fee)==0xcd);
+            assert(runtime_byte(*after_loop_prepare_body,0x12fef)==0xef);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory
@@ -8207,12 +8238,6 @@ int main() {
             && admitted_sixth_helper_prefix.boundary().call_target
                 == std::optional<std::uint16_t>{0x6baa});
         admitted_sixth_helper_prefix.observe_call_return(0xce2f, 0xce32);
-        assert(admitted_sixth_helper_prefix.state()
-                == eon::MillenniumDosSixthFunctionState::caller_helper_dynamic_table_call_return
-            && admitted_sixth_helper_prefix.boundary().instruction_address == 0xce42
-            && admitted_sixth_helper_prefix.boundary().call_target
-                == std::optional<std::uint16_t>{0xcf57});
-        admitted_sixth_helper_prefix.observe_call_return(0xce42, 0xce45);
         assert(admitted_sixth_helper_prefix.boundary().kind
                 == eon::MillenniumDosSixthFunctionBoundaryKind::runtime_word
             && admitted_sixth_helper_prefix.boundary().instruction_address == 0xcf5e
@@ -8261,6 +8286,23 @@ int main() {
                 == std::optional<std::uint16_t>{0x7908}
             && admitted_sixth_helper_prefix.boundary().known_ax
                 == std::optional<std::uint16_t>{0x017a});
+        const auto effects_before_wrong_dynamic_first_return =
+            admitted_sixth_helper_prefix.effects();
+        bool wrong_dynamic_first_return_rejected = false;
+        try {
+            admitted_sixth_helper_prefix.observe_call_return(0xcf77, 0xcf7b);
+        } catch (const std::runtime_error&) {
+            wrong_dynamic_first_return_rejected = true;
+        }
+        assert(wrong_dynamic_first_return_rejected
+            && admitted_sixth_helper_prefix.effects()
+                == effects_before_wrong_dynamic_first_return);
+        admitted_sixth_helper_prefix.observe_call_return(0xcf77, 0xcf7a);
+        assert(admitted_sixth_helper_prefix.state()
+                == eon::MillenniumDosSixthFunctionState::caller_helper_dynamic_second_call_return
+            && admitted_sixth_helper_prefix.boundary().instruction_address == 0xcf7a
+            && admitted_sixth_helper_prefix.boundary().call_target
+                == std::optional<std::uint16_t>{0x3f6a});
         admitted.observe_private_interrupt_return(0x0129, 0);
         admitted.observe_runtime_byte(0xd349, 0xda05, 3);
         admitted.observe_native_call_return(0xd373, 0xd376);

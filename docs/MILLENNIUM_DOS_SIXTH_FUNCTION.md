@@ -88,23 +88,22 @@ is inferred.
 After the exact `$4f08` return, the helper restores the already observed F6
 bytes and word to `$75ae`, `$75ac`, and `$75a8`. It then requires returns from
 `$ce20 -> $0b0c`, `$ce27 -> $7b47` with encoded `AX=$002e`, and `$ce2f ->
-$6baa`, recording only the literal `$cb9a := 0` between them. The next call
-`$ce42 -> $cf57` is the boundary: that local callee begins with word reads via
-runtime-derived table pointers, so neither those values nor its effects are
-invented.
+$6baa`, recording only the literal `$cb9a := 0` between them. The direct local
+call at `$ce42` enters the owned `$cf57` body without manufacturing a return.
 
-The `$cf57` callee is now entered through its exact 35-byte prefix
-`$cf57..$cf79` (file `+$ce57`, SHA-256
-`c5383923d88251142281469eb99b59e074b7020d7ff1392e256e1d3ef6c0064d`).
+The `$cf57` callee is now entered through its exact 38-byte prefix
+`$cf57..$cf7c` (file `+$ce57`, SHA-256
+`03c26d611fc6e6df65a20e483d304ed0179234640b8964dae324c895568bddae`).
 Its first pointer is the genuine-image word `$5dd2` from the separately hashed
 18-byte pointer table at file `+$5e9a` (SHA-256
 `041c6a544bd1fcdd5823cb6aac8dac8010a43b344d8997d21c3385287ba44e7d`).
 The session explicitly observes the runtime words at `$5dd2` and `$cb88`.
 Inequality records the encoded `$cb9a := 1` and adds two before the `$03fe`
 mask; equality only applies the mask. The resulting word write to `$5dd2` is
-owned, followed by the explicit byte at `$5dd4`. Execution stops at `$cf77 ->
-$7908` with the exact resulting AX. Later iterations and both callee results
-remain outside the boundary.
+owned, followed by the explicit byte at `$5dd4`. The exact resulting AX is
+carried across `$cf77 -> $7908`; after its observed return, execution stops at
+`$cf7a -> $3f6a`. Later iterations and both callee results remain outside the
+boundary.
 
 The typed session exposes only addresses, call targets, proved register values,
 and memory effects. In particular, the byte read at `$613a` is not assigned a
