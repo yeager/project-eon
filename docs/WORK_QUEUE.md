@@ -500,7 +500,15 @@ The configured bootstrap route now executes `$12932` request initialization,
 its ordered Exec return and the caller's `$12a92` return, then dispatches via
 the owned profile table at `$12a36`. Profiles 0–4 now execute their fixed
 native load bodies and prepare the `$12ad2` read request;
-profile 5 remains at its selected `$12aa8` target.
+profile 5 selects its distinct `$12b46` body.
+The exact profile-five source block is now independently parser-gated across
+all 204 bytes at `$12b46..$12c11`, with its four service sites, two literal
+read ranges, mutable `$66000->$13006` copy, and common `$12ada` tail recorded
+as preservation metadata. The native runtime now executes its helper and
+four private phases, performs both hash-locked media transfers and the
+owned-memory copy, then joins the three-return common cleanup and reaches the
+real `$13000` program entry with profile 5 retained. Failed or reordered
+returns roll back their pending effects.
 The successful `$12ad2` path now transfers the exact parsed main/title range
 into private native memory, clears the request length and issues command 9,
 then admits the separate `$12aee`, `$12afc` and `$12b0a` returns. Final RTS

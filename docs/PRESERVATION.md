@@ -8001,8 +8001,34 @@ Additional source gates:
 - ADF `$2f1c`, 42 bytes, SHA-256
   `8770c93957436fe924ad9bd39a567b4c9e5ad16e8021031b9884e6475242f5ae`.
 
+Profile five now has a separate whole-body source gate. Runtime
+`$12b46..$12c11` maps to bootstrap ADF `$2f46..$3011`: 204 bytes, SHA-256
+`68df4e7e4c9450e11fb7a386f13785be63e433f4f8d594cb2fe2cf8478622475`.
+The parser records all four service calls inside that interval
+(`$12b60`, `$12b98`, `$12bce`, and `$12c0a`, each through Exec vector
+`-$1c8`) separately from the helper call at `$12950`. It also records the
+literal two-read layout: `$b000` bytes from ADF offset `$6e000` to `$13000`,
+then `$55400` bytes from `$79000` to `$1e000`. Between those reads the code
+copies exactly `$9392` current runtime bytes from `$66000` to `$13006`; this
+is mutable-memory preservation, not permission to restore pristine disk
+bytes. The final branch enters the already identified common load tail at
+`$12ada`. These are opcode- and hash-bound mechanics only. The parser does
+not infer names for either payload or claim that an Exec call succeeded.
+
+The native session separately executes that proven body as five explicit
+phases after profile-table selection. It admits the helper plus the four
+service returns in sequence, requires zero from both read calls, and stages
+each hash-locked ADF span in private runtime memory before committing the
+observation. The intervening `$9392`-byte copy reads only already-owned
+mutable `$66000` bytes. Missing source bytes, changed request fields, a stale
+sequence, a wrong vector, or a failed read discards the entire pending memory
+batch. The second read joins the existing `$12aee/$12afc/$12b0a` cleanup;
+its final RTS retains destination `$13000` and profile word 5. No emulator
+memory, extracted file, or synthetic replacement enters this transaction.
+
 The production-checkpoint profile matrix now checks these request fields,
-the two different disk offsets, and the unchanged profile-five boundary.
+both disk offsets, the mutable copy, all eight ordered returns including the
+shared cleanup, and the resulting `$13000` continuation.
 
 ### Deuteros native bootstrap payload read and return chain
 

@@ -169,6 +169,26 @@ struct DeuterosAmigaTitleStageProfile {
     std::array<std::uint16_t, 4> initialization_custom_values{};
     std::uint32_t initialization_mode_five_call_address = 0;
     std::uint32_t initialization_normal_call_address = 0;
+    // Exact bootstrap profile-five body.  The hash covers every source byte
+    // from the indirect-call target through the branch into the common load
+    // tail.  Names below describe only literal request/copy mechanics; no
+    // filesystem or gameplay meaning is inferred.
+    std::uint32_t bootstrap_profile_five_block_address = 0;
+    std::uint32_t bootstrap_profile_five_block_end_address = 0;
+    std::uint32_t bootstrap_profile_five_block_length = 0;
+    std::string bootstrap_profile_five_block_sha256;
+    std::array<std::uint32_t, 4> bootstrap_profile_five_service_calls{};
+    std::array<std::int16_t, 4> bootstrap_profile_five_service_vectors{};
+    std::uint32_t bootstrap_profile_five_first_read_length = 0;
+    std::uint32_t bootstrap_profile_five_first_read_destination = 0;
+    std::uint32_t bootstrap_profile_five_first_read_disk_offset = 0;
+    std::uint32_t bootstrap_profile_five_copy_source = 0;
+    std::uint32_t bootstrap_profile_five_copy_destination = 0;
+    std::uint32_t bootstrap_profile_five_copy_length = 0;
+    std::uint32_t bootstrap_profile_five_second_read_length = 0;
+    std::uint32_t bootstrap_profile_five_second_read_destination = 0;
+    std::uint32_t bootstrap_profile_five_second_read_disk_offset = 0;
+    std::uint32_t bootstrap_profile_five_common_tail_address = 0;
 };
 
 // The wholly local prefix of the timer-gated $4069a transition, ending just

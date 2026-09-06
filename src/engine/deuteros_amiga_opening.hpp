@@ -67,6 +67,20 @@ public:
             throw std::runtime_error("Deuteros auxiliary read source hash changed");
         return payload;
     }
+    [[nodiscard]] std::span<const std::uint8_t> bootstrap_profile_five_payload(
+        std::uint32_t destination,std::uint32_t length,std::uint32_t offset) const {
+        const bool first=destination==0x13000&&length==0xb000&&offset==0x6e000;
+        const bool second=destination==0x1e000&&length==0x55400&&offset==0x79000;
+        if(!first&&!second)
+            throw std::runtime_error("Deuteros profile-five read does not match recovered media range");
+        const auto payload=disk_.bytes(offset,length);
+        const auto expected=first
+            ?"def0bd6a481356e9e1747ad95136b4a01671d57aee8e8060b960308377e47f0c"
+            :"9882e4ff73e6a1a94d7fb675f14fe0184ebea37af541a9b9ee1c57688317f5b0";
+        if(to_hex(sha256(payload))!=expected)
+            throw std::runtime_error("Deuteros profile-five read source hash changed");
+        return payload;
+    }
     [[nodiscard]] std::uint32_t vblank_counter() const { return random_.vblank_counter(); }
     // These are raw opening-VM observables used by the provenance overlay.
     // They are not title/gameplay labels or host controls.

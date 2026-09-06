@@ -525,9 +525,47 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_word(profile_zero, 12, 0x243c); // move.l #$4,d2
     require_long(profile_zero, 14, 4);
     require_word(profile_zero, 18, 0x4e75);
-    const auto profile_five = bootstrap_code(0x12b46, 6);
+    constexpr std::uint32_t profile_five_block_address = 0x12b46;
+    constexpr std::uint32_t profile_five_block_end_address = 0x12c12;
+    constexpr std::uint32_t profile_five_block_length =
+        profile_five_block_end_address - profile_five_block_address;
+    const auto profile_five = bootstrap_code(
+        profile_five_block_address, profile_five_block_length);
+    if (to_hex(sha256(profile_five))
+        != "68df4e7e4c9450e11fb7a386f13785be63e433f4f8d594cb2fe2cf8478622475") {
+        throw std::runtime_error("Unsupported Deuteros bootstrap profile-five body");
+    }
     require_word(profile_five, 0, 0x6100); // bsr.w $12932
     require_word(profile_five, 2, 0xfdea);
+    require_word(profile_five, 4, 0x2279); // movea.l $12822,a1
+    require_long(profile_five, 6, 0x00012822);
+    require_word(profile_five, 26, 0x4eae); // jsr -$1c8(a6), request one
+    require_word(profile_five, 28, 0xfe38);
+    require_long(profile_five, 38, 0x0000b000); // first read length
+    require_long(profile_five, 46, 0x00013000); // first destination
+    require_long(profile_five, 58, 0x00000050); // track multiplier input
+    require_word(profile_five, 62, 0xc4fc); // mulu.w #$1600,d2
+    require_word(profile_five, 64, 0x1600);
+    require_word(profile_five, 82, 0x4eae); // jsr -$1c8(a6), first read
+    require_word(profile_five, 84, 0xfe38);
+    require_long(profile_five, 92, 0x00066000); // mutable copy source
+    require_long(profile_five, 98, 0x00013006); // mutable copy destination
+    require_word(profile_five, 102, 0x303c);
+    require_word(profile_five, 104, 0x9392); // pre-decremented DBRA count
+    require_word(profile_five, 106, 0x5340); // subq.w #1,d0
+    require_word(profile_five, 108, 0x12d8); // move.b (a0)+,(a1)+
+    require_word(profile_five, 110, 0x51c8); // dbra d0,$12bb2
+    require_word(profile_five, 112, 0xfffc);
+    require_word(profile_five, 120, 0x337c); // command $8005, request two
+    require_word(profile_five, 136, 0x4eae); // jsr -$1c8(a6)
+    require_word(profile_five, 138, 0xfe38);
+    require_long(profile_five, 146, 0x0000b000); // destination/offset delta
+    require_long(profile_five, 152, 0x0000b000);
+    require_long(profile_five, 158, 0x00055400); // second read length
+    require_word(profile_five, 196, 0x4eae); // jsr -$1c8(a6), second read
+    require_word(profile_five, 198, 0xfe38);
+    require_word(profile_five, 200, 0x6000); // bra.w $12ada
+    require_word(profile_five, 202, 0xfeca);
     // The helper itself has a straight-line, local prefix. Stop exactly at
     // its first library vector; neither its return nor that vector's effect
     // is part of this preservation profile.
@@ -583,6 +621,23 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     result.initialization_custom_values = custom_values;
     result.initialization_mode_five_call_address = 0x36a8c;
     result.initialization_normal_call_address = 0x1fb9a;
+    result.bootstrap_profile_five_block_address = profile_five_block_address;
+    result.bootstrap_profile_five_block_end_address = profile_five_block_end_address;
+    result.bootstrap_profile_five_block_length = profile_five_block_length;
+    result.bootstrap_profile_five_block_sha256 =
+        "68df4e7e4c9450e11fb7a386f13785be63e433f4f8d594cb2fe2cf8478622475";
+    result.bootstrap_profile_five_service_calls = {0x12b60, 0x12b98, 0x12bce, 0x12c0a};
+    result.bootstrap_profile_five_service_vectors = {-0x1c8, -0x1c8, -0x1c8, -0x1c8};
+    result.bootstrap_profile_five_first_read_length = 0xb000;
+    result.bootstrap_profile_five_first_read_destination = 0x13000;
+    result.bootstrap_profile_five_first_read_disk_offset = 0x6e000;
+    result.bootstrap_profile_five_copy_source = 0x66000;
+    result.bootstrap_profile_five_copy_destination = 0x13006;
+    result.bootstrap_profile_five_copy_length = 0x9392;
+    result.bootstrap_profile_five_second_read_length = 0x55400;
+    result.bootstrap_profile_five_second_read_destination = 0x1e000;
+    result.bootstrap_profile_five_second_read_disk_offset = 0x79000;
+    result.bootstrap_profile_five_common_tail_address = 0x12ada;
     return result;
 }
 

@@ -4888,6 +4888,14 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_service(const DeuterosAm
             for(std::size_t i=0;i<payload.size();++i)
                 write(destination+static_cast<std::uint32_t>(i),MemoryTransferElementWidth::byte,payload[i]);
         }
+        if(current->next_call_address==0x12b98||current->next_call_address==0x12c0a){
+            const auto request=current->a1_value;
+            const auto destination=read(request+40,4);
+            const auto payload=deuteros_amiga_->bootstrap_profile_five_payload(
+                destination,read(request+36,4),read(request+44,4));
+            for(std::size_t i=0;i<payload.size();++i)
+                write(destination+static_cast<std::uint32_t>(i),MemoryTransferElementWidth::byte,payload[i]);
+        }
         if(current->next_call_address==0x13354){
             const auto request=current->a1_value;
             const auto destination=read(request+40,4);

@@ -1410,6 +1410,9 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
     std::uint32_t d1_value=0;
     std::uint32_t bootstrap_stack_top=0;
     std::uint32_t bootstrap_return_destination=0;
+    // Nonzero only while executing the hash-locked profile-five split title
+    // reload at $12b46..$12c11.
+    std::uint8_t bootstrap_profile_five_phase=0;
     std::uint32_t main_stage_stack_top=0;
     std::array<std::uint16_t,4> main_stage_audio_dma_writes{};
     std::uint32_t d2_value=0;
@@ -1783,6 +1786,65 @@ DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
         return plan;
     }
     const auto load_call=plan.next_call_address;
+    if(load_call==0x12b60&&plan.bootstrap_profile_five_phase==2){
+        if(o.read_instruction!=0x12b5c||o.source_address!=4||o.call_address!=0x12b60
+            ||o.return_address!=0x12b64||o.vector!=-0x1c8||read(4,4)!=o.exec_base)
+            throw std::runtime_error("Deuteros profile-five clear return does not match boundary");
+        plan.a1_value=read(0x12822,4);plan.d0_value=0xb000;plan.d1_value=0x13000;
+        plan.d2_value=0x6e000;plan.bootstrap_return_destination=0x13000;
+        write(plan.a1_value+28,MemoryTransferElementWidth::word,0x8002);
+        write(plan.a1_value+36,MemoryTransferElementWidth::longword,plan.d0_value);
+        write(plan.a1_value+40,MemoryTransferElementWidth::longword,plan.d1_value);
+        write(plan.a1_value+44,MemoryTransferElementWidth::longword,plan.d2_value);
+        write(plan.a1_value+30,MemoryTransferElementWidth::byte,0);
+        plan.a6_value=o.exec_base;plan.next_call_address=0x12b98;plan.next_return_address=0x12b9c;
+        plan.next_vector=-0x1c8;plan.pending_read_instruction=0x12b94;plan.pending_read_address=4;
+        plan.bootstrap_profile_five_phase=3;return plan;
+    }
+    if(load_call==0x12b98&&plan.bootstrap_profile_five_phase==3){
+        if(o.read_instruction!=0x12b94||o.source_address!=4||o.call_address!=0x12b98
+            ||o.return_address!=0x12b9c||o.vector!=-0x1c8||read(4,4)!=o.exec_base||o.result_d0!=0
+            ||read(plan.a1_value+28,2)!=0x8002||read(plan.a1_value+36,4)!=0xb000
+            ||read(plan.a1_value+40,4)!=0x13000||read(plan.a1_value+44,4)!=0x6e000)
+            throw std::runtime_error("Deuteros profile-five first read is incomplete or inconsistent");
+        // The original title tail placed this mutable block at $66000. Copy
+        // its current owned bytes back, never pristine media substitutes.
+        for(std::uint32_t i=0;i<0x9392;++i)
+            write(0x13006+i,MemoryTransferElementWidth::byte,read(0x66000+i,1));
+        plan.a1_value=read(0x12822,4);
+        write(plan.a1_value+28,MemoryTransferElementWidth::word,0x8005);
+        write(plan.a1_value+30,MemoryTransferElementWidth::byte,0);
+        plan.a6_value=o.exec_base;plan.next_call_address=0x12bce;plan.next_return_address=0x12bd2;
+        plan.next_vector=-0x1c8;plan.pending_read_instruction=0x12bca;plan.pending_read_address=4;
+        plan.bootstrap_profile_five_phase=4;return plan;
+    }
+    if(load_call==0x12bce&&plan.bootstrap_profile_five_phase==4){
+        if(o.read_instruction!=0x12bca||o.source_address!=4||o.call_address!=0x12bce
+            ||o.return_address!=0x12bd2||o.vector!=-0x1c8||read(4,4)!=o.exec_base)
+            throw std::runtime_error("Deuteros profile-five second clear return does not match boundary");
+        plan.a1_value=read(0x12822,4);plan.d0_value=0x55400;plan.d1_value=0x1e000;plan.d2_value=0x79000;
+        write(plan.a1_value+28,MemoryTransferElementWidth::word,0x8002);
+        write(plan.a1_value+36,MemoryTransferElementWidth::longword,plan.d0_value);
+        write(plan.a1_value+40,MemoryTransferElementWidth::longword,plan.d1_value);
+        write(plan.a1_value+44,MemoryTransferElementWidth::longword,plan.d2_value);
+        write(plan.a1_value+30,MemoryTransferElementWidth::byte,0);
+        plan.a6_value=o.exec_base;plan.next_call_address=0x12c0a;plan.next_return_address=0x12c0e;
+        plan.next_vector=-0x1c8;plan.pending_read_instruction=0x12c06;plan.pending_read_address=4;
+        plan.bootstrap_profile_five_phase=5;return plan;
+    }
+    if(load_call==0x12c0a&&plan.bootstrap_profile_five_phase==5){
+        if(o.read_instruction!=0x12c06||o.source_address!=4||o.call_address!=0x12c0a
+            ||o.return_address!=0x12c0e||o.vector!=-0x1c8||read(4,4)!=o.exec_base||o.result_d0!=0
+            ||read(plan.a1_value+28,2)!=0x8002||read(plan.a1_value+36,4)!=0x55400
+            ||read(plan.a1_value+40,4)!=0x1e000||read(plan.a1_value+44,4)!=0x79000)
+            throw std::runtime_error("Deuteros profile-five second read is incomplete or inconsistent");
+        plan.d0_value=0x55400;write(plan.a1_value+36,MemoryTransferElementWidth::longword,0);
+        write(plan.a1_value+28,MemoryTransferElementWidth::word,9);
+        write(plan.a1_value+30,MemoryTransferElementWidth::byte,0);
+        plan.a6_value=o.exec_base;plan.next_call_address=0x12aee;plan.next_return_address=0x12af2;
+        plan.next_vector=-0x1c8;plan.pending_read_instruction=0x12aea;plan.pending_read_address=4;
+        plan.bootstrap_profile_five_phase=0;return plan;
+    }
     if(load_call==0x12ad2||load_call==0x12aee||load_call==0x12afc||load_call==0x12b0a){
         const auto read_site=load_call==0x12ad2?0x12aceU:load_call==0x12aee?0x12aeaU:
             load_call==0x12afc?0x12af8U:0x12b06U;
@@ -1830,8 +1892,10 @@ DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
         plan.pending_read_address=plan.pending_read_instruction?4:0;
         return plan;
     }
-    const bool bootstrap_request=plan.next_call_address==0x12a7e
-        &&plan.local_call_target==0x12932&&plan.next_return_address==0x12a82;
+    const bool profile_five_helper=plan.bootstrap_profile_five_phase==1
+        &&plan.next_call_address==0x12950&&plan.next_return_address==0x12954;
+    const bool bootstrap_request=(plan.next_call_address==0x12a7e
+        &&plan.local_call_target==0x12932&&plan.next_return_address==0x12a82)||profile_five_helper;
     const bool bootstrap_dispatch=plan.next_call_address==0x12a92
         &&plan.next_return_address==0x12a96&&plan.next_vector==-0x1c8;
     if(bootstrap_request||bootstrap_dispatch){
@@ -1848,12 +1912,15 @@ DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
             write(plan.a1_value+36,MemoryTransferElementWidth::longword,1);
             write(plan.a1_value+28,MemoryTransferElementWidth::word,9);
             write(plan.a1_value+30,MemoryTransferElementWidth::byte,0);
-            // The local RTS returns to $12a82; the next request is not executed.
+            // The local RTS returns to the owning caller before its next
+            // request. Profile five has a distinct $12b4a continuation.
             write(plan.a1_value+28,MemoryTransferElementWidth::word,0x8005);
             write(plan.a1_value+30,MemoryTransferElementWidth::byte,0);
-            plan.next_call_address=0x12a92;plan.next_return_address=0x12a96;
+            plan.next_call_address=profile_five_helper?0x12b60:0x12a92;
+            plan.next_return_address=profile_five_helper?0x12b64:0x12a96;
             plan.next_vector=-0x1c8;plan.local_call_target=0;
-            plan.pending_read_instruction=0x12a8e;plan.pending_read_address=4;
+            plan.pending_read_instruction=profile_five_helper?0x12b5c:0x12a8e;plan.pending_read_address=4;
+            if(profile_five_helper)plan.bootstrap_profile_five_phase=2;
         }else{
             const auto index=(read(0x12a34,2)<<2)&0xffffU;
             const auto displacement=index<0x8000?static_cast<std::int32_t>(index)
@@ -1867,7 +1934,16 @@ DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
             plan.pending_read_instruction=0;plan.pending_read_address=0;
             // The two fixed load profiles and profile two's branch have
             // source-gated native bodies. Other table targets remain calls.
-            if(plan.a1_value==0x12b1c||plan.a1_value==0x12b30||plan.a1_value==0x12b44){
+            if(plan.a1_value==0x12b46){
+                plan.a1_value=read(0x12822,4);
+                write(plan.a1_value+36,MemoryTransferElementWidth::longword,1);
+                write(plan.a1_value+28,MemoryTransferElementWidth::word,9);
+                write(plan.a1_value+30,MemoryTransferElementWidth::byte,0);
+                plan.next_call_address=0x12950;plan.next_return_address=0x12954;
+                plan.local_call_target=0;plan.next_vector=-0x1c8;
+                plan.pending_read_instruction=0x1294c;plan.pending_read_address=4;
+                plan.bootstrap_profile_five_phase=1;
+            }else if(plan.a1_value==0x12b1c||plan.a1_value==0x12b30||plan.a1_value==0x12b44){
                 const bool title=plan.a1_value==0x12b30;
                 plan.d0_value=title?0x6ca00:0x4200;
                 plan.d1_value=title?0x13000:0x20000;
@@ -4876,6 +4952,20 @@ public:
             main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
         }
         const auto load_call=current.next_call_address;
+        if((load_call==0x12950&&current.bootstrap_profile_five_phase==1)
+            ||(load_call==0x12b60&&current.bootstrap_profile_five_phase==2)
+            ||(load_call==0x12b98&&current.bootstrap_profile_five_phase==3)
+            ||(load_call==0x12bce&&current.bootstrap_profile_five_phase==4)
+            ||(load_call==0x12c0a&&current.bootstrap_profile_five_phase==5)){
+            const auto expected_read=load_call==0x12950?0x1294cU:load_call==0x12b60?0x12b5cU:
+                load_call==0x12b98?0x12b94U:load_call==0x12bce?0x12bcaU:0x12c06U;
+            if(o.trace_sequence<=last_command_sequence_||o.read_instruction!=expected_read
+                ||o.source_address!=4||o.call_address!=load_call||o.return_address!=load_call+4
+                ||o.vector!=-0x1c8||plan.a6_value!=o.exec_base
+                ||((load_call==0x12b98||load_call==0x12c0a)&&o.result_d0!=0))
+                throw std::runtime_error("Deuteros profile-five return is invalid or stale");
+            main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
+        }
         if(load_call==0x12ad2||load_call==0x12aee||load_call==0x12afc||load_call==0x12b0a){
             const auto read_site=load_call==0x12ad2?0x12aceU:load_call==0x12aee?0x12aeaU:
                 load_call==0x12afc?0x12af8U:0x12b06U;
@@ -4898,7 +4988,8 @@ public:
                 ||o.return_address!=(bootstrap_request?0x12954U:0x12a96U)||o.vector!=-0x1c8
                 ||plan.a6_value!=o.exec_base
                 ||(bootstrap_request?plan.next_call_address!=0x12a92U
-                    :(plan.next_call_address!=0x12aa8U&&plan.next_call_address!=0x12ad2U)))
+                    :(plan.next_call_address!=0x12aa8U&&plan.next_call_address!=0x12ad2U
+                        &&plan.next_call_address!=0x12950U)))
                 throw std::runtime_error("Deuteros bootstrap dispatch return is invalid or stale");
             main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
         }

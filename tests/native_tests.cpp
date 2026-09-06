@@ -7115,8 +7115,41 @@ int main() {
                                                 const auto index=(command_read(0x12a34,2)<<2)&0xffffU;
                                                 if((profile&0xffffU)==5){
                                                     assert(selected.d0_value==(0xdead0000U|index));
-                                                    assert(selected.next_call_address==0x12aa8&&selected.next_return_address==0x12aaa);
-                                                    assert(selected.local_call_target==command_read(0x12a36+index,4));
+                                                    assert(selected.next_call_address==0x12950&&selected.next_return_address==0x12954);
+                                                    assert(selected.bootstrap_profile_five_phase==1);
+                                                    for(std::uint32_t byte=0;byte<0x9392;++byte)
+                                                        command_write(0x66000+byte,eon::MemoryTransferElementWidth::byte,
+                                                            static_cast<std::uint8_t>((byte*17U+3U)&0xffU));
+                                                    auto reload=eon::execute_deuteros_amiga_outer_service(selected,
+                                                        {15,0x1294c,4,command_read(4,4),0x12950,0x12954,0,-0x1c8},command_read,command_write);
+                                                    assert(reload.next_call_address==0x12b60&&reload.bootstrap_profile_five_phase==2);
+                                                    reload=eon::execute_deuteros_amiga_outer_service(reload,
+                                                        {16,0x12b5c,4,command_read(4,4),0x12b60,0x12b64,0,-0x1c8},command_read,command_write);
+                                                    assert(reload.next_call_address==0x12b98&&reload.bootstrap_profile_five_phase==3);
+                                                    assert(command_read(reload.a1_value+36,4)==0xb000
+                                                        &&command_read(reload.a1_value+40,4)==0x13000
+                                                        &&command_read(reload.a1_value+44,4)==0x6e000);
+                                                    reload=eon::execute_deuteros_amiga_outer_service(reload,
+                                                        {17,0x12b94,4,command_read(4,4),0x12b98,0x12b9c,0,-0x1c8},command_read,command_write);
+                                                    assert(reload.next_call_address==0x12bce&&reload.bootstrap_profile_five_phase==4);
+                                                    for(std::uint32_t byte=0;byte<0x9392;++byte)
+                                                        assert(command_read(0x13006+byte,1)==((byte*17U+3U)&0xffU));
+                                                    reload=eon::execute_deuteros_amiga_outer_service(reload,
+                                                        {18,0x12bca,4,command_read(4,4),0x12bce,0x12bd2,0,-0x1c8},command_read,command_write);
+                                                    assert(reload.next_call_address==0x12c0a&&reload.bootstrap_profile_five_phase==5);
+                                                    assert(command_read(reload.a1_value+36,4)==0x55400
+                                                        &&command_read(reload.a1_value+40,4)==0x1e000
+                                                        &&command_read(reload.a1_value+44,4)==0x79000);
+                                                    reload=eon::execute_deuteros_amiga_outer_service(reload,
+                                                        {19,0x12c06,4,command_read(4,4),0x12c0a,0x12c0e,0,-0x1c8},command_read,command_write);
+                                                    assert(reload.next_call_address==0x12aee&&reload.bootstrap_profile_five_phase==0);
+                                                    reload=eon::execute_deuteros_amiga_outer_service(reload,
+                                                        {20,0x12aea,4,command_read(4,4),0x12aee,0x12af2,0,-0x1c8},command_read,command_write);
+                                                    reload=eon::execute_deuteros_amiga_outer_service(reload,
+                                                        {21,0x12af8,4,command_read(4,4),0x12afc,0x12b00,0,-0x1c2},command_read,command_write);
+                                                    reload=eon::execute_deuteros_amiga_outer_service(reload,
+                                                        {22,0x12b06,4,command_read(4,4),0x12b0a,0x12b0e,0xface0000,-0x168},command_read,command_write);
+                                                    assert(reload.next_instruction_address==0x13000&&reload.d0_value==0xface0005);
                                                 }else{
                                                     const bool title=(profile&0xffffU)==1;
                                                     assert(selected.next_call_address==0x12ad2&&selected.next_return_address==0x12ad6);
@@ -15123,6 +15156,20 @@ int main() {
     }
     const auto title_stage = eon::parse_deuteros_amiga_title_stage(system_disk, load_plan);
     {
+        auto altered_profile_five_disk = *amiga_disk1;
+        // This byte is in the profile-five body but outside the older
+        // six-byte entry check and the separately checked helper at $12932.
+        altered_profile_five_disk[0x2f46 + 0x7e] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_profile_five_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_stage(altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    {
         auto altered_title_stage_disk = *amiga_disk1;
         // The final stage byte lies outside the profile's decoded opcode
         // windows. Full-stage identity must reject it before those windows
@@ -15240,6 +15287,25 @@ int main() {
     assert(title_stage.bootstrap_profile_five_helper_byte_value == 0);
     assert(title_stage.bootstrap_profile_five_helper_library_base == 4);
     assert(title_stage.bootstrap_profile_five_helper_library_vector == -0x1c8);
+    assert(title_stage.bootstrap_profile_five_block_address == 0x12b46);
+    assert(title_stage.bootstrap_profile_five_block_end_address == 0x12c12);
+    assert(title_stage.bootstrap_profile_five_block_length == 0xcc);
+    assert(title_stage.bootstrap_profile_five_block_sha256
+        == "68df4e7e4c9450e11fb7a386f13785be63e433f4f8d594cb2fe2cf8478622475");
+    assert((title_stage.bootstrap_profile_five_service_calls
+        == std::array<std::uint32_t, 4>{{0x12b60, 0x12b98, 0x12bce, 0x12c0a}}));
+    assert((title_stage.bootstrap_profile_five_service_vectors
+        == std::array<std::int16_t, 4>{{-0x1c8, -0x1c8, -0x1c8, -0x1c8}}));
+    assert(title_stage.bootstrap_profile_five_first_read_length == 0xb000);
+    assert(title_stage.bootstrap_profile_five_first_read_destination == 0x13000);
+    assert(title_stage.bootstrap_profile_five_first_read_disk_offset == 0x6e000);
+    assert(title_stage.bootstrap_profile_five_copy_source == 0x66000);
+    assert(title_stage.bootstrap_profile_five_copy_destination == 0x13006);
+    assert(title_stage.bootstrap_profile_five_copy_length == 0x9392);
+    assert(title_stage.bootstrap_profile_five_second_read_length == 0x55400);
+    assert(title_stage.bootstrap_profile_five_second_read_destination == 0x1e000);
+    assert(title_stage.bootstrap_profile_five_second_read_disk_offset == 0x79000);
+    assert(title_stage.bootstrap_profile_five_common_tail_address == 0x12ada);
     assert(title_stage.initialization_stack_address == 0x40b62);
     assert(title_stage.initialization_exec_base_address == 4);
     assert((title_stage.initialization_exec_vectors
