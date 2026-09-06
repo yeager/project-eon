@@ -1,6 +1,7 @@
 #include "data/deuteros_amiga_alternate_renderer.hpp"
 #include "data/sha256.hpp"
 
+#include <algorithm>
 #include <array>
 #include <stdexcept>
 #include <string_view>
@@ -126,28 +127,17 @@ void apply_deuteros_amiga_alternate_renderer(
     // local link from its display base cell to $20510.  The calls themselves
     // remain an ABI boundary, but this following raw move pair and the
     // position helper below are enough to validate the renderer-only route.
-    constexpr std::array<std::uint8_t, 20> video_link_bytes{{
-        0x23, 0xf9, 0x00, 0x02, 0x01, 0x28, 0x00, 0x02, 0x05, 0x10,
-        0x23, 0xf9, 0x00, 0x02, 0x01, 0x28, 0x00, 0x02, 0x0c, 0x20,
-    }};
-    constexpr std::array<std::uint8_t, 48> position_helper_bytes{{
-        0x2f, 0x01, 0x12, 0x1c, 0x42, 0x40, 0x10, 0x1c, 0xb0, 0x3c,
-        0x00, 0x31, 0x65, 0x04, 0x10, 0x3c, 0x00, 0x30, 0xe5, 0x48,
-        0xc0, 0xfc, 0x00, 0x28, 0x02, 0x41, 0x00, 0xff, 0xd0, 0x41,
-        0x22, 0x39, 0x00, 0x02, 0x01, 0x28, 0xd2, 0x40, 0x23, 0xc1,
-        0x00, 0x02, 0x05, 0x10, 0x22, 0x1f, 0x4e, 0x75,
-    }};
+    constexpr std::size_t video_link_size = 20;
+    constexpr std::size_t position_helper_size = 48;
     constexpr std::string_view video_link_hash =
         "66c68dea1896b857f9cda825ef5511b34254ceed8db8a1b1481c3e3477514194";
     constexpr std::string_view position_helper_hash =
         "b167cbda0c4e419b50e8dea16172b80a3db31e52385fe606efd146a54ce4d772";
-    const auto video_link = main.subspan(main_offset(plan, 0x21768, video_link_bytes.size()),
-        video_link_bytes.size());
+    const auto video_link = main.subspan(main_offset(plan, 0x21768, video_link_size),
+        video_link_size);
     const auto position_helper = main.subspan(
-        main_offset(plan, 0x2069c, position_helper_bytes.size()), position_helper_bytes.size());
-    if (!std::equal(video_link_bytes.begin(), video_link_bytes.end(), video_link.begin())
-        || !std::equal(position_helper_bytes.begin(), position_helper_bytes.end(), position_helper.begin())
-        || to_hex(sha256(video_link)) != video_link_hash
+        main_offset(plan, 0x2069c, position_helper_size), position_helper_size);
+    if (to_hex(sha256(video_link)) != video_link_hash
         || to_hex(sha256(position_helper)) != position_helper_hash) {
         throw std::runtime_error("Unsupported Deuteros alternate renderer video setup");
     }
@@ -171,12 +161,9 @@ void apply_deuteros_amiga_alternate_renderer(
     // The only observed stream uses selector one/zero. Require its original
     // masks rather than interpreting a synthetic table as a compatible font.
     if (trace.primary_table_selector == 1 && trace.secondary_table_selector == 0) {
-        constexpr std::array<std::uint8_t, 8> primary_expected{{
-            0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        }};
-        constexpr std::array<std::uint8_t, 8> secondary_expected{};
-        if (!std::equal(primary_expected.begin(), primary_expected.end(), primary_table.begin())
-            || !std::equal(secondary_expected.begin(), secondary_expected.end(), secondary_table.begin())) {
+        if (big16(primary_table, 0) != 0xffff
+            || std::any_of(primary_table.begin() + 2, primary_table.end(), [](auto byte) { return byte != 0; })
+            || std::any_of(secondary_table.begin(), secondary_table.end(), [](auto byte) { return byte != 0; })) {
             throw std::runtime_error("Unsupported Deuteros alternate renderer selector tables");
         }
     }

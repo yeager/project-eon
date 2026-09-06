@@ -37,12 +37,13 @@ RAW_INSTRUCTION_LINE = re.compile(
     rb"(?:[0-9a-f]{2}\s+){2,}[a-z][a-z0-9.]*\b"
 )
 
-# An initializer is counted only when it contains at least 64 byte literals:
-# normal palettes, protocol constants, UUIDs, and unit-test fixtures remain
-# outside this gate. Original-derived executable spans belong in the external
-# reproducible analysis cache; production code retains their length and hash.
+# Exact original spans do not become safe merely because they are short.
+# Production byte tables with two or more literals are therefore rejected by
+# default. A genuinely public-format or independently specified constant may
+# carry the narrowly reviewed marker immediately above its declaration.
+BYTE_INITIALIZER_ALLOW_MARKER = b"EON_ARTIFACT_POLICY_ALLOW:"
 BYTE_INITIALIZER = re.compile(
-    rb"(?:std::array\s*<\s*std::uint8_t\s*,\s*\d+\s*>|"
+    rb"(?:std::array\s*<\s*std::uint8_t\s*,\s*[^>]+>|"
     rb"std::to_array\s*<\s*std::uint8_t\s*>\s*\()"
     rb"[^;={]*[({]{1,2}(.*?)[})]{1,2}\s*;",
     re.DOTALL,
@@ -85,12 +86,17 @@ def forbidden_tracked_content(paths: list[str], root: Path = ROOT,
             rejected.append(raw_path)
             continue
         if raw_path.startswith("src/") and raw_path.endswith((".c", ".cpp", ".h", ".hpp")):
-            lengths = [
-                len(BYTE_LITERAL.findall(match.group(1)))
-                for match in BYTE_INITIALIZER.finditer(data)
-            ]
-            lengths = [length for length in lengths if length >= 64]
-            if lengths:
+            forbidden_initializer = False
+            for match in BYTE_INITIALIZER.finditer(data):
+                if len(BYTE_LITERAL.findall(match.group(1))) < 2:
+                    continue
+                prefix = data[max(0, match.start() - 240):match.start()]
+                if any(BYTE_INITIALIZER_ALLOW_MARKER in line
+                       for line in prefix.splitlines()[-3:]):
+                    continue
+                forbidden_initializer = True
+                break
+            if forbidden_initializer:
                 rejected.append(raw_path)
     return sorted(rejected)
 

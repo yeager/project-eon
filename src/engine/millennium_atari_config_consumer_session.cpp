@@ -47,202 +47,103 @@ MillenniumAtariConfigConsumerSession::MillenniumAtariConfigConsumerSession(
     constexpr std::uint16_t move_sr_d0 = 0x40c0;
     constexpr std::string_view prelude_sha256 =
         "dede20eddbd8015da1d1a4f2f5e53424c2bc2195bff238d830ea24c9f522ea59";
-    const std::array<std::uint8_t, 8> required{
-        require_byte(memory, jsr_target), require_byte(memory, jsr_target + 1U),
-        require_byte(memory, jsr_target + 2U), require_byte(memory, jsr_target + 3U),
-        require_byte(memory, jsr_target + 4U), require_byte(memory, jsr_target + 5U),
-        require_byte(memory, jump_target), require_byte(memory, jump_target + 1U)};
-    constexpr std::array<std::uint8_t, 20> xbios_prefix{
-        0x3f, 0x3c, 0x00, 0x02, 0x4e, 0x4e, 0x54, 0x8f,
-        0x23, 0xc0, 0x00, 0x02, 0xa5, 0x0a, 0x3f, 0x3c,
-        0x00, 0x03, 0x4e, 0x4e,
+    const auto require_span = [&memory]<std::size_t Size>(const std::uint32_t address,
+        const ExecutableByteAnchor<Size>& anchor, const char* message) {
+        if (!memory_matches(memory, address, anchor)) throw std::runtime_error(message);
     };
-    for (std::size_t index = 0; index < xbios_prefix.size(); ++index) {
-        if (require_byte(memory, 0x2a51cU + static_cast<std::uint32_t>(index))
-            != xbios_prefix[index]) {
-            throw std::runtime_error("Unexpected Millennium Atari XBIOS continuation bytes");
-        }
-    }
-    constexpr std::array<std::uint8_t, 16> selector_three_continuation{
-        0x4e, 0x4e, 0x54, 0x8f, 0x23, 0xc0, 0x00, 0x02,
-        0xa5, 0x0e, 0x3f, 0x3c, 0x00, 0x04, 0x4e, 0x4e,
-    };
-    for (std::size_t index = 0; index < selector_three_continuation.size(); ++index) {
-        if (require_byte(memory, 0x2a52eU + static_cast<std::uint32_t>(index))
-            != selector_three_continuation[index]) {
-            throw std::runtime_error("Unexpected Millennium Atari selector-3 continuation bytes");
-        }
-    }
-    constexpr std::array<std::uint8_t, 12> selector_four_continuation{
-        0x4e, 0x4e, 0x54, 0x8f, 0x33, 0xc0,
-        0x00, 0x02, 0xa5, 0x12, 0xa0, 0x00,
-    };
-    for (std::size_t index = 0; index < selector_four_continuation.size(); ++index) {
-        if (require_byte(memory, 0x2a53cU + static_cast<std::uint32_t>(index))
-            != selector_four_continuation[index]) {
-            throw std::runtime_error("Unexpected Millennium Atari selector-4 continuation bytes");
-        }
-    }
-    constexpr std::array<std::uint8_t, 24> line_a_continuation{
-        0xa0, 0x00, 0x26, 0x68, 0x00, 0x08, 0x28, 0x68,
-        0x00, 0x0c, 0x23, 0xcb, 0x00, 0x02, 0xa5, 0x14,
-        0x23, 0xcc, 0x00, 0x02, 0xa5, 0x18, 0x4e, 0x75,
-    };
-    for (std::size_t index = 0; index < line_a_continuation.size(); ++index) {
-        if (require_byte(memory, 0x2a546U + static_cast<std::uint32_t>(index))
-            != line_a_continuation[index]) {
-            throw std::runtime_error("Unexpected Millennium Atari Line-A continuation bytes");
-        }
-    }
-    constexpr std::array<std::uint8_t, 8> caller_continuation{
-        0x42, 0xa7, 0x3f, 0x3c, 0x00, 0x15, 0x4e, 0x4e,
-    };
-    for (std::size_t index = 0; index < caller_continuation.size(); ++index) {
-        if (require_byte(memory, 0x2aaaaU + static_cast<std::uint32_t>(index))
-            != caller_continuation[index]) {
-            throw std::runtime_error("Unexpected Millennium Atari Line-A caller bytes");
-        }
-    }
-    constexpr std::array<std::uint8_t, 16> selector_21_continuation{
-        0x4e, 0x4e, 0x5c, 0x8f, 0x2f, 0x3c, 0x00, 0x02,
-        0xa6, 0x12, 0x3f, 0x3c, 0x00, 0x06, 0x4e, 0x4e,
-    };
-    for (std::size_t index = 0; index < selector_21_continuation.size(); ++index) {
-        if (require_byte(memory, 0x2aab0U + static_cast<std::uint32_t>(index))
-            != selector_21_continuation[index]) {
-            throw std::runtime_error("Unexpected Millennium Atari selector-21 continuation bytes");
-        }
-    }
-    constexpr std::array<std::uint8_t, 10> selector_6_continuation{
-        0x4e, 0x4e, 0x5c, 0x8f, 0x4e, 0xb9, 0x00, 0x02, 0xb5, 0x5a,
-    };
-    for (std::size_t index = 0; index < selector_6_continuation.size(); ++index) {
-        if (require_byte(memory, 0x2aabeU + static_cast<std::uint32_t>(index))
-            != selector_6_continuation[index]) {
-            throw std::runtime_error("Unexpected Millennium Atari selector-6 continuation bytes");
-        }
-    }
-    constexpr std::array<std::uint8_t, 8> jsr_prefix{
-        0x48, 0xe7, 0xff, 0xfe, 0x61, 0x00, 0x00, 0x38,
-    };
-    for (std::size_t index = 0; index < jsr_prefix.size(); ++index) {
-        if (require_byte(memory, 0x2b55aU + static_cast<std::uint32_t>(index))
-            != jsr_prefix[index]) throw std::runtime_error("Unexpected $2b55a prefix");
-    }
-    constexpr std::array<std::uint8_t, 16> bsr_prefix{
-        0x47, 0xfa, 0xfb, 0x4a, 0x42, 0x2b, 0x05, 0xd0,
-        0x41, 0xfa, 0x08, 0x56, 0x17, 0x70, 0x00, 0x01,
-    };
-    for (std::size_t index = 0; index < bsr_prefix.size(); ++index) {
-        if (require_byte(memory, 0x2b59aU + static_cast<std::uint32_t>(index))
-            != bsr_prefix[index]) throw std::runtime_error("Unexpected $2b59a prefix");
-    }
-    constexpr std::array<std::uint8_t, 12> indexed_writes{
-        0x17, 0x70, 0x00, 0x01, 0x05, 0xc8,
-        0x17, 0x7a, 0x01, 0x00, 0x05, 0xc9,
-    };
-    for (std::size_t index = 0; index < indexed_writes.size(); ++index) {
-        if (require_byte(memory, 0x2b5a6U + static_cast<std::uint32_t>(index))
-            != indexed_writes[index]) throw std::runtime_error("Unexpected indexed writes");
-    }
-    constexpr std::array<std::uint8_t, 48> a1_setup{
-        0x43,0xfa,0x00,0x68,0x7e,0x02,0x13,0x7c,0x00,0x01,0x00,0x1b,
-        0x42,0x29,0x00,0x00,0x42,0x29,0x00,0x2c,0x51,0xe9,0x00,0x2d,
-        0x51,0xe9,0x00,0x2e,0x41,0xfa,0x07,0xfa,0x23,0x48,0x00,0x10,
-        0x23,0x48,0x00,0x14,0x41,0xfa,0x08,0x1e,0x30,0x70,0x00,0x02,
-    };
-    for (std::size_t index = 0; index < a1_setup.size(); ++index) {
-        if (require_byte(memory, 0x2b5b2U + static_cast<std::uint32_t>(index))
-            != a1_setup[index]) throw std::runtime_error("Unexpected A1 setup bytes");
-    }
-    constexpr std::array<std::uint8_t, 18> indexed_word{
-        0x30,0x70,0x00,0x02,0x33,0x48,0x00,0x06,0x33,0x7c,0x00,0x02,
-        0x00,0x0a,0x30,0x73,0x80,0x00,
-    };
-    for(std::size_t i=0;i<indexed_word.size();++i) if(require_byte(memory,0x2b5deU+static_cast<std::uint32_t>(i))!=indexed_word[i]) throw std::runtime_error("Unexpected indexed word bytes");
-    constexpr std::array<std::uint8_t,20> tail{0x30,0x73,0x80,0x00,0xd1,0xcb,0x23,0x48,0x00,0x02,0xd2,0xfc,0x00,0x30,0x54,0x40,0x51,0xcf,0xff,0xba};
-    for(std::size_t i=0;i<tail.size();++i)if(require_byte(memory,0x2b5ecU+static_cast<std::uint32_t>(i))!=tail[i])throw std::runtime_error("Unexpected indexed tail");
-    constexpr std::array<std::uint8_t,42> loop_setup{0x13,0x7c,0x00,0x01,0x00,0x1b,0x42,0x29,0x00,0x00,0x42,0x29,0x00,0x2c,0x51,0xe9,0x00,0x2d,0x51,0xe9,0x00,0x2e,0x41,0xfa,0x07,0xfa,0x23,0x48,0x00,0x10,0x23,0x48,0x00,0x14,0x41,0xfa,0x08,0x1e,0x30,0x70,0x00,0x02};
-    for(std::size_t i=0;i<loop_setup.size();++i)if(require_byte(memory,0x2b5b8U+static_cast<std::uint32_t>(i))!=loop_setup[i])throw std::runtime_error("Unexpected loop setup");
-    constexpr std::array<std::uint8_t,28> epilogue{0x42,0xab,0x05,0xca,0x17,0x7c,0x00,0x0f,0x05,0xc7,0x51,0xeb,0x05,0xd1,0x50,0xeb,0x05,0xd6,0x50,0xeb,0x05,0xcf,0x50,0xeb,0x05,0xc6,0x4e,0x75};
-    for(std::size_t i=0;i<epilogue.size();++i)if(require_byte(memory,0x2b600U+static_cast<std::uint32_t>(i))!=epilogue[i])throw std::runtime_error("Unexpected loop epilogue");
-    constexpr std::array<std::uint8_t,6> movem_rts{0x4c,0xdf,0x7f,0xff,0x4e,0x75};
-    constexpr std::array<std::uint8_t,6> caller_jsr{0x4e,0xb9,0x00,0x02,0xaa,0x68};
-    for(std::size_t i=0;i<6;++i)if(require_byte(memory,0x2b562U+static_cast<std::uint32_t>(i))!=movem_rts[i]||require_byte(memory,0x2aac8U+static_cast<std::uint32_t>(i))!=caller_jsr[i])throw std::runtime_error("Unexpected MOVEM caller continuation");
-    constexpr std::array<std::uint8_t,12> aa68_prefix{0x2f,0x3c,0x00,0x02,0xaa,0x42,0x3f,0x3c,0x00,0x26,0x4e,0x4e};
-    for(std::size_t i=0;i<aa68_prefix.size();++i)if(require_byte(memory,0x2aa68U+static_cast<std::uint32_t>(i))!=aa68_prefix[i])throw std::runtime_error("Unexpected $2aa68 prefix");
-    constexpr std::array<std::uint8_t,6> selector38_return{0x4e,0x4e,0x5c,0x8f,0x4e,0x75};
-    constexpr std::array<std::uint8_t,12> selector38_caller{0x2e,0x3c,0x00,0x02,0xa6,0x40,0x4e,0xb9,0x00,0x02,0xaa,0x0c};
-    for(std::size_t i=0;i<6;++i)if(require_byte(memory,0x2aa72U+static_cast<std::uint32_t>(i))!=selector38_return[i])throw std::runtime_error("Unexpected selector-38 return");
-    for(std::size_t i=0;i<12;++i)if(require_byte(memory,0x2aaceU+static_cast<std::uint32_t>(i))!=selector38_caller[i])throw std::runtime_error("Unexpected selector-38 caller");
-    constexpr std::array<std::uint8_t,6> jsr_2a5aa{0x4e,0xb9,0x00,0x02,0xa5,0xaa};
-    constexpr std::array<std::uint8_t,12> gemdos61{0x3f,0x3c,0x00,0x02,0x2f,0x07,0x3f,0x3c,0x00,0x3d,0x4e,0x41};
-    for(std::size_t i=0;i<6;++i)if(require_byte(memory,0x2aa0cU+static_cast<std::uint32_t>(i))!=jsr_2a5aa[i])throw std::runtime_error("Unexpected $2aa0c caller");
-    for(std::size_t i=0;i<12;++i)if(require_byte(memory,0x2a5aaU+static_cast<std::uint32_t>(i))!=gemdos61[i])throw std::runtime_error("Unexpected GEMDOS 61 prefix");
-    constexpr std::array<std::uint8_t,12> gemdos61_return{0x50,0x8f,0x33,0xc0,0x00,0x02,0xa5,0xfa,0x4a,0x80,0x4e,0x75};
-    constexpr std::array<std::uint8_t,12> fopen_branch{0x6a,0x00,0x00,0x08,0x4e,0xf9,0x00,0x02,0xa6,0x32,0x20,0x3c};
-    constexpr std::array<std::uint8_t,18> fopen_positive{0x20,0x3c,0x00,0x00,0x7d,0x42,0x22,0x3c,0x00,0x02,0xc2,0x4a,0x4e,0xb9,0x00,0x02,0xa5,0xc2};
-    for(std::size_t i=0;i<12;++i)if(require_byte(memory,0x2a5b6U+static_cast<std::uint32_t>(i))!=gemdos61_return[i])throw std::runtime_error("Unexpected GEMDOS 61 return");
-    for(std::size_t i=0;i<12;++i)if(require_byte(memory,0x2aa12U+static_cast<std::uint32_t>(i))!=fopen_branch[i])throw std::runtime_error("Unexpected Fopen caller branch");
-    for(std::size_t i=0;i<18;++i)if(require_byte(memory,0x2aa1cU+static_cast<std::uint32_t>(i))!=fopen_positive[i])throw std::runtime_error("Unexpected Fopen positive continuation");
+    constexpr ExecutableByteAnchor<20> xbios_prefix{"751915c217471e4763ebeef2928dc4cca68bc481dae3113adabb441c2446ee2f"};
+    require_span(0x2a51cU, xbios_prefix, "Unexpected Millennium Atari XBIOS continuation bytes");
+    constexpr ExecutableByteAnchor<16> selector_three_continuation{"f4a7b019591ccff43e4478ac1549e262387ebfb22c16ded18457fe2aca6bbcc2"};
+    require_span(0x2a52eU, selector_three_continuation, "Unexpected Millennium Atari selector-3 continuation bytes");
+    constexpr ExecutableByteAnchor<12> selector_four_continuation{"42c6d7ede7609ced9c859e6222d678edf861018b86ee80be2cfe6f8a23010e44"};
+    require_span(0x2a53cU, selector_four_continuation, "Unexpected Millennium Atari selector-4 continuation bytes");
+    constexpr ExecutableByteAnchor<24> line_a_continuation{"1705523f57debe7644c3a874cd76e42464f1f34f227c9ee1247026afdb2f3539"};
+    require_span(0x2a546U, line_a_continuation, "Unexpected Millennium Atari Line-A continuation bytes");
+    constexpr ExecutableByteAnchor<8> caller_continuation{"37f9fb95e45dc6c4807821ac79189a2d764fffe6bbbef6196ee17f3ad1a18684"};
+    require_span(0x2aaaaU, caller_continuation, "Unexpected Millennium Atari Line-A caller bytes");
+    constexpr ExecutableByteAnchor<16> selector_21_continuation{"de3f0996c3b76c20c1e83a686f9a97f7a5ad8f9575a03d8f01b7f4cadf45a233"};
+    require_span(0x2aab0U, selector_21_continuation, "Unexpected Millennium Atari selector-21 continuation bytes");
+    constexpr ExecutableByteAnchor<10> selector_6_continuation{"ba614a28f861921a263225ef85209b20dc2673ea3444cb556b88ca29b2b23163"};
+    require_span(0x2aabeU, selector_6_continuation, "Unexpected Millennium Atari selector-6 continuation bytes");
+    constexpr ExecutableByteAnchor<8> jsr_prefix{"b1b4328c9f54737553994259dac4dfb0247bf422414ed05a1c5c6166ec37ba62"};
+    require_span(0x2b55aU, jsr_prefix, "Unexpected $2b55a prefix");
+    constexpr ExecutableByteAnchor<16> bsr_prefix{"967cb0022c8e29e0bef0dae618b95750fff3afa255094f9356210f1c89686fa3"};
+    require_span(0x2b59aU, bsr_prefix, "Unexpected $2b59a prefix");
+    constexpr ExecutableByteAnchor<12> indexed_writes{"e87859079e18a266cc359d7e0be47667c5cfe79dbffa05daad80ee951fa777d7"};
+    require_span(0x2b5a6U, indexed_writes, "Unexpected indexed writes");
+    constexpr ExecutableByteAnchor<48> a1_setup{"4345389397550c90280802d10a3f03b3e181745bcb98f8c693a2c0980722a1ef"};
+    require_span(0x2b5b2U, a1_setup, "Unexpected A1 setup bytes");
+    constexpr ExecutableByteAnchor<18> indexed_word{"6fae36f2f65050ca3ff99c8cb73f43a8c130dd4d252d4b7d38d0be9118eeba78"};
+    require_span(0x2b5deU, indexed_word, "Unexpected indexed word bytes");
+    constexpr ExecutableByteAnchor<20> tail{"82379ace33d5464b74e03aa0669f8a1097498fd21ce3639c180ab5e21cac810b"};
+    require_span(0x2b5ecU, tail, "Unexpected indexed tail");
+    constexpr ExecutableByteAnchor<42> loop_setup{"9efa7511411f3ca6698746d8bac484420a14e67e35467be2909f3647b0612034"};
+    require_span(0x2b5b8U, loop_setup, "Unexpected loop setup");
+    constexpr ExecutableByteAnchor<28> epilogue{"51ea54e46ad38380435c7a367889825fce566b4f33036fb5dd38846dafdf4ab7"};
+    require_span(0x2b600U, epilogue, "Unexpected loop epilogue");
+    constexpr ExecutableByteAnchor<6> movem_rts{"7f09b538ef863cae65b4a16e1301251bde1fed37c1dba591dd4ec9f4b34106b1"};
+    constexpr ExecutableByteAnchor<6> caller_jsr{"fd41f7c5a0cdb684768c3da230cb9ca56bac136abd2254b55090d6b1cf58da78"};
+    require_span(0x2b562U, movem_rts, "Unexpected MOVEM return continuation");
+    require_span(0x2aac8U, caller_jsr, "Unexpected MOVEM caller continuation");
+    constexpr ExecutableByteAnchor<12> aa68_prefix{"fd6e1ace58bbc4108fcc0b8a7f75103c04337c41d24b2c9de5907f9538aaf439"};
+    require_span(0x2aa68U, aa68_prefix, "Unexpected $2aa68 prefix");
+    constexpr ExecutableByteAnchor<6> selector38_return{"59f7345ed980fd79117e7ad10db1a93c3872cafca3000afb7ef3f7eda5603adc"};
+    constexpr ExecutableByteAnchor<12> selector38_caller{"7218804023c2ec3e694e19b581efeb17703f7bfe78d77b6da330354cc23a18f2"};
+    require_span(0x2aa72U, selector38_return, "Unexpected selector-38 return");
+    require_span(0x2aaceU, selector38_caller, "Unexpected selector-38 caller");
+    constexpr ExecutableByteAnchor<6> jsr_2a5aa{"25939d2a8a98420749b181f742081cc576f302cffd0bea5b8008765af3b5d9f0"};
+    constexpr ExecutableByteAnchor<12> gemdos61{"bdfb77219a19903ee730f3361af0958841aae3570ef3ed0d2ea60c3b56a3491e"};
+    require_span(0x2aa0cU, jsr_2a5aa, "Unexpected $2aa0c caller");
+    require_span(0x2a5aaU, gemdos61, "Unexpected GEMDOS 61 prefix");
+    constexpr ExecutableByteAnchor<12> gemdos61_return{"dfe4c3bc4466d6d8772f3633cb125f64ea7a9114d3d0be45aca5be3daf28b30b"};
+    constexpr ExecutableByteAnchor<12> fopen_branch{"fc103b11f1dfc5ee90e07376b76549242e52fd0823e6c6775f090cfd8ef7204d"};
+    constexpr ExecutableByteAnchor<18> fopen_positive{"84dffae90b11dbe9032b435f839fb2f0afe57565b2052c7dcf177c06410b6d32"};
+    require_span(0x2a5b6U, gemdos61_return, "Unexpected GEMDOS 61 return");
+    require_span(0x2aa12U, fopen_branch, "Unexpected Fopen caller branch");
+    require_span(0x2aa1cU, fopen_positive, "Unexpected Fopen positive continuation");
     if(require_byte(memory,0x2a632U)!=0x60||require_byte(memory,0x2a633U)!=0xfe)throw std::runtime_error("Unexpected Fopen failure spin");
-    constexpr std::array<std::uint8_t,16> gemdos63{0x2f,0x01,0x2f,0x00,0x3f,0x39,0x00,0x02,0xa5,0xfa,0x3f,0x3c,0x00,0x3f,0x4e,0x41};
-    for(std::size_t i=0;i<16;++i)if(require_byte(memory,0x2a5c2U+static_cast<std::uint32_t>(i))!=gemdos63[i])throw std::runtime_error("Unexpected GEMDOS 63 prefix");
-    constexpr std::array<std::uint8_t,10> gemdos63_return{0xdf,0xfc,0x00,0x00,0x00,0x0c,0x4a,0x80,0x4e,0x75};
-    constexpr std::array<std::uint8_t,6> fread_caller_jump{0x4e,0xf9,0x00,0x02,0xa5,0xdc};
-    constexpr std::array<std::uint8_t,12> gemdos62{0x3f,0x39,0x00,0x02,0xa5,0xfa,0x3f,0x3c,0x00,0x3e,0x4e,0x41};
-    for(std::size_t i=0;i<10;++i)if(require_byte(memory,0x2a5d2U+static_cast<std::uint32_t>(i))!=gemdos63_return[i])throw std::runtime_error("Unexpected GEMDOS 63 return");
-    for(std::size_t i=0;i<6;++i)if(require_byte(memory,0x2aa2eU+static_cast<std::uint32_t>(i))!=fread_caller_jump[i])throw std::runtime_error("Unexpected Fread caller jump");
-    for(std::size_t i=0;i<12;++i)if(require_byte(memory,0x2a5dcU+static_cast<std::uint32_t>(i))!=gemdos62[i])throw std::runtime_error("Unexpected GEMDOS 62 prefix");
-    constexpr std::array<std::uint8_t,6> gemdos62_return{0x58,0x8f,0x4a,0x80,0x4e,0x75};
-    constexpr std::array<std::uint8_t,18> fclose_caller{0x28,0x7c,0x00,0x02,0xc2,0x4a,0x54,0x8c,0x3c,0x1c,0x3e,0x1c,0x2a,0x79,0x00,0x02,0xa5,0x0e};
-    constexpr std::array<std::uint8_t,6> jsr_2b2be{0x4e,0xb9,0x00,0x02,0xb2,0xbe};
-    for(std::size_t i=0;i<6;++i)if(require_byte(memory,0x2a5e8U+static_cast<std::uint32_t>(i))!=gemdos62_return[i])throw std::runtime_error("Unexpected GEMDOS 62 return");
-    for(std::size_t i=0;i<18;++i)if(require_byte(memory,0x2aadaU+static_cast<std::uint32_t>(i))!=fclose_caller[i])throw std::runtime_error("Unexpected Fclose caller continuation");
-    for(std::size_t i=0;i<6;++i)if(require_byte(memory,0x2aaecU+static_cast<std::uint32_t>(i))!=jsr_2b2be[i])throw std::runtime_error("Unexpected $2b2be caller");
-    constexpr std::array<std::uint8_t,34> game_init_setup{0x26,0x7c,0x00,0x02,0xb2,0xba,0x02,0x47,0x00,0xff,0x53,0x46,0xe4,0x4e,0x52,0x46,0x36,0x86,0x37,0x47,0x00,0x02,0x2c,0x4d,0x20,0x4d,0x3a,0x3c,0x00,0x04,0x42,0x42,0x10,0x1c};
-    for(std::size_t i=0;i<34;++i)if(require_byte(memory,0x2b2beU+static_cast<std::uint32_t>(i))!=game_init_setup[i])throw std::runtime_error("Unexpected game-init setup");
-    constexpr std::array<std::uint8_t,12> game_init_source_dispatch{0x10,0x1c,0x14,0x00,0x02,0x00,0x00,0xc0,0x66,0x00,0x00,0x3a};
-    constexpr std::array<std::uint8_t,16> game_init_nonzero_dispatch{0x08,0x02,0x00,0x06,0x67,0x00,0x00,0x90,0x08,0x02,0x00,0x07,0x66,0x00,0x00,0x46};
-    for(std::size_t i=0;i<12;++i)if(require_byte(memory,0x2b2deU+static_cast<std::uint32_t>(i))!=game_init_source_dispatch[i])throw std::runtime_error("Unexpected game-init source dispatch");
-    for(std::size_t i=0;i<16;++i)if(require_byte(memory,0x2b322U+static_cast<std::uint32_t>(i))!=game_init_nonzero_dispatch[i])throw std::runtime_error("Unexpected game-init nonzero dispatch");
-    constexpr std::array<std::uint8_t,48> game_init_zero_counter_continuation{
-        0x66,0x00,0x00,0x28,0x53,0x47,0x66,0x00,0x00,0x18,0x53,0x45,
-        0x67,0x00,0x00,0xc6,0x54,0x88,0x2c,0x48,0x3c,0x13,0x3e,0x2b,
-        0x00,0x02,0x2a,0x4e,0x60,0x00,0x00,0x0c,0x3c,0x13,0xdd,0xfc,
-        0x00,0x00,0x00,0xa0,0x2a,0x4e,0x53,0x02,0x66,0xca,0x60,0xba,
-    };
-    for(std::size_t i=0;i<game_init_zero_counter_continuation.size();++i)
-        if(require_byte(memory,0x2b2f2U+static_cast<std::uint32_t>(i))!=game_init_zero_counter_continuation[i])
-            throw std::runtime_error("Unexpected game-init zero-counter continuation");
+    constexpr ExecutableByteAnchor<16> gemdos63{"6d2ddd7da4866769c78162433427fb37fe2f885926f429c098fca3062e282921"};
+    require_span(0x2a5c2U, gemdos63, "Unexpected GEMDOS 63 prefix");
+    constexpr ExecutableByteAnchor<10> gemdos63_return{"9f590fdbc6197d898da37312cddcb27a0411bf687877778f77320cb5c61f8ed3"};
+    constexpr ExecutableByteAnchor<6> fread_caller_jump{"a3bf89946746662879548e7a74f8f77c8d107c234cae2908c9b94abe94b19f89"};
+    constexpr ExecutableByteAnchor<12> gemdos62{"e815352850ca1cb7dffb7fa6d7e46d7775e82146695009e790e525daac17a2e9"};
+    require_span(0x2a5d2U, gemdos63_return, "Unexpected GEMDOS 63 return");
+    require_span(0x2aa2eU, fread_caller_jump, "Unexpected Fread caller jump");
+    require_span(0x2a5dcU, gemdos62, "Unexpected GEMDOS 62 prefix");
+    constexpr ExecutableByteAnchor<6> gemdos62_return{"1653b046f59ffdf7cdcdae81914ab08b45f9fd09915e21b1c27ea8c6021e0b2f"};
+    constexpr ExecutableByteAnchor<18> fclose_caller{"b57a65f987273c544a3b4bb8826792332a01aa3fe3ba019798bbb437ba2eca1f"};
+    constexpr ExecutableByteAnchor<6> jsr_2b2be{"2454ed31c410499746fd0817e23556106ddbb3a6089f52720385a9d815567450"};
+    require_span(0x2a5e8U, gemdos62_return, "Unexpected GEMDOS 62 return");
+    require_span(0x2aadaU, fclose_caller, "Unexpected Fclose caller continuation");
+    require_span(0x2aaecU, jsr_2b2be, "Unexpected $2b2be caller");
+    constexpr ExecutableByteAnchor<34> game_init_setup{"8086ab4a24f6f30bc4c267337bf872a4d258efae4ac89d0726392167ebd86de5"};
+    require_span(0x2b2beU, game_init_setup, "Unexpected game-init setup");
+    constexpr ExecutableByteAnchor<12> game_init_source_dispatch{"948e269d0e24d6ec05013d07ffe3d3ba66400189b98a30d676b44e5b39683fe6"};
+    constexpr ExecutableByteAnchor<16> game_init_nonzero_dispatch{"4b98ca43cbf9af758b5d56087a8d113f23fedf107e1320a2a6ee137d6cfe92c3"};
+    require_span(0x2b2deU, game_init_source_dispatch, "Unexpected game-init source dispatch");
+    require_span(0x2b322U, game_init_nonzero_dispatch, "Unexpected game-init nonzero dispatch");
+    constexpr ExecutableByteAnchor<48> game_init_zero_counter_continuation{"9b3476f5d2ecb028149eec6ee575cd79c7c9f94589a7e7398d794ecd176f04ef"};
+    require_span(0x2b2f2U, game_init_zero_counter_continuation, "Unexpected game-init zero-counter continuation");
     constexpr ExecutableByteAnchor<68> game_init_replicated_run{"6429d7b0634cff176ec01486b3f4e05bd648e3de11a67edd151f8345724b6701"};
     constexpr ExecutableByteAnchor<66> game_init_swapped_run{"dbf80460ade3c9cc5fba8b4a62937920cc9e131052d3a48bfc8b0981e150a9b9"};
-    constexpr std::array<std::uint8_t,14> game_init_extended_prefix{
-        0x42,0x40,0x02,0x42,0x00,0x3f,0xe1,0x4a,0x10,0x1c,0x84,0x40,0x60,0xb4};
+    constexpr ExecutableByteAnchor<14> game_init_extended_prefix{"72fa63385edc5122cd3fe1c4031d0a0089a187d498c04ff1f8be912f4462b0c5"};
     if(!memory_matches(memory,0x2b332U,game_init_replicated_run))throw std::runtime_error("Unexpected replicated-run continuation");
     if(!memory_matches(memory,0x2b376U,game_init_swapped_run))throw std::runtime_error("Unexpected swapped-run continuation");
-    for(std::size_t i=0;i<game_init_extended_prefix.size();++i)if(require_byte(memory,0x2b3b8U+static_cast<std::uint32_t>(i))!=game_init_extended_prefix[i])throw std::runtime_error("Unexpected extended-run prefix");
-    constexpr std::array<std::uint8_t,18> game_init_caller_2b448{0x26,0x7c,0x00,0x02,0xa6,0x4c,0x28,0x7c,0x00,0x02,0xa6,0x6c,0x4e,0xb9,0x00,0x02,0xb4,0x48};
-    constexpr std::array<std::uint8_t,62> game_init_palette_copy_prefix{0x20,0x3c,0x00,0x00,0x00,0x00,0x32,0x3c,0x00,0x07,0x2a,0xc0,0x51,0xc9,0xff,0xfc,0x2f,0x0b,0x2a,0x7c,0x00,0x02,0xb3,0xc8,0x30,0x3c,0x00,0x17,0x2a,0xdc,0x51,0xc8,0xff,0xfc,0x3e,0x3c,0x00,0x06,0x2a,0x7c,0x00,0x02,0xb4,0x28,0x28,0x7c,0x00,0x02,0xb3,0xc8,0x3c,0x3c,0x00,0x0f,0x3a,0x3c,0x00,0x02,0x38,0x3c,0x01,0x00};
-    constexpr std::array<std::uint8_t,40> game_init_palette_arithmetic{0x12,0x14,0x10,0x2c,0x00,0x01,0xd2,0x00,0x64,0x02,0xd9,0x55,0xe8,0x4c,0x18,0x81,0x54,0x8c,0x51,0xcd,0xff,0xec,0x54,0x8d,0x51,0xce,0xff,0xde,0x2f,0x3c,0x00,0x02,0xb4,0x28,0x3f,0x3c,0x00,0x06,0x4e,0x4e};
-    constexpr std::array<std::uint8_t,16> game_init_palette_post_xbios{0x5c,0x8f,0x20,0x3c,0x00,0x00,0x4e,0x20,0x53,0x80,0x66,0xfc,0x51,0xcf,0xff,0xb2};
-    constexpr std::array<std::uint8_t,10> game_init_palette_terminal{0x3f,0x3c,0x00,0x06,0x4e,0x4e,0x5c,0x8f,0x4e,0x75};
-    constexpr std::array<std::uint8_t,12> game_init_palette_caller{0x2e,0x3c,0x00,0x02,0xa6,0x34,0x4e,0xb9,0x00,0x02,0xaa,0x0c};
-    constexpr std::array<std::uint8_t,22> game_init_second_config_caller{0x26,0x7c,0x00,0x02,0xa6,0x4c,0x28,0x7c,0x00,0x02,0xa6,0x6c,0x48,0x7a,0x00,0x0c,0x3f,0x3c,0x00,0x26,0x4e,0x4e};
-    for(std::size_t i=0;i<game_init_caller_2b448.size();++i){
-        const auto address=0x2aaf2U+static_cast<std::uint32_t>(i);
-        const auto actual=require_byte(memory,address);
-        if(actual!=game_init_caller_2b448[i])throw std::runtime_error(
-            "Unexpected post-game-init caller byte at $"+std::to_string(address)
-            +": expected "+std::to_string(game_init_caller_2b448[i])
-            +", observed "+std::to_string(actual));
-    }
-    for(std::size_t i=0;i<game_init_palette_copy_prefix.size();++i)if(require_byte(memory,0x2b448U+static_cast<std::uint32_t>(i))!=game_init_palette_copy_prefix[i])throw std::runtime_error("Unexpected palette-copy prefix");
-    for(std::size_t i=0;i<game_init_palette_arithmetic.size();++i)if(require_byte(memory,0x2b486U+static_cast<std::uint32_t>(i))!=game_init_palette_arithmetic[i])throw std::runtime_error("Unexpected palette arithmetic");
-    for(std::size_t i=0;i<game_init_palette_post_xbios.size();++i)if(require_byte(memory,0x2b4aeU+static_cast<std::uint32_t>(i))!=game_init_palette_post_xbios[i])throw std::runtime_error("Unexpected post-XBIOS palette continuation");
-    for(std::size_t i=0;i<game_init_palette_terminal.size();++i)if(require_byte(memory,0x2b4beU+static_cast<std::uint32_t>(i))!=game_init_palette_terminal[i])throw std::runtime_error("Unexpected terminal palette continuation");
-    for(std::size_t i=0;i<game_init_palette_caller.size();++i)if(require_byte(memory,0x2ab04U+static_cast<std::uint32_t>(i))!=game_init_palette_caller[i])throw std::runtime_error("Unexpected palette caller continuation");
-    for(std::size_t i=0;i<game_init_second_config_caller.size();++i)if(require_byte(memory,0x2ab10U+static_cast<std::uint32_t>(i))!=game_init_second_config_caller[i])throw std::runtime_error("Unexpected second-config caller continuation");
+    require_span(0x2b3b8U, game_init_extended_prefix, "Unexpected extended-run prefix");
+    constexpr ExecutableByteAnchor<18> game_init_caller_2b448{"155575e295ad1e7831c0eef9809316db6f68321beb0661c03b7c14bb141f793e"};
+    constexpr ExecutableByteAnchor<62> game_init_palette_copy_prefix{"748d9b2df05839b68583069e29ff34954477ce7a367b0a88ef9e9bad7abfa0ca"};
+    constexpr ExecutableByteAnchor<40> game_init_palette_arithmetic{"0866601f1a271ee74b399dd544b5b1ced15693e600c30034531a094dbc41d746"};
+    constexpr ExecutableByteAnchor<16> game_init_palette_post_xbios{"9e3fd4aeca606c5560b204d12a20a77de12552ded7fa64a0677cca56c4676bf1"};
+    constexpr ExecutableByteAnchor<10> game_init_palette_terminal{"876ea72e7f61e2604ffa34d0fae7a6c1b3f880aa43e88006af18e1f67677c967"};
+    constexpr ExecutableByteAnchor<12> game_init_palette_caller{"ae672762da7616abc67d0a1e5a5aaf3ab540b96b94b9689b31f8a11a8de256d7"};
+    constexpr ExecutableByteAnchor<22> game_init_second_config_caller{"eea2683953b1fe18e3e7b88e1744fa10a9684444fe183d283efee9f54302c1a0"};
+    require_span(0x2aaf2U, game_init_caller_2b448, "Unexpected post-game-init caller bytes");
+    require_span(0x2b448U, game_init_palette_copy_prefix, "Unexpected palette-copy prefix");
+    require_span(0x2b486U, game_init_palette_arithmetic, "Unexpected palette arithmetic");
+    require_span(0x2b4aeU, game_init_palette_post_xbios, "Unexpected post-XBIOS palette continuation");
+    require_span(0x2b4beU, game_init_palette_terminal, "Unexpected terminal palette continuation");
+    require_span(0x2ab04U, game_init_palette_caller, "Unexpected palette caller continuation");
+    require_span(0x2ab10U, game_init_second_config_caller, "Unexpected second-config caller continuation");
     if (generation == 0 || gemdos.generation != generation
         || gemdos.state != MillenniumAtariReadOnlyGemdosState::config_jsr_boundary
         || gemdos.config_jsr_instruction_address != jsr_instruction
@@ -255,8 +156,14 @@ MillenniumAtariConfigConsumerSession::MillenniumAtariConfigConsumerSession(
         || prelude.mapped_entry_address != jump_target
         || prelude.mapped_entry_file_offset != 0x588
         || prelude.initial_opcode != move_sr_d0 || prelude.sha256 != prelude_sha256
-        || required != std::array<std::uint8_t, 8>{
-            0x4e, 0xf9, 0x00, 0x02, 0xaa, 0x88, 0x40, 0xc0}) {
+        || require_byte(memory, jsr_target) != 0x4e
+        || require_byte(memory, jsr_target + 1U) != 0xf9
+        || (static_cast<std::uint32_t>(require_byte(memory, jsr_target + 2U)) << 24U
+            | static_cast<std::uint32_t>(require_byte(memory, jsr_target + 3U)) << 16U
+            | static_cast<std::uint32_t>(require_byte(memory, jsr_target + 4U)) << 8U
+            | require_byte(memory, jsr_target + 5U)) != jump_target
+        || (static_cast<std::uint16_t>(require_byte(memory, jump_target)) << 8U
+            | require_byte(memory, jump_target + 1U)) != move_sr_d0) {
         throw std::runtime_error("Unexpected Millennium Atari config consumer entry");
     }
     checkpoint_.generation = generation;

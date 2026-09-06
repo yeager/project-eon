@@ -60,22 +60,34 @@ DeuterosAmigaOpening::DeuterosAmigaOpening(std::vector<std::uint8_t> system_adf,
 }
 
 std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
-DeuterosAmigaOpening::prepare_title_stage_profile_five() const {
-    DeuterosAmigaTitleStageSession candidate(disk_, load_plan_, 5);
+DeuterosAmigaOpening::prepare_title_stage_program_entry(const std::uint16_t profile) const {
+    if (profile != 1 && profile != 5) return std::nullopt;
+    DeuterosAmigaTitleStageSession candidate(disk_, load_plan_, profile);
     return candidate.execute_local_prefix();
 }
 
 std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
-DeuterosAmigaOpening::reenter_title_stage_profile_five() {
+DeuterosAmigaOpening::commit_title_stage_program_entry(const std::uint16_t profile) {
+    if (profile != 1 && profile != 5) return std::nullopt;
     // Construct and advance privately. In particular, do not revoke the
     // existing session if a future media/profile gate rejects this re-entry.
-    DeuterosAmigaTitleStageSession replacement(disk_, load_plan_, 5);
+    DeuterosAmigaTitleStageSession replacement(disk_, load_plan_, profile);
     auto prefix = replacement.execute_local_prefix();
     if (!prefix) {
         return std::nullopt;
     }
     title_stage_session_ = std::move(replacement);
     return prefix;
+}
+
+std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
+DeuterosAmigaOpening::prepare_title_stage_profile_five() const {
+    return prepare_title_stage_program_entry(5);
+}
+
+std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
+DeuterosAmigaOpening::reenter_title_stage_profile_five() {
+    return commit_title_stage_program_entry(5);
 }
 
 DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
@@ -107,7 +119,6 @@ DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
             throw std::runtime_error("Deuteros title bootstrap did not reach its entry dispatch");
         }
         title_stage_session_.emplace(disk_, load_plan_, title_handoff_route_.bootstrap_profile_value);
-        static_cast<void>(title_stage_session_->execute_local_prefix());
         events.title_handoff = true;
     }
     ++ticks_;

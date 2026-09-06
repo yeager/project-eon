@@ -8,6 +8,15 @@
 namespace eon {
 namespace {
 
+template <std::size_t Size>
+struct ExecutableByteAnchor {
+    std::string_view sha256;
+    static constexpr std::size_t size() { return Size; }
+    bool matches(const std::span<const std::uint8_t> bytes) const {
+        return bytes.size()==Size&&to_hex(eon::sha256(bytes))==sha256;
+    }
+};
+
 std::uint16_t be16(std::span<const std::uint8_t> bytes, std::size_t offset) {
     if (offset > bytes.size() || bytes.size() - offset < 2) {
         throw std::runtime_error("Truncated Deuteros Atari ST boot field");
@@ -34,11 +43,11 @@ std::uint16_t le16(std::span<const std::uint8_t> bytes, std::size_t offset) {
         | (static_cast<std::uint16_t>(bytes[offset + 1]) << 8U));
 }
 
-bool starts_with(std::span<const std::uint8_t> bytes, std::size_t offset,
-    std::span<const std::uint8_t> expected) {
-    return offset <= bytes.size() && expected.size() <= bytes.size() - offset
-        && std::equal(expected.begin(), expected.end(), bytes.begin()
-            + static_cast<std::ptrdiff_t>(offset));
+template<std::size_t Size>
+bool starts_with(std::span<const std::uint8_t> bytes,std::size_t offset,
+    const ExecutableByteAnchor<Size>& expected){
+    return offset<=bytes.size()&&Size<=bytes.size()-offset
+        &&expected.matches(bytes.subspan(offset,Size));
 }
 
 } // namespace
@@ -81,8 +90,8 @@ void DeuterosAtariDisk::parse_boot_profile() {
     if (profile_.boot_checksum != 0x1234U) {
         throw std::runtime_error("Invalid Deuteros Atari ST boot checksum");
     }
-    constexpr std::array<std::uint8_t, 12> killer_boot{{
-        'K', 'I', 'L', 'L', 'E', 'R', '_', 'B', 'O', 'O', 'T', 0}};
+    constexpr ExecutableByteAnchor<12> killer_boot{
+        "60df1a313ba887d678a0713a503000d11d5047c71ac9d9c70626f537ea01323a"};
     profile_.killer_boot_signature = starts_with(bytes, 0x24, killer_boot);
 
     // Disk 2's post-BPB branch at $22 enters a KILLER_BOOT-specific setup.
@@ -92,15 +101,7 @@ void DeuterosAtariDisk::parse_boot_profile() {
     // to $f0 rather than the instruction's own offset.
     // Keep this as a protected-media trace: the copied words and destination
     // are not classified as a game executable or resource.
-    constexpr std::array<std::uint8_t, 24> killer_vector_setup{{
-        0x46, 0xfc, 0x27, 0x00, // move.w #$2700,sr
-        0x43, 0xf8, 0x00, 0x08, // lea $8.w,a1
-        0x41, 0xfa, 0x00, 0x0e, // lea $ee(pc),a0
-        0x7e, 0x09,             // moveq #9,d7
-        0x22, 0xd8,             // move.l (a0)+,(a1)+
-        0x51, 0xcf, 0xff, 0xfc, // dbf d7,$e4
-        0x4e, 0xf8, 0x00, 0x12  // jmp $12.w
-    }};
+    constexpr ExecutableByteAnchor<24> killer_vector_setup{"1ce81773d11374cac65ce69742a475e0731cbc8798f7c7bd374c04a2d2a7d150"};
     if (profile_.killer_boot_signature && profile_.boot_branch_target == 0x22U
         && starts_with(bytes, 0xd8, killer_vector_setup)) {
         profile_.has_killer_boot_vector_setup = true;
@@ -112,13 +113,7 @@ void DeuterosAtariDisk::parse_boot_profile() {
         constexpr std::size_t relocated_byte_count = 40;
         constexpr auto expected_relocated_sha256 =
             "21a5d61e2289fe2f2141d3710fad31faf42e96f59c5fba768819380e8f595a8d";
-        constexpr std::array<std::uint8_t, relocated_byte_count> relocated_code{{
-            0x00, 0x00, 0x00, 0x0c, 0x20, 0x78, 0x00, 0x04,
-            0x4e, 0xd0, 0x41, 0xfa, 0x00, 0x1c, 0x70, 0x00,
-            0x22, 0x00, 0x24, 0x00, 0x26, 0x00, 0x28, 0x00,
-            0x2a, 0x00, 0x2c, 0x00, 0x2e, 0x00, 0x48, 0xd0,
-            0x00, 0xff, 0xd0, 0xfc, 0x00, 0x20, 0x60, 0xf6,
-        }};
+        constexpr ExecutableByteAnchor<40> relocated_code{"21a5d61e2289fe2f2141d3710fad31faf42e96f59c5fba768819380e8f595a8d"};
         const auto relocated = bytes.subspan(profile_.killer_boot_vector_source_offset,
             relocated_byte_count);
         if (starts_with(bytes, profile_.killer_boot_vector_source_offset, relocated_code)
@@ -135,11 +130,7 @@ void DeuterosAtariDisk::parse_boot_profile() {
     // At $50 the supplied Replicants Disk 1 starts a literal Floprd argument
     // sequence. It reads 9 sectors at track 70 / side 0 / sector 1 into A6.
     // Do not generalize this to the other crack boot sectors.
-    constexpr std::array<std::uint8_t, 26> replicants_floprd{{
-        0x3f, 0x3c, 0x00, 0x09, 0x3f, 0x07, 0x3f, 0x06,
-        0x3f, 0x3c, 0x00, 0x01, 0x42, 0x67, 0x42, 0xa7,
-        0x48, 0x56, 0x3f, 0x3c, 0x00, 0x08, 0x4e, 0x4e,
-        0x4f, 0xef}};
+    constexpr ExecutableByteAnchor<26> replicants_floprd{"0769f990885d0a7a64cb4e15eba1cd7b618b4cdf3b4d65859d9f923b817edf13"};
     if (starts_with(bytes, 0x50, replicants_floprd)) {
         profile_.has_recovered_first_stage = true;
         profile_.first_stage_track = 70;
@@ -201,11 +192,7 @@ DeuterosAtariKillerBootHandoff parse_deuteros_atari_killer_boot_handoff(
     // to RAM $8.  It is intentionally not treated as a host reset or game
     // bootstrap; the preceding copied JMP (A0) instead depends on RAM $4.
     constexpr std::size_t setup_offset = 0xd8;
-    constexpr auto setup_bytes = std::to_array<std::uint8_t>({
-        0x46, 0xfc, 0x27, 0x00, 0x43, 0xf8, 0x00, 0x08,
-        0x41, 0xfa, 0x00, 0x0e, 0x7e, 0x09, 0x22, 0xd8,
-        0x51, 0xcf, 0xff, 0xfc, 0x4e, 0xf8, 0x00, 0x12,
-    });
+    constexpr ExecutableByteAnchor<24> setup_bytes{"1ce81773d11374cac65ce69742a475e0731cbc8798f7c7bd374c04a2d2a7d150"};
     constexpr std::string_view setup_sha256 =
         "1ce81773d11374cac65ce69742a475e0731cbc8798f7c7bd374c04a2d2a7d150";
     constexpr std::size_t source_offset = 0xf0;
@@ -250,21 +237,16 @@ DeuterosAtariKillerBootExecutionPrefix execute_deuteros_atari_killer_boot_prefix
     // Bind the caller-connected DBF copy and its direct relocated entry. The
     // separate JMP (A0) vector-cell path at relocated +$8 is not followed.
     const auto handoff = parse_deuteros_atari_killer_boot_handoff(boot_sector, profile);
-    constexpr std::array<std::uint8_t, 30> continuation_bytes{{
-        0x41, 0xfa, 0x00, 0x1c, 0x70, 0x00,
-        0x22, 0x00, 0x24, 0x00, 0x26, 0x00, 0x28, 0x00,
-        0x2a, 0x00, 0x2c, 0x00, 0x2e, 0x00,
-        0x48, 0xd0, 0x00, 0xff, 0xd0, 0xfc, 0x00, 0x20,
-        0x60, 0xf6,
-    }};
+    constexpr ExecutableByteAnchor<30> continuation_bytes{
+        "45149a5baceb2242352214c5cffe327efe644dbc1e4056eab3b87bf037752cbc"};
     constexpr std::uint32_t first_clear_address = 0x32;
     constexpr std::uint32_t loop_target_address = 0x30;
     const auto relocated = boot_sector.subspan(handoff.source_offset, handoff.byte_count);
     if (handoff.destination != 0x8U || handoff.continuation_address != 0x12U
         || handoff.continuation_relocated_offset != 10U
         || continuation_bytes.size() != relocated.size() - handoff.continuation_relocated_offset
-        || !std::equal(continuation_bytes.begin(), continuation_bytes.end(),
-            relocated.begin() + static_cast<std::ptrdiff_t>(handoff.continuation_relocated_offset))) {
+        || !continuation_bytes.matches(relocated.subspan(handoff.continuation_relocated_offset,
+            continuation_bytes.size()))) {
         throw std::runtime_error("Unexpected Deuteros Atari ST KILLER_BOOT local continuation");
     }
 
@@ -298,22 +280,11 @@ DeuterosAtariKillerBootDecoderBoundary parse_deuteros_atari_killer_boot_decoder_
     // transformed byte is zero, then pushes GEMDOS selector 9 and traps. Its
     // caller's condition is deliberately not emulated here.
     constexpr std::size_t caller_offset = 0x6c;
-    constexpr auto caller_bytes = std::to_array<std::uint8_t>({
-        0x41, 0xfa, 0x00, 0xe8, // lea $1156(pc),a0
-        0x61, 0x00, 0x00, 0x54, // bsr.w $10c6
-    });
+    constexpr ExecutableByteAnchor<8> caller_bytes{"5e21bb3b7a3bc300d36f330a3112efbc5388515eb0441f23d9205bcc26df3d95"};
     constexpr std::string_view caller_sha256 =
         "5e21bb3b7a3bc300d36f330a3112efbc5388515eb0441f23d9205bcc26df3d95";
     constexpr std::size_t decoder_offset = 0xc6;
-    constexpr auto decoder_bytes = std::to_array<std::uint8_t>({
-        0x2f, 0x08,             // move.l a0,-(a7)
-        0x0a, 0x18, 0x00, 0xb9, // eori.b #$b9,(a0)+
-        0x66, 0xfa,             // bne.b $10c8
-        0x3f, 0x3c, 0x00, 0x09, // move.w #9,-(a7)
-        0x4e, 0x41,             // trap #1
-        0x5c, 0x8f,             // addq.l #6,a7
-        0x4e, 0x75,             // rts
-    });
+    constexpr ExecutableByteAnchor<18> decoder_bytes{"218908b4c5751ffa0b5b19aaebd278df41e29a8f70cd6285a0e05ee9e07f5c04"};
     constexpr std::string_view decoder_sha256 =
         "218908b4c5751ffa0b5b19aaebd278df41e29a8f70cd6285a0e05ee9e07f5c04";
     constexpr std::uint32_t source_address = 0x1156;

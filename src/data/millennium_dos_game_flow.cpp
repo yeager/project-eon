@@ -19,13 +19,6 @@ struct ExecutableByteAnchor {
     }
 };
 
-bool has_bytes(std::span<const std::uint8_t> bytes, std::size_t offset,
-               std::span<const std::uint8_t> expected) {
-    return offset <= bytes.size() && expected.size() <= bytes.size() - offset
-        && std::equal(expected.begin(), expected.end(), bytes.begin()
-            + static_cast<std::ptrdiff_t>(offset));
-}
-
 template <std::size_t Size>
 bool has_bytes(std::span<const std::uint8_t> bytes, std::size_t offset,
                const ExecutableByteAnchor<Size>& expected) {
@@ -94,9 +87,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr std::size_t record_pointer_offset = 0x27c4 - load_bias;
     constexpr std::size_t initial_record_offset = 0x12cc - load_bias;
     constexpr std::size_t initial_record_flag_offset = 0x12f0 - load_bias;
-    constexpr std::array<std::uint8_t, 15> entry{
-        0x0e, 0x1f, 0x0e, 0x07, 0x8c, 0xc8, 0x8e, 0xd0,
-        0xb8, 0x00, 0xda, 0x89, 0xc4, 0xb8, 0x1f};
+    constexpr ExecutableByteAnchor<15> entry{"ffd5577dd272dca434c6afa781885921c483beb7a44ef61ab508f361fa07c17e"};
     // The post-entry block establishes SS=CS and SP=$da00, invokes the
     // original $0124 routine (the 16-bit IP wraps), then routes an AL==1 result to $d1a1 and all
     // other results to $d1b5.  A later DX test has a static nonzero edge to
@@ -106,46 +97,23 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     // The wrapped first target saves the five original register values around
     // private INT $91 and ends in RET.  Its interrupt effect and whether it
     // returns at runtime remain deliberately unmodelled.
-    constexpr auto startup_first_call = std::to_array<std::uint8_t>({
-        0x1e, 0x56, 0x57, 0x55, 0x06, 0xcd, 0x91,
-        0x07, 0x5d, 0x5f, 0x5e, 0x1f, 0xc3});
+    constexpr ExecutableByteAnchor<13> startup_first_call{"5d17daad68e9062dc6852ae76740db4afdcb81555ba9fb7d15d4e4aa8d088175"};
     // The two calls selected at $d2dd/$d2e2 use distinct small paths. Both
     // independently prepare the same $0124 private-interrupt wrapper, then
     // make a different immediate follow-up call if that wrapper returns.
     // Their native call effects and return behaviour are deliberately not
     // interpreted here.
-    constexpr auto startup_equal_path = std::to_array<std::uint8_t>({
-        0xb8, 0x04, 0x00, 0x0e, 0x07, 0xbb, 0x9f, 0xd1,
-        0xe8, 0x78, 0x2f, 0xe8, 0x9f, 0x32, 0xb0, 0x01,
-        0xa2, 0x05, 0xda, 0xc3});
-    constexpr auto startup_other_path = std::to_array<std::uint8_t>({
-        0xb8, 0x04, 0x00, 0x0e, 0x07, 0xbb, 0x9f, 0xd1,
-        0xe8, 0x64, 0x2f, 0xe8, 0xa3, 0x32, 0xa0, 0x05,
-        0xda, 0x3c, 0x02, 0x75, 0x06, 0xb8, 0x00, 0xb8,
-        0xa3, 0x07, 0x01, 0xc3});
+    constexpr ExecutableByteAnchor<20> startup_equal_path{"6f59df77c567324b41dd6159a6fbac7d8970626fc40e8b908f9f58746a993a3e"};
+    constexpr ExecutableByteAnchor<28> startup_other_path{"2f61098eb45bb48ea7a38ab2fcc2e065ae0d0b2ad08ea9973e3fe464943fba9b"};
     // The equal path's follow-up writes a literal one then returns. The
     // other path reaches a BIOS interrupt after a fixed 16-byte in-image
     // table and local register setup. INT $10 is the first external boundary
     // in that path; neither its behavior nor the loop is executed here.
-    constexpr auto startup_equal_followup = std::to_array<std::uint8_t>({
-        0xb0, 0x01, 0x2e, 0x88, 0x06, 0x05, 0xda, 0xc3});
-    constexpr auto startup_other_followup = std::to_array<std::uint8_t>({
-        0x0e, 0x1f, 0xbe, 0x56, 0x04, 0xb9, 0x10, 0x00,
-        0x32, 0xdb, 0xac, 0x8a, 0xf8, 0xb8, 0x00, 0x10,
-        0xcd, 0x10, 0xfe, 0xc3, 0xe2, 0xf4, 0xc3});
-    constexpr auto startup_other_followup_table = std::to_array<std::uint8_t>({
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-        0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f});
-    constexpr auto loop = std::to_array<std::uint8_t>({
-        0xe8, 0xe6, 0x3a, 0xe8, 0x29, 0xa2, 0xe8, 0xf0, 0xa7,
-        0xe8, 0x27, 0x3b, 0x22, 0xc0, 0x74, 0xf0, 0x32, 0xe4,
-        0x3c, 0x0b, 0x74,
-        0x26, 0x8a, 0x0e, 0x3a, 0xda, 0x22, 0xc9, 0x75, 0xe2,
-        0x3c, 0x0c, 0x75, 0x05, 0xe8, 0x79, 0x01, 0x33, 0xc0,
-        0x2c, 0x3b, 0x3c, 0x0a, 0x73, 0xd3, 0xbe, 0xbf, 0x2f,
-        0x32, 0xe4, 0xc0, 0xe0, 0x03, 0x01, 0xc6, 0xe8, 0xe4, 0xa2});
-    constexpr auto action_poll = std::to_array<std::uint8_t>({
-        0xb4, 0x06, 0xb2, 0xff, 0xcd, 0x21, 0xc3});
+    constexpr ExecutableByteAnchor<8> startup_equal_followup{"38889279a8b89e0e600bb25298015ccd8aadc09ea3858a1790097b3f7ff4ea8f"};
+    constexpr ExecutableByteAnchor<23> startup_other_followup{"b17db26fa4fa8b7307fb767ff98351bd6dcca202829dd2d9348ff4991942d779"};
+    constexpr ExecutableByteAnchor<16> startup_other_followup_table{"ce46bce999708ea5109a857b0b6ecc02ece34eaf431cd148ef1aa1c0e80aed0a"};
+    constexpr ExecutableByteAnchor<58> loop{"5dee8e4b699d427d9e6ae8193fc6afb826e93bd2b2002e02c4f4b3ecfd213b76"};
+    constexpr ExecutableByteAnchor<7> action_poll{"96715350de2c4a159dd994b1c40dafb21c038f38f52937aa1a54491485146dc6"};
     // Table record 0 contains its non-semantic rectangle followed by the
     // handler entry. The F1 handler clears AX, calls the common display
     // selector at $d0c9, then calls the setup block below. That setup has an
@@ -154,96 +122,53 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     // It selects $12cc through the original word table at $27c4, retains the
     // word at $da20, and stores mode $07 / descriptor $300f before calling
     // $5b1f.
-    constexpr auto f1_table = std::to_array<std::uint8_t>({
-        0x00, 0x06, 0x09, 0x1b, 0x30, 0x00, 0x9a, 0x6f});
-    constexpr auto f1_handler = std::to_array<std::uint8_t>({
-        0x33, 0xc0, 0xe8, 0x2a, 0x61, 0xe8, 0x7b, 0x07,
-        0xe8, 0x55, 0x9a, 0xd0, 0xeb, 0x72, 0xf9, 0xc3});
-    constexpr auto f1_setup = std::to_array<std::uint8_t>({
-        0xb8, 0xcc, 0x12, 0xc6, 0x06, 0x1f, 0xda, 0x00,
-        0xa3, 0x20, 0xda, 0xb9, 0x0f, 0x30, 0xa0, 0x1f,
-        0xda, 0x22, 0xc0, 0xb0, 0x07, 0x74, 0x05, 0xb0,
-        0x05, 0xb9, 0x47, 0x30, 0xa2, 0xa8, 0x75, 0x89,
-        0x0e, 0xa6, 0x75, 0xb8, 0x01, 0x00, 0x80, 0x3e,
-        0xa8, 0x75, 0x07, 0x74, 0x03, 0xb8, 0x6d, 0x00,
-        0xe8, 0xcf, 0xe3});
-    constexpr auto record_pointer_table = std::to_array<std::uint8_t>({
-        0xcc, 0x12, 0x84, 0x13, 0x44, 0x14, 0x04, 0x15});
-    constexpr auto initial_record = std::to_array<std::uint8_t>({
-        0x03, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00});
-    constexpr auto initial_record_flag = std::to_array<std::uint8_t>({0x00});
+    constexpr ExecutableByteAnchor<8> f1_table{"b8bda15adac22e4ab18135c52ea4e79b5e524638db1c32e728ee7afae73ffa4e"};
+    constexpr ExecutableByteAnchor<16> f1_handler{"dd2845ed78dfe103e969f48dbb39c643dc1dbda71b1c8f28ed281be6a4672ca3"};
+    constexpr ExecutableByteAnchor<51> f1_setup{"75c7bcb101cba78e4d184a8a8bb46c249c1877f54023056d4bd7ca37c4599e1f"};
+    constexpr ExecutableByteAnchor<8> record_pointer_table{"b655619b1c84e1412f20d00dc79baf8cb5e1c225f341dae88c66ce5c52abdcdb"};
+    constexpr ExecutableByteAnchor<8> initial_record{"3d4d46ae49c7baccfae55d99778c0ec5fcb4fea74bf0d14d99f74862014940b3"};
+    constexpr ExecutableByteAnchor<1> initial_record_flag{"6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"};
     // Record one (raw F2 / $3c) enters $71ca. It reads a runtime byte at
     // $da26, waits in the original loop if it is below two, otherwise enters
     // $71de. That admitted path creates a $c0-stride list beginning at
     // $1384 and installs callback $7221. No host-side value is supplied for
     // the runtime byte.
-    constexpr auto f2_table = std::to_array<std::uint8_t>({
-        0x06, 0x0c, 0x09, 0x1b, 0x31, 0x01, 0xca, 0x71});
-    constexpr auto f2_handler = std::to_array<std::uint8_t>({
-        0xb0, 0x02, 0xa0, 0x26, 0xda, 0x3c, 0x02, 0x72, 0x03,
-        0xe9, 0x08, 0x00, 0xe8, 0x21, 0x98, 0xd0, 0xeb, 0x72,
-        0xf9, 0xc3});
+    constexpr ExecutableByteAnchor<8> f2_table{"d5bfd4f39d2f5608e0c6f78347774754613063582888badedaf6db8a76a61452"};
+    constexpr ExecutableByteAnchor<20> f2_handler{"3800ca72b443d389e761cd60e1c8873122067063856acf4433c28dbb1dfc0302"};
     constexpr ExecutableByteAnchor<67> f2_setup{"470e6842003ff43f79c20ba2d2fd986a1ffe5244016e9ccc1307848b7d8759ab"};
-    constexpr auto f3_table = std::to_array<std::uint8_t>({
-        0x0c, 0x12, 0x09, 0x1b, 0x32, 0x02, 0xaa, 0x6f});
+    constexpr ExecutableByteAnchor<8> f3_table{"a5494f900b4ad8b67c31deaf9acad9797d9bb8e66cb26e21b008b1ef53b52052"};
     // F3 returns when $a19e is nonzero, waits at $09fa while $da27 is zero,
     // and only then reaches this setup. The two runtime values are not known.
-    constexpr auto f3_handler = std::to_array<std::uint8_t>({
-        0xa1, 0x9e, 0xa1, 0x23, 0xc0, 0x74, 0x01, 0xc3,
-        0xb0, 0x02, 0xa1, 0x27, 0xda, 0x22, 0xc0, 0x74,
-        0x03, 0xe9, 0x08, 0x00, 0xe8, 0x39, 0x9a, 0xd0,
-        0xeb, 0x72, 0xf9, 0xc3});
-    constexpr auto f3_setup = std::to_array<std::uint8_t>({
-        0xb8, 0x2a, 0x71, 0xa3, 0x98, 0x6f, 0xc6, 0x06,
-        0x98, 0x6e, 0x00, 0xb8, 0x16, 0x00, 0xe8, 0x55,
-        0xdd, 0xb8, 0x17, 0x00, 0xe8, 0x59, 0xdd, 0xb8,
-        0x00, 0x00, 0xba, 0x00, 0x00, 0x8b, 0x0e, 0x27,
-        0xda, 0x88, 0x0e, 0x95, 0x6e, 0xbb, 0x99, 0x6e,
-        0xc5, 0x36, 0x12, 0x01});
+    constexpr ExecutableByteAnchor<28> f3_handler{"de0256a8b5e6536c9b211c9d8ee405cfa66dc6729894ab461636b3dbbcb10498"};
+    constexpr ExecutableByteAnchor<44> f3_setup{"09205086af186df1d4a108ffccaba4ed62a08207083ddd78766a12007461029c"};
     // Record three (raw F4 / $3e) only admits when $a19e is zero.  It loads
     // AL=$02 and transfers to $ba5e. That routine calls $4d2c, writes $07 to
     // $da13, calls $9dd5, writes $09 to $da1e and clears $75a9. There is no
     // pre-call write: each literal write depends on the preceding native call
     // returning. The call effects and all three cells are native runtime facts,
     // not host state, so this is deliberately not an overlay effect.
-    constexpr auto f4_table = std::to_array<std::uint8_t>({
-        0x12, 0x18, 0x09, 0x1b, 0x33, 0x03, 0xf9, 0x72});
-    constexpr auto f4_handler = std::to_array<std::uint8_t>({
-        0xa1, 0x9e, 0xa1, 0x23, 0xc0, 0x74, 0x01, 0xc3,
-        0xb0, 0x02, 0xe9, 0x58, 0x47});
-    constexpr auto f4_common = std::to_array<std::uint8_t>({
-        0xb8, 0x05, 0x00, 0xe8, 0xc8, 0x92, 0xc6, 0x06,
-        0x13, 0xda, 0x07, 0xe8, 0x69, 0xe3, 0xc6, 0x06,
-        0x1e, 0xda, 0x09, 0xc6, 0x06, 0xa9, 0x75, 0x00, 0xc3});
-    constexpr auto f4_guard_clear = std::to_array<std::uint8_t>({
-        0x8b, 0x0e, 0x9e, 0xa1, 0xc7, 0x06, 0x9e, 0xa1, 0x00, 0x00,
-        0x32, 0xed});
+    constexpr ExecutableByteAnchor<8> f4_table{"de172662695863115f14f102f410ccc0684cf7444a05dcb9a1271ce30d774982"};
+    constexpr ExecutableByteAnchor<13> f4_handler{"749f220d59b5966bd6e552361ad3a74b2dfff3e3288c2948a4bc1800eb91b10e"};
+    constexpr ExecutableByteAnchor<25> f4_common{"96b0a8efa1b0e657f26207f5106bbf040576aaf14052ddb7329cb37fdf47b0af"};
+    constexpr ExecutableByteAnchor<12> f4_guard_clear{"052d3f7c3d1cc29e57baccb492ee86098909fec403de732f9621cfe10410aa68"};
     // Record four (raw F5 / $3f) enters $7597.  It has no store before the
     // first CALL.  That target immediately calls $52f9, so even the first
     // possible post-call state depends on native execution and return behavior.
     // The remaining F5 calls are ordinary 16-bit near targets: do not turn
     // their signed displacements into fictional addresses above 64 KiB.
-    constexpr auto f5_table = std::to_array<std::uint8_t>({
-        0x18, 0x1e, 0x09, 0x1b, 0x34, 0x04, 0x97, 0x75});
-    constexpr auto f5_handler = std::to_array<std::uint8_t>({
-        0xb0, 0x02, 0xe8, 0x8c, 0x48, 0xe8, 0xfe, 0x95,
-        0xe8, 0x55, 0xd6, 0xe8, 0xd1, 0x95, 0xc3});
-    constexpr auto f5_first_call = std::to_array<std::uint8_t>({
-        0xe8, 0xce, 0x94});
-    constexpr auto f5_second_call = std::to_array<std::uint8_t>({
-        0x80, 0x3e, 0xf9, 0x07, 0x01, 0x75, 0x20});
-    constexpr auto f5_third_call = std::to_array<std::uint8_t>({
-        0x06, 0x57, 0x1e, 0x56, 0xe8, 0xd9, 0xbf});
-    constexpr auto f5_fourth_call = std::to_array<std::uint8_t>({
-        0x80, 0x3e, 0xf9, 0x07, 0x01, 0x75, 0x12});
+    constexpr ExecutableByteAnchor<8> f5_table{"d3bd6bde83b260a5d7f6c55054eccfdc1ccf73e9ce96e3615f3a4ebcdca94688"};
+    constexpr ExecutableByteAnchor<15> f5_handler{"14697f146944b3b7f00f283db079d5c1bf401c924bee97da78c35913003c3aa7"};
+    constexpr ExecutableByteAnchor<3> f5_first_call{"bdbaa7fd27584f2712445c3083bceae07de88494591571e5dbfefeada3676ad3"};
+    constexpr ExecutableByteAnchor<7> f5_second_call{"2e07930cbe7b96ef29ddcdfb7319fe8f75a59010817b146838a43c5c3bc66595"};
+    constexpr ExecutableByteAnchor<7> f5_third_call{"0bd3db0c3b5ac1f65880ce173175abea6dd32decef73048159f8556e0fae47f2"};
+    constexpr ExecutableByteAnchor<7> f5_fourth_call{"c420db37c01f18a95f88a4478803ccb65d377413b6435fda3adeff2b0cb3b8a7"};
     // Record five (raw F6 / $40) uses the same $a19e gate as F3/F4.  On its
     // admitted path the native image snapshots $75a8/$75ae/$75ac into its
     // own $7412/$740f/$7410 scratch cells, then installs literal temporary
     // values before calling the original $09fa polling routine.  The byte
     // following SHR BL,1 controls repetition of that poll; no host state is
     // supplied for it, and this parser deliberately does not execute it.
-    constexpr auto f6_table = std::to_array<std::uint8_t>({
-        0x1e, 0x24, 0x09, 0x1b, 0x35, 0x05, 0x15, 0x74});
+    constexpr ExecutableByteAnchor<8> f6_table{"87507c0563f013b44f8928170f9b59260d0cc8b053c858ebde7c9cb6cc15b5cf"};
     constexpr ExecutableByteAnchor<64> f6_handler{"8c04d2f4c8a087fd1942a5dc3b07fe02702aaf0b6b87134a8447ed53be3e6609"};
     // $7455 is a separate routine immediately following F6. It restores the
     // exact three F6 snapshots, then performs its complete caller sequence
@@ -252,15 +177,13 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     constexpr ExecutableByteAnchor<86> f6_restoration{"990dfec0e40229d70d100b1e6d4174f069eed46f95dacbc1d958334314a68525"};
     // $74c1 is the statically proved caller: after the opaque $cc4e call
     // returns it discards one stack word and tail-jumps to $7455.
-    constexpr auto f6_restoration_caller = std::to_array<std::uint8_t>({
-        0xe8, 0x8a, 0x57, 0x58, 0xeb, 0x8e});
+    constexpr ExecutableByteAnchor<6> f6_restoration_caller{"26aa10af6fc9d62f91ab8e1f922622618d61b0f92af3b48e641e8a5ee400a76c"};
     constexpr ExecutableByteAnchor<277> f6_caller_helper_prefix{"4a397c5288f1b47472c1a73a386c2a1ea6843008316a96236b58f90321aa0e59"};
     // Record six (raw F7 / $41) uses the same native $a19e gate. On its
     // admitted path it reads words at $da17/$da18/$da27/$da26/$da35/$da37,
     // calls the observed helper sequence, and returns. The values and helper
     // effects are native runtime state, so this parser records no semantics.
-    constexpr auto f7_table = std::to_array<std::uint8_t>({
-        0x24, 0x2a, 0x09, 0x1b, 0x36, 0x06, 0x21, 0x75});
+    constexpr ExecutableByteAnchor<8> f7_table{"086a118db02e6970e16519bd38aa1d0bb28fede09bcdc9c5855d6aef42f39140"};
     constexpr ExecutableByteAnchor<118> f7_handler{"21b20c185909a18d0026728f313a7cf9b1de1c7ec9ca3bf2522fe3d85a8648cc"};
     // Record seven (raw F8 / $42) enters $7306. It clears native byte $da30,
     // loads AL=$02, enters $731a, then repeatedly calls $09fa while the carry
@@ -268,24 +191,15 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     // calls $7b47 and returns. Its zero path reads/decrements $da0a, applies
     // XLAT through BX=$db4b, then jumps to $7948. Neither runtime byte nor BL
     // is invented.
-    constexpr auto f8_table = std::to_array<std::uint8_t>({
-        0x2a, 0x30, 0x09, 0x1b, 0x37, 0x07, 0x06, 0x73});
-    constexpr auto f8_handler = std::to_array<std::uint8_t>({
-        0x0e, 0x1f, 0xc6, 0x06, 0x30, 0xda, 0x00, 0xb0,
-        0x02, 0xe8, 0x08, 0x00, 0xe8, 0xe5, 0x96, 0xd0,
-        0xeb, 0x72, 0xf9, 0xc3});
-    constexpr auto f8_preflight = std::to_array<std::uint8_t>({
-        0xa0, 0x39, 0xda, 0x22, 0xc0, 0x74, 0x04, 0xe8,
-        0x23, 0x08, 0xc3, 0xa0, 0x0a, 0xda, 0x22, 0xc0,
-        0x75, 0x01, 0xc3, 0xfe, 0xc8, 0xa2, 0x0a, 0xda,
-        0xbb, 0x4b, 0xdb, 0xd7, 0xe9, 0x0f, 0x06});
+    constexpr ExecutableByteAnchor<8> f8_table{"1ff3160cd81b960576f13ea94e2876fc183f69cc6667e4921fa238792f230566"};
+    constexpr ExecutableByteAnchor<20> f8_handler{"91242d77ab597487f0be694129dd45dba5f899034193673275a4286a8e28ddd1"};
+    constexpr ExecutableByteAnchor<31> f8_preflight{"71c2c4189e66104aea08d4f7040e9d6bc873eb6717607eed30cf61ce27f5ac2e"};
     // Record eight (raw F9 / $43) admits only when $a19e is zero. It calls
     // $d0c9 with AX=0, clears $da30, sets its code-local $6e2f to one, clears
     // $dad7, and conditionally calls $7b47 if $da39 is nonzero. It then loops
     // through F8's $731a while $da06 is below nine. Its terminal call crosses
     // 64 KiB, so the trace stores it as a flat image address.
-    constexpr auto f9_table = std::to_array<std::uint8_t>({
-        0x30, 0x36, 0x09, 0x1b, 0x38, 0x08, 0x39, 0x73});
+    constexpr ExecutableByteAnchor<8> f9_table{"b2af5f9871ee10d13a30866c1922c3c4aca318794fda43b8aee5fc59dd568fb6"};
     constexpr ExecutableByteAnchor<75> f9_handler{"81f6ffb10d26945a8eb234846c4a8243334d286233b0e4f23d9a22742f99d41b"};
     // Record nine (raw F10 / $44) enters $7384. It has the established
     // $a19e admission gate, clears $da30/$dad7, and sets code-local $6e2f to
@@ -294,8 +208,7 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
     // $7a9d from $da09, then reaches the observed call sequence. The final
     // wait/repetition depends on $da41 and BL/carry; no native state is
     // invented or mutated by this parser.
-    constexpr auto f10_table = std::to_array<std::uint8_t>({
-        0x36, 0x3c, 0x09, 0x1b, 0x39, 0x09, 0x84, 0x73});
+    constexpr ExecutableByteAnchor<8> f10_table{"9f08418e95788bd012e58e62da1fc1975540b8fcef8568acfe00651c02cad03f"};
     constexpr ExecutableByteAnchor<99> f10_handler{"baf98a9cde92782037b1dc560529fa25006fadc0bf6b53e5ca49a1a15f324390"};
     if (!has_bytes(game_executable, entry_offset, entry)) {
         throw std::runtime_error("Unsupported Millennium DOS COM entry");
@@ -534,7 +447,8 @@ MillenniumDosGameFlow parse_millennium_dos_game_flow(
             // CALL rel16 at $7312 is read from the accepted original handler
             // bytes. Its next IP is $7315, so the signed displacement resolves
             // modulo 64 KiB to $09fa rather than a fictional flat address.
-            .repeated_call_address = near_call_target(0x7315, f8_handler[13], f8_handler[14]),
+            .repeated_call_address = near_call_target(0x7315,
+                game_executable[f8_handler_offset+13],game_executable[f8_handler_offset+14]),
             .repeat_shift_register = 3,
         },
         .ninth_function_key = {
@@ -595,11 +509,8 @@ parse_millennium_dos_startup_allocation_boundary(
     constexpr std::size_t load_bias = 0x100;
     constexpr auto executable_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
-    constexpr auto continuation = std::to_array<std::uint8_t>({
-        0x52, 0x0e, 0x1f, 0xe8, 0x0f, 0xff, 0xa3, 0x28, 0xd1,
-        0x23, 0xd2, 0x74, 0x03, 0xe9, 0x56, 0x01, 0xe8, 0x69, 0x3e});
-    constexpr auto allocator_prefix = std::to_array<std::uint8_t>({
-        0x0e, 0x07, 0xbb, 0x00, 0x10, 0xb4, 0x4a, 0xcd, 0x21});
+    constexpr ExecutableByteAnchor<19> continuation{"9623d493ddfa9339d3137799c133a99df86425db2fb0d674a81b2e09555692b6"};
+    constexpr ExecutableByteAnchor<9> allocator_prefix{"11d1e2057faef11b2ebbcd56ea6e392435d75111519765894d3c839d6ba551c8"};
     constexpr auto continuation_sha256 =
         "9623d493ddfa9339d3137799c133a99df86425db2fb0d674a81b2e09555692b6";
     constexpr auto allocator_prefix_sha256 =
@@ -632,24 +543,11 @@ parse_millennium_dos_startup_zero_path_boundary(
     constexpr std::size_t load_bias = 0x100;
     constexpr auto executable_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
-    constexpr auto zero_path = std::to_array<std::uint8_t>({
-        0xe8, 0x69, 0x3e});
-    constexpr auto selector = std::to_array<std::uint8_t>({
-        0xba, 0x31, 0x11, 0xa0, 0x05, 0xda, 0x3c, 0x01, 0x74, 0x11,
-        0xba, 0x3d, 0x11, 0x3c, 0x03, 0x74, 0x0a, 0xba, 0x55, 0x11,
-        0x3c, 0x02, 0x74, 0x03, 0xba, 0x49, 0x11, 0xe8, 0xbb, 0xf3});
-    constexpr auto security_loader_prefix = std::to_array<std::uint8_t>({
-        0x1e, 0x06, 0x1e, 0x0e, 0x1f, 0xeb, 0x08, 0x1e, 0x06, 0x1e,
-        0x0e, 0x1f, 0xba, 0x6a, 0x2f, 0xb0, 0x02, 0xb4, 0x3d, 0xcd,
-        0x21, 0x89, 0x06, 0x00});
-    constexpr auto selector_names = std::to_array<std::uint8_t>({
-        0x56, 0x47, 0x41, 0x54, 0x58, 0x54, 0x2e, 0x42, 0x49, 0x4e, 0x00, 0x00,
-        0x45, 0x47, 0x33, 0x54, 0x58, 0x54, 0x2e, 0x42, 0x49, 0x4e, 0x00, 0x00,
-        0x45, 0x47, 0x36, 0x54, 0x58, 0x54, 0x2e, 0x42, 0x49, 0x4e, 0x00, 0x00,
-        0x54, 0x44, 0x59, 0x54, 0x58, 0x54, 0x2e, 0x42, 0x49, 0x4e, 0x00, 0x00});
-    constexpr auto security_name = std::to_array<std::uint8_t>({
-        0x41, 0x3a, 0x5c, 0x32, 0x32, 0x30, 0x30, 0x41, 0x44, 0x5c, 0x53,
-        0x45, 0x43, 0x55, 0x52, 0x49, 0x54, 0x59, 0x2e, 0x48, 0x49, 0x44, 0x00});
+    constexpr ExecutableByteAnchor<3> zero_path{"798bd5318e00348848f0ca4b876d687fec5c606abe88236ff4e922a77fe08b65"};
+    constexpr ExecutableByteAnchor<30> selector{"fffa1b0e03e9abf90bfde3bfb86bf1125ae579ede767eea68223e098d641992f"};
+    constexpr ExecutableByteAnchor<24> security_loader_prefix{"328e11edf0653b0e0f21db3b61cf9ff95795ec9431f07c0198a700358f75ed74"};
+    constexpr ExecutableByteAnchor<48> selector_names{"153a0b62bdec1702cdd36ff6e7dc33ec4ed6673ad5d3f5f8bc07b748f7e06d76"};
+    constexpr ExecutableByteAnchor<23> security_name{"1a95edb6109f3db1af0c0389f1aa5d597a184f26725e095f771b6622f654ec6a"};
     constexpr auto zero_path_sha256 =
         "798bd5318e00348848f0ca4b876d687fec5c606abe88236ff4e922a77fe08b65";
     constexpr auto selector_sha256 =
@@ -699,12 +597,9 @@ parse_millennium_dos_startup_nonzero_path_boundary(
     constexpr std::size_t load_bias = 0x100;
     constexpr auto executable_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
-    constexpr auto nonzero_entry = std::to_array<std::uint8_t>({
-        0xb0, 0x08, 0xeb, 0xcc});
-    constexpr auto continuation = std::to_array<std::uint8_t>({
-        0x2e, 0xa2, 0xb2, 0x2f, 0x8b, 0x26, 0x2c, 0xd1, 0xe8, 0xbe, 0x35});
-    constexpr auto local_callee_prefix = std::to_array<std::uint8_t>({
-        0xb8, 0x00, 0x00, 0xcd, 0x33});
+    constexpr ExecutableByteAnchor<4> nonzero_entry{"92252049901ece1d56c7b17fdd7450ce8ade576650b4f7b032f61dd1e4e59522"};
+    constexpr ExecutableByteAnchor<11> continuation{"7fb9d6276e557976c68a02e9900531347fd95ecbfbd6fc3fa60cd0c176ca5c5d"};
+    constexpr ExecutableByteAnchor<5> local_callee_prefix{"d84b931c90a3b7e1baf2a0a6caf2c67fc5834ed6a160750ba6991b77fdb11909"};
     constexpr auto nonzero_entry_sha256 =
         "92252049901ece1d56c7b17fdd7450ce8ade576650b4f7b032f61dd1e4e59522";
     constexpr auto continuation_sha256 =
@@ -743,11 +638,7 @@ parse_millennium_dos_startup_zero_continuation_boundary(
     constexpr std::string_view executable_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr std::uint16_t entry = 0xd2f8;
-    constexpr auto continuation = std::to_array<std::uint8_t>({
-        0xbe, 0x82, 0x00, 0x32, 0xe4, 0x2e, 0x8a, 0x04, 0x2c, 0x30,
-        0xa2, 0x22, 0x01, 0xe8, 0x72, 0xfd, 0xbb, 0x00, 0xfa, 0xb4,
-        0x48, 0xcd, 0x21,
-    });
+    constexpr ExecutableByteAnchor<23> continuation{"9c7b13c4e0b99e8529e78063b91ae92d967b9fc6de66ebeeaacec01563e4a9d9"};
     constexpr std::string_view continuation_sha256 =
         "9c7b13c4e0b99e8529e78063b91ae92d967b9fc6de66ebeeaacec01563e4a9d9";
     const auto offset = [](const std::uint16_t address) {
@@ -756,7 +647,7 @@ parse_millennium_dos_startup_zero_continuation_boundary(
     if (game_executable.size() != 54'391
         || to_hex(sha256(game_executable)) != executable_sha256
         || !has_bytes(game_executable, offset(entry), continuation)
-        || near_call_target(0xd308, continuation[14], continuation[15]) != 0xd07a
+        || near_call_target(0xd308,game_executable[offset(entry)+14],game_executable[offset(entry)+15]) != 0xd07a
         || to_hex(sha256(game_executable.subspan(offset(entry), continuation.size())))
             != continuation_sha256) {
         throw std::runtime_error("Unsupported Millennium DOS startup zero continuation");
@@ -776,9 +667,7 @@ parse_millennium_dos_startup_post_allocation_boundary(
     constexpr std::string_view executable_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr std::uint16_t entry = 0xd30f;
-    constexpr auto boundary = std::to_array<std::uint8_t>({
-        0x2e, 0x89, 0x1e, 0x30, 0xd1, 0x8e, 0xc0, 0xb4, 0x49, 0xcd,
-    });
+    constexpr ExecutableByteAnchor<10> boundary{"f583faad7bddba301c431adb94fa9d53d5b197dcba2f447b0b654df6f1b452ce"};
     constexpr std::string_view boundary_sha256 =
         "f583faad7bddba301c431adb94fa9d53d5b197dcba2f447b0b654df6f1b452ce";
     const auto offset = [](const std::uint16_t address) {
@@ -806,11 +695,7 @@ parse_millennium_dos_startup_post_release_continuation(
     constexpr std::string_view executable_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr std::uint16_t entry = 0xd31a;
-    constexpr auto continuation = std::to_array<std::uint8_t>({
-        0x0e, 0x1f, 0x5a, 0xc5, 0x16, 0x42, 0x10, 0xb9, 0xff, 0xff,
-        0x0e, 0x1f, 0xc5, 0x36, 0x42, 0x10, 0xb8, 0x00, 0x0a, 0x0e,
-        0x1f, 0xe8, 0xc0, 0x98, 0xe8, 0xe5, 0x3c, 0xe8, 0x96, 0x3e,
-    });
+    constexpr ExecutableByteAnchor<30> continuation{"4d94bf904471cf96a03ce6dd111c0720f396e08ebf2f4603469377db0dc669ef"};
     constexpr std::string_view continuation_sha256 =
         "4d94bf904471cf96a03ce6dd111c0720f396e08ebf2f4603469377db0dc669ef";
     const auto offset = [](const std::uint16_t address) {
@@ -819,9 +704,9 @@ parse_millennium_dos_startup_post_release_continuation(
     if (game_executable.size() != 54'391
         || to_hex(sha256(game_executable)) != executable_sha256
         || !has_bytes(game_executable, offset(entry), continuation)
-        || near_call_target(0xd332, continuation[22], continuation[23]) != 0x6bf2
-        || near_call_target(0xd335, continuation[25], continuation[26]) != 0x101a
-        || near_call_target(0xd338, continuation[28], continuation[29]) != 0x11ce
+        || near_call_target(0xd332,game_executable[offset(entry)+22],game_executable[offset(entry)+23]) != 0x6bf2
+        || near_call_target(0xd335,game_executable[offset(entry)+25],game_executable[offset(entry)+26]) != 0x101a
+        || near_call_target(0xd338,game_executable[offset(entry)+28],game_executable[offset(entry)+29]) != 0x11ce
         || to_hex(sha256(game_executable.subspan(offset(entry), continuation.size())))
             != continuation_sha256) {
         throw std::runtime_error("Unsupported Millennium DOS startup post-release continuation");
@@ -841,9 +726,7 @@ parse_millennium_dos_startup_post_gx_loader_boundary(
     constexpr std::string_view executable_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr std::uint16_t entry = 0xd338;
-    constexpr auto boundary = std::to_array<std::uint8_t>({
-        0x0e, 0x07, 0xbb, 0xa0, 0xd1, 0xb8, 0x22, 0x00, 0xe8, 0xe1, 0x2d,
-    });
+    constexpr ExecutableByteAnchor<11> boundary{"64e7dddae2ca6942cddaa4c564d61203b26c469fc898bb923b2ba227d93876ab"};
     constexpr std::string_view boundary_sha256 =
         "64e7dddae2ca6942cddaa4c564d61203b26c469fc898bb923b2ba227d93876ab";
     const auto offset = [](const std::uint16_t address) {
@@ -852,7 +735,7 @@ parse_millennium_dos_startup_post_gx_loader_boundary(
     if (game_executable.size() != 54'391
         || to_hex(sha256(game_executable)) != executable_sha256
         || !has_bytes(game_executable, offset(entry), boundary)
-        || near_call_target(0xd343, boundary[9], boundary[10]) != 0x0124
+        || near_call_target(0xd343,game_executable[offset(entry)+9],game_executable[offset(entry)+10]) != 0x0124
         || to_hex(sha256(game_executable.subspan(offset(entry), boundary.size())))
             != boundary_sha256) {
         throw std::runtime_error("Unsupported Millennium DOS startup post-GX-loader boundary");
@@ -870,14 +753,11 @@ MillenniumDosPrivateInt91Wrapper parse_millennium_dos_private_int91_wrapper(
     constexpr std::string_view executable_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr std::uint16_t entry = 0x0124;
-    constexpr auto wrapper = std::to_array<std::uint8_t>({
-        0x1e, 0x56, 0x57, 0x55, 0x06, 0xcd, 0x91, 0x07, 0x5d, 0x5f,
-        0x5e, 0x1f, 0xc3,
-    });
+    constexpr ExecutableByteAnchor<13> wrapper{"5d17daad68e9062dc6852ae76740db4afdcb81555ba9fb7d15d4e4aa8d088175"};
     constexpr std::string_view wrapper_sha256 =
         "5d17daad68e9062dc6852ae76740db4afdcb81555ba9fb7d15d4e4aa8d088175";
     constexpr std::uint16_t caller_call = 0xd340;
-    constexpr auto caller = std::to_array<std::uint8_t>({0xe8, 0xe1, 0x2d});
+    constexpr ExecutableByteAnchor<3> caller{"9ff166707c34cef7db1e235d34339645e4c581aa205f3f6fbaadcff5b1745bea"};
     const auto offset = [](const std::uint16_t address) {
         return static_cast<std::size_t>(address) - load_bias;
     };
@@ -885,7 +765,7 @@ MillenniumDosPrivateInt91Wrapper parse_millennium_dos_private_int91_wrapper(
         || to_hex(sha256(game_executable)) != executable_sha256
         || !has_bytes(game_executable, offset(entry), wrapper)
         || !has_bytes(game_executable, offset(caller_call), caller)
-        || near_call_target(0xd343, caller[1], caller[2]) != entry
+        || near_call_target(0xd343,game_executable[offset(caller_call)+1],game_executable[offset(caller_call)+2]) != entry
         || to_hex(sha256(game_executable.subspan(offset(entry), wrapper.size())))
             != wrapper_sha256) {
         throw std::runtime_error("Unsupported Millennium DOS private INT 91 wrapper");
@@ -907,14 +787,7 @@ MillenniumDosPostInt91CallerSelector parse_millennium_dos_post_int91_caller_sele
     constexpr std::string_view executable_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr std::uint16_t entry = 0xd343;
-    constexpr auto selector = std::to_array<std::uint8_t>({
-        0xba, 0x28, 0x00, 0xb8, 0x0e, 0x00, 0x8a, 0x0e, 0x05, 0xda,
-        0x80, 0xf9, 0x03, 0x74, 0x1c, 0xba, 0x50, 0x00, 0xb8, 0x12,
-        0x00, 0x80, 0xf9, 0x04, 0x74, 0x11, 0xba, 0xa0, 0x00, 0xb8,
-        0x14, 0x00, 0x80, 0xf9, 0x02, 0x74, 0x06, 0xba, 0x40, 0x01,
-        0xb8, 0x0f, 0x00, 0x2e, 0x89, 0x16, 0x6e, 0x4b, 0xe8, 0xdc,
-        0x98,
-    });
+    constexpr ExecutableByteAnchor<51> selector{"571626e83b0787401f89c8586c12dfb4d4221c44e0a9786727d2314b09327091"};
     constexpr std::string_view selector_sha256 =
         "571626e83b0787401f89c8586c12dfb4d4221c44e0a9786727d2314b09327091";
     const auto offset = [](const std::uint16_t address) {
@@ -923,7 +796,7 @@ MillenniumDosPostInt91CallerSelector parse_millennium_dos_post_int91_caller_sele
     if (game_executable.size() != 54'391
         || to_hex(sha256(game_executable)) != executable_sha256
         || !has_bytes(game_executable, offset(entry), selector)
-        || near_call_target(0xd376, selector[49], selector[50]) != 0x6c52
+        || near_call_target(0xd376,game_executable[offset(entry)+49],game_executable[offset(entry)+50]) != 0x6c52
         || to_hex(sha256(game_executable.subspan(offset(entry), selector.size())))
             != selector_sha256) {
         throw std::runtime_error("Unsupported Millennium DOS post-INT 91 caller selector");
@@ -1004,13 +877,7 @@ parse_millennium_dos_post_overlay_adapter_continuation(
     constexpr std::string_view executable_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr std::uint16_t entry = 0xd376;
-    constexpr auto continuation = std::to_array<std::uint8_t>({
-        0xe8, 0xd9, 0xfd, 0xe8, 0x8c, 0x7b, 0xe8, 0x92, 0x6d,
-        0xe8, 0x2d, 0x6d, 0xe8, 0x2d, 0x6f, 0xe8, 0xf2, 0x3c,
-        0x80, 0x3e, 0x05, 0xda, 0x01, 0x74, 0x05, 0xe8, 0x23,
-        0xfe, 0xeb, 0x03, 0xe8, 0x0a, 0xfe, 0x0e, 0x1f, 0x0e,
-        0x07, 0x0e, 0x07,
-    });
+    constexpr ExecutableByteAnchor<39> continuation{"1df4b30f14434eae3a44463402710bcd1b162200a923c0b9cc1f827faf3763ac"};
     constexpr std::string_view continuation_sha256 =
         "1df4b30f14434eae3a44463402710bcd1b162200a923c0b9cc1f827faf3763ac";
     const auto offset = [](const std::uint16_t address) {
@@ -1019,14 +886,14 @@ parse_millennium_dos_post_overlay_adapter_continuation(
     if (game_executable.size() != 54'391
         || to_hex(sha256(game_executable)) != executable_sha256
         || !has_bytes(game_executable, offset(entry), continuation)
-        || near_call_target(0xd379, continuation[1], continuation[2]) != 0xd152
-        || near_call_target(0xd37c, continuation[4], continuation[5]) != 0x4f08
-        || near_call_target(0xd37f, continuation[7], continuation[8]) != 0x4111
-        || near_call_target(0xd382, continuation[10], continuation[11]) != 0x40af
-        || near_call_target(0xd385, continuation[13], continuation[14]) != 0x42b2
-        || near_call_target(0xd388, continuation[16], continuation[17]) != 0x107a
-        || near_call_target(0xd392, continuation[26], continuation[27]) != 0xd1b5
-        || near_call_target(0xd397, continuation[31], continuation[32]) != 0xd1a1
+        || near_call_target(0xd379,game_executable[offset(entry)+1],game_executable[offset(entry)+2]) != 0xd152
+        || near_call_target(0xd37c,game_executable[offset(entry)+4],game_executable[offset(entry)+5]) != 0x4f08
+        || near_call_target(0xd37f,game_executable[offset(entry)+7],game_executable[offset(entry)+8]) != 0x4111
+        || near_call_target(0xd382,game_executable[offset(entry)+10],game_executable[offset(entry)+11]) != 0x40af
+        || near_call_target(0xd385,game_executable[offset(entry)+13],game_executable[offset(entry)+14]) != 0x42b2
+        || near_call_target(0xd388,game_executable[offset(entry)+16],game_executable[offset(entry)+17]) != 0x107a
+        || near_call_target(0xd392,game_executable[offset(entry)+26],game_executable[offset(entry)+27]) != 0xd1b5
+        || near_call_target(0xd397,game_executable[offset(entry)+31],game_executable[offset(entry)+32]) != 0xd1a1
         || to_hex(sha256(game_executable.subspan(offset(entry), continuation.size())))
             != continuation_sha256) {
         throw std::runtime_error("Unsupported Millennium DOS post-overlay-adapter continuation");
@@ -1158,22 +1025,16 @@ MillenniumDosPostOverlayDispatchPrefix parse_millennium_dos_post_overlay_dispatc
     constexpr std::string_view executable_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr std::uint16_t entry = 0xd3e2;
-    constexpr auto prefix = std::to_array<std::uint8_t>({
-        0x32, 0xe4, 0x3c, 0x0b, 0x74, 0x26, 0x8a, 0x0e, 0x3a, 0xda,
-        0x22, 0xc9, 0x75, 0xe2, 0x3c, 0x0c, 0x75, 0x05, 0xe8, 0x79,
-        0x01, 0x33, 0xc0, 0x2c, 0x3b, 0x3c, 0x0a, 0x73, 0xd3, 0xbe,
-        0xbf, 0x2f, 0x32, 0xe4, 0xc0, 0xe0, 0x03, 0x01, 0xc6, 0xe8,
-        0xe4, 0xa2, 0xeb, 0xc4, 0xe8, 0x93, 0x3d, 0xeb, 0xbf,
-    });
+    constexpr ExecutableByteAnchor<49> prefix{"7abec93ec23f7ca3c4b400e16b9e746da7b0b9a1dd4bec88ba891ef04b322065"};
     constexpr std::string_view prefix_sha256 =
         "7abec93ec23f7ca3c4b400e16b9e746da7b0b9a1dd4bec88ba891ef04b322065";
     const auto offset = static_cast<std::size_t>(entry) - load_bias;
     if (game_executable.size() != 54'391
         || to_hex(sha256(game_executable)) != executable_sha256
         || !has_bytes(game_executable, offset, prefix)
-        || near_call_target(0xd3f7, prefix[19], prefix[20]) != 0xd570
-        || near_call_target(0xd40d, prefix[40], prefix[41]) != 0x76f1
-        || near_call_target(0xd411, prefix[45], prefix[46]) != 0x11a4
+        || near_call_target(0xd3f7,game_executable[offset+19],game_executable[offset+20]) != 0xd570
+        || near_call_target(0xd40d,game_executable[offset+40],game_executable[offset+41]) != 0x76f1
+        || near_call_target(0xd411,game_executable[offset+45],game_executable[offset+46]) != 0x11a4
         || to_hex(sha256(game_executable.subspan(offset, prefix.size()))) != prefix_sha256) {
         throw std::runtime_error("Unsupported Millennium DOS post-overlay dispatch prefix");
     }
@@ -1401,18 +1262,8 @@ MillenniumDosFirstSpecialActionPrefix evaluate_millennium_dos_first_special_acti
     constexpr std::size_t load_bias = 0x100;
     constexpr std::size_t dispatch_offset = 0xd3e2 - load_bias;
     constexpr std::size_t handler_offset = 0x11a4 - load_bias;
-    constexpr auto dispatch_bytes = std::to_array<std::uint8_t>({
-        0x32, 0xe4, 0x3c, 0x0b, 0x74, 0x26, 0x8a, 0x0e, 0x3a, 0xda,
-        0x22, 0xc9, 0x75, 0xe2, 0x3c, 0x0c, 0x75, 0x05, 0xe8, 0x79,
-        0x01, 0x33, 0xc0, 0x2c, 0x3b, 0x3c, 0x0a, 0x73, 0xd3, 0xbe,
-        0xbf, 0x2f, 0x32, 0xe4, 0xc0, 0xe0, 0x03, 0x01, 0xc6, 0xe8,
-        0xe4, 0xa2, 0xeb,
-    });
-    constexpr auto handler_bytes = std::to_array<std::uint8_t>({
-        0x8a, 0x0e, 0xf9, 0x07, 0x22, 0xc9, 0xb8, 0x8f, 0x01, 0x74,
-        0x01, 0x48, 0x80, 0xf1, 0x01, 0x88, 0x0e, 0xf9, 0x07, 0xe8,
-        0xac, 0xf4,
-    });
+    constexpr ExecutableByteAnchor<43> dispatch_bytes{"1e4e43aad1a2507aa7f85189022063db0f0cb481d267ef79789a447c3e184d62"};
+    constexpr ExecutableByteAnchor<22> handler_bytes{"2cd76e49776b940065ecb01418394984a9e03a6d6a6fc161c218f450faac1ed5"};
     constexpr std::string_view dispatch_hash =
         "1e4e43aad1a2507aa7f85189022063db0f0cb481d267ef79789a447c3e184d62";
     constexpr std::string_view handler_hash =
@@ -1445,11 +1296,7 @@ MillenniumDosSharedHelperPrefix evaluate_millennium_dos_shared_helper_prefix(
     const std::span<const std::uint8_t> game_executable, const std::uint16_t caller_ax) {
     constexpr std::size_t load_bias = 0x100;
     constexpr std::size_t offset = 0x0666 - load_bias;
-    constexpr auto expected = std::to_array<std::uint8_t>({
-        0x1e, 0x56, 0x50, 0x2e, 0x8e, 0x1e, 0x16, 0x01, 0x2e, 0xc6,
-        0x06, 0xc8, 0x05, 0x00, 0xd1, 0xe0, 0x8b, 0xf0, 0xad, 0x8b,
-        0xf0, 0xe8, 0x79, 0xff, 0x58, 0x5e, 0x1f, 0xc3,
-    });
+    constexpr ExecutableByteAnchor<28> expected{"8dc7586f3809a14f3ed6acd601cd42486841adb9d9cb09d3e9b1ed727329e485"};
     constexpr std::string_view executable_hash =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr std::string_view prefix_hash =
@@ -1473,13 +1320,8 @@ MillenniumDosSecondSpecialActionPrefix evaluate_millennium_dos_second_special_ac
     constexpr std::size_t load_bias = 0x100;
     constexpr std::size_t dispatch_offset = 0xd3e8 - load_bias;
     constexpr std::size_t handler_offset = 0xd570 - load_bias;
-    constexpr auto dispatch_bytes = std::to_array<std::uint8_t>({
-        0x8a, 0x0e, 0x3a, 0xda, 0x22, 0xc9, 0x75, 0xe2, 0x3c, 0x0c,
-        0x75, 0x05, 0xe8, 0x79, 0x01,
-    });
-    constexpr auto handler_bytes = std::to_array<std::uint8_t>({
-        0xb8, 0x0d, 0x00, 0xe8, 0xdc, 0x96, 0xc3,
-    });
+    constexpr ExecutableByteAnchor<15> dispatch_bytes{"e59faad9b95521837b340ff56ef032cb140327bfabb0b39be32d01bb9c05bda3"};
+    constexpr ExecutableByteAnchor<7> handler_bytes{"f266d52e554a2e85147994b34eb69e7678cd9339fda1b99206c18fc05361232b"};
     constexpr std::string_view dispatch_hash =
         "e59faad9b95521837b340ff56ef032cb140327bfabb0b39be32d01bb9c05bda3";
     constexpr std::string_view handler_hash =
@@ -1517,18 +1359,13 @@ MillenniumDosGxOverlayLoadEvidence parse_millennium_dos_gx_overlay_load_evidence
         "093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb";
     constexpr std::size_t load_bias = 0x100;
     constexpr std::uint16_t name_address = 0x11c2;
-    constexpr auto name = std::to_array<std::uint8_t>({
-        0x32, 0x32, 0x30, 0x30, 0x47, 0x58, 0x2e, 0x45, 0x58, 0x45, 0x00, 0x00});
+    constexpr ExecutableByteAnchor<12> name{"69c2cd20ef6fc3182b339013e48200c94618630d138371e0468f228cb52f174d"};
     constexpr std::uint16_t loader_address = 0x11ce;
-    constexpr auto loader = std::to_array<std::uint8_t>({
-        0xba, 0xc2, 0x11, 0xe8, 0x66, 0xf3, 0x73, 0x03, 0xe9, 0xce, 0xf3,
-        0xb9, 0xff, 0xff, 0x33, 0xd2, 0x2e, 0xa1, 0x18, 0x01, 0x8e, 0xd8,
-        0xe8, 0x8d, 0xf3, 0x73, 0x03, 0xe9, 0xbb, 0xf3, 0xe8, 0xa7, 0xf3,
-        0x0e, 0x1f, 0x73, 0x03, 0xe9, 0xb1, 0xf3, 0xc3});
+    constexpr ExecutableByteAnchor<41> loader{"a8972b74ad9d1dfabe508c42b7fcda0fb45e0d449613449ab8a2763ca8ecff45"};
     constexpr auto loader_sha256 =
         "a8972b74ad9d1dfabe508c42b7fcda0fb45e0d449613449ab8a2763ca8ecff45";
     constexpr std::uint16_t caller_address = 0xd335;
-    constexpr std::array<std::uint8_t, 3> caller{{0xe8, 0x96, 0x3e}};
+    constexpr ExecutableByteAnchor<3> caller{"593a5b3350b1dc290dccca778e5ef123a9bf32440a7f61b0fcee6df6900e8dfd"};
     const auto offset = [](const std::uint16_t address) {
         return static_cast<std::size_t>(address) - load_bias;
     };
@@ -1542,10 +1379,10 @@ MillenniumDosGxOverlayLoadEvidence parse_millennium_dos_gx_overlay_load_evidence
         throw std::runtime_error("Unexpected Millennium DOS GX overlay load evidence");
     }
     return {game_sha256, overlay_sha256, name_address, loader_address, 0x0118,
-        0x11d1, near_call_target(0x11d4, loader[4], loader[5]),
-        0x11e4, near_call_target(0x11e7, loader[23], loader[24]),
-        0x11ec, near_call_target(0x11ef, loader[31], loader[32]), 0x11f6,
-        caller_address, near_call_target(0xd338, caller[1], caller[2]), loader_sha256};
+        0x11d1,near_call_target(0x11d4,game_executable[offset(loader_address)+4],game_executable[offset(loader_address)+5]),
+        0x11e4,near_call_target(0x11e7,game_executable[offset(loader_address)+23],game_executable[offset(loader_address)+24]),
+        0x11ec,near_call_target(0x11ef,game_executable[offset(loader_address)+31],game_executable[offset(loader_address)+32]),0x11f6,
+        caller_address,near_call_target(0xd338,game_executable[offset(caller_address)+1],game_executable[offset(caller_address)+2]),loader_sha256};
 }
 
 MillenniumDosStaticDataLoadEvidence parse_millennium_dos_static_data_load_evidence(
@@ -1553,14 +1390,11 @@ MillenniumDosStaticDataLoadEvidence parse_millennium_dos_static_data_load_eviden
     constexpr std::size_t load_bias = 0x100;
     constexpr auto game_sha256 = "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr std::uint16_t name_address = 0x100d;
-    constexpr auto name = std::to_array<std::uint8_t>({0x32,0x32,0x30,0x30,0x41,0x44,0x34,0x2e,0x42,0x49,0x4e,0x00});
+    constexpr ExecutableByteAnchor<12> name{"91032791cbe9e4cfaa88d2f3d9d4882e58dd66ccfbc8a0c457af21dfcefd63ae"};
     constexpr std::uint16_t loader_address = 0x101a;
-    constexpr auto loader = std::to_array<std::uint8_t>({
-        0xba,0x0d,0x10,0xe8,0x1a,0xf5,0x73,0x03,0xe9,0x82,0xf5,0xb9,0xff,0xff,0x8e,0x1e,
-        0x16,0x01,0x33,0xd2,0xe8,0x43,0xf5,0x73,0x03,0xe9,0x71,0xf5,0xe8,0x5d,0xf5,0x0e,
-        0x1f,0x73,0x03,0xe9,0x67,0xf5,0xc3});
+    constexpr ExecutableByteAnchor<39> loader{"d81719b0293c15ad5edbc5c816feb0c44e78abdde749473e5b5795848e4c86cb"};
     constexpr std::uint16_t caller_address = 0xd332;
-    constexpr auto caller = std::to_array<std::uint8_t>({0xe8,0xe5,0x3c});
+    constexpr ExecutableByteAnchor<3> caller{"f8b1e2bed8701d623133bbe3d5d24e133a2e78ee068a7f335fb43289bffaf286"};
     constexpr auto caller_sha256 = "f8b1e2bed8701d623133bbe3d5d24e133a2e78ee068a7f335fb43289bffaf286";
     constexpr auto loader_sha256 = "d81719b0293c15ad5edbc5c816feb0c44e78abdde749473e5b5795848e4c86cb";
     constexpr auto name_sha256 = "91032791cbe9e4cfaa88d2f3d9d4882e58dd66ccfbc8a0c457af21dfcefd63ae";
@@ -1574,7 +1408,8 @@ MillenniumDosStaticDataLoadEvidence parse_millennium_dos_static_data_load_eviden
         || to_hex(sha256(game_executable.subspan(offset(caller_address), caller.size()))) != caller_sha256) {
         throw std::runtime_error("Unexpected Millennium DOS static-data load evidence");
     }
-    return {name_address, loader_address, caller_address, near_call_target(0xd335, caller[1], caller[2]),
+    return {name_address,loader_address,caller_address,near_call_target(0xd335,
+        game_executable[offset(caller_address)+1],game_executable[offset(caller_address)+2]),
         0x101d, 0x102e, 0x1036, 0x1040, caller_sha256, loader_sha256, name_sha256};
 }
 
@@ -1583,10 +1418,7 @@ MillenniumDosGxOverlayAdapterEvidence parse_millennium_dos_gx_overlay_adapter_ev
     const MillenniumDosGxOverlayLoadEvidence& loader) {
     constexpr std::size_t load_bias = 0x100;
     constexpr std::uint16_t entry = 0x6c52;
-    constexpr auto expected = std::to_array<std::uint8_t>({
-        0x1e, 0x56, 0x06, 0x57, 0x51, 0x8c, 0xc9, 0x51, 0xb9, 0x69, 0x6c,
-        0x51, 0x2e, 0x8b, 0x0e, 0x18, 0x01, 0x51, 0xb9, 0x00, 0x00, 0x51,
-        0xcb, 0x50, 0x0e, 0x1f, 0x58, 0x59, 0x5f, 0x07, 0x5e, 0x1f, 0xc3});
+    constexpr ExecutableByteAnchor<33> expected{"b34e5abf8ecd790fce3e7a032d7a7fcacc073d03909e98fd33f9503113e3ad87"};
     constexpr auto expected_sha256 =
         "b34e5abf8ecd790fce3e7a032d7a7fcacc073d03909e98fd33f9503113e3ad87";
     const auto offset = static_cast<std::size_t>(entry) - load_bias;
@@ -1603,14 +1435,8 @@ MillenniumDosGxOverlayDispatcherEvidence parse_millennium_dos_gx_overlay_dispatc
     const MillenniumDosGxOverlayAdapterEvidence& adapter) {
     constexpr auto overlay_sha256 =
         "093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb";
-    constexpr std::array<std::uint8_t, 20> dispatch{{
-        0x32, 0xe4, 0x0e, 0x07, 0x0e, 0x1f, 0xbe, 0x15, 0x00, 0xd1,
-        0xe0, 0x01, 0xc6, 0xad, 0xbe, 0x14, 0x00, 0x56, 0x50, 0xc3}};
-    constexpr std::array<std::uint8_t, 42> table{{
-        0x0c,0x08,0x26,0x25,0x57,0x25,0x8a,0x25,0x73,0x25,0x13,0x2e,
-        0xa1,0x25,0x14,0x25,0x8f,0x25,0x19,0x26,0x35,0x26,0x60,0x26,
-        0x8b,0x26,0xd0,0x08,0x90,0x00,0x9f,0x00,0x98,0x25,0x3f,0x31,
-        0x97,0x00,0x72,0x31,0xa7,0x00}};
+    constexpr ExecutableByteAnchor<20> dispatch{"f4d657fcbdda23d7f0fdf2bbf48405d0a04e8b8149df064607f49042525fbd55"};
+    constexpr ExecutableByteAnchor<42> table{"4d04568e05378787921012654fe9c157419ce7c07f9943b51135258f32a06df3"};
     constexpr auto dispatch_sha256 =
         "f4d657fcbdda23d7f0fdf2bbf48405d0a04e8b8149df064607f49042525fbd55";
     constexpr auto table_sha256 =
@@ -1637,11 +1463,7 @@ MillenniumDosGxOverlaySelectorEvidence parse_millennium_dos_gx_overlay_selector_
     const MillenniumDosGxOverlayDispatcherEvidence& dispatcher) {
     constexpr std::size_t load_bias = 0x100;
     constexpr std::uint16_t caller_address = 0xd343;
-    constexpr auto caller = std::to_array<std::uint8_t>({
-        0xba,0x28,0x00,0xb8,0x0e,0x00,0x8a,0x0e,0x05,0xda,0x80,0xf9,0x03,0x74,0x1c,
-        0xba,0x50,0x00,0xb8,0x12,0x00,0x80,0xf9,0x04,0x74,0x11,0xba,0xa0,0x00,0xb8,
-        0x14,0x00,0x80,0xf9,0x02,0x74,0x06,0xba,0x40,0x01,0xb8,0x0f,0x00,0x2e,0x89,
-        0x16,0x6e,0x4b,0xe8,0xdc,0x98});
+    constexpr ExecutableByteAnchor<51> caller{"571626e83b0787401f89c8586c12dfb4d4221c44e0a9786727d2314b09327091"};
     constexpr auto caller_sha256 =
         "571626e83b0787401f89c8586c12dfb4d4221c44e0a9786727d2314b09327091";
     constexpr std::size_t overlay_offset = 0x90;
@@ -1673,12 +1495,7 @@ parse_millennium_dos_gx_overlay_startup_record_evidence(
         "093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb";
     constexpr std::size_t first_entry_offset = 0x90;
     constexpr ExecutableByteAnchor<94> entry_span{"8d412472415d513482b5c70198bb1aa04fa0d25798dd5f4b40b262151c489736"};
-    constexpr auto records = std::to_array<std::uint8_t>({
-        0xc7,0x0d,0x24,0x00,0xa0,0x05,0xa2,0x05,
-        0x1f,0x37,0x20,0x01,0xa0,0x05,0x10,0x2d,
-        0x8f,0x1b,0x48,0x00,0xa0,0x05,0x44,0x0b,
-        0x8f,0x1b,0x90,0x00,0xa0,0x05,0xa8,0x05,
-    });
+    constexpr ExecutableByteAnchor<32> records{"1b92e08f514f6b6dee4683550e2d9363d39e6ed0375ac9c9e2b652754326965f"};
     constexpr std::string_view entry_span_sha256 =
         "8d412472415d513482b5c70198bb1aa04fa0d25798dd5f4b40b262151c489736";
     constexpr std::string_view record_bank_sha256 =
@@ -1849,15 +1666,8 @@ MillenniumDosSoundEffectNameTableEvidence parse_millennium_dos_sound_effect_name
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr std::size_t load_bias = 0x100;
     constexpr std::uint16_t table_address = 0xcfdd;
-    constexpr auto names = std::to_array<std::uint8_t>({
-        'S','F','X','1','.','V','O','C',0, 'S','F','X','2','.','V','O','C',0,
-        'S','F','X','3','.','V','O','C',0, 'S','F','X','4','.','V','O','C',0,
-        'S','F','X','5','.','V','O','C',0, 'S','F','X','6','.','V','O','C',0,
-        'S','F','X','7','.','V','O','C',0, 'S','F','X','8','.','V','O','C',0,
-        'S','F','X','9','.','V','O','C',0, 'S','F','X','A','.','V','O','C',0,
-        'S','F','X','B','.','V','O','C',0, 'S','F','X','C','.','V','O','C',0,
-        'S','F','X','D','.','V','O','C',0, 'S','F','X','E','.','V','O','C',0,
-    });
+    constexpr ExecutableByteAnchor<126> names{
+        "5bc252a34057b25239c81ce4ead178c294456e9af233bdd98d2d6f0f3cb4d008"};
     constexpr auto table_sha256 =
         "5bc252a34057b25239c81ce4ead178c294456e9af233bdd98d2d6f0f3cb4d008";
     const auto table_offset = static_cast<std::size_t>(table_address) - load_bias;
@@ -1880,15 +1690,8 @@ parse_millennium_dos_english_game_startup_callees(
     constexpr std::size_t load_bias = 0x100;
     constexpr std::uint16_t equal_entry = 0xd1a1;
     constexpr std::uint16_t other_entry = 0xd1b5;
-    constexpr auto equal = std::to_array<std::uint8_t>({
-        0xb8, 0x04, 0x00, 0x0e, 0x07, 0xbb, 0x9f, 0xd1, 0xe8, 0x78,
-        0x2f, 0xe8, 0x9f, 0x32, 0xb0, 0x01, 0xa2, 0x05, 0xda, 0xc3,
-    });
-    constexpr auto other = std::to_array<std::uint8_t>({
-        0xb8, 0x04, 0x00, 0x0e, 0x07, 0xbb, 0x9f, 0xd1, 0xe8, 0x64,
-        0x2f, 0xe8, 0xa3, 0x32, 0xa0, 0x05, 0xda, 0x3c, 0x02, 0x75,
-        0x06, 0xb8, 0x00, 0xb8, 0xa3, 0x07, 0x01, 0xc3,
-    });
+    constexpr ExecutableByteAnchor<20> equal{"6f59df77c567324b41dd6159a6fbac7d8970626fc40e8b908f9f58746a993a3e"};
+    constexpr ExecutableByteAnchor<28> other{"2f61098eb45bb48ea7a38ab2fcc2e065ae0d0b2ad08ea9973e3fe464943fba9b"};
     constexpr std::string_view executable_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr std::string_view equal_sha256 =
@@ -1902,10 +1705,10 @@ parse_millennium_dos_english_game_startup_callees(
         || to_hex(sha256(game_executable)) != executable_sha256
         || !has_bytes(game_executable, offset(equal_entry), equal)
         || !has_bytes(game_executable, offset(other_entry), other)
-        || near_call_target(0xd1ac, equal[9], equal[10]) != 0x0124
-        || near_call_target(0xd1af, equal[12], equal[13]) != 0x044e
-        || near_call_target(0xd1c0, other[9], other[10]) != 0x0124
-        || near_call_target(0xd1c3, other[12], other[13]) != 0x0466
+        || near_call_target(0xd1ac,game_executable[offset(equal_entry)+9],game_executable[offset(equal_entry)+10]) != 0x0124
+        || near_call_target(0xd1af,game_executable[offset(equal_entry)+12],game_executable[offset(equal_entry)+13]) != 0x044e
+        || near_call_target(0xd1c0,game_executable[offset(other_entry)+9],game_executable[offset(other_entry)+10]) != 0x0124
+        || near_call_target(0xd1c3,game_executable[offset(other_entry)+12],game_executable[offset(other_entry)+13]) != 0x0466
         || to_hex(sha256(game_executable.subspan(offset(equal_entry), equal.size()))) != equal_sha256
         || to_hex(sha256(game_executable.subspan(offset(other_entry), other.size()))) != other_sha256) {
         throw std::runtime_error("Unexpected Millennium English DOS startup callees");
@@ -1923,16 +1726,9 @@ parse_millennium_dos_english_game_startup_followups(
     constexpr std::size_t load_bias = 0x100;
     constexpr std::uint16_t equal_entry = 0x044e;
     constexpr std::uint16_t palette_entry = 0x0466;
-    constexpr auto equal = std::to_array<std::uint8_t>({0xb0, 0x01, 0x2e, 0x88, 0x06, 0x05, 0xda, 0xc3});
-    constexpr auto palette = std::to_array<std::uint8_t>({
-        0x0e, 0x1f, 0xbe, 0x56, 0x04, 0xb9, 0x10, 0x00, 0x32, 0xdb,
-        0xac, 0x8a, 0xf8, 0xb8, 0x00, 0x10, 0xcd, 0x10, 0xfe, 0xc3,
-        0xe2, 0xf4, 0xc3,
-    });
-    constexpr std::array<std::uint8_t, 16> palette_table{
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-        0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
-    };
+    constexpr ExecutableByteAnchor<8> equal{"38889279a8b89e0e600bb25298015ccd8aadc09ea3858a1790097b3f7ff4ea8f"};
+    constexpr ExecutableByteAnchor<23> palette{"b17db26fa4fa8b7307fb767ff98351bd6dcca202829dd2d9348ff4991942d779"};
+    constexpr ExecutableByteAnchor<16> palette_table{"ce46bce999708ea5109a857b0b6ecc02ece34eaf431cd148ef1aa1c0e80aed0a"};
     constexpr std::string_view executable_sha256 =
         "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
     constexpr std::string_view equal_sha256 =
@@ -1956,9 +1752,12 @@ parse_millennium_dos_english_game_startup_followups(
         || to_hex(sha256(game_executable.subspan(offset(palette_entry), palette.size()))) != palette_sha256) {
         throw std::runtime_error("Unexpected Millennium English DOS startup follow-ups");
     }
+    std::array<std::uint8_t,16> decoded_palette_table{};
+    std::copy_n(game_executable.begin()+static_cast<std::ptrdiff_t>(offset(0x0456)),
+        decoded_palette_table.size(),decoded_palette_table.begin());
     return {std::string(executable_sha256), equal_entry, equal.size(), std::string(equal_sha256),
         0x01, 0xda05, 0x0455, palette_entry, palette.size(), std::string(palette_sha256),
-        0x0456, palette_table, std::string(palette_table_sha256), 16, 0x10, 0x1000, 0x047c};
+        0x0456, decoded_palette_table, std::string(palette_table_sha256), 16, 0x10, 0x1000, 0x047c};
 }
 
 MillenniumDosEnglishStartupPrefix evaluate_millennium_dos_english_startup_prefix(
@@ -2053,21 +1852,13 @@ MillenniumDosSpanishIbmHandoffEvidence parse_millennium_dos_spanish_ibm_handoff_
         "9f7d6f28f71eb7f2f6bb48cb3977efbf45049fc74083f8cbc865ec25396330c6";
     constexpr std::size_t load_bias = 0x100;
     constexpr std::uint16_t caller_address = 0x023d;
-    constexpr auto caller = std::to_array<std::uint8_t>({
-        0xba,0x1d,0x07,0xe8,0xf6,0x00,0x22,0xc0,0x75,0x19,0x0e,0x1f,
-        0xba,0x28,0x07,0xe8,0xea,0x00,0x22,0xc0,0x75,0x0d});
+    constexpr ExecutableByteAnchor<22> caller{"6e1cf860908aa88e9427efac371439744c1a10f5bb5fcc7d9588a7f18085cbb7"};
     constexpr auto caller_sha256 =
         "6e1cf860908aa88e9427efac371439744c1a10f5bb5fcc7d9588a7f18085cbb7";
     constexpr std::uint16_t names_address = 0x071d;
-    constexpr auto names = std::to_array<std::uint8_t>({
-        0x54,0x49,0x54,0x4c,0x45,0x53,0x2e,0x45,0x58,0x45,0x00,
-        0x32,0x32,0x30,0x30,0x61,0x64,0x2e,0x65,0x78,0x65,0x00});
+    constexpr ExecutableByteAnchor<22> names{"068878614c0a0459f17d0d13b09d1c13867d17b19ffc0e3b0e6c60157c94ba35"};
     constexpr std::uint16_t callee_address = 0x0339;
-    constexpr auto callee = std::to_array<std::uint8_t>({
-        0x8c,0xc8,0x89,0x06,0x0c,0x07,0x89,0x06,0x10,0x07,0x89,0x06,
-        0x14,0x07,0x8e,0xc0,0xbb,0x08,0x07,0x89,0x26,0x84,0x06,0xb8,
-        0x00,0x4b,0xcd,0x21,0x8c,0xc9,0x8e,0xd1,0x2e,0x8b,0x26,0x84,
-        0x06,0x8e,0xd9,0x8e,0xc1,0x72,0x05,0xb4,0x4d,0xcd,0x21,0xc3});
+    constexpr ExecutableByteAnchor<48> callee{"c2f5b915a0fbbc7a25d8a3f4c0e5fcc97eb197d44048eaff53e2046eb6e7c32c"};
     constexpr auto callee_sha256 =
         "c2f5b915a0fbbc7a25d8a3f4c0e5fcc97eb197d44048eaff53e2046eb6e7c32c";
     const auto offset = [](const std::uint16_t address) {
@@ -2105,7 +1896,7 @@ parse_millennium_dos_spanish_game_startup_evidence(const std::span<const std::ui
     constexpr std::size_t load_bias = 0x100;
     constexpr std::uint16_t startup_entry_address = 0xd2cd;
     constexpr std::size_t startup_offset = startup_entry_address - load_bias;
-    constexpr auto entry = std::to_array<std::uint8_t>({0x0e, 0x1f, 0x0e, 0x07, 0xe9, 0xc6, 0xd1});
+    constexpr ExecutableByteAnchor<7> entry{"fcb297d6b479266ef57682cddab8ec1a5f9eed6cd041801dbda7a0b8d3f3ed37"};
     constexpr ExecutableByteAnchor<70> startup_anchor{"acbfcacc4cfac948944e42181f2fe0dfec11b9ab2c9b79b8aff79d958c5469c6"};
     constexpr std::string_view startup_sha256 =
         "acbfcacc4cfac948944e42181f2fe0dfec11b9ab2c9b79b8aff79d958c5469c6";
@@ -2115,7 +1906,7 @@ parse_millennium_dos_spanish_game_startup_evidence(const std::span<const std::ui
     }
     const auto startup = game_executable.subspan(startup_offset, startup_anchor.size());
     if (!startup_anchor.matches(startup)
-        || near_call_target(0x0107, entry[5], entry[6]) != startup_entry_address
+        || near_call_target(0x0107,game_executable[5],game_executable[6]) != startup_entry_address
         || near_call_target(0xd2e5, startup[22], startup[23]) != 0x0124
         || near_call_target(0xd2fd, startup[46], startup[47]) != 0xd1be
         || near_call_target(0xd302, startup[51], startup[52]) != 0xd1d2
@@ -2139,15 +1930,8 @@ parse_millennium_dos_spanish_game_startup_callees(
     constexpr std::size_t load_bias = 0x100;
     constexpr std::uint16_t equal_entry = 0xd1be;
     constexpr std::uint16_t other_entry = 0xd1d2;
-    constexpr auto equal = std::to_array<std::uint8_t>({
-        0xb8, 0x04, 0x00, 0x0e, 0x07, 0xbb, 0xbc, 0xd1, 0xe8, 0x5b,
-        0x2f, 0xe8, 0x82, 0x32, 0xb0, 0x01, 0xa2, 0x05, 0xda, 0xc3,
-    });
-    constexpr auto other = std::to_array<std::uint8_t>({
-        0xb8, 0x04, 0x00, 0x0e, 0x07, 0xbb, 0xbc, 0xd1, 0xe8, 0x47,
-        0x2f, 0xe8, 0x86, 0x32, 0xa0, 0x05, 0xda, 0x3c, 0x02, 0x75,
-        0x06, 0xb8, 0x00, 0xb8, 0xa3, 0x07, 0x01, 0xc3,
-    });
+    constexpr ExecutableByteAnchor<20> equal{"fdfc8f02550ee226dea27b1ac0204d1ead083c9d5585e18103bfe67435f0a5bb"};
+    constexpr ExecutableByteAnchor<28> other{"6b8180c8f3b01e1f8810b2132756486dc761aee980949643129eeb53f6e86472"};
     constexpr std::string_view equal_sha256 =
         "fdfc8f02550ee226dea27b1ac0204d1ead083c9d5585e18103bfe67435f0a5bb";
     constexpr std::string_view other_sha256 =
@@ -2160,10 +1944,10 @@ parse_millennium_dos_spanish_game_startup_callees(
         || startup.other_call_target_address != other_entry
         || !has_bytes(game_executable, offset(equal_entry), equal)
         || !has_bytes(game_executable, offset(other_entry), other)
-        || near_call_target(0xd1c9, equal[9], equal[10]) != 0x0124
-        || near_call_target(0xd1cc, equal[12], equal[13]) != 0x044e
-        || near_call_target(0xd1dd, other[9], other[10]) != 0x0124
-        || near_call_target(0xd1e0, other[12], other[13]) != 0x0466
+        || near_call_target(0xd1c9,game_executable[offset(equal_entry)+9],game_executable[offset(equal_entry)+10]) != 0x0124
+        || near_call_target(0xd1cc,game_executable[offset(equal_entry)+12],game_executable[offset(equal_entry)+13]) != 0x044e
+        || near_call_target(0xd1dd,game_executable[offset(other_entry)+9],game_executable[offset(other_entry)+10]) != 0x0124
+        || near_call_target(0xd1e0,game_executable[offset(other_entry)+12],game_executable[offset(other_entry)+13]) != 0x0466
         || to_hex(sha256(game_executable.subspan(offset(equal_entry), equal.size()))) != equal_sha256
         || to_hex(sha256(game_executable.subspan(offset(other_entry), other.size()))) != other_sha256) {
         throw std::runtime_error("Unexpected Millennium Spanish DOS startup callees");
@@ -2186,16 +1970,9 @@ parse_millennium_dos_spanish_game_startup_followups(
     constexpr std::size_t load_bias = 0x100;
     constexpr std::uint16_t equal_entry = 0x044e;
     constexpr std::uint16_t palette_entry = 0x0466;
-    constexpr auto equal = std::to_array<std::uint8_t>({0xb0, 0x01, 0x2e, 0x88, 0x06, 0x05, 0xda, 0xc3});
-    constexpr auto palette = std::to_array<std::uint8_t>({
-        0x0e, 0x1f, 0xbe, 0x56, 0x04, 0xb9, 0x10, 0x00, 0x32, 0xdb,
-        0xac, 0x8a, 0xf8, 0xb8, 0x00, 0x10, 0xcd, 0x10, 0xfe, 0xc3,
-        0xe2, 0xf4, 0xc3,
-    });
-    constexpr std::array<std::uint8_t, 16> palette_table{
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-        0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
-    };
+    constexpr ExecutableByteAnchor<8> equal{"38889279a8b89e0e600bb25298015ccd8aadc09ea3858a1790097b3f7ff4ea8f"};
+    constexpr ExecutableByteAnchor<23> palette{"b17db26fa4fa8b7307fb767ff98351bd6dcca202829dd2d9348ff4991942d779"};
+    constexpr ExecutableByteAnchor<16> palette_table{"ce46bce999708ea5109a857b0b6ecc02ece34eaf431cd148ef1aa1c0e80aed0a"};
     constexpr std::string_view equal_sha256 =
         "38889279a8b89e0e600bb25298015ccd8aadc09ea3858a1790097b3f7ff4ea8f";
     constexpr std::string_view palette_sha256 =
@@ -2218,8 +1995,11 @@ parse_millennium_dos_spanish_game_startup_followups(
         || to_hex(sha256(game_executable.subspan(offset(palette_entry), palette.size()))) != palette_sha256) {
         throw std::runtime_error("Unexpected Millennium Spanish DOS startup follow-ups");
     }
+    std::array<std::uint8_t,16> decoded_palette_table{};
+    std::copy_n(game_executable.begin()+static_cast<std::ptrdiff_t>(offset(0x0456)),
+        decoded_palette_table.size(),decoded_palette_table.begin());
     return {equal_entry, equal.size(), std::string(equal_sha256), 0x01, 0xda05, 0x0455,
-        palette_entry, palette.size(), std::string(palette_sha256), 0x0456, palette_table,
+        palette_entry, palette.size(), std::string(palette_sha256), 0x0456, decoded_palette_table,
         std::string(palette_table_sha256), 16, 0x10, 0x1000, 0x047c};
 }
 

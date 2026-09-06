@@ -17,12 +17,6 @@ struct ExecutableByteAnchor {
     }
 };
 
-bool has_bytes(std::span<const std::uint8_t> bytes, std::size_t offset,
-               std::span<const std::uint8_t> expected) {
-    return offset <= bytes.size() && expected.size() <= bytes.size() - offset
-        && std::equal(expected.begin(), expected.end(), bytes.begin() + static_cast<std::ptrdiff_t>(offset));
-}
-
 template <std::size_t Size>
 bool has_bytes(std::span<const std::uint8_t> bytes, std::size_t offset,
                const ExecutableByteAnchor<Size>& expected) {
@@ -30,11 +24,12 @@ bool has_bytes(std::span<const std::uint8_t> bytes, std::size_t offset,
         && expected.matches(bytes.subspan(offset, Size));
 }
 
+template <std::size_t Size>
 std::size_t require_unique(std::span<const std::uint8_t> bytes,
-                           std::span<const std::uint8_t> expected,
+                           const ExecutableByteAnchor<Size>& expected,
                            const char* description) {
     std::size_t result = bytes.size();
-    for (std::size_t offset = 0; offset + expected.size() <= bytes.size(); ++offset) {
+    for (std::size_t offset = 0; offset + Size <= bytes.size(); ++offset) {
         if (!has_bytes(bytes, offset, expected)) continue;
         if (result != bytes.size()) {
             throw std::runtime_error(std::string("Ambiguous Millennium DOS ") + description);
@@ -53,19 +48,14 @@ MillenniumDosSpanishTitleBoundary parse_millennium_dos_spanish_title_boundary(
     const std::span<const std::uint8_t> titles_executable) {
     constexpr auto spanish_sha256 =
         "02082c35e18cee330f7d1b88098f502e68011f7e47a3a649961f6f03d1d14fe7";
-    constexpr std::array<std::uint8_t, 7> entry{0x0e, 0x1f, 0x0e, 0x07, 0xe9, 0x79, 0x1a};
-    constexpr std::array<std::uint8_t, 13> wrapper{
-        0x1e, 0x56, 0x57, 0x55, 0x06, 0xcd, 0x91, 0x07, 0x5d, 0x5f, 0x5e, 0x1f, 0xc3};
-    constexpr std::array<std::uint8_t, 16> post_title_loop{
-        0x89, 0xc1, 0x51, 0xb8, 0x13, 0x00, 0xe8, 0xe8,
-        0xe7, 0xe8, 0xda, 0xff, 0x59, 0xe2, 0xf3, 0xc3};
-    constexpr std::array<std::uint8_t, 7> input_poll{
-        0xb4, 0x06, 0xb2, 0xff, 0xcd, 0x21, 0xc3};
+    constexpr ExecutableByteAnchor<7> entry{"f68952a9bbb82fa876f35aa293b010e2fb0be9f2814c77d2f8604391716ccd07"};
+    constexpr ExecutableByteAnchor<13> wrapper{"5d17daad68e9062dc6852ae76740db4afdcb81555ba9fb7d15d4e4aa8d088175"};
+    constexpr ExecutableByteAnchor<16> post_title_loop{"5eebd21fcd4da98b08e7b29a27c3ee7b88405949ff3c1838b31aecc3ebf596fb"};
+    constexpr ExecutableByteAnchor<7> input_poll{"96715350de2c4a159dd994b1c40dafb21c038f38f52937aa1a54491485146dc6"};
     // The local exit begins at loaded $1c54.  Its preceding condition is the
     // original `AND AL,AL` / `JNZ`, so this anchor establishes the title's
     // availability-only hand-off without interpreting a DOS character.
-    constexpr std::array<std::uint8_t, 8> input_nonzero_exit{
-        0x22, 0xc0, 0x75, 0x25, 0xb8, 0x13, 0x00, 0xe8};
+    constexpr ExecutableByteAnchor<8> input_nonzero_exit{"6802b4587f2f3f458752384d2397dc54fda71ecd0515d5b45fc854959d15ac96"};
     if (titles_executable.size() != 7022 || to_hex(sha256(titles_executable)) != spanish_sha256
         || !has_bytes(titles_executable, 0, entry)
         || !has_bytes(titles_executable, 0x0122 - 0x100, wrapper)
@@ -86,8 +76,7 @@ parse_millennium_dos_spanish_title_presentation_evidence(
         "02082c35e18cee330f7d1b88098f502e68011f7e47a3a649961f6f03d1d14fe7";
     constexpr std::string_view title_library_sha256 =
         "30d6ccb95e7f501d59e72fc2e34583302116bd88f6eceaae989f6ad986ef7f19";
-    constexpr std::array<std::uint8_t, 12> selection{
-        0xb8, 0x00, 0x00, 0xe8, 0x0b, 0xfb, 0xe8, 0xe7, 0xf3, 0xe8, 0x21, 0xfd};
+    constexpr ExecutableByteAnchor<12> selection{"056142489c8d70d88640c5dd0dea385fd4a3d561efe95cb57625773840ca1327"};
     // Revalidate the independent input profile too. This prevents a generic
     // similarly-shaped COM image from being used to associate a title library
     // with the Spanish release.
@@ -133,80 +122,34 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     }
     // Flat DOS files are loaded at offset 0x100.  The entry jump at file 0
     // lands at 0x1b80, where the title program establishes its stack.
-    constexpr std::array<std::uint8_t, 7> entry_jump{
-        0x0e, 0x1f, 0x0e, 0x07, 0xe9, 0x79, 0x1a};
-    constexpr std::array<std::uint8_t, 6> title_selection{
-        0xb8, 0x00, 0x00, 0xe8, 0x0b, 0xfb}; // AX=0; call 0x1725
-    constexpr std::array<std::uint8_t, 13> title_selection_callee_prefix{
-        0x0e, 0x1f, 0x0e, 0x07, 0x8b, 0x0e, 0x5d, 0x0e,
-        0x3b, 0xc1, 0x7e, 0x01, 0xc3};
-    constexpr std::array<std::uint8_t, 16> title_selection_callee_jle_target_prefix{
-        0x50, 0xd1, 0xe0, 0x89, 0xc1, 0xd1, 0xe0, 0x03,
-        0xc8, 0x58, 0x51, 0xe8, 0x50, 0xfc, 0x58, 0x0e};
-    constexpr std::array<std::uint8_t, 46> title_selection_nested_callee_prefix{
-        0xb9, 0x0c, 0x00, 0xf7, 0xe1, 0x2e, 0xc5, 0x36,
-        0x4a, 0x0e, 0x2e, 0xc4, 0x3e, 0x46, 0x0e, 0x8c,
-        0xc2, 0x89, 0xfb, 0x0e, 0x07, 0xbf, 0x8c, 0x13,
-        0x01, 0xc6, 0xad, 0x01, 0xc3, 0xad, 0x88, 0xc4,
-        0x32, 0xc0, 0xb9, 0x04, 0x00, 0xd3, 0xe0, 0x01,
-        0xc2, 0x8b, 0xcb, 0xe8, 0x7e, 0xed};
-    constexpr std::array<std::uint8_t, 16> title_selection_nested_leaf_prefix{
-        0x89, 0xc8, 0x83, 0xe1, 0x0f, 0xd1, 0xe8, 0xd1,
-        0xe8, 0xd1, 0xe8, 0xd1, 0xe8, 0x01, 0xc2, 0xc3};
-    constexpr std::array<std::uint8_t, 13> transition_setup{
-        0xb9, 0x25, 0x00, 0xba, 0x70, 0x01, 0x51, 0x52,
-        0xbe, 0x0c, 0x01, 0x8b, 0x04};
-    constexpr std::array<std::uint8_t, 7> input_poll{
-        0xb4, 0x06, 0xb2, 0xff, 0xcd, 0x21, 0xc3};
+    constexpr ExecutableByteAnchor<7> entry_jump{"f68952a9bbb82fa876f35aa293b010e2fb0be9f2814c77d2f8604391716ccd07"};
+    constexpr ExecutableByteAnchor<6> title_selection{"f0805af54bb804b270a11e08547332a0601eecd904f9e8e42f11c9ea79930cd7"}; // AX=0; call 0x1725
+    constexpr ExecutableByteAnchor<13> title_selection_callee_prefix{"7ac29ca8f2e9685a8285698f967d1e6f0e0fda76842bb4166d0cc15fa46cc2d1"};
+    constexpr ExecutableByteAnchor<16> title_selection_callee_jle_target_prefix{"e26bb9b183aee42e91251408dc3b876838e0472fe9f3516e3c6715f0f3461067"};
+    constexpr ExecutableByteAnchor<46> title_selection_nested_callee_prefix{"10a8d366b8fbc911960b5b800a1651b6e30ad3144008519a86dfefd4f48abbaf"};
+    constexpr ExecutableByteAnchor<16> title_selection_nested_leaf_prefix{"0c3e92ab20959a3c185dd4ebd7a9ff731ddef8bb63a18a7625eb5802adcfdfa5"};
+    constexpr ExecutableByteAnchor<13> transition_setup{"98245c2d0f86d2037a032c43898944758f68aeaac515c23109f9ecb88de7274b"};
+    constexpr ExecutableByteAnchor<7> input_poll{"96715350de2c4a159dd994b1c40dafb21c038f38f52937aa1a54491485146dc6"};
     // All nonzero DOS poll results take this one exit path. The returned AL
     // is only tested, never decoded as a scan code or a named control. The
     // path subsequently reaches a private INT 91h wrapper, so it remains
     // static evidence rather than a host-side loading animation.
     constexpr ExecutableByteAnchor<66> input_branch{"d08916b10f92fe78e643a3335680c341f2347c361cded2419954422c0c37e6dd"};
-    constexpr std::array<std::uint8_t, 16> input_exit_loading_text{
-        ' ', ' ', ' ', ' ', 'L', 'O', 'A', 'D', 'I', 'N', 'G', ' ', ' ', ' ', ' ', '2'};
-    constexpr std::array<std::uint8_t, 7> input_exit_private_driver_entry{
-        0xb8, 0x05, 0x00, 0xe8, 0xc3, 0xff, 0x0e};
-    constexpr std::array<std::uint8_t, 16> input_exit_private_driver_loop{
-        0x89, 0xc1, 0x51, 0xb8, 0x13, 0x00, 0xe8, 0xe8,
-        0xe7, 0xe8, 0xda, 0xff, 0x59, 0xe2, 0xf3, 0xc3};
-    constexpr std::array<std::uint8_t, 25> input_exit_helper_loop{
-        0x0e, 0x1f, 0xb9, 0x0f, 0x00, 0xbe, 0x68, 0x17, 0x51,
-        0x56, 0xe8, 0xd5, 0xff, 0xfe, 0xc0, 0xe8, 0xe9, 0xfd,
-        0x5e, 0x59, 0x83, 0xc6, 0x04, 0xe2, 0xef};
-    constexpr std::array<std::uint8_t, 29> input_exit_helper_selector{
-        0x56, 0xa1, 0x81, 0x11, 0x03, 0x06, 0xf7, 0x18, 0x25,
-        0xff, 0x03, 0xa3, 0xf7, 0x18, 0x8b, 0xf0, 0xac, 0x5e,
-        0x25, 0x3f, 0x00, 0x3c, 0x24, 0x72, 0x04, 0x2c, 0x18,
-        0xeb, 0xf8};
-    constexpr std::array<std::uint8_t, 13> input_exit_helper_patch_offset_builder{
-        0x56, 0xb9, 0x70, 0x01, 0x32, 0xe4, 0xf7, 0xe1,
-        0x2e, 0xa3, 0x41, 0x13, 0x5e};
-    constexpr std::array<std::uint8_t, 24> input_exit_helper_position_dispatch{
-        0xad, 0x2e, 0xa3, 0x51, 0x13, 0xad, 0x2e, 0xa3,
-        0x4f, 0x13, 0xbf, 0x3d, 0x13, 0xbe, 0x57, 0x13,
-        0xa5, 0xa5, 0x0e, 0x07, 0xbb, 0x49, 0x13, 0xb8};
-    constexpr std::array<std::uint8_t, 8> input_exit_helper_position_table_first{
-        0x1c, 0x00, 0x7c, 0x00, 0x2e, 0x00, 0x7c, 0x00};
-    constexpr std::array<std::uint8_t, 4> input_exit_helper_position_table_last{
-        0x18, 0x01, 0x7c, 0x00};
-    constexpr std::array<std::uint8_t, 34> title_buffer_setup{
-        0x0e, 0x1f, 0x0e, 0x07, 0x2e, 0xc5, 0x36, 0x0c, 0x01,
-        0x2e, 0xa0, 0x07, 0x01, 0x3c, 0x01, 0x74, 0x05, 0x2e,
-        0xc5, 0x36, 0x10, 0x01, 0x8b, 0xc6, 0x2e, 0xa3, 0x41,
-        0x13, 0x8c, 0xd8, 0x2e, 0xa3, 0x43, 0x13};
-    constexpr std::array<std::uint8_t, 10> clean_exit{
-        0x32, 0xc0, 0x2e, 0xa2, 0x0e, 0x1a, 0x8b, 0x26,
-        0xa0, 0x1a};
-    constexpr std::array<std::uint8_t, 8> dos_exit{
-        0x2e, 0xa0, 0x0e, 0x1a, 0xb4, 0x4c, 0xcd, 0x21};
-    constexpr std::array<std::uint8_t, 40> title_driver_setup{
-        0x0e,0x1f,0x0e,0x07,0x8c,0xc8,0x8e,0xd0,0xb8,0x00,0xda,0x89,0xc4,
-        0xb8,0x00,0x00,0x0e,0x07,0xbb,0xc4,0x1a,0xe8,0x8a,0xe5,0x2e,0xa3,
-        0x9c,0x1a,0x88,0xe0,0x2e,0xa2,0xaa,0x1a,0xa2,0x07,0x01,0x89,0x26,0xa0};
-    constexpr std::array<std::uint8_t, 13> private_wrapper{
-        0x1e,0x56,0x57,0x55,0x06,0xcd,0x91,0x07,0x5d,0x5f,0x5e,0x1f,0xc3};
-    constexpr std::array<std::uint8_t, 2> title_driver_record{0x01,0x00};
+    constexpr ExecutableByteAnchor<16> input_exit_loading_text{"1db412f70481caefc39f1fd0d330b05cef0638ce34735f44d6ec56e7b2318594"};
+    constexpr ExecutableByteAnchor<7> input_exit_private_driver_entry{"964b6704df7b2a452669a3a4acbf934eaea023fc29343430e70b02b62c0d888f"};
+    constexpr ExecutableByteAnchor<16> input_exit_private_driver_loop{"5eebd21fcd4da98b08e7b29a27c3ee7b88405949ff3c1838b31aecc3ebf596fb"};
+    constexpr ExecutableByteAnchor<25> input_exit_helper_loop{"17910a31c3aa8cbbb788c95e0b303828ea210fec847fa658502f3e32728207b4"};
+    constexpr ExecutableByteAnchor<29> input_exit_helper_selector{"a08610633a7f4b202daa5c51417097e73f40ebd59b8f97b1f67454e1016ec9d4"};
+    constexpr ExecutableByteAnchor<13> input_exit_helper_patch_offset_builder{"6fa75475170547fb9a9018b3960df7fa64b1cad87311bba3bbf19eb3c3451bf0"};
+    constexpr ExecutableByteAnchor<24> input_exit_helper_position_dispatch{"62de989e3d07e863425a27d71d402ac07d6c7e7cf27c4b712ceb176566b604b5"};
+    constexpr ExecutableByteAnchor<8> input_exit_helper_position_table_first{"c7c869480e7d21e18110f4780b7e4dec5de3fb4a0ff81b7ef51bc244a577390b"};
+    constexpr ExecutableByteAnchor<4> input_exit_helper_position_table_last{"82322cbc7e3ab2ff060c3f38d3afe92be3895b5b08f90054e9642c088b269a35"};
+    constexpr ExecutableByteAnchor<34> title_buffer_setup{"1d09fc8745da25f46945c0cf038c156d6a66eb7f7c5d7fde452804a8255d42ac"};
+    constexpr ExecutableByteAnchor<10> clean_exit{"04ed07830e7ac6deedf3d93b3e78fe5edff092c6b8758c8e4bffd89ba19bcb69"};
+    constexpr ExecutableByteAnchor<8> dos_exit{"71853cdd1fe4b6f587a7012f7278054bf03969b608331a3ab17fac0a2157ab49"};
+    constexpr ExecutableByteAnchor<40> title_driver_setup{"e6e014d7c03f9efbd7e9bde67686c281cf66acca809b306cc29dfb45d614b535"};
+    constexpr ExecutableByteAnchor<13> private_wrapper{"5d17daad68e9062dc6852ae76740db4afdcb81555ba9fb7d15d4e4aa8d088175"};
+    constexpr ExecutableByteAnchor<2> title_driver_record{"47dc540c94ceb704a23875c11273e16bb0b8a87aed84de911f2133568115f254"};
 
     if (!has_bytes(titles_executable, 0, entry_jump)) {
         throw std::runtime_error("Unsupported Millennium DOS title entry");
@@ -265,100 +208,48 @@ MillenniumDosTitleFlow parse_millennium_dos_title_flow(
     // program string, makes two near calls to the same local target, and
     // tests AL between them.  We deliberately do not assign a meaning to
     // the target or to either post-call status test.
-    constexpr std::array<std::uint8_t, 22> launcher_call_chain{
-        0xba, 0x8f, 0x06, 0xe8, 0xd9, 0x00, 0x22, 0xc0,
-        0x75, 0x19, 0x0e, 0x1f, 0xba, 0x9a, 0x06, 0xe8,
-        0xcd, 0x00, 0x22, 0xc0, 0x75, 0x0d};
+    constexpr ExecutableByteAnchor<22> launcher_call_chain{"829b3d096d593d1ff4f1028eb05af1ccf8ca0b8ead98a5edcb523dba4cd725cf"};
     // The shared local target is preserved as raw control flow.  Its first
     // local branch is JC +5 at 0x345: the non-taken bytes end in RET at
     // 0x34b, while the taken destination starts at 0x34c.  No interrupt or
     // return semantics are inferred here.
-    constexpr std::array<std::uint8_t, 50> launcher_common_routine{
-        0x8c, 0xc8, 0x89, 0x06, 0x7e, 0x06, 0x89, 0x06,
-        0x82, 0x06, 0x89, 0x06, 0x86, 0x06, 0x8e, 0xc0,
-        0xbb, 0x7a, 0x06, 0x89, 0x26, 0xf7, 0x05, 0xb8,
-        0x00, 0x4b, 0xcd, 0x21, 0x8c, 0xc9, 0x8e, 0xd1,
-        0x2e, 0x8b, 0x26, 0xf7, 0x05, 0x8e, 0xd9, 0x8e,
-        0xc1, 0x72, 0x05, 0xb4, 0x4d, 0xcd, 0x21, 0xc3,
-        0xba, 0x70};
-    constexpr std::array<std::uint8_t, 14> launcher_branch_target_bytes{
-        0xba, 0x70, 0x03, 0x89, 0xd2, 0xb4, 0x09, 0xcd,
-        0x21, 0xb8, 0x0a, 0x4c, 0xcd, 0x21};
+    constexpr ExecutableByteAnchor<50> launcher_common_routine{"635407dc237538c96bc7cbd1f34f7fd3f83dfe0051ca2da2e64dfc7063f4c080"};
+    constexpr ExecutableByteAnchor<14> launcher_branch_target_bytes{"eef67bc7e389dab3d03ba67b93c9e690ea971ed52e5a6e27a056ef021a32d62a"};
     // This static caller-side range is immediately before the DX=0x68f
     // setup.  It records a post-call JE and the later local near call without
     // claiming either call's return behavior or assigning meaning to AL.
-    constexpr std::array<std::uint8_t, 45> launcher_pre_title_chain{
-        0xe8, 0xfe, 0x02, 0x22, 0xc0, 0x74, 0x03, 0x05,
-        0x02, 0x00, 0x8b, 0xd8, 0x04, 0x30, 0xbe, 0x88,
-        0x06, 0x2e, 0x88, 0x44, 0x02, 0xd1, 0xe3, 0x8b,
-        0x97, 0x6e, 0x06, 0xc7, 0x06, 0xd5, 0x05, 0xde,
-        0x03, 0xe8, 0x9b, 0x00, 0x33, 0xd2, 0xb8, 0x95,
-        0x25, 0xcd, 0x21, 0x0e, 0x1f};
+    constexpr ExecutableByteAnchor<45> launcher_pre_title_chain{"f85abb17f9eb88ca911788b00af4719c50ec2307c1f18b85bdbbe9cab35be3be"};
     // The local target of the near call at 0x231 is only profiled through its
     // first conditional split.  The conditional's meaning and all interrupt
     // effects remain deliberately unmodelled.
-    constexpr std::array<std::uint8_t, 19> launcher_pre_title_callee_prefix{
-        0xb8, 0x00, 0x3d, 0xcd, 0x21, 0x73, 0x0c, 0x0e,
-        0x1f, 0x8b, 0x16, 0xd5, 0x05, 0xb4, 0x09, 0xcd,
-        0x21, 0xeb, 0x87};
-    constexpr std::array<std::uint8_t, 14> launcher_pre_title_callee_jnc_target_prefix{
-        0x50, 0x93, 0x33, 0xd2, 0x33, 0xc9, 0xb8, 0x02,
-        0x42, 0xcd, 0x21, 0x72, 0xe7, 0x50};
-    constexpr std::array<std::uint8_t, 12> launcher_pre_title_callee_jc_target_prefix{
-        0x0e, 0x1f, 0x8b, 0x16, 0xd5, 0x05, 0xb4, 0x09,
-        0xcd, 0x21, 0xeb, 0x87};
-    constexpr std::array<std::uint8_t, 16> launcher_pre_title_callee_join_prefix{
-        0x50, 0xc5, 0x16, 0xe7, 0x05, 0xb8, 0x91, 0x25,
-        0xcd, 0x21, 0x2e, 0xc5, 0x16, 0xeb, 0x05, 0xb8};
-    constexpr std::array<std::uint8_t, 10> launcher_pre_title_callee_join_branch{
-        0xb8, 0x08, 0x25, 0xcd, 0x21, 0x58, 0x22, 0xc0,
-        0x74, 0x14};
-    constexpr std::array<std::uint8_t, 48> launcher_exec_helper{
-        0x8c,0xc8,0x89,0x06,0x7e,0x06,0x89,0x06,0x82,0x06,0x89,0x06,0x86,0x06,
-        0x8e,0xc0,0xbb,0x7a,0x06,0x89,0x26,0xf7,0x05,0xb8,0x00,0x4b,0xcd,0x21,
-        0x8c,0xc9,0x8e,0xd1,0x2e,0x8b,0x26,0xf7,0x05,0x8e,0xd9,0x8e,0xc1,0x72,
-        0x05,0xb4,0x4d,0xcd,0x21,0xc3};
-    constexpr std::array<std::uint8_t, 14> launcher_exec_param_block{
-        0x00,0x00,0x88,0x06,0x00,0x00,0x5c,0x00,0x00,0x00,0x5c,0x00,0x00,0x00};
+    constexpr ExecutableByteAnchor<19> launcher_pre_title_callee_prefix{"f5e4b8fec5ab5875ff7ab15c75a4486338914c869a0f80952110f419f2fa9712"};
+    constexpr ExecutableByteAnchor<14> launcher_pre_title_callee_jnc_target_prefix{"1d20ec61c3489df31b8c8c55760c715a4359d8e84c7adb74f6c81eda4f485321"};
+    constexpr ExecutableByteAnchor<12> launcher_pre_title_callee_jc_target_prefix{"84ad630af41e41c04728eedf9769121b9062224ebbf5aa1baa8df000f4f19f9a"};
+    constexpr ExecutableByteAnchor<16> launcher_pre_title_callee_join_prefix{"082750245e349594d03c9169369a8d15335996185ba0f168434b6478b7e681f6"};
+    constexpr ExecutableByteAnchor<10> launcher_pre_title_callee_join_branch{"ee072ddd5db21ea6d44aaf0b93376ebc112df370899691c8a0f06d4cbaf3be2f"};
+    constexpr ExecutableByteAnchor<48> launcher_exec_helper{"62cee56837e015eecc218906046c1e1c19a7ad9ba87e6580f99674eac0976b58"};
+    constexpr ExecutableByteAnchor<14> launcher_exec_param_block{"e2b2aa089d2c6a23b14055f3721c6b53836268070c2a727d2d7fa1a75461869b"};
     // The raw private-vector installation is preceded by a local loader call.
     // The call's DOS effects are intentionally not evaluated: this byte range
     // establishes only the direct call target and the literal DX=0 / AX=$2591
     // setup at the following interrupt instruction.
-    constexpr std::array<std::uint8_t, 12> launcher_private_interrupt_install{
-        0xe8, 0xc8, 0x00, 0x33, 0xd2, 0xb8, 0x91, 0x25,
-        0xcd, 0x21, 0x0e, 0x1f};
-    constexpr std::array<std::uint8_t, 13> launcher_private_interrupt_query{
-        0xb8, 0x91, 0x35, 0xcd, 0x21, 0x89, 0x1e, 0xe7,
-        0x05, 0x8c, 0x06, 0xe9, 0x05};
-    constexpr std::array<std::uint8_t, 10> launcher_private_interrupt_restore{
-        0x50, 0xc5, 0x16, 0xe7, 0x05, 0xb8, 0x91, 0x25,
-        0xcd, 0x21};
+    constexpr ExecutableByteAnchor<12> launcher_private_interrupt_install{"df3b878ca7eb13ae3509d271eb6f0dced3c534180dbe8935b399dfd56b0bf811"};
+    constexpr ExecutableByteAnchor<13> launcher_private_interrupt_query{"f549729b17553fe940573af7c7b4baccca4509c97641c87fd309438f8135c27a"};
+    constexpr ExecutableByteAnchor<10> launcher_private_interrupt_restore{"806a50b1d7fcb55eca56a0de70e74f6d8e7bb4b9e4ab73702c85e08e98885eed"};
     // Before the first call to $02cf, AL==1 keeps DX=$0617; the other path
     // loads DX=$05f9. $02cf opens the selected original file, seeks to its
     // end, rounds the length to paragraphs, allocates a segment, rewinds,
     // reads CX bytes at DS:0000, closes, and returns. The code proves this
     // transfer ABI but deliberately does not assign any DOS result, segment,
     // or handler execution semantics.
-    constexpr std::array<std::uint8_t, 12> launcher_private_interrupt_handler_selection{
-        0xba, 0x17, 0x06, 0x3c, 0x01, 0x74, 0x19, 0xba, 0xf9,
-        0x05, 0xeb, 0x14};
-    constexpr std::array<std::uint8_t, 45> launcher_video_selection_scan{
-        0xbb, 0x80, 0x00, 0x43, 0x80, 0x3f, 0x0d, 0x74, 0x1a,
-        0xb0, 0x01, 0x80, 0x3f, 0x65, 0x74, 0x1d, 0x80, 0x3f,
-        0x45, 0x74, 0x18, 0xb0, 0x02, 0x80, 0x3f, 0x6d, 0x74,
-        0x11, 0x80, 0x3f, 0x4d, 0x74, 0x0c, 0xeb, 0xe0, 0xe8,
-        0xde, 0x03, 0x22, 0xc0, 0x75, 0x03, 0xe9, 0x9f, 0x00};
+    constexpr ExecutableByteAnchor<12> launcher_private_interrupt_handler_selection{"c92d7e6e830b7785d1749250a4879d70cee7a87a147d41e4cb465481a6d7f76d"};
+    constexpr ExecutableByteAnchor<45> launcher_video_selection_scan{"157c83c6cdef55dfb7531bceee1759884f68237f445437553d36c12f167d6eba"};
     constexpr ExecutableByteAnchor<77> launcher_private_interrupt_handler_loader{"5c7f7ec03aa3109d4df2fbdec457ca7e2be412fc9d818bd07252a039fb8c6671"};
-    constexpr std::array<std::uint8_t, 7> launcher_pre_title_callee_join_target_prefix{
-        0xb4, 0x4c, 0xcd, 0x21, 0x32, 0xc0, 0xcf};
-    constexpr std::array<std::uint8_t, 11> title_name{
-        'T', 'I', 'T', 'L', 'E', 'S', '.', 'E', 'X', 'E', 0};
-    constexpr std::array<std::uint8_t, 11> game_name{
-        '2', '2', '0', '0', 'a', 'd', '.', 'e', 'x', 'e', 0};
-    constexpr std::array<std::uint8_t, 10> ega640_name{
-        'e', 'g', 'a', '6', '4', '0', '.', 'b', 'i', 'n'};
-    constexpr std::array<std::uint8_t, 8> mcga_name{
-        'm', 'c', 'g', 'a', '.', 'b', 'i', 'n'};
+    constexpr ExecutableByteAnchor<7> launcher_pre_title_callee_join_target_prefix{"b5f36b3aede6a55d03f540f96de1e31eb3459fb167be4a75c744548e4f7f1560"};
+    constexpr ExecutableByteAnchor<11> title_name{"8591f84bc4f9a8c6cc2134853a800147de6e11d64f5d363a0645a701a386fce2"};
+    constexpr ExecutableByteAnchor<11> game_name{"06b11f376f111baff60775a1986a1473d07d9e1788587c66e991e10e74b0dfdb"};
+    constexpr ExecutableByteAnchor<10> ega640_name{"9183b6686ed145c0be0045cc0412c3f92776eea35600597f4bbb1aa2a1de588e"};
+    constexpr ExecutableByteAnchor<8> mcga_name{"2c2626a5700aac6b83cf8efd8632ab9bebc5b5b0ec93b0b175d4b5b375271241"};
     constexpr std::size_t mill_load_bias = 0x100;
     const auto launcher_chain_offset = require_unique(
         mill_launcher, launcher_call_chain, "launcher caller-side call chain");

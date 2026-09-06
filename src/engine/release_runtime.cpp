@@ -2765,20 +2765,36 @@ std::optional<DeuterosAmigaVmEvents> ReleaseRuntimeCoordinator::tick_deuteros_am
         // consume owned state instead of consulting the source ADF later.
         const auto& title=*deuteros_amiga_->title_stage_session();
         const auto bytes=title.original_bytes();
-        constexpr std::uint32_t counter_address=0x1ed70;
-        const auto counter_offset=counter_address-title.stage().destination;
-        if(counter_offset>bytes.size()||bytes.size()-counter_offset<2)return std::nullopt;
-        NativeRuntimeEffectBatch batch{"deuteros-amiga-title-open-count-load",true,{{
-            1,{NativeRuntimeAddressSpace::linear,std::nullopt,counter_address},
-            MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,
-            static_cast<std::uint16_t>((static_cast<std::uint16_t>(bytes[counter_offset])<<8U)
-                |bytes[counter_offset+1U])}}};
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-title-profile-one-load",true,{}};
+        batch.effects.reserve(bytes.size()+1);
+        for(std::size_t index=0;index<bytes.size();++index)
+            batch.effects.push_back({batch.effects.size()+1,
+                {NativeRuntimeAddressSpace::linear,std::nullopt,title.stage().destination+index},
+                MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,bytes[index]});
+        // The completed bootstrap owns its in-structure request at $12826;
+        // $12a4e preserves that A1 through the dispatch and the entry JMP.
+        constexpr std::uint32_t controller_pointer=0x12826;
+        batch.effects.push_back({batch.effects.size()+1,
+            {NativeRuntimeAddressSpace::linear,std::nullopt,0x12822},
+            MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,
+            controller_pointer});
         auto memory=*native_runtime_memory_;
         const auto applied=memory.apply(batch);
         if(!applied.accepted)return std::nullopt;
+        constexpr std::size_t entry_size=6;
+        if(bytes.size()<entry_size)return std::nullopt;
+        const auto entry=bytes.first(entry_size);
+        const auto opcode=static_cast<std::uint16_t>((entry[0]<<8U)|entry[1]);
+        const auto target=(static_cast<std::uint32_t>(entry[2])<<24U)
+            |(static_cast<std::uint32_t>(entry[3])<<16U)
+            |(static_cast<std::uint32_t>(entry[4])<<8U)|entry[5];
+        if(opcode!=0x4ef9||target!=0x40426)return std::nullopt;
+        deuteros_amiga_title_program_entry_=DeuterosAmigaTitleProgramEntrySnapshot{
+            1,0x13000,0x40426,controller_pointer,memory.checkpoint().checksum,
+            to_hex(sha256(entry))};
         *native_runtime_memory_=std::move(memory);
         session_snapshot_ = make_runtime_session_snapshot(*active_,
-            RuntimeSessionKind::deuteros_amiga_title_stage);
+            RuntimeSessionKind::deuteros_amiga_title_program_entry);
         deuteros_amiga_opening_input_held_ = false;
         // The title stage has no admitted audio capability.  Drop every
         // opening DMA channel before its boundary becomes visible to SDL.
@@ -2928,18 +2944,19 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_title_program_entry() {
     }
     try {
         auto memory = *native_runtime_memory_;
-        const auto prefix=deuteros_amiga_->prepare_title_stage_profile_five();
+        const auto profile=deuteros_amiga_title_program_entry_->profile;
+        const auto prefix=deuteros_amiga_->prepare_title_stage_program_entry(profile);
         if(!prefix)
-            throw std::runtime_error("Deuteros profile-five title re-entry was not admitted");
+            throw std::runtime_error("Deuteros profile-selected title entry was not admitted");
         const auto transaction=prepare_deuteros_amiga_title_program_entry_transaction(
             *deuteros_amiga_title_program_entry_,memory,*prefix);
         if(!transaction.accepted)throw std::runtime_error(transaction.error);
         const auto applied=memory.apply(transaction.batch);
         if(!applied.accepted)throw std::runtime_error(applied.error);
 
-        const auto committed=deuteros_amiga_->reenter_title_stage_profile_five();
+        const auto committed=deuteros_amiga_->commit_title_stage_program_entry(profile);
         if(!committed||*committed!=*prefix)
-            throw std::runtime_error("Deuteros profile-five title re-entry changed before commit");
+            throw std::runtime_error("Deuteros profile-selected title entry changed before commit");
         *native_runtime_memory_=std::move(memory);
         deuteros_amiga_title_program_entry_.reset();
         deuteros_amiga_title_load_copy_.reset();
@@ -5142,14 +5159,18 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_service(const DeuterosAm
         }
         if(current->next_call_address==0x12b0a&&plan.next_instruction_address==0x13000
             &&(plan.d0_value&0xffffU)==5&&plan.next_call_address==0&&plan.next_vector==0){
-            constexpr std::array<std::uint8_t,6> expected{{0x4e,0xf9,0x00,0x04,0x04,0x26}};
-            std::array<std::uint8_t,6> owned{};
+            constexpr std::size_t entry_size=6;
+            std::vector<std::uint8_t> owned(entry_size);
             for(std::size_t i=0;i<owned.size();++i){
                 const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,0x13000+i});
                 if(!byte){result.error="Deuteros title program-entry JMP is not owned";return result;}
                 owned[i]=*byte;
             }
-            if(owned!=expected){result.error="Deuteros title program-entry JMP did not match admitted media";return result;}
+            const auto opcode=static_cast<std::uint16_t>((owned[0]<<8U)|owned[1]);
+            const auto target=(static_cast<std::uint32_t>(owned[2])<<24U)
+                |(static_cast<std::uint32_t>(owned[3])<<16U)
+                |(static_cast<std::uint32_t>(owned[4])<<8U)|owned[5];
+            if(opcode!=0x4ef9||target!=0x40426){result.error="Deuteros title program-entry JMP did not match admitted media";return result;}
             program_entry=DeuterosAmigaTitleProgramEntrySnapshot{
                 5,0x13000,0x40426,plan.a1_value,memory.checkpoint().checksum,to_hex(sha256(owned))};
         }

@@ -112,11 +112,15 @@ public:
     [[nodiscard]] const std::optional<DeuterosAmigaTitleStageSession>& title_stage_session() const {
         return title_stage_session_;
     }
-    // Rebuild the title-stage execution receipts after the original
-    // profile-five split reload has returned to the loaded $13000 entry.
+    // Prepare or rebuild title-stage execution receipts after an admitted
+    // loader has returned to the loaded $13000 entry (profiles one or five).
     // The replacement is prepared completely before publication, so a
     // rejected profile never destroys the still-live session. Native memory
     // is owned by the coordinator and is deliberately not touched here.
+    [[nodiscard]] std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
+    prepare_title_stage_program_entry(std::uint16_t profile) const;
+    [[nodiscard]] std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
+    commit_title_stage_program_entry(std::uint16_t profile);
     [[nodiscard]] std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
     prepare_title_stage_profile_five() const;
     [[nodiscard]] std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>

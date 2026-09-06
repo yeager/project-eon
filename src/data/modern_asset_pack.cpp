@@ -211,6 +211,7 @@ bool rgba_png_scanlines_valid(const std::vector<std::uint8_t>& idat,
 
 bool rgba_png_layout(const std::vector<std::uint8_t>& bytes,
                      const ModernPngTarget& target) {
+    // EON_ARTIFACT_POLICY_ALLOW: public PNG file signature
     constexpr std::array<std::uint8_t, 8> signature{{0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a}};
     if (bytes.size() < 57U || !std::equal(signature.begin(), signature.end(), bytes.begin())) return false;
     std::size_t offset = 8;

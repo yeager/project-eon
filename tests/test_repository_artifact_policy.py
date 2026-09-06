@@ -70,7 +70,7 @@ class RepositoryArtifactPolicyTests(unittest.TestCase):
             blob_reader=lambda _path: source,
         ), ["src/data/new_anchor.cpp"])
 
-    def test_allows_small_ordinary_production_constant_table(self) -> None:
+    def test_rejects_unreviewed_small_production_constant_table(self) -> None:
         byte_literals = ", ".join(f"0x{value:02x}" for value in range(32))
         source = (
             "#include <array>\n#include <cstdint>\n"
@@ -80,6 +80,17 @@ class RepositoryArtifactPolicyTests(unittest.TestCase):
         self.assertEqual(forbidden_tracked_content(
             ["src/ui/palette.cpp"],
             blob_reader=lambda _path: source,
+        ), ["src/ui/palette.cpp"])
+
+    def test_allows_explicitly_reviewed_public_format_constant(self) -> None:
+        source = (
+            "#include <array>\n#include <cstdint>\n"
+            "// EON_ARTIFACT_POLICY_ALLOW: public PNG file signature\n"
+            "constexpr std::array<std::uint8_t, 8> signature{{"
+            "0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}};\n"
+        ).encode("ascii")
+        self.assertEqual(forbidden_tracked_content(
+            ["src/data/png.cpp"], blob_reader=lambda _path: source,
         ), [])
 
     def test_rejects_large_byte_initializer_in_known_production_source(self) -> None:
@@ -93,6 +104,16 @@ class RepositoryArtifactPolicyTests(unittest.TestCase):
             ["src/data/millennium_amiga_loader.cpp"],
             blob_reader=lambda _path: source,
         ), ["src/data/millennium_amiga_loader.cpp"])
+
+    def test_rejects_hex_sized_byte_initializer(self) -> None:
+        source = (
+            "#include <array>\n#include <cstdint>\n"
+            "constexpr std::array<std::uint8_t, 0x02> extracted{{"
+            "0x4e, 0x75}};\n"
+        ).encode("ascii")
+        self.assertEqual(forbidden_tracked_content(
+            ["src/data/short_return.cpp"], blob_reader=lambda _path: source,
+        ), ["src/data/short_return.cpp"])
 
     def test_allows_hash_addressed_preservation_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

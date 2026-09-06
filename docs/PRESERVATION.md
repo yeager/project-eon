@@ -8094,23 +8094,27 @@ its final RTS retains destination `$13000` and profile word 5. No emulator
 memory, extracted file, or synthetic replacement enters this transaction.
 
 That `$13000` address is now an explicit image-sensitive program-entry
-boundary. In the restored title image its six owned bytes are
-`4ef9 00040426` (ADF `+$6e000`, SHA-256
+boundary. The restored title image has a six-byte absolute jump there (ADF
+`+$6e000`, target `$40426`, SHA-256
 `410c25318444feb62dc9df59396b5940ff4631c153984f7d908fc3366e280cfe`);
 they must not be confused with the earlier bootstrap graphics routine loaded
-at the same address. The coordinator publishes a no-capability profile-five
-entry snapshot containing the owned controller pointer and runtime-memory
-checksum. A separate deterministic advance revalidates that checksum and JMP,
-then writes the proven `A1->$206a0`, `$4040e.w=5`, `$3717e.b=5`, and
-`$38092.w=$0101` effects before installing stack `$40b62`. It starts a fresh
-title-stage receipt at the shared `$40456` Exec boundary. Profile five never
-performs profile one's `$19d52.b=1` store. Preparation happens against cloned
-memory and a temporary session; stale title callbacks and cached display
-receipts are cleared only when the complete transaction commits.
+at the same address. Both the initial profile-one load and the later
+profile-five split reload publish the same no-capability typed boundary with
+the selected profile, owned controller pointer, and runtime-memory checksum.
+A separate deterministic advance revalidates that checksum, jump structure,
+target and hash, then applies the profile-selected controller/mode stores and
+installs stack `$40b62`. Profile one writes `$4040e.w=1` and `$19d52.b=1`;
+profile five writes `$4040e.w=5`, `$3717e.b=5`, and `$38092.w=$0101` and never
+performs profile one's normal-mode store. Both start a fresh title-stage
+receipt at the shared `$40456` Exec boundary. Preparation happens against
+cloned memory and a temporary session; stale title callbacks and cached
+display receipts are cleared only when the complete transaction commits.
 The JMP/checksum gate and ordered write-batch construction live in the
 dedicated title program-entry transaction component; native tests exercise
 that component independently, while the genuine-media coordinator path
-continues to supply the hash-addressed boundary and profile-five prefix.
+supplies both hash-addressed profile paths. The initial handoff atomically
+copies the exact admitted title span into owned native memory before publishing
+profile one; a failed load or entry validation leaves the opening live.
 
 The profile-two main-stage startup now also exposes an explicit coarse native
 state machine from the committed `$20000` load through the `$20994` entry,

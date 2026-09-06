@@ -42,9 +42,10 @@ decode_deuteros_amiga_bootstrap_auxiliary(const std::span<const std::uint8_t> pa
         throw std::runtime_error("Unsupported Deuteros bootstrap auxiliary payload");
     }
     // MOVEM.L D0-D7/A0-A2,-(A7); BSR $1fe24; MOVEM.L (A7)+,...; RTS.
-    constexpr std::array<std::uint8_t, 12> wrapper{{
-        0x48,0xe7,0xff,0xe0,0x61,0x1e,0x4c,0xdf,0x07,0xff,0x4e,0x75}};
-    if (!std::equal(wrapper.begin(), wrapper.end(), payload.begin()))
+    constexpr std::size_t wrapper_size = 12;
+    constexpr std::string_view wrapper_hash =
+        "f8b5012a2f5c6acda8c2aa1aa5685bab2809f1d071cda291cf46382fb4bad32e";
+    if (to_hex(sha256(payload.first(wrapper_size))) != wrapper_hash)
         throw std::runtime_error("Unexpected Deuteros auxiliary entry wrapper");
 
     const auto compressed_length = big32(payload, header_offset);
@@ -626,7 +627,7 @@ DeuterosAmigaTitleHandoffRoute parse_deuteros_amiga_title_handoff_route(
     // and the main-stage bootstrap return facts together: a matching number
     // elsewhere in a bundle must not become a title handoff.
     constexpr std::uint32_t command_relative_offset = 0x0a8a;
-    constexpr std::array<std::uint8_t, 6> expected{{0x00, 0x0f, 0x00, 0x00, 0x0b, 0x38}};
+    constexpr std::size_t expected_size = 6;
     constexpr std::string_view expected_hash =
         "9f3880bf72d32f0fc119b941527dfe6004e18ad7e0fdfc40fe87eb6a13fe9c41";
     constexpr std::uint32_t expected_payload_base = 0x32a24;
@@ -634,7 +635,7 @@ DeuterosAmigaTitleHandoffRoute parse_deuteros_amiga_title_handoff_route(
     constexpr std::uint16_t expected_profile = 1;
     const auto source = plan.resource_disk_offsets[0];
     if (source > AmigaAdf::standard_size || command_relative_offset > AmigaAdf::standard_size - source
-        || expected.size() > AmigaAdf::standard_size - source - command_relative_offset
+        || expected_size > AmigaAdf::standard_size - source - command_relative_offset
         || plan.main_stage_entry.resource_payload_address != expected_payload_base
         || plan.main_stage_entry.bootstrap_profile_return_cell != expected_return_cell
         || plan.main_stage_entry.first_exit_profile_value != expected_profile
@@ -643,9 +644,9 @@ DeuterosAmigaTitleHandoffRoute parse_deuteros_amiga_title_handoff_route(
         || plan.title_handoff_profile.destination != plan.title_stage.destination) {
         throw std::runtime_error("Unexpected Deuteros title-handoff route");
     }
-    const auto bytes = disk.bytes(source + command_relative_offset, expected.size());
+    const auto bytes = disk.bytes(source + command_relative_offset, expected_size);
     const auto hash = to_hex(sha256(bytes));
-    if (!std::equal(expected.begin(), expected.end(), bytes.begin()) || hash != expected_hash) {
+    if (hash != expected_hash) {
         throw std::runtime_error("Unexpected Deuteros title-handoff command");
     }
     return {source + command_relative_offset, 0x0b38,
@@ -657,16 +658,6 @@ parse_deuteros_amiga_channel_request_continuation(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
     constexpr std::uint32_t entry = 0x21892;
     constexpr std::size_t length = 58;
-    constexpr std::array<std::uint8_t, length> expected{{
-        0x20, 0x39, 0x00, 0x02, 0x12, 0x6a, 0x67, 0x08,
-        0x61, 0x00, 0x0a, 0x00, 0x61, 0x00, 0x0c, 0x02,
-        0x4e, 0xb9, 0x00, 0x02, 0x2a, 0x5a, 0x20, 0x39,
-        0x00, 0x02, 0x07, 0x9e, 0x22, 0x39, 0x00, 0x02,
-        0x07, 0x9e, 0xb0, 0x81, 0x67, 0xf6, 0x4e, 0xb9,
-        0x00, 0x02, 0x08, 0xba, 0x08, 0x39, 0x00, 0x06,
-        0x00, 0xbf, 0xe0, 0x01, 0x67, 0xf6, 0x60, 0x00,
-        0xff, 0x2c,
-    }};
     const auto& stage = plan.main_stage;
     if (plan.main_stage_entry.channel_request_continuation_address != entry
         || entry < stage.destination || entry - stage.destination > stage.length
@@ -676,8 +667,7 @@ parse_deuteros_amiga_channel_request_continuation(
     const auto disk_offset = stage.disk_offset + entry - stage.destination;
     const auto bytes = disk.bytes(disk_offset, length);
     constexpr auto expected_hash = "120fba90e0b4fa9e96d8a6cf95fbac512d67d7daa42c3776ce0d3066b3f02ee9";
-    if (!std::equal(expected.begin(), expected.end(), bytes.begin())
-        || to_hex(sha256(bytes)) != expected_hash) {
+    if (to_hex(sha256(bytes)) != expected_hash) {
         throw std::runtime_error("Unexpected Deuteros channel-request continuation");
     }
     return {entry, 0x2126a, 0x21898, 0x218a2,
@@ -692,21 +682,6 @@ parse_deuteros_amiga_channel_request_first_callee(
     const DeuterosAmigaChannelRequestContinuation& continuation) {
     constexpr std::uint32_t entry = 0x2229c;
     constexpr std::size_t length = 0x94;
-    constexpr std::array<std::uint8_t, length> expected{{
-        0x33, 0xfc, 0x01, 0x00, 0x00, 0x02, 0x22, 0x9a, 0x13, 0xfc, 0x00, 0x00,
-        0x00, 0x02, 0x07, 0xea, 0x08, 0x39, 0x00, 0x05, 0x00, 0xdf, 0xf0, 0x1f,
-        0x67, 0x76, 0x74, 0x0f, 0x49, 0xf9, 0x00, 0x01, 0x2e, 0xcc, 0x30, 0x14,
-        0xb0, 0x7c, 0x01, 0x00, 0x65, 0x04, 0x04, 0x40, 0x01, 0x00, 0xb0, 0x3c,
-        0x00, 0x10, 0x65, 0x04, 0x04, 0x00, 0x00, 0x10, 0x12, 0x00, 0x02, 0x01,
-        0x00, 0x0f, 0x67, 0x02, 0x53, 0x00, 0x38, 0xc0, 0x51, 0xca, 0xff, 0xdc,
-        0x41, 0xf9, 0x00, 0x01, 0x2e, 0x12, 0x43, 0xf9, 0x00, 0x01, 0x2e, 0xcc,
-        0x2f, 0x09, 0x30, 0x3c, 0x00, 0x10, 0x2c, 0x79, 0x00, 0x01, 0x2f, 0xec,
-        0x4e, 0xae, 0xff, 0x40, 0x22, 0x5f, 0x41, 0xf9, 0x00, 0x01, 0x2f, 0x12,
-        0x30, 0x3c, 0x00, 0x10, 0x2c, 0x79, 0x00, 0x01, 0x2f, 0xec, 0x4e, 0xae,
-        0xff, 0x40, 0x51, 0x79, 0x00, 0x02, 0x22, 0x9a, 0x66, 0x0e, 0x4e, 0xb9,
-        0x00, 0x02, 0x16, 0x98, 0x4e, 0xb9, 0x00, 0x02, 0x16, 0x98, 0x4e, 0x75,
-        0x60, 0x00, 0xff, 0x7e,
-    }};
     const auto& stage = plan.main_stage;
     if (continuation.local_call_targets[0] != entry || entry < stage.destination
         || entry - stage.destination > stage.length
@@ -715,8 +690,7 @@ parse_deuteros_amiga_channel_request_first_callee(
     }
     const auto bytes = disk.bytes(stage.disk_offset + entry - stage.destination, length);
     constexpr auto expected_hash = "d1a162af50f92b60d03b1da4ab186a547e46d145b0599cfbbeff7fb5af324ac1";
-    if (!std::equal(expected.begin(), expected.end(), bytes.begin())
-        || to_hex(sha256(bytes)) != expected_hash) {
+    if (to_hex(sha256(bytes)) != expected_hash) {
         throw std::runtime_error("Unexpected Deuteros channel-request first callee");
     }
     return {entry, 0x2229a, 0x0100, 0x207ea, 0x222ac, 5, 0x222b4, 0x2232c,
@@ -731,14 +705,6 @@ parse_deuteros_amiga_channel_request_second_callee(
     const DeuterosAmigaChannelRequestContinuation& continuation) {
     constexpr std::uint32_t entry = 0x224a2;
     constexpr std::size_t length = 42;
-    constexpr std::array<std::uint8_t, length> expected{{
-        0x21, 0xf9, 0x00, 0x02, 0x24, 0xe6, 0x00, 0x6c,
-        0x42, 0x79, 0x00, 0xdf, 0xf0, 0xa8, 0x42, 0x79,
-        0x00, 0xdf, 0xf0, 0xb8, 0x42, 0x79, 0x00, 0xdf,
-        0xf0, 0xc8, 0x42, 0x79, 0x00, 0xdf, 0xf0, 0xd8,
-        0x33, 0xfc, 0x00, 0x0f, 0x00, 0xdf, 0xf0, 0x96,
-        0x4e, 0x75,
-    }};
     const auto& stage = plan.main_stage;
     if (continuation.local_call_targets[1] != entry || entry < stage.destination
         || entry - stage.destination > stage.length
@@ -747,8 +713,7 @@ parse_deuteros_amiga_channel_request_second_callee(
     }
     const auto bytes = disk.bytes(stage.disk_offset + entry - stage.destination, length);
     constexpr auto expected_hash = "d4e9a1ee0065537a627cdd9ee8827f11d5fa28e0f860aacb21bbdc7e11784bd1";
-    if (!std::equal(expected.begin(), expected.end(), bytes.begin())
-        || to_hex(sha256(bytes)) != expected_hash) {
+    if (to_hex(sha256(bytes)) != expected_hash) {
         throw std::runtime_error("Unexpected Deuteros channel-request second callee");
     }
     return {entry, 0x224e6, 0x006c, {0xdff0a8, 0xdff0b8, 0xdff0c8, 0xdff0d8},
@@ -782,15 +747,6 @@ parse_deuteros_amiga_channel_request_adjacent_entry(
     const DeuterosAmigaChannelRequestFollowingService& service) {
     constexpr std::uint32_t entry = 0x22b8a;
     constexpr std::size_t length = 96;
-    constexpr std::array<std::uint8_t, length> expected{{
-        0x4a,0x39,0x00,0x02,0x2a,0x30,0x67,0x02,0x4e,0x75,0xc0,0xfc,0x00,0x0e,
-        0x20,0x79,0x00,0x02,0x2a,0xa6,0xd0,0xc0,0x20,0x10,0x6a,0x04,0x20,0x68,
-        0x00,0x04,0x43,0xf9,0x00,0x02,0x2a,0x6e,0xe2,0x09,0x64,0x06,0x23,0x68,
-        0x00,0x0a,0x00,0x0a,0xd3,0xfc,0x00,0x00,0x00,0x0e,0xe2,0x09,0x64,0x06,
-        0x23,0x68,0x00,0x0a,0x00,0x0a,0xd3,0xfc,0x00,0x00,0x00,0x0e,0xe2,0x09,
-        0x64,0x06,0x23,0x68,0x00,0x0a,0x00,0x0a,0xd3,0xfc,0x00,0x00,0x00,0x0e,
-        0xe2,0x09,0x64,0x06,0x23,0x68,0x00,0x0a,0x00,0x0a,0x4e,0x75,
-    }};
     const auto& stage = plan.main_stage;
     if (service.return_address != 0x22b88 || entry < stage.destination
         || entry - stage.destination > stage.length
@@ -799,8 +755,7 @@ parse_deuteros_amiga_channel_request_adjacent_entry(
     }
     const auto bytes = disk.bytes(stage.disk_offset + entry - stage.destination, length);
     constexpr auto expected_hash = "10ed8be15c107dbb56ca98eb8d17ffd2bce3910dd169d67ba058447c9031b1ff";
-    if (!std::equal(expected.begin(), expected.end(), bytes.begin())
-        || to_hex(sha256(bytes)) != expected_hash) {
+    if (to_hex(sha256(bytes)) != expected_hash) {
         throw std::runtime_error("Unexpected Deuteros channel-request adjacent entry");
     }
     return {entry, 0x22a30, 0x22b90, 0x22b94, 0x22b92, 0x000e, 0x22aa6,

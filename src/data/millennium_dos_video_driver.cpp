@@ -1,19 +1,10 @@
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/sha256.hpp"
 
-#include <algorithm>
-#include <array>
 #include <stdexcept>
 
 namespace eon {
 namespace {
-
-bool has_bytes(const std::span<const std::uint8_t> bytes, const std::size_t offset,
-               const std::span<const std::uint8_t> expected) {
-    return offset <= bytes.size() && expected.size() <= bytes.size() - offset
-        && std::equal(expected.begin(), expected.end(),
-            bytes.begin() + static_cast<std::ptrdiff_t>(offset));
-}
 
 std::uint16_t little16(const std::span<const std::uint8_t> bytes, const std::size_t offset) {
     if (offset > bytes.size() || bytes.size() - offset < 2) {
@@ -49,9 +40,6 @@ MillenniumDosVideoDriverProfile parse_driver_profile(
             throw std::runtime_error("Unsupported Millennium English DOS video driver");
         }
     }
-    constexpr auto entry = std::to_array<std::uint8_t>({
-        0xfb, 0x0e, 0x1f, 0xd1, 0xe0, 0x3d, 0x4e, 0x00, 0x90, 0x73});
-    if (!has_bytes(bytes, 0, entry)) throw std::runtime_error("Unsupported Millennium DOS video-driver entry");
     const auto function_zero = little16(bytes, dispatch);
     const auto function_four = little16(bytes, dispatch + 8);
     const auto function_six = little16(bytes, dispatch + 12);
@@ -69,59 +57,8 @@ MillenniumDosVideoDriverProfile parse_driver_profile(
         || function_thirty_one != expected_thirty_one) {
         throw std::runtime_error("Unsupported Millennium DOS video-driver dispatch targets");
     }
-    const auto zero_prefix = std::array<std::uint8_t, 35>{
-        0x26, 0x8a, 0x0f, 0x32, 0xed, 0x80, 0x3e,
-        static_cast<std::uint8_t>(ega ? 0x8c : 0xae), 0x00, 0xff, 0x75, 0x07,
-        0xb4, 0x0f, 0xcd, 0x10, 0xa2,
-        static_cast<std::uint8_t>(ega ? 0x8c : 0xae), 0x00, 0xb8, mode, 0x00,
-        0xcd, 0x10, 0xb4, 0x0f, 0xcd, 0x10, 0x3c, mode, 0x74, 0x03,
-        0x33, 0xc0, 0xc3};
-    constexpr auto ega_four_prefix = std::to_array<std::uint8_t>({
-        0x26, 0x8a, 0x07, 0x25, 0x03, 0x00, 0xb1, 0x03,
-        0xd2, 0xe0, 0x86, 0x06, 0x8d, 0x00, 0xd2, 0xe8, 0xc3});
-    constexpr auto mcga_four_prefix = std::to_array<std::uint8_t>({
-        0x26, 0x8a, 0x07, 0x25, 0x03, 0x00, 0x86, 0x06,
-        0xaf, 0x00, 0xc3});
-    const auto thirty_one_prefix = std::array<std::uint8_t, 6>{
-        0xa0, static_cast<std::uint8_t>(ega ? 0x8a : 0xac), 0x00,
-        0xb4, static_cast<std::uint8_t>(ega ? 0x04 : 0x01), 0xc3};
-    constexpr auto thirteen_prefix = std::to_array<std::uint8_t>({
-        0xba, 0xda, 0x03, 0xec, 0xa8, 0x08, 0x75, 0xfb,
-        0xec, 0xa8, 0x08, 0x74, 0xfb, 0xc3});
-    constexpr auto ega_six_prefix = std::to_array<std::uint8_t>({
-        0x26, 0x83, 0x7f, 0x10, 0x00, 0x7e, 0xf8, 0xb8, 0x40,
-        0x01, 0x26, 0x2b, 0x47, 0x08, 0x26, 0x3b, 0x47, 0x10});
-    constexpr auto mcga_six_prefix = std::to_array<std::uint8_t>({
-        0xb8, 0x40, 0x01, 0x26, 0x2b, 0x47, 0x08, 0x26, 0x3b,
-        0x47, 0x10, 0x73, 0x04, 0x26, 0x89, 0x47, 0x10});
-    constexpr auto ega_six_source_pointer_load = std::to_array<std::uint8_t>({0x26, 0xc5, 0x3f});
-    constexpr auto mcga_six_source_pointer_load = std::to_array<std::uint8_t>({0x26, 0xc5, 0x37});
-    constexpr auto ega_six_source_prefix = std::to_array<std::uint8_t>({
-        0x26, 0xc5, 0x3f, 0x03, 0x6d, 0x04, 0x8b, 0x45, 0x02,
-        0x05, 0x03, 0x00, 0xd1, 0xe8, 0xd1, 0xe8, 0x8b, 0xf0,
-        0xf7, 0x25});
-    constexpr auto mcga_six_source_prefix = std::to_array<std::uint8_t>({
-        0x1e, 0x26, 0xc5, 0x37, 0x8b, 0x44, 0x02, 0x8b, 0xf8,
-        0xc5, 0x74, 0x04});
     constexpr auto ega_six_source_pointer_load_offset = 0x33U;
     constexpr auto mcga_six_source_pointer_load_offset = 0x29U;
-    if (!has_bytes(bytes, function_zero, zero_prefix)
-        || (ega && !has_bytes(bytes, function_four, ega_four_prefix))
-        || (!ega && !has_bytes(bytes, function_four, mcga_four_prefix))
-        || (ega && !has_bytes(bytes, function_six, ega_six_prefix))
-        || (!ega && !has_bytes(bytes, function_six, mcga_six_prefix))
-        || (ega && !has_bytes(bytes, function_six + ega_six_source_pointer_load_offset,
-                              ega_six_source_pointer_load))
-        || (!ega && !has_bytes(bytes, function_six + mcga_six_source_pointer_load_offset,
-                               mcga_six_source_pointer_load))
-        || (ega && !has_bytes(bytes, function_six + ega_six_source_pointer_load_offset,
-                              ega_six_source_prefix))
-        || (!ega && !has_bytes(bytes, function_six + mcga_six_source_pointer_load_offset - 1,
-                               mcga_six_source_prefix))
-        || !has_bytes(bytes, function_thirteen, thirteen_prefix)
-        || !has_bytes(bytes, function_thirty_one, thirty_one_prefix)) {
-        throw std::runtime_error("Unsupported Millennium DOS video-driver ABI profile");
-    }
     return {
         .kind = kind,
         .byte_size = bytes.size(),

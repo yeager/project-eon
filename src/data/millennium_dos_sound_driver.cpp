@@ -2,7 +2,6 @@
 
 #include "data/sha256.hpp"
 
-#include <algorithm>
 #include <array>
 #include <stdexcept>
 
@@ -17,13 +16,6 @@ struct ExecutableByteAnchor {
         return bytes.size() == Size && to_hex(eon::sha256(bytes)) == sha256;
     }
 };
-
-bool has_bytes(const std::span<const std::uint8_t> bytes, const std::size_t offset,
-    const std::span<const std::uint8_t> expected) {
-    return offset <= bytes.size() && expected.size() <= bytes.size() - offset
-        && std::equal(expected.begin(), expected.end(),
-            bytes.begin() + static_cast<std::ptrdiff_t>(offset));
-}
 
 template <std::size_t Size>
 bool has_bytes(const std::span<const std::uint8_t> bytes, const std::size_t offset,
@@ -42,15 +34,10 @@ MillenniumDosSoundSelectionEvidence parse_millennium_dos_sound_selection(
         throw std::runtime_error("Unsupported Millennium DOS sound-selection launcher");
     }
     constexpr ExecutableByteAnchor<100> selector{"f9e63fc4c7c590fc57abef4a0154a2399f714951c787f98d2f7d64eee86a7434"};
-    constexpr auto filenames = std::to_array<std::uint8_t>({
-        's','i','b','m','.','d','r','v',0, 's','a','d','l','.','d','r','v',0,
-        's','r','o','l','.','d','r','v',0, 's','s','b','l','.','d','r','v',0,
-        's','c','v','x','.','d','r','v',0, 's','t','d','y','.','d','r','v',0,
-    });
-    constexpr auto selection_table = std::to_array<std::uint8_t>({
-        0x2a, 0x06, 0x33, 0x06, 0x3c, 0x06, 0x45, 0x06, 0x4e, 0x06, 0x57, 0x06,
-        0x00, 0x00,
-    });
+    constexpr ExecutableByteAnchor<54> filenames{
+        "a5a3260fdf7a7018df0f34b0e9ba6f74a03e157f6d97cfb8f2f70407d8791185"};
+    constexpr ExecutableByteAnchor<14> selection_table{
+        "c49071bf0db7a712437ca74d2e9effe9222665f2ab154db1f5d748f540e10ef8"};
     // File offsets are loaded COM addresses minus $0100.
     if (!has_bytes(mill_com, 0x411, selector) || !has_bytes(mill_com, 0x52a, filenames)
         || !has_bytes(mill_com, 0x56e, selection_table)) {

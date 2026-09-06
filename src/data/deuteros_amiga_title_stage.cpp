@@ -669,9 +669,7 @@ parse_deuteros_amiga_title_graphics_setup_profile(
         "d6b37bc6431a1fe9145ae9403a5165028ccfd856a6529d1752f824b166807223";
     constexpr std::string_view palette_hash =
         "5903a1c83619d7667c04ac1f3c923dfaa3a1ce0d090d6fd95109616a9b506a55";
-    constexpr std::array<std::uint8_t, 17> expected_library_name{{
-        'g', 'r', 'a', 'p', 'h', 'i', 'c', 's', '.', 'l', 'i', 'b', 'r', 'a', 'r', 'y', 0,
-    }};
+    constexpr ExecutableByteAnchor<17> expected_library_name{"e980a2d4bcd9acfeb0695100efcf98a3c1f945e7e7617576209908e46a7ff553"};
     const auto& stage = plan.title_stage;
     const auto stage_code = [&](std::uint32_t address, std::size_t length) {
         if (address < stage.destination || address - stage.destination > stage.length
@@ -689,7 +687,7 @@ parse_deuteros_amiga_title_graphics_setup_profile(
         || to_hex(sha256(first)) != first_hash
         || to_hex(sha256(following)) != following_hash
         || to_hex(sha256(palette)) != palette_hash
-        || !std::equal(expected_library_name.begin(), expected_library_name.end(), name.begin())) {
+        || !expected_library_name.matches(std::span<const std::uint8_t>(name.begin(), expected_library_name.size()))) {
         throw std::runtime_error("Unsupported Deuteros title graphics setup");
     }
 
@@ -1291,13 +1289,7 @@ DeuterosAmigaTitleTimerGate evaluate_deuteros_amiga_title_timer_gate(
     constexpr std::uint32_t transition_address = 0x4069a;
     constexpr std::string_view title_stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
-    constexpr std::array<std::uint8_t, 40> gate_bytes{{
-        0x20, 0x39, 0x00, 0x04, 0x04, 0x10, 0xb0, 0xbc,
-        0x00, 0x00, 0xea, 0x60, 0x65, 0x1a, 0x0c, 0x79,
-        0x00, 0x11, 0x00, 0x02, 0x2d, 0x34, 0x67, 0x10,
-        0x4e, 0xb9, 0x00, 0x04, 0x06, 0x9a, 0x23, 0xfc,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x04, 0x10,
-    }};
+    constexpr ExecutableByteAnchor<40> gate_bytes{"47c56a2ad892d973cc967bca2a8c3b34338ffbdbff3b1b57ecef63cc6d8d7200"};
     constexpr std::string_view gate_hash =
         "47c56a2ad892d973cc967bca2a8c3b34338ffbdbff3b1b57ecef63cc6d8d7200";
     if (stage.length == 0 || entry_address < stage.destination
@@ -1308,7 +1300,7 @@ DeuterosAmigaTitleTimerGate evaluate_deuteros_amiga_title_timer_gate(
     const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
     const auto gate = stage_bytes.subspan(entry_address - stage.destination, gate_bytes.size());
     if (to_hex(sha256(stage_bytes)) != title_stage_hash
-        || !std::equal(gate_bytes.begin(), gate_bytes.end(), gate.begin())
+        || !gate_bytes.matches(std::span<const std::uint8_t>(gate.begin(), gate_bytes.size()))
         || to_hex(sha256(gate)) != gate_hash) {
         throw std::runtime_error("Unsupported Deuteros title timer gate");
     }
@@ -1338,9 +1330,7 @@ DeuterosAmigaTitleZeroResponseLoop evaluate_deuteros_amiga_title_zero_response_l
     constexpr std::uint32_t return_loop_address = 0x40574;
     constexpr std::string_view title_stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
-    constexpr std::array<std::uint8_t, 10> common_gate_bytes{{
-        0x4a, 0x39, 0x00, 0x01, 0xbf, 0x36, 0x67, 0x00, 0x00, 0x6a,
-    }};
+    constexpr ExecutableByteAnchor<10> common_gate_bytes{"68ccbd8edf32800e43fe55c47356e162896b8500b01d2e9fd461191ba1760736"};
     constexpr std::string_view common_gate_hash =
         "68ccbd8edf32800e43fe55c47356e162896b8500b01d2e9fd461191ba1760736";
     constexpr std::string_view response_loop_hash =
@@ -1361,7 +1351,7 @@ DeuterosAmigaTitleZeroResponseLoop evaluate_deuteros_amiga_title_zero_response_l
     const auto response_loop = stage_bytes.subspan(response_loop_address - stage.destination, 60);
     const auto initial_state = stage_bytes.subspan(state_word_address - stage.destination, 2);
     if (to_hex(sha256(stage_bytes)) != title_stage_hash
-        || !std::equal(common_gate_bytes.begin(), common_gate_bytes.end(), common_gate.begin())
+        || !common_gate_bytes.matches(std::span<const std::uint8_t>(common_gate.begin(), common_gate_bytes.size()))
         || to_hex(sha256(common_gate)) != common_gate_hash
         || to_hex(sha256(response_loop)) != response_loop_hash
         || to_hex(sha256(initial_state)) != initial_state_hash
@@ -1479,22 +1469,10 @@ DeuterosAmigaTitleEntryPrefix execute_deuteros_amiga_title_entry_prefix(
     }
     constexpr std::string_view adf_hash =
         "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38";
-    constexpr std::array<std::uint8_t, 14> bootstrap_return{{
-        0x22, 0x79, 0x00, 0x01, 0x28, 0x22, 0x30, 0x39,
-        0x00, 0x01, 0x2a, 0x34, 0x4e, 0x75,
-    }};
-    constexpr std::array<std::uint8_t, 18> mode_prefix{{
-        0x23, 0xc9, 0x00, 0x02, 0x06, 0xa0, 0x33, 0xc0,
-        0x00, 0x04, 0x04, 0x0e, 0xb0, 0x3c, 0x00, 0x05,
-        0x66, 0x10,
-    }};
-    constexpr std::array<std::uint8_t, 8> normal_prefix{{
-        0x13, 0xfc, 0x00, 0x01, 0x00, 0x01, 0x9d, 0x52,
-    }};
-    constexpr std::array<std::uint8_t, 16> exec_boundary{{
-        0x2e, 0x7c, 0x00, 0x04, 0x0b, 0x62, 0x2c, 0x78,
-        0x00, 0x04, 0x4e, 0xae, 0xff, 0x6a, 0x20, 0x3c,
-    }};
+    constexpr ExecutableByteAnchor<14> bootstrap_return{"858d0a08e8d6fe8200fb71a0866731feabffcadc232bfdeff5be669446bae0fd"};
+    constexpr ExecutableByteAnchor<18> mode_prefix{"833374022042225f1bfeeedd56c05d7011168531fa121494cef04174453e5387"};
+    constexpr ExecutableByteAnchor<8> normal_prefix{"8d15b73f389c05fc214b9440c0a0b77df33782c6400d455cef96f338aa5f1211"};
+    constexpr ExecutableByteAnchor<16> exec_boundary{"f0c847a4d443e26fc08f6c6864afeca3b33da514f8708f76f2f05314a4c88067"};
     if (to_hex(sha256(disk.bytes(0, AmigaAdf::standard_size))) != adf_hash
         || plan.bootstrap_loader.destination > 0x12b0e
         || 0x12b0e - plan.bootstrap_loader.destination > plan.bootstrap_loader.length
@@ -1513,13 +1491,13 @@ DeuterosAmigaTitleEntryPrefix execute_deuteros_amiga_title_entry_prefix(
         + 0x40448 - plan.title_stage.destination, normal_prefix.size());
     const auto exec = disk.bytes(plan.title_stage.disk_offset
         + 0x40450 - plan.title_stage.destination, exec_boundary.size());
-    if (!std::equal(bootstrap_return.begin(), bootstrap_return.end(), bootstrap.begin())
+    if (!bootstrap_return.matches(std::span<const std::uint8_t>(bootstrap.begin(), bootstrap_return.size()))
         || to_hex(sha256(bootstrap)) != "858d0a08e8d6fe8200fb71a0866731feabffcadc232bfdeff5be669446bae0fd"
-        || !std::equal(mode_prefix.begin(), mode_prefix.end(), mode.begin())
+        || !mode_prefix.matches(std::span<const std::uint8_t>(mode.begin(), mode_prefix.size()))
         || to_hex(sha256(mode)) != "833374022042225f1bfeeedd56c05d7011168531fa121494cef04174453e5387"
-        || !std::equal(normal_prefix.begin(), normal_prefix.end(), normal.begin())
+        || !normal_prefix.matches(std::span<const std::uint8_t>(normal.begin(), normal_prefix.size()))
         || to_hex(sha256(normal)) != "8d15b73f389c05fc214b9440c0a0b77df33782c6400d455cef96f338aa5f1211"
-        || !std::equal(exec_boundary.begin(), exec_boundary.end(), exec.begin())
+        || !exec_boundary.matches(std::span<const std::uint8_t>(exec.begin(), exec_boundary.size()))
         || to_hex(sha256(exec)) != "f0c847a4d443e26fc08f6c6864afeca3b33da514f8708f76f2f05314a4c88067") {
         throw std::runtime_error("Unsupported Deuteros title entry prefix");
     }
@@ -1558,9 +1536,7 @@ DeuterosAmigaTitleExecPrelude execute_deuteros_amiga_title_exec_prelude(
     // this a weaker second acceptance path.
     const auto prefix = materialize_deuteros_amiga_title_entry_prefix_state(
         disk, plan, incoming_profile);
-    constexpr std::array<std::uint8_t, 6> stack_setup{{
-        0x2e, 0x7c, 0x00, 0x04, 0x0b, 0x62,
-    }};
+    constexpr ExecutableByteAnchor<6> stack_setup{"5751cf8005bff79d636488a9e0292ecb5821879b1cb2c432e7a5332a0f7b5e3a"};
     constexpr std::uint32_t entry = 0x40450;
     constexpr std::uint32_t stop = 0x40456;
     const auto& stage = plan.title_stage;
@@ -1570,7 +1546,7 @@ DeuterosAmigaTitleExecPrelude execute_deuteros_amiga_title_exec_prelude(
         throw std::runtime_error("Deuteros title Exec prelude lies outside original stage");
     }
     const auto bytes = disk.bytes(stage.disk_offset + entry - stage.destination, stack_setup.size());
-    if (!std::equal(stack_setup.begin(), stack_setup.end(), bytes.begin())
+    if (!stack_setup.matches(std::span<const std::uint8_t>(bytes.begin(), stack_setup.size()))
         || to_hex(sha256(bytes))
             != "5751cf8005bff79d636488a9e0292ecb5821879b1cb2c432e7a5332a0f7b5e3a") {
         throw std::runtime_error("Unsupported Deuteros title Exec prelude");
@@ -1586,10 +1562,7 @@ DeuterosAmigaTitleEntryModeFivePrefix execute_deuteros_amiga_title_entry_mode_fi
     }
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
-    constexpr std::array<std::uint8_t, 16> mode_five{{
-        0x13, 0xc0, 0x00, 0x03, 0x71, 0x7e, 0x33, 0xfc,
-        0x01, 0x01, 0x00, 0x03, 0x80, 0x92, 0x60, 0x08,
-    }};
+    constexpr ExecutableByteAnchor<16> mode_five{"c4f5b0fa571dc0c932e9bb3df9f48e4c4336840d49ae2368e69fffa8c05c87a7"};
     const auto& stage = plan.title_stage;
     constexpr std::uint32_t branch_entry = 0x40426;
     constexpr std::uint32_t entry = 0x40438;
@@ -1604,7 +1577,7 @@ DeuterosAmigaTitleEntryModeFivePrefix execute_deuteros_amiga_title_entry_mode_fi
     const auto prefix = bytes.subspan(entry - stage.destination, mode_five.size());
     if (to_hex(sha256(bytes)) != stage_hash
         || to_hex(sha256(branch)) != "8fbe2ad1f1ad9de8d8edf02fa792faf88938dc4415f40db614e9e1399cf36fba"
-        || !std::equal(mode_five.begin(), mode_five.end(), prefix.begin())
+        || !mode_five.matches(std::span<const std::uint8_t>(prefix.begin(), mode_five.size()))
         || to_hex(sha256(prefix)) != "c4f5b0fa571dc0c932e9bb3df9f48e4c4336840d49ae2368e69fffa8c05c87a7") {
         throw std::runtime_error("Unsupported Deuteros mode-five title prefix");
     }
@@ -1621,14 +1594,8 @@ parse_deuteros_amiga_title_post_exec_pointer_seed_profile(
     // returned ABI value or a title-stage write.
     constexpr std::uint32_t call_site_address = 0x404c2;
     constexpr std::uint32_t callee_address = 0x403e6;
-    constexpr std::array<std::uint8_t, 12> call_site_bytes{{
-        0x22, 0x3c, 0x00, 0x01, 0x30, 0x00,
-        0x4e, 0xb9, 0x00, 0x04, 0x03, 0xe6,
-    }};
-    constexpr std::array<std::uint8_t, 12> callee_bytes{{
-        0x20, 0x3c, 0x00, 0x01, 0xc4, 0x82,
-        0x23, 0xc0, 0x00, 0x01, 0xf9, 0x7c,
-    }};
+    constexpr ExecutableByteAnchor<12> call_site_bytes{"a617235dd94a6c0b3f5fb9f9e078652ed8f1e45213e85c80b10ec165a6b7216f"};
+    constexpr ExecutableByteAnchor<12> callee_bytes{"1e1ccdae97d5849873d3d2e785f5a8be585ffa0e104b5c550ecade6bc37a33a2"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
     constexpr std::string_view call_site_hash =
@@ -1649,8 +1616,8 @@ parse_deuteros_amiga_title_post_exec_pointer_seed_profile(
     const auto call_site = stage_bytes.subspan(call_site_address - stage.destination, call_site_bytes.size());
     const auto callee = stage_bytes.subspan(callee_address - stage.destination, callee_bytes.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(call_site_bytes.begin(), call_site_bytes.end(), call_site.begin())
-        || !std::equal(callee_bytes.begin(), callee_bytes.end(), callee.begin())
+        || !call_site_bytes.matches(std::span<const std::uint8_t>(call_site.begin(), call_site_bytes.size()))
+        || !callee_bytes.matches(std::span<const std::uint8_t>(callee.begin(), callee_bytes.size()))
         || to_hex(sha256(call_site)) != call_site_hash
         || to_hex(sha256(callee)) != callee_hash) {
         throw std::runtime_error("Unsupported Deuteros post-Exec pointer-seed profile");
@@ -1673,16 +1640,8 @@ parse_deuteros_amiga_title_post_exec_service_batch_profile(
     // four targets remain opaque: this parser neither calls nor models them.
     constexpr std::uint32_t call_site_address = 0x404ce;
     constexpr std::uint32_t callee_address = 0x403f4;
-    constexpr std::array<std::uint8_t, 6> call_site_bytes{{
-        0x4e, 0xb9, 0x00, 0x04, 0x03, 0xf4,
-    }};
-    constexpr std::array<std::uint8_t, 26> callee_bytes{{
-        0x4e, 0xb9, 0x00, 0x04, 0x03, 0xc8,
-        0x4e, 0xb9, 0x00, 0x02, 0x05, 0x10,
-        0x4e, 0xb9, 0x00, 0x01, 0xf3, 0x7a,
-        0x4e, 0xb9, 0x00, 0x04, 0x06, 0x98,
-        0x4e, 0x75,
-    }};
+    constexpr ExecutableByteAnchor<6> call_site_bytes{"555513267ef304f2a5cec2303f8565db8e4ed9ecb2abd7bc87b73dbe5d6c0976"};
+    constexpr ExecutableByteAnchor<26> callee_bytes{"5353ab8b18d63a51e12ef2f586a68d872981fa491ca13531198f18a2a38edf07"};
     constexpr std::array<std::uint32_t, 4> direct_callees{{
         0x403c8, 0x20510, 0x1f37a, 0x40698,
     }};
@@ -1706,8 +1665,8 @@ parse_deuteros_amiga_title_post_exec_service_batch_profile(
     const auto call_site = stage_bytes.subspan(call_site_address - stage.destination, call_site_bytes.size());
     const auto callee = stage_bytes.subspan(callee_address - stage.destination, callee_bytes.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(call_site_bytes.begin(), call_site_bytes.end(), call_site.begin())
-        || !std::equal(callee_bytes.begin(), callee_bytes.end(), callee.begin())
+        || !call_site_bytes.matches(std::span<const std::uint8_t>(call_site.begin(), call_site_bytes.size()))
+        || !callee_bytes.matches(std::span<const std::uint8_t>(callee.begin(), callee_bytes.size()))
         || to_hex(sha256(call_site)) != call_site_hash
         || to_hex(sha256(callee)) != callee_hash) {
         throw std::runtime_error("Unsupported Deuteros post-Exec service batch profile");
@@ -1724,10 +1683,8 @@ parse_deuteros_amiga_title_post_exec_fourth_service_profile(
     // that any earlier call in the batch or post-Exec path returned.
     constexpr std::uint32_t caller_address = 0x40406;
     constexpr std::uint32_t callee_address = 0x40698;
-    constexpr std::array<std::uint8_t, 6> caller_bytes{{
-        0x4e, 0xb9, 0x00, 0x04, 0x06, 0x98,
-    }};
-    constexpr std::array<std::uint8_t, 2> callee_bytes{{0x4e, 0x75}};
+    constexpr ExecutableByteAnchor<6> caller_bytes{"b214a93028755289cb8dcefb5e4013d307dc2e8a4bb27ae2e798a7bf10298606"};
+    constexpr ExecutableByteAnchor<2> callee_bytes{"1ceeabf0c6a5a30bad12cdac0e3ab015a7188a42e6aebb556aad00bb9cd693ad"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
     constexpr std::string_view caller_hash =
@@ -1748,8 +1705,8 @@ parse_deuteros_amiga_title_post_exec_fourth_service_profile(
     const auto caller = stage_bytes.subspan(caller_address - stage.destination, caller_bytes.size());
     const auto callee = stage_bytes.subspan(callee_address - stage.destination, callee_bytes.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(caller_bytes.begin(), caller_bytes.end(), caller.begin())
-        || !std::equal(callee_bytes.begin(), callee_bytes.end(), callee.begin())
+        || !caller_bytes.matches(std::span<const std::uint8_t>(caller.begin(), caller_bytes.size()))
+        || !callee_bytes.matches(std::span<const std::uint8_t>(callee.begin(), callee_bytes.size()))
         || to_hex(sha256(caller)) != caller_hash
         || to_hex(sha256(callee)) != callee_hash) {
         throw std::runtime_error("Unsupported Deuteros post-Exec fourth-service profile");
@@ -1773,17 +1730,8 @@ parse_deuteros_amiga_title_post_exec_graphics_vector_profile(
     // intentionally neither called nor given a higher-level interpretation.
     constexpr std::uint32_t caller_address = 0x403f4;
     constexpr std::uint32_t entry_address = 0x403c8;
-    constexpr std::array<std::uint8_t, 6> caller_bytes{{
-        0x4e, 0xb9, 0x00, 0x04, 0x03, 0xc8,
-    }};
-    constexpr std::array<std::uint8_t, 30> routine_bytes{{
-        0x22, 0x7c, 0x00, 0x01, 0xed, 0x24,
-        0x20, 0x7c, 0x00, 0x01, 0x2e, 0x12,
-        0x20, 0x3c, 0x00, 0x00, 0x00, 0x14,
-        0x2c, 0x79, 0x00, 0x01, 0x2f, 0xec,
-        0x4e, 0xae, 0xff, 0x40,
-        0x4e, 0x75,
-    }};
+    constexpr ExecutableByteAnchor<6> caller_bytes{"2a90f1020af64bd1a6f7f6e7e7503bea4133a2a569bba55987f6edb23442cec3"};
+    constexpr ExecutableByteAnchor<30> routine_bytes{"3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
     constexpr std::string_view caller_hash =
@@ -1804,8 +1752,8 @@ parse_deuteros_amiga_title_post_exec_graphics_vector_profile(
     const auto caller = stage_bytes.subspan(caller_address - stage.destination, caller_bytes.size());
     const auto routine = stage_bytes.subspan(entry_address - stage.destination, routine_bytes.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(caller_bytes.begin(), caller_bytes.end(), caller.begin())
-        || !std::equal(routine_bytes.begin(), routine_bytes.end(), routine.begin())
+        || !caller_bytes.matches(std::span<const std::uint8_t>(caller.begin(), caller_bytes.size()))
+        || !routine_bytes.matches(std::span<const std::uint8_t>(routine.begin(), routine_bytes.size()))
         || to_hex(sha256(caller)) != caller_hash
         || to_hex(sha256(routine)) != routine_hash) {
         throw std::runtime_error("Unsupported Deuteros post-Exec graphics-vector profile");
@@ -1824,16 +1772,8 @@ parse_deuteros_amiga_title_post_exec_state_init_profile(
     // through RTS, but reaching it still requires every prior call to return.
     constexpr std::uint32_t caller_address = 0x403fa;
     constexpr std::uint32_t entry_address = 0x20510;
-    constexpr std::array<std::uint8_t, 6> caller_bytes{{
-        0x4e, 0xb9, 0x00, 0x02, 0x05, 0x10,
-    }};
-    constexpr std::array<std::uint8_t, 38> routine_bytes{{
-        0x33, 0xfc, 0x00, 0x00, 0x00, 0x02, 0x02, 0xc4,
-        0x33, 0xfc, 0xf6, 0x90, 0x00, 0x02, 0x02, 0x7e,
-        0x23, 0xfc, 0x00, 0x00, 0x00, 0x01, 0x00, 0x02, 0x02, 0x80,
-        0x33, 0xf9, 0x00, 0x02, 0x02, 0x76, 0x00, 0x02, 0x02, 0x7c,
-        0x4e, 0x75,
-    }};
+    constexpr ExecutableByteAnchor<6> caller_bytes{"f31dc5923e4b39eb1726fc9b05ac7f56c0209f5d60c9499b979ebfc7c08a58a2"};
+    constexpr ExecutableByteAnchor<38> routine_bytes{"60ee2fcb4a18f62cd2066aba2429e760a64f14cd3f07f3cfe8467972030008bc"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
     constexpr std::string_view caller_hash =
@@ -1854,8 +1794,8 @@ parse_deuteros_amiga_title_post_exec_state_init_profile(
     const auto caller = stage_bytes.subspan(caller_address - stage.destination, caller_bytes.size());
     const auto routine = stage_bytes.subspan(entry_address - stage.destination, routine_bytes.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(caller_bytes.begin(), caller_bytes.end(), caller.begin())
-        || !std::equal(routine_bytes.begin(), routine_bytes.end(), routine.begin())
+        || !caller_bytes.matches(std::span<const std::uint8_t>(caller.begin(), caller_bytes.size()))
+        || !routine_bytes.matches(std::span<const std::uint8_t>(routine.begin(), routine_bytes.size()))
         || to_hex(sha256(caller)) != caller_hash
         || to_hex(sha256(routine)) != routine_hash) {
         throw std::runtime_error("Unsupported Deuteros post-Exec state-init profile");
@@ -1879,14 +1819,8 @@ parse_deuteros_amiga_title_post_exec_third_service_profile(
     constexpr std::uint32_t caller_address = 0x40400;
     constexpr std::uint32_t dispatch_entry_address = 0x1f37a;
     constexpr std::uint32_t graphics_service_address = 0x20094;
-    constexpr std::array<std::uint8_t, 6> caller_bytes{{
-        0x4e, 0xb9, 0x00, 0x01, 0xf3, 0x7a,
-    }};
-    constexpr std::array<std::uint8_t, 18> dispatch_bytes{{
-        0x4e, 0xb9, 0x00, 0x02, 0x00, 0x94,
-        0x4d, 0xf9, 0x00, 0x01, 0xf3, 0x72,
-        0x4e, 0xf9, 0x00, 0x02, 0x01, 0xd2,
-    }};
+    constexpr ExecutableByteAnchor<6> caller_bytes{"901b0ad5740a3e6aea3eba28b6aadf5ac5c187e961cc848f6f1a882b3592f464"};
+    constexpr ExecutableByteAnchor<18> dispatch_bytes{"58e85705bc821d42834936342b242162c749889b9d9c23c3d5896f7bcf06e4ff"};
     constexpr ExecutableByteAnchor<102> service_bytes{"7427cdaa0f716496e21c5ef0f6a8d0850a9606a9b4ffe6e56df599109b0ca947"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
@@ -1914,8 +1848,8 @@ parse_deuteros_amiga_title_post_exec_third_service_profile(
     const auto service = stage_bytes.subspan(
         graphics_service_address - stage.destination, service_bytes.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(caller_bytes.begin(), caller_bytes.end(), caller.begin())
-        || !std::equal(dispatch_bytes.begin(), dispatch_bytes.end(), dispatch.begin())
+        || !caller_bytes.matches(std::span<const std::uint8_t>(caller.begin(), caller_bytes.size()))
+        || !dispatch_bytes.matches(std::span<const std::uint8_t>(dispatch.begin(), dispatch_bytes.size()))
         || !service_bytes.matches(service)
         || to_hex(sha256(caller)) != caller_hash
         || to_hex(sha256(dispatch)) != dispatch_hash
@@ -1969,14 +1903,8 @@ parse_deuteros_amiga_title_post_exec_tail_first_callee_profile(
     constexpr std::uint32_t caller_address = 0x201d6;
     constexpr std::uint32_t caller_continuation_address = 0x201da;
     constexpr std::uint32_t entry_address = 0x200fa;
-    constexpr std::array<std::uint8_t, 4> caller_bytes{{0x61, 0x00, 0xff, 0x22}};
-    constexpr std::array<std::uint8_t, 30> routine_bytes{{
-        0x41, 0xf9, 0x00, 0x01, 0x2e, 0x12,
-        0x43, 0xf9, 0x00, 0x01, 0xff, 0xda,
-        0x24, 0x79, 0x00, 0x02, 0x00, 0x8e,
-        0x2c, 0x79, 0x00, 0x01, 0x2f, 0xec,
-        0x4e, 0xae, 0xfe, 0x5c, 0x4e, 0x75,
-    }};
+    constexpr ExecutableByteAnchor<4> caller_bytes{"fd55349ce2476b466426a5addfa7eedae100cddaac5a480512c6eff31a06a450"};
+    constexpr ExecutableByteAnchor<30> routine_bytes{"6e36c860c280c651947ad0ea6ef868759fbc7bfac67d89af219135e4751e6e6f"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
     constexpr std::string_view caller_hash =
@@ -1997,8 +1925,8 @@ parse_deuteros_amiga_title_post_exec_tail_first_callee_profile(
     const auto caller = stage_bytes.subspan(caller_address - stage.destination, caller_bytes.size());
     const auto routine = stage_bytes.subspan(entry_address - stage.destination, routine_bytes.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(caller_bytes.begin(), caller_bytes.end(), caller.begin())
-        || !std::equal(routine_bytes.begin(), routine_bytes.end(), routine.begin())
+        || !caller_bytes.matches(std::span<const std::uint8_t>(caller.begin(), caller_bytes.size()))
+        || !routine_bytes.matches(std::span<const std::uint8_t>(routine.begin(), routine_bytes.size()))
         || to_hex(sha256(caller)) != caller_hash
         || to_hex(sha256(routine)) != routine_hash) {
         throw std::runtime_error("Unsupported Deuteros post-Exec tail first-callee profile");
@@ -2019,7 +1947,7 @@ parse_deuteros_amiga_title_post_exec_tail_second_callee_profile(
     constexpr std::uint32_t caller_address = 0x201fe;
     constexpr std::uint32_t caller_continuation_address = 0x20202;
     constexpr std::uint32_t entry_address = 0x20118;
-    constexpr std::array<std::uint8_t, 4> caller_bytes{{0x61, 0x00, 0xff, 0x18}};
+    constexpr ExecutableByteAnchor<4> caller_bytes{"8919a0658d9b7a79bca49d3ca3f38227e3ee6a043491ebac0dbb395504b33fd9"};
     constexpr ExecutableByteAnchor<168> routine_bytes{"9b16e7cdc97495a1b52656d49c7a3612e7e1617ce88996e2c5e7138e3f183ec3"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
@@ -2041,7 +1969,7 @@ parse_deuteros_amiga_title_post_exec_tail_second_callee_profile(
     const auto caller = stage_bytes.subspan(caller_address - stage.destination, caller_bytes.size());
     const auto routine = stage_bytes.subspan(entry_address - stage.destination, routine_bytes.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(caller_bytes.begin(), caller_bytes.end(), caller.begin())
+        || !caller_bytes.matches(std::span<const std::uint8_t>(caller.begin(), caller_bytes.size()))
         || !routine_bytes.matches(routine)
         || to_hex(sha256(caller)) != caller_hash
         || to_hex(sha256(routine)) != routine_hash) {
@@ -2064,7 +1992,7 @@ parse_deuteros_amiga_title_post_exec_tail_third_callee_profile(
     constexpr std::uint32_t caller_address = 0x20212;
     constexpr std::uint32_t caller_continuation_address = 0x20216;
     constexpr std::uint32_t entry_address = 0x20118;
-    constexpr std::array<std::uint8_t, 4> caller_bytes{{0x61, 0x00, 0xff, 0x04}};
+    constexpr ExecutableByteAnchor<4> caller_bytes{"a760d59c7213517e7d3427b30915f9c586be5448e40a0a3980f9dded55f9f994"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
     constexpr std::string_view caller_hash =
@@ -2078,7 +2006,7 @@ parse_deuteros_amiga_title_post_exec_tail_third_callee_profile(
     const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
     const auto caller = stage_bytes.subspan(caller_address - stage.destination, caller_bytes.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(caller_bytes.begin(), caller_bytes.end(), caller.begin())
+        || !caller_bytes.matches(std::span<const std::uint8_t>(caller.begin(), caller_bytes.size()))
         || to_hex(sha256(caller)) != caller_hash) {
         throw std::runtime_error("Unsupported Deuteros post-Exec tail third-callee profile");
     }
@@ -2100,14 +2028,8 @@ parse_deuteros_amiga_title_post_exec_tail_fourth_callee_profile(
     constexpr std::uint32_t caller_address = 0x20216;
     constexpr std::uint32_t caller_continuation_address = 0x2021a;
     constexpr std::uint32_t entry_address = 0x200dc;
-    constexpr std::array<std::uint8_t, 4> caller_bytes{{0x61, 0x00, 0xfe, 0xc4}};
-    constexpr std::array<std::uint8_t, 30> routine_bytes{{
-        0x41, 0xf9, 0x00, 0x01, 0x2e, 0x12,
-        0x43, 0xf9, 0x00, 0x01, 0xff, 0xda,
-        0x24, 0x79, 0x00, 0x02, 0x00, 0x8e,
-        0x2c, 0x79, 0x00, 0x01, 0x2f, 0xec,
-        0x4e, 0xae, 0xfe, 0x5c, 0x4e, 0x75,
-    }};
+    constexpr ExecutableByteAnchor<4> caller_bytes{"6b8c80452bd43c82d8ce91fa551b3067dfc33bb85e553d555aaec65ea6a8ce26"};
+    constexpr ExecutableByteAnchor<30> routine_bytes{"6e36c860c280c651947ad0ea6ef868759fbc7bfac67d89af219135e4751e6e6f"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
     constexpr std::string_view caller_hash =
@@ -2128,8 +2050,8 @@ parse_deuteros_amiga_title_post_exec_tail_fourth_callee_profile(
     const auto caller = stage_bytes.subspan(caller_address - stage.destination, caller_bytes.size());
     const auto routine = stage_bytes.subspan(entry_address - stage.destination, routine_bytes.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(caller_bytes.begin(), caller_bytes.end(), caller.begin())
-        || !std::equal(routine_bytes.begin(), routine_bytes.end(), routine.begin())
+        || !caller_bytes.matches(std::span<const std::uint8_t>(caller.begin(), caller_bytes.size()))
+        || !routine_bytes.matches(std::span<const std::uint8_t>(routine.begin(), routine_bytes.size()))
         || to_hex(sha256(caller)) != caller_hash
         || to_hex(sha256(routine)) != routine_hash) {
         throw std::runtime_error("Unsupported Deuteros post-Exec tail fourth-callee profile");
@@ -2149,25 +2071,8 @@ parse_deuteros_amiga_title_post_exec_tail_return_profile(
     // final Exec-vector call in `$204c8`.
     constexpr std::uint32_t continuation_address = 0x404d4;
     constexpr std::uint32_t local_service_address = 0x204c8;
-    constexpr std::array<std::uint8_t, 28> continuation_bytes{{
-        0x41, 0xf9, 0x00, 0x01, 0x2f, 0xf4,
-        0x20, 0x18,
-        0x23, 0xc0, 0x00, 0x03, 0x7e, 0xf2,
-        0x20, 0x18,
-        0x23, 0xc0, 0x00, 0x03, 0x7e, 0xf6,
-        0x4e, 0xb9, 0x00, 0x02, 0x04, 0xc8,
-    }};
-    constexpr std::array<std::uint8_t, 50> routine_bytes{{
-        0x22, 0x7c, 0x00, 0x02, 0x04, 0xaa,
-        0x13, 0x7c, 0x00, 0x02, 0x00, 0x08,
-        0x13, 0x7c, 0x00, 0xc4, 0x00, 0x09,
-        0x23, 0x7c, 0x00, 0x02, 0x04, 0xc0, 0x00, 0x0e,
-        0x23, 0x7c, 0x00, 0x02, 0x02, 0xca, 0x00, 0x12,
-        0x20, 0x3c, 0x00, 0x00, 0x00, 0x05,
-        0x2c, 0x78, 0x00, 0x04,
-        0x4e, 0xae, 0xff, 0x58,
-        0x4e, 0x75,
-    }};
+    constexpr ExecutableByteAnchor<28> continuation_bytes{"32a750150f115f5c012e99811313916078a8657c6100b50e92acadca0708965d"};
+    constexpr ExecutableByteAnchor<50> routine_bytes{"76f4163c15e6761168f1d267e3feae94f0430975efa75b1c3576d7b88947e596"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
     constexpr std::string_view continuation_hash =
@@ -2190,8 +2095,8 @@ parse_deuteros_amiga_title_post_exec_tail_return_profile(
     const auto routine = stage_bytes.subspan(
         local_service_address - stage.destination, routine_bytes.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(continuation_bytes.begin(), continuation_bytes.end(), continuation.begin())
-        || !std::equal(routine_bytes.begin(), routine_bytes.end(), routine.begin())
+        || !continuation_bytes.matches(std::span<const std::uint8_t>(continuation.begin(), continuation_bytes.size()))
+        || !routine_bytes.matches(std::span<const std::uint8_t>(routine.begin(), routine_bytes.size()))
         || to_hex(sha256(continuation)) != continuation_hash
         || to_hex(sha256(routine)) != routine_hash) {
         throw std::runtime_error("Unsupported Deuteros post-Exec tail-return profile");
@@ -2209,7 +2114,7 @@ parse_deuteros_amiga_title_post_exec_load_service_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
     constexpr std::uint32_t caller_address = 0x404f0;
     constexpr std::uint32_t entry_address = 0x389e2;
-    constexpr std::array<std::uint8_t, 6> caller{{0x4e, 0xb9, 0x00, 0x03, 0x89, 0xe2}};
+    constexpr ExecutableByteAnchor<6> caller{"1385698c6c854ab133e3e7cd75417c90025916dd0a1dd303347dce0636114bea"};
     constexpr std::size_t routine_length = 0x4e;
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
@@ -2229,7 +2134,7 @@ parse_deuteros_amiga_title_post_exec_load_service_profile(
     const auto caller_bytes = bytes.subspan(caller_address - stage.destination, caller.size());
     const auto routine = bytes.subspan(entry_address - stage.destination, routine_length);
     if (to_hex(sha256(bytes)) != stage_hash
-        || !std::equal(caller.begin(), caller.end(), caller_bytes.begin())
+        || !caller.matches(std::span<const std::uint8_t>(caller_bytes.begin(), caller.size()))
         || to_hex(sha256(caller_bytes)) != caller_hash
         || to_hex(sha256(routine)) != routine_hash) {
         throw std::runtime_error("Unsupported Deuteros post-Exec load-service profile");
@@ -2248,33 +2153,8 @@ parse_deuteros_amiga_title_post_exec_tail_return_continuation_profile(
     // unentered boundary.  The span stops before the next flag-gated block.
     constexpr std::uint32_t continuation_address = 0x404f0;
     constexpr std::uint32_t stop_before_address = 0x40618;
-    constexpr std::array<std::uint8_t, 0x128> expected{{
-        0x4e, 0xb9, 0x00, 0x03, 0x89, 0xe2, 0x70, 0x01, 0x4e, 0xb9, 0x00, 0x01,
-        0xfb, 0x9a, 0x4e, 0xb9, 0x00, 0x03, 0x89, 0x12, 0x4e, 0xb9, 0x00, 0x02,
-        0x02, 0x2a, 0x30, 0x3c, 0x00, 0x4d, 0x4e, 0xb9, 0x00, 0x04, 0x1b, 0xb4,
-        0x30, 0x3c, 0x00, 0x4e, 0x4e, 0xb9, 0x00, 0x04, 0x1b, 0xb4, 0x23, 0xfc,
-        0x00, 0x02, 0x15, 0x1a, 0x00, 0x02, 0x22, 0xae, 0x70, 0x00, 0x4e, 0xb9,
-        0x00, 0x02, 0x0e, 0x18, 0x4e, 0xb9, 0x00, 0x02, 0x0b, 0xa8, 0x41, 0xf9,
-        0x00, 0x02, 0x0c, 0xfe, 0x4e, 0x90, 0x20, 0x39, 0x00, 0x01, 0x2f, 0xe4,
-        0xe6, 0x88, 0x33, 0xc0, 0x00, 0x01, 0xf4, 0x2a, 0x4e, 0xb9, 0x00, 0x03,
-        0x71, 0x80, 0x23, 0xf9, 0x00, 0x01, 0x37, 0x8e, 0x00, 0x01, 0xc2, 0x6c,
-        0x70, 0x05, 0xb0, 0x79, 0x00, 0x04, 0x04, 0x0e, 0x66, 0x08, 0x4e, 0xb9,
-        0x00, 0x03, 0x6a, 0x8c, 0x60, 0x06, 0x4e, 0xb9, 0x00, 0x01, 0xfb, 0x9a,
-        0x4e, 0xb9, 0x00, 0x02, 0x22, 0xc0, 0x4e, 0xb9, 0x00, 0x02, 0x3e, 0x4e,
-        0x30, 0x39, 0x00, 0x01, 0xff, 0xc8, 0xb0, 0x79, 0x00, 0x04, 0x04, 0x14,
-        0x67, 0x10, 0x33, 0xc0, 0x00, 0x04, 0x04, 0x14, 0x23, 0xfc, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x04, 0x04, 0x10, 0x20, 0x39, 0x00, 0x04, 0x04, 0x10,
-        0xb0, 0xbc, 0x00, 0x00, 0xea, 0x60, 0x65, 0x1a, 0x0c, 0x79, 0x00, 0x11,
-        0x00, 0x02, 0x2d, 0x34, 0x67, 0x10, 0x4e, 0xb9, 0x00, 0x04, 0x06, 0x9a,
-        0x23, 0xfc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x04, 0x10, 0x4a, 0x39,
-        0x00, 0x01, 0xbf, 0x36, 0x67, 0x00, 0x00, 0x6a, 0x4e, 0xb9, 0x00, 0x01,
-        0xf9, 0xa4, 0x16, 0x1a, 0x04, 0x10, 0x0f, 0x11, 0x00, 0x00, 0x30, 0x39,
-        0x00, 0x02, 0x22, 0xa0, 0x4e, 0xb9, 0x00, 0x01, 0xfe, 0x88, 0x30, 0x39,
-        0x00, 0x01, 0xff, 0xc8, 0x4e, 0xb9, 0x00, 0x01, 0xfe, 0x6c, 0x30, 0x39,
-        0x00, 0x01, 0xff, 0xce, 0x4e, 0xb9, 0x00, 0x01, 0xfe, 0x6c, 0x30, 0x39,
-        0x00, 0x02, 0x2d, 0x34, 0x4e, 0xb9, 0x00, 0x01, 0xfe, 0x7a, 0x30, 0x39,
-        0x00, 0x01, 0xff, 0xc8, 0x66, 0x22, 0x30, 0x39,
-    }};
+    constexpr ExecutableByteAnchor<0x128> expected{
+        "10a96a2c80f83b32530ed9355cb2988bcac233c49f66d93484b31d0c0e3667c6"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
     constexpr std::string_view profile_hash =
@@ -2288,7 +2168,7 @@ parse_deuteros_amiga_title_post_exec_tail_return_continuation_profile(
     const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
     const auto bytes = stage_bytes.subspan(continuation_address - stage.destination, expected.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(expected.begin(), expected.end(), bytes.begin())
+        || !expected.matches(bytes)
         || to_hex(sha256(bytes)) != profile_hash) {
         throw std::runtime_error("Unsupported Deuteros post-Exec tail return-continuation profile");
     }
@@ -2306,14 +2186,9 @@ parse_deuteros_amiga_title_post_load_dispatch_profile(
     constexpr std::uint32_t caller_address = 0x404f6;
     constexpr std::uint32_t entry_address = 0x1fb9a;
     constexpr std::uint32_t parser_address = 0x1fa00;
-    constexpr std::array<std::uint8_t, 8> caller{{
-        0x70, 0x01, 0x4e, 0xb9, 0x00, 0x01, 0xfb, 0x9a}};
-    constexpr std::array<std::uint8_t, 24> routine{{
-        0x28, 0x79, 0x00, 0x01, 0xf9, 0x7c, 0x2f, 0x00,
-        0xd0, 0x40, 0x30, 0x34, 0x00, 0x00, 0xd8, 0xc0,
-        0x61, 0x00, 0xfe, 0x54, 0x20, 0x1f, 0x4e, 0x75}};
-    constexpr std::array<std::uint8_t, 10> parser_prefix{{
-        0x42, 0x39, 0x00, 0x01, 0xf9, 0x8c, 0x4e, 0x71, 0x70, 0x00}};
+    constexpr ExecutableByteAnchor<8> caller{"596e3b08acbe94bbe512d87ca7aeb9e8eb686af82c891c5a0e4dd1c4fcdbe3c3"};
+    constexpr ExecutableByteAnchor<24> routine{"173ecec3e880b6b6d9022567622548e25629dd23d671f6f8f9e46fe700edcbbb"};
+    constexpr ExecutableByteAnchor<10> parser_prefix{"2605ca4af737e72accc1c6dc91bf640aac370f6037da3ec284ba440377a6b4cf"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
     constexpr std::string_view caller_hash =
@@ -2335,9 +2210,9 @@ parse_deuteros_amiga_title_post_load_dispatch_profile(
     const auto routine_bytes = span_at(entry_address, routine.size());
     const auto parser_bytes = span_at(parser_address, parser_prefix.size());
     if (to_hex(sha256(bytes)) != stage_hash
-        || !std::equal(caller.begin(), caller.end(), caller_bytes.begin())
-        || !std::equal(routine.begin(), routine.end(), routine_bytes.begin())
-        || !std::equal(parser_prefix.begin(), parser_prefix.end(), parser_bytes.begin())
+        || !caller.matches(std::span<const std::uint8_t>(caller_bytes.begin(), caller.size()))
+        || !routine.matches(std::span<const std::uint8_t>(routine_bytes.begin(), routine.size()))
+        || !parser_prefix.matches(std::span<const std::uint8_t>(parser_bytes.begin(), parser_prefix.size()))
         || to_hex(sha256(caller_bytes)) != caller_hash
         || to_hex(sha256(routine_bytes)) != routine_hash
         || to_hex(sha256(parser_bytes)) != parser_hash) {
@@ -2433,9 +2308,7 @@ parse_deuteros_amiga_title_post_exec_pointer_route_profile(
     constexpr std::uint32_t caller_address = 0x40504;
     constexpr std::uint32_t caller_continuation_address = 0x4050a;
     constexpr std::uint32_t entry_address = 0x2022a;
-    constexpr std::array<std::uint8_t, 6> caller_bytes{{
-        0x4e, 0xb9, 0x00, 0x02, 0x02, 0x2a,
-    }};
+    constexpr ExecutableByteAnchor<6> caller_bytes{"ce9c44a0a83e370fdf54b5ec8ef0ffd72c170b007419176403293d2a54f91188"};
     constexpr ExecutableByteAnchor<76> routine_bytes{"a7f7c0c3efa60284b3d292249b3560da4d832ff0c5dfa34711b72604760b39a9"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
@@ -2457,7 +2330,7 @@ parse_deuteros_amiga_title_post_exec_pointer_route_profile(
     const auto caller = stage_bytes.subspan(caller_address - stage.destination, caller_bytes.size());
     const auto routine = stage_bytes.subspan(entry_address - stage.destination, routine_bytes.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(caller_bytes.begin(), caller_bytes.end(), caller.begin())
+        || !caller_bytes.matches(std::span<const std::uint8_t>(caller.begin(), caller_bytes.size()))
         || !routine_bytes.matches(routine)
         || to_hex(sha256(caller)) != caller_hash
         || to_hex(sha256(routine)) != routine_hash) {
@@ -2577,16 +2450,8 @@ parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(
     // 68000 instruction boundary.  Nothing below is executed or interpreted.
     constexpr std::uint32_t entry_address = 0x40616;
     constexpr std::uint32_t stop_after_address = 0x40674;
-    constexpr std::array<std::uint8_t, 0x5e> expected{{
-        0x30, 0x39, 0x00, 0x01, 0xff, 0xce, 0xb0, 0x3c, 0x00, 0xb4, 0x65, 0x16,
-        0x30, 0x39, 0x00, 0x01, 0xff, 0xd4, 0xe2, 0x08, 0x64, 0x0c, 0x4e, 0xf9,
-        0x00, 0x03, 0x7f, 0x56, 0x4e, 0xb9, 0x00, 0x01, 0xf3, 0xf8, 0x4e, 0xb9,
-        0x00, 0x01, 0xf2, 0x38, 0xb0, 0x3c, 0x00, 0x43, 0x66, 0x2c, 0x32, 0x3c,
-        0x00, 0xf0, 0x0a, 0x79, 0x01, 0x01, 0x00, 0x01, 0xbf, 0x36, 0x67, 0x04,
-        0x32, 0x3c, 0x0f, 0x00, 0x3f, 0x01, 0x20, 0x7c, 0x00, 0xdf, 0xf0, 0x00,
-        0x31, 0x41, 0x01, 0x80, 0x4e, 0xb9, 0x00, 0x01, 0xf2, 0x38, 0x32, 0x1f,
-        0xb0, 0x3c, 0x00, 0x43, 0x66, 0xe6, 0x60, 0x00, 0xff, 0x02,
-    }};
+    constexpr ExecutableByteAnchor<0x5e> expected{
+        "fcf7c15552302b6b902352380a5b5d454eba190be2a7e89af9701822eac1f80e"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
     constexpr std::string_view profile_hash =
@@ -2600,7 +2465,7 @@ parse_deuteros_amiga_title_post_exec_tail_flag_gate_profile(
     const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
     const auto bytes = stage_bytes.subspan(entry_address - stage.destination, expected.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(expected.begin(), expected.end(), bytes.begin())
+        || !expected.matches(bytes)
         || to_hex(sha256(bytes)) != profile_hash) {
         throw std::runtime_error("Unsupported Deuteros post-Exec tail flag-gate profile");
     }
@@ -2618,15 +2483,8 @@ parse_deuteros_amiga_title_post_exec_tail_flag_gate_first_callee_profile(
     // not choose values for either tested cell or enter either loop.
     constexpr std::uint32_t caller_address = 0x40632;
     constexpr std::uint32_t entry_address = 0x1f3f8;
-    constexpr std::array<std::uint8_t, 6> caller_bytes{{
-        0x4e, 0xb9, 0x00, 0x01, 0xf3, 0xf8,
-    }};
-    constexpr std::array<std::uint8_t, 34> routine_bytes{{
-        0x4a, 0x39, 0x00, 0x01, 0xee, 0x16, 0x67, 0x02, 0x4e, 0x75,
-        0x32, 0x39, 0x00, 0x01, 0xff, 0xd4, 0x02, 0x01, 0x00, 0x03,
-        0x66, 0xf4, 0x32, 0x39, 0x00, 0x01, 0xff, 0xd4, 0xe2, 0x49,
-        0x64, 0xf6, 0x4e, 0x75,
-    }};
+    constexpr ExecutableByteAnchor<6> caller_bytes{"c3998d07f8e89408b9332ae19f449256087b1eb8843256751c03e52700cbbec4"};
+    constexpr ExecutableByteAnchor<34> routine_bytes{"101f4026b51a3c0bef3758f4244fffd3fe12c93d76e37b44d0728295b5e27aa6"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
     constexpr std::string_view caller_hash =
@@ -2646,8 +2504,8 @@ parse_deuteros_amiga_title_post_exec_tail_flag_gate_first_callee_profile(
     const auto caller = stage_bytes.subspan(caller_address - stage.destination, caller_bytes.size());
     const auto routine = stage_bytes.subspan(entry_address - stage.destination, routine_bytes.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(caller_bytes.begin(), caller_bytes.end(), caller.begin())
-        || !std::equal(routine_bytes.begin(), routine_bytes.end(), routine.begin())
+        || !caller_bytes.matches(std::span<const std::uint8_t>(caller.begin(), caller_bytes.size()))
+        || !routine_bytes.matches(std::span<const std::uint8_t>(routine.begin(), routine_bytes.size()))
         || to_hex(sha256(caller)) != caller_hash
         || to_hex(sha256(routine)) != routine_hash) {
         throw std::runtime_error("Unsupported Deuteros post-Exec tail flag-gate first-callee profile");
@@ -2667,16 +2525,8 @@ parse_deuteros_amiga_title_post_exec_tail_flag_gate_copy_callee_profile(
     // RTS.  Its branch and its move/DBRA delay loop depend wholly on original RAM.
     constexpr std::array<std::uint32_t, 2> caller_addresses{{0x40638, 0x40662}};
     constexpr std::uint32_t entry_address = 0x1f238;
-    constexpr std::array<std::uint8_t, 6> caller_bytes{{
-        0x4e, 0xb9, 0x00, 0x01, 0xf2, 0x38,
-    }};
-    constexpr std::array<std::uint8_t, 34> routine_bytes{{
-        0x30, 0x39, 0x00, 0x01, 0xee, 0xd6, 0x67, 0x18,
-        0x20, 0x7c, 0x00, 0x01, 0xee, 0xc0, 0x22, 0x48,
-        0x10, 0x18, 0x72, 0x13, 0x12, 0xd8, 0x51, 0xc9,
-        0xff, 0xfc, 0x53, 0x79, 0x00, 0x01, 0xee, 0xd6,
-        0x4e, 0x75,
-    }};
+    constexpr ExecutableByteAnchor<6> caller_bytes{"88e2b3531aa5cb582d1ed1a672f9a524c89cbdf572c7a7d77c8cc7f4e6db695d"};
+    constexpr ExecutableByteAnchor<34> routine_bytes{"9c0ffcff9d88feedca2b8079b14f5a32fb51dac94bee60e1c477c746e7c6c4f0"};
     constexpr std::string_view stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
     constexpr std::string_view caller_hash =
@@ -2698,9 +2548,9 @@ parse_deuteros_amiga_title_post_exec_tail_flag_gate_copy_callee_profile(
     const auto second_caller = stage_bytes.subspan(caller_addresses[1] - stage.destination, caller_bytes.size());
     const auto routine = stage_bytes.subspan(entry_address - stage.destination, routine_bytes.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
-        || !std::equal(caller_bytes.begin(), caller_bytes.end(), first_caller.begin())
-        || !std::equal(caller_bytes.begin(), caller_bytes.end(), second_caller.begin())
-        || !std::equal(routine_bytes.begin(), routine_bytes.end(), routine.begin())
+        || !caller_bytes.matches(std::span<const std::uint8_t>(first_caller.begin(), caller_bytes.size()))
+        || !caller_bytes.matches(std::span<const std::uint8_t>(second_caller.begin(), caller_bytes.size()))
+        || !routine_bytes.matches(std::span<const std::uint8_t>(routine.begin(), routine_bytes.size()))
         || to_hex(sha256(first_caller)) != caller_hash
         || to_hex(sha256(second_caller)) != caller_hash
         || to_hex(sha256(routine)) != routine_hash) {
@@ -2725,17 +2575,7 @@ DeuterosAmigaFirstTitleExitCopy evaluate_deuteros_amiga_first_title_exit_copy(
     constexpr std::uint32_t stop_before_subroutine_address = 0x37f7a;
     constexpr std::string_view title_stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
-    constexpr std::array<std::uint8_t, 40> copy_prefix_bytes{{
-        0x4e, 0xb9, 0x00, 0x03, 0x88, 0x0a,
-        0x4e, 0xb9, 0x00, 0x02, 0x04, 0xfa,
-        0x41, 0xf9, 0x00, 0x06, 0x60, 0x00,
-        0x22, 0x7c, 0x00, 0x01, 0x30, 0x06,
-        0x30, 0x3c, 0x93, 0x92,
-        0x53, 0x40,
-        0x10, 0xd9,
-        0x51, 0xc8, 0xff, 0xfc,
-        0x61, 0x00, 0x00, 0x1e,
-    }};
+    constexpr ExecutableByteAnchor<40> copy_prefix_bytes{"51b8d6875ea6d0c35557c358d4fe22e4cac6cff79ead9df604d213cab1adfe1c"};
     constexpr std::string_view copy_prefix_hash =
         "51b8d6875ea6d0c35557c358d4fe22e4cac6cff79ead9df604d213cab1adfe1c";
     constexpr std::string_view source_hash =
@@ -2754,7 +2594,7 @@ DeuterosAmigaFirstTitleExitCopy evaluate_deuteros_amiga_first_title_exit_copy(
         entry_address - stage.destination, copy_prefix_bytes.size());
     const auto source = stage_bytes.subspan(source_address - stage.destination, byte_count);
     if (to_hex(sha256(stage_bytes)) != title_stage_hash
-        || !std::equal(copy_prefix_bytes.begin(), copy_prefix_bytes.end(), copy_prefix.begin())
+        || !copy_prefix_bytes.matches(std::span<const std::uint8_t>(copy_prefix.begin(), copy_prefix_bytes.size()))
         || to_hex(sha256(copy_prefix)) != copy_prefix_hash
         || to_hex(sha256(source)) != source_hash) {
         throw std::runtime_error("Unsupported Deuteros first title exit copy");
@@ -2783,12 +2623,7 @@ DeuterosAmigaFirstTitleExitReturnTail evaluate_deuteros_amiga_first_title_exit_r
     constexpr std::uint32_t preceding_subroutine_address = 0x37f7a;
     constexpr std::string_view title_stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
-    constexpr std::array<std::uint8_t, 28> return_tail_bytes{{
-        0x20, 0x39, 0x00, 0x02, 0x06, 0xa0,
-        0x23, 0xc0, 0x00, 0x01, 0x2f, 0xf8,
-        0x23, 0xfc, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0x2f, 0xfc,
-        0x4e, 0xf9, 0x00, 0x01, 0x28, 0x00,
-    }};
+    constexpr ExecutableByteAnchor<28> return_tail_bytes{"bacc75771f84068878d031ad87b0708c08911e85b605436c29d8d4c1faa2884c"};
     constexpr std::string_view return_tail_hash =
         "bacc75771f84068878d031ad87b0708c08911e85b605436c29d8d4c1faa2884c";
     const auto& stage = plan.title_stage;
@@ -2801,7 +2636,7 @@ DeuterosAmigaFirstTitleExitReturnTail evaluate_deuteros_amiga_first_title_exit_r
     const auto return_tail = stage_bytes.subspan(
         entry_address - stage.destination, return_tail_bytes.size());
     if (to_hex(sha256(stage_bytes)) != title_stage_hash
-        || !std::equal(return_tail_bytes.begin(), return_tail_bytes.end(), return_tail.begin())
+        || !return_tail_bytes.matches(std::span<const std::uint8_t>(return_tail.begin(), return_tail_bytes.size()))
         || to_hex(sha256(return_tail)) != return_tail_hash) {
         throw std::runtime_error("Unsupported Deuteros first title exit return tail");
     }
@@ -2847,12 +2682,7 @@ DeuterosAmigaSecondTitleExitReturnTail evaluate_deuteros_amiga_second_title_exit
     constexpr std::uint32_t entry_address = 0x38046;
     constexpr std::string_view title_stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
-    constexpr std::array<std::uint8_t, 28> return_tail_bytes{{
-        0x20, 0x39, 0x00, 0x02, 0x06, 0xa0,
-        0x23, 0xc0, 0x00, 0x01, 0x2f, 0xf8,
-        0x23, 0xfc, 0x00, 0x00, 0x00, 0x04, 0x00, 0x01, 0x2f, 0xfc,
-        0x4e, 0xf9, 0x00, 0x01, 0x28, 0x00,
-    }};
+    constexpr ExecutableByteAnchor<28> return_tail_bytes{"cf80103d5a580dc1e59f1090169c769a66a5d34c1112f14456e00713f1d078da"};
     constexpr std::string_view return_tail_hash =
         "cf80103d5a580dc1e59f1090169c769a66a5d34c1112f14456e00713f1d078da";
     const auto& stage = plan.title_stage;
@@ -2865,7 +2695,7 @@ DeuterosAmigaSecondTitleExitReturnTail evaluate_deuteros_amiga_second_title_exit
     const auto return_tail = stage_bytes.subspan(
         entry_address - stage.destination, return_tail_bytes.size());
     if (to_hex(sha256(stage_bytes)) != title_stage_hash
-        || !std::equal(return_tail_bytes.begin(), return_tail_bytes.end(), return_tail.begin())
+        || !return_tail_bytes.matches(std::span<const std::uint8_t>(return_tail.begin(), return_tail_bytes.size()))
         || to_hex(sha256(return_tail)) != return_tail_hash) {
         throw std::runtime_error("Unsupported Deuteros second title exit return tail");
     }
@@ -2882,12 +2712,7 @@ DeuterosAmigaThirdTitleExitReturnTail evaluate_deuteros_amiga_third_title_exit_r
     constexpr std::uint32_t entry_address = 0x38076;
     constexpr std::string_view title_stage_hash =
         "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
-    constexpr std::array<std::uint8_t, 28> return_tail_bytes{{
-        0x20, 0x39, 0x00, 0x02, 0x06, 0xa0,
-        0x23, 0xc0, 0x00, 0x01, 0x2f, 0xf8,
-        0x23, 0xfc, 0x00, 0x00, 0x00, 0x03, 0x00, 0x01, 0x2f, 0xfc,
-        0x4e, 0xf9, 0x00, 0x01, 0x28, 0x00,
-    }};
+    constexpr ExecutableByteAnchor<28> return_tail_bytes{"25c2f6bf241a863d0b16359553dfae9a82953dfbc25035db71634a0b369df217"};
     constexpr std::string_view return_tail_hash =
         "25c2f6bf241a863d0b16359553dfae9a82953dfbc25035db71634a0b369df217";
     const auto& stage = plan.title_stage;
@@ -2900,7 +2725,7 @@ DeuterosAmigaThirdTitleExitReturnTail evaluate_deuteros_amiga_third_title_exit_r
     const auto return_tail = stage_bytes.subspan(
         entry_address - stage.destination, return_tail_bytes.size());
     if (to_hex(sha256(stage_bytes)) != title_stage_hash
-        || !std::equal(return_tail_bytes.begin(), return_tail_bytes.end(), return_tail.begin())
+        || !return_tail_bytes.matches(std::span<const std::uint8_t>(return_tail.begin(), return_tail_bytes.size()))
         || to_hex(sha256(return_tail)) != return_tail_hash) {
         throw std::runtime_error("Unsupported Deuteros third title exit return tail");
     }
