@@ -16,6 +16,12 @@ never claim parity or invent behaviour that evidence does not support.
   as explicit preservation boundaries.
 - Use disassembly, raw-media inspection, and reproducible tests. Record file
   offsets, runtime addresses, hashes, and uncertainty in `docs/PRESERVATION.md`.
+- Never commit or push raw/generated disassembly listings, decompiler projects,
+  extracted executable bytes, emulator dumps, or original-derived report
+  bodies. Keep them under `/home/yeager/.cache/project-eon-tools/`, outside
+  both the repository and original media. Git may contain only the tools and
+  tests needed to reproduce them plus preservation metadata such as hashes,
+  offsets, address ranges, line counts, uncertainty, and function maps.
 
 ## Capture recorder restoration
 
@@ -67,6 +73,8 @@ never claim parity or invent behaviour that evidence does not support.
   maintainer explicitly requests one.
 - Package no commercial data. Keep direct archive input and data immutability
   covered by tests.
+- Run `python3 tools/verify_repository_artifacts.py` before pushing; CI must
+  reject tracked original media and raw/generated reverse-engineering output.
 
 ## Git workflow
 

@@ -4,3 +4,26 @@ analysis-work/
 build/
 __pycache__/
 *.pyc
+
+# Original-derived reverse-engineering output stays in the external tool cache.
+/disassembly-output/
+/disassembly-report/
+/disassembly-reports/
+*.disassembly.md
+*.disassembly.txt
+*.disassembly.jsonl
+*.objdump
+*.lst
+*.idb
+*.i64
+
+# Commercial media and extracted executable members must never be committed.
+*.adf
+*.msa
+*.st
+*.img
+*.bin
+*.exe
+*.com
+*.prg
+*.tos
