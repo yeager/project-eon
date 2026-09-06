@@ -532,6 +532,13 @@ The typed `$217e4` CIA sample now drives native byte BSET and the owned
 existing resource-0/1 transfer transaction, which resets loop-local receipts
 and reaches fresh `$21276` preparation. Unproven selectors and unknown return
 addresses remain separate boundaries; no alternate media is substituted.
+The unconfigured bootstrap `$12a76 -> $13000` route now crosses library
+opening, both memory-query branches and the two initial graphics calls,
+reaching `$1306c`. The first query requires the returned Z flag explicitly;
+it is not inferred from D0. Continue native view/viewport structure setup
+from `$1306c`, followed by the remaining graphics allocation/assembly calls.
+Do not confuse this bootstrap routine with the separately loaded title whose
+destination is also `$13000`.
 The unconfigured `$13000` graphics initialization remains separate. Opening
 acquisition now retains the genuine 24-byte bootstrap profile table in owned
 memory from its boot-track source. Tests consume that production checkpoint,

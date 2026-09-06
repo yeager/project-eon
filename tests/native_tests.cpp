@@ -7001,6 +7001,40 @@ int main() {
                                             assert(connected.next_call_address==(pointer==0x1ab00?0x12a7eU:0x12a76U));
                                             assert(connected.local_call_target==(pointer==0x1ab00?0x12932U:0x13000U));
                                             assert(command_read(0x12856,4)==0xffffffff&&command_read(0x12844,1)==0);
+                                            if(pointer==0x80000){
+                                                auto graphics=eon::execute_deuteros_amiga_outer_service(connected,
+                                                    {13,0x13008,4,command_read(4,4),0x1300c,0x13010,0x123400,-0x228},command_read,command_write);
+                                                assert(command_read(0x12fec,4)==0x123400&&command_read(0x12ff4,4)==0xab00);
+                                                assert(graphics.next_call_address==0x13028&&graphics.d1_value==4);
+                                                auto available=eon::DeuterosAmigaObservedLoopRequestService{
+                                                    14,0x13024,4,command_read(4,4),0x13028,0x1302c,0,-0xd8};
+                                                bool missing_flags=false;
+                                                try{(void)eon::execute_deuteros_amiga_outer_service(graphics,available,command_read,command_write);}
+                                                catch(const std::runtime_error&){missing_flags=true;}
+                                                assert(missing_flags);
+                                                available.result_status_register=0; // Z clear, even though D0 is zero.
+                                                assert(eon::execute_deuteros_amiga_outer_service(graphics,available,command_read,command_write).next_call_address==0x13058);
+                                                available.result_status_register=4;available.result_d0=123;
+                                                const auto second=eon::execute_deuteros_amiga_outer_service(graphics,available,command_read,command_write);
+                                                assert(second.next_call_address==0x13034&&second.d1_value==2);
+                                                for(const auto amount:{0U,0x7ffffU,0x80000U,0x7fffffffU,0x80000000U,0xffffffffU}){
+                                                    command_write(0x12ff4,eon::MemoryTransferElementWidth::longword,0xab00);
+                                                    auto initialized=eon::execute_deuteros_amiga_outer_service(second,
+                                                        {15,0x13030,4,command_read(4,4),0x13034,0x13038,amount,-0xd8},command_read,command_write);
+                                                    const bool large=amount>=0x80000&&amount<0x80000000;
+                                                    assert(command_read(0x12ff4,4)==(large?0x8ab00U:0xab00U));
+                                                    assert(initialized.next_call_address==0x13058&&initialized.a1_value==0x12e00);
+                                                    initialized=eon::execute_deuteros_amiga_outer_service(initialized,
+                                                        {16,0x13052,0x12fec,0x123400,0x13058,0x1305c,0,-0x168},command_read,command_write);
+                                                    assert(initialized.next_call_address==0x13068&&initialized.a0_value==0x12e12);
+                                                    initialized=eon::execute_deuteros_amiga_outer_service(initialized,
+                                                        {17,0x13062,0x12fec,0x123400,0x13068,0x1306c,0,-0xcc},command_read,command_write);
+                                                    assert(initialized.next_instruction_address==0x1306c&&initialized.next_call_address==0);
+                                                }
+                                                eon::DeuterosAmigaMainStageLoopGraphicsPlan title_entry;
+                                                title_entry.next_instruction_address=0x13000;
+                                                assert(!eon::deuteros_amiga_bootstrap_graphics_boundary(title_entry));
+                                            }
                                             if(pointer==0x1ab00){
                                                 const eon::DeuterosAmigaObservedLoopRequestService request{
                                                     13,0x1294c,4,command_read(4,4),0x12950,0x12954,0xdeadbeef,-0x1c8};

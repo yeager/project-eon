@@ -8189,3 +8189,36 @@ both supported resource selections, rejection of selectors 2 and `$ffff`,
 and the distinction between proven `$217f6` and unproven `$217f4` returns.
 These component tests supplement the existing genuine-media transfer tests;
 they are not a full hardware-driven restart capture or gameplay-parity claim.
+
+### Deuteros bootstrap graphics memory-selection prefix
+
+The caller-connected `$12a76 -> $13000` path now executes native prefixes
+through `$1306c`. This admission requires that local call and its `$12a7a`
+return, not a bare program entry at `$13000`; the loaded title has a different
+image at that same address and is deliberately not admitted as this routine.
+
+The `$1300c/-$228` return is stored at `$12fec`. Native code sets the default
+buffer base `$12ff4` to `$ab00`, D0 to `$ab00` and D1 to 4 before the
+`$13028/-$d8` query. Its following BNE has **no intervening TST instruction**:
+the observation now carries an optional raw result status register, mandatory
+at this site, and the native branch uses its Z bit. A missing status register
+is rejected; a zero/nonzero D0 does not manufacture the condition code.
+
+Z set continues to the second query `$13034/-$d8` with D1 equal to 2. The
+following CMP.L/BLT is evaluated natively as a signed 32-bit comparison
+against `$80000`. A sufficiently large nonnegative result selects `$8ab00`;
+negative results and values below the threshold retain `$ab00`. Z clear on
+the first query bypasses the second query without this replacement.
+
+Both routes prepare A1 `$12e00` for `$13058/-$168`, using owned `$12fec` as
+the library base. Its return prepares A0 `$12e12` for `$13068/-$cc`; that
+return reaches the `$1306c` structure-building boundary. These typed returns
+do not invent the libraries' writes to view or viewport structures. The next
+native structure stores and graphics-generated pointer chains remain work.
+
+Source gate: ADF `$3400`, 108 bytes (runtime `$13000..$1306b`), SHA-256
+`ca2490219557649ff335d47ccc9d15fcbaa34da2ab9c723feb6bcea147970c0f`.
+Controlled tests distinguish returned flags from D0, reject missing flags,
+exercise six signed memory-size boundary values, follow both graphics returns,
+and reject conflation with the loaded title entry. No capture or full graphics
+initialization parity is claimed.

@@ -1418,7 +1418,22 @@ struct DeuterosAmigaObservedLoopRequestService {
     std::uint32_t read_instruction=0,source_address=0,exec_base=0;
     std::uint32_t call_address=0,return_address=0,result_d0=0;
     std::int16_t vector=0;
+    std::optional<std::uint16_t> result_status_register=std::nullopt;
 };
+inline std::optional<DeuterosAmigaObservedLoopRequestService>
+deuteros_amiga_bootstrap_graphics_boundary(const DeuterosAmigaMainStageLoopGraphicsPlan&plan){
+    if(plan.next_call_address==0x12a76&&plan.local_call_target==0x13000&&plan.next_return_address==0x12a7a)
+        return DeuterosAmigaObservedLoopRequestService{0,0x13008,4,0,0x1300c,0x13010,0,-0x228};
+    if(plan.next_call_address==0x13028&&plan.next_return_address==0x1302c&&plan.next_vector==-0xd8)
+        return DeuterosAmigaObservedLoopRequestService{0,0x13024,4,0,0x13028,0x1302c,0,-0xd8};
+    if(plan.next_call_address==0x13034&&plan.next_return_address==0x13038&&plan.next_vector==-0xd8)
+        return DeuterosAmigaObservedLoopRequestService{0,0x13030,4,0,0x13034,0x13038,0,-0xd8};
+    if(plan.next_call_address==0x13058&&plan.next_return_address==0x1305c&&plan.next_vector==-0x168)
+        return DeuterosAmigaObservedLoopRequestService{0,0x13052,0x12fec,0,0x13058,0x1305c,0,-0x168};
+    if(plan.next_call_address==0x13068&&plan.next_return_address==0x1306c&&plan.next_vector==-0xcc)
+        return DeuterosAmigaObservedLoopRequestService{0,0x13062,0x12fec,0,0x13068,0x1306c,0,-0xcc};
+    return std::nullopt;
+}
 inline std::optional<DeuterosAmigaObservedLoopRequestService>
 deuteros_amiga_main_reentry_service_boundary(const DeuterosAmigaMainStageLoopGraphicsPlan&plan){
     if(plan.next_instruction_address==0x2178e)
@@ -1487,6 +1502,39 @@ template<class Read,class Write>
 DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
     DeuterosAmigaMainStageLoopGraphicsPlan plan,const DeuterosAmigaObservedLoopRequestService&o,
     Read read,Write write){
+    if(const auto boundary=deuteros_amiga_bootstrap_graphics_boundary(plan)){
+        if(o.read_instruction!=boundary->read_instruction||o.source_address!=boundary->source_address
+            ||o.call_address!=boundary->call_address||o.return_address!=boundary->return_address
+            ||o.vector!=boundary->vector||read(o.source_address,4)!=o.exec_base
+            ||(o.call_address==0x13028&&!o.result_status_register))
+            throw std::runtime_error("Deuteros bootstrap graphics return lacks matching boundary or flags");
+        plan.d0_value=o.result_d0;plan.a6_value=o.exec_base;
+        plan.next_instruction_address=0;plan.local_call_target=0;
+        if(o.call_address==0x1300c){
+            write(0x12fec,MemoryTransferElementWidth::longword,o.result_d0);
+            write(0x12ff4,MemoryTransferElementWidth::longword,0xab00);
+            plan.d0_value=0xab00;plan.d1_value=4;
+            plan.next_call_address=0x13028;plan.next_return_address=0x1302c;plan.next_vector=-0xd8;
+            plan.pending_read_instruction=0x13024;plan.pending_read_address=4;
+        }else if(o.call_address==0x13028&&(*o.result_status_register&4U)){
+            // BNE immediately follows JSR. It tests returned Z, not inferred D0.
+            plan.d1_value=2;plan.next_call_address=0x13034;plan.next_return_address=0x13038;
+            plan.next_vector=-0xd8;plan.pending_read_instruction=0x13030;plan.pending_read_address=4;
+        }else if(o.call_address==0x13028||o.call_address==0x13034){
+            if(o.call_address==0x13034&&!(o.result_d0&0x80000000U)&&o.result_d0>=0x80000){
+                plan.d0_value=0x8ab00;write(0x12ff4,MemoryTransferElementWidth::longword,plan.d0_value);
+            }
+            plan.a1_value=0x12e00;plan.next_call_address=0x13058;plan.next_return_address=0x1305c;
+            plan.next_vector=-0x168;plan.pending_read_instruction=0x13052;plan.pending_read_address=0x12fec;
+        }else if(o.call_address==0x13058){
+            plan.a0_value=0x12e12;plan.next_call_address=0x13068;plan.next_return_address=0x1306c;
+            plan.next_vector=-0xcc;plan.pending_read_instruction=0x13062;plan.pending_read_address=0x12fec;
+        }else{
+            plan.next_instruction_address=0x1306c;plan.next_call_address=0;plan.next_return_address=0;
+            plan.next_vector=0;plan.pending_read_instruction=0;plan.pending_read_address=0;
+        }
+        return plan;
+    }
     if(const auto boundary=deuteros_amiga_main_reentry_service_boundary(plan)){
         if(o.read_instruction!=boundary->read_instruction||o.source_address!=boundary->source_address
             ||o.call_address!=boundary->call_address||o.return_address!=boundary->return_address
@@ -1961,6 +2009,8 @@ public:
                 !="e4826a60a00a9c9ed6797e5636ca0e99f038e10cea9d732ebe53452ca659a658")
             throw std::runtime_error("Unsupported Deuteros bootstrap re-entry route");
         const auto main_stage=disk.bytes(plan.main_stage.disk_offset,plan.main_stage.length);
+        if(to_hex(sha256(disk.bytes(0x3400,108)))!="ca2490219557649ff335d47ccc9d15fcbaa34da2ab9c723feb6bcea147970c0f")
+            throw std::runtime_error("Unsupported Deuteros bootstrap graphics initialization");
         if(to_hex(sha256(disk.bytes(0x6fe4,20)))!="4136558f36e9cd0c89cd1828353a95ac05fa79d58e11bd30b8063b7d15e96c50")
             throw std::runtime_error("Unsupported Deuteros re-entry CIA resource route");
         if(to_hex(sha256(disk.bytes(0x6f8e,80)))!="baa9d531e015bf1199340078fbb3ac620280e07969563a5c563ff38cf83bddc9"
@@ -4619,6 +4669,14 @@ public:
         const DeuterosAmigaMainStageLoopGraphicsPlan&plan){
         if(!main_stage_loop_graphics_plan_)return std::nullopt;
         const auto& current=*main_stage_loop_graphics_plan_;
+        if(const auto boundary=deuteros_amiga_bootstrap_graphics_boundary(current)){
+            if(o.trace_sequence<=last_command_sequence_||o.read_instruction!=boundary->read_instruction
+                ||o.source_address!=boundary->source_address||o.call_address!=boundary->call_address
+                ||o.return_address!=boundary->return_address||o.vector!=boundary->vector
+                ||plan.a6_value!=o.exec_base||(o.call_address==0x13028&&!o.result_status_register))
+                throw std::runtime_error("Deuteros bootstrap graphics return is invalid or stale");
+            main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
+        }
         if(const auto boundary=deuteros_amiga_main_reentry_service_boundary(current)){
             if(o.trace_sequence<=last_command_sequence_||o.read_instruction!=boundary->read_instruction
                 ||o.source_address!=boundary->source_address||o.call_address!=boundary->call_address
