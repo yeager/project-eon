@@ -106,6 +106,15 @@ public:
     [[nodiscard]] const std::optional<DeuterosAmigaTitleStageSession>& title_stage_session() const {
         return title_stage_session_;
     }
+    // Rebuild the title-stage execution receipts after the original
+    // profile-five split reload has returned to the loaded $13000 entry.
+    // The replacement is prepared completely before publication, so a
+    // rejected profile never destroys the still-live session. Native memory
+    // is owned by the coordinator and is deliberately not touched here.
+    [[nodiscard]] std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
+    prepare_title_stage_profile_five() const;
+    [[nodiscard]] std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
+    reenter_title_stage_profile_five();
     [[nodiscard]] std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance> advance_title_local_prefix() { return title_stage_session_ ? title_stage_session_->execute_local_prefix() : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleExecBoundaryCheckpoint> observe_title_exec_return(const DeuterosAmigaObservedExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_exec_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleOpenLibraryBoundaryCheckpoint> observe_title_open_library_return(const DeuterosAmigaObservedOpenLibraryReturn& o) { return title_stage_session_ ? title_stage_session_->observe_open_library_return(o) : std::nullopt; }

@@ -50,6 +50,10 @@ enum class RuntimeSessionKind {
     // The verified opening handed one exact original title stage to its first
     // unresolved Exec boundary. It is not a rendered title or input session.
     deuteros_amiga_title_stage,
+    // Profile five completed its split title reload and returned to the
+    // owned $13000 JMP stub. No title code runs until the explicit local
+    // program-entry advance validates that reconstructed runtime image.
+    deuteros_amiga_title_program_entry,
     // A v4/v5 trace was revalidated at consumption time. This remains an
     // immutable provenance checkpoint with no renderer, audio or input right.
     deuteros_amiga_title_display_trace_boundary,

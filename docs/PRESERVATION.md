@@ -8026,6 +8026,21 @@ batch. The second read joins the existing `$12aee/$12afc/$12b0a` cleanup;
 its final RTS retains destination `$13000` and profile word 5. No emulator
 memory, extracted file, or synthetic replacement enters this transaction.
 
+That `$13000` address is now an explicit image-sensitive program-entry
+boundary. In the restored title image its six owned bytes are
+`4ef9 00040426` (ADF `+$6e000`, SHA-256
+`410c25318444feb62dc9df59396b5940ff4631c153984f7d908fc3366e280cfe`);
+they must not be confused with the earlier bootstrap graphics routine loaded
+at the same address. The coordinator publishes a no-capability profile-five
+entry snapshot containing the owned controller pointer and runtime-memory
+checksum. A separate deterministic advance revalidates that checksum and JMP,
+then writes the proven `A1->$206a0`, `$4040e.w=5`, `$3717e.b=5`, and
+`$38092.w=$0101` effects before installing stack `$40b62`. It starts a fresh
+title-stage receipt at the shared `$40456` Exec boundary. Profile five never
+performs profile one's `$19d52.b=1` store. Preparation happens against cloned
+memory and a temporary session; stale title callbacks and cached display
+receipts are cleared only when the complete transaction commits.
+
 The production-checkpoint profile matrix now checks these request fields,
 both disk offsets, the mutable copy, all eight ordered returns including the
 shared cleanup, and the resulting `$13000` continuation.

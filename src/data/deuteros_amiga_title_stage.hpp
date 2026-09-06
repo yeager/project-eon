@@ -275,11 +275,12 @@ struct DeuterosAmigaTitleEntryPrefix {
     std::uint32_t stop_before_exec_address = 0;
 };
 
-// The title-entry instructions before the first Exec vector make exactly two
-// caller-proven writes for the live profile-one route.  Retain them as a
+// The title-entry instructions before the first Exec vector make two known
+// writes for profile one and three for profile five. Retain them as a
 // sparse, in-memory result instead of allocating an imagined Amiga address
 // space or changing the source ADF.  `width_bytes` is deliberately explicit:
-// the mode store is a word and the normal-mode store is a byte.
+// the profile-five literal at $38092 is also a word. The preceding A1 store
+// to $206a0 is not included because its value remains coordinator-owned.
 struct DeuterosAmigaTitleEntryWrite {
     std::uint32_t address = 0;
     std::uint8_t width_bytes = 0;
@@ -290,7 +291,8 @@ struct DeuterosAmigaTitleEntryWrite {
 
 struct DeuterosAmigaTitleEntryPrefixState {
     std::uint16_t incoming_profile = 0;
-    std::array<DeuterosAmigaTitleEntryWrite, 2> writes{};
+    std::array<DeuterosAmigaTitleEntryWrite, 3> writes{};
+    std::size_t write_count = 0;
     std::uint32_t stop_before_exec_address = 0;
 };
 
@@ -306,7 +308,7 @@ struct DeuterosAmigaTitleExecPrelude {
     std::uint32_t stop_before_exec_base_read_address = 0;
 };
 
-// Materializes only the two direct stores described above.  This is the last
+// Materializes only the profile-selected direct stores described above. This is the last
 // wholly local execution result at the title handoff; it never supplies the
 // bootstrap A1/controller value, calls Exec, or models an Amiga OS state.
 [[nodiscard]] DeuterosAmigaTitleEntryPrefixState
@@ -314,7 +316,7 @@ materialize_deuteros_amiga_title_entry_prefix_state(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     std::uint16_t incoming_profile);
 
-// Executes exactly `MOVEA.L #$40b62,A7` after the observed profile-one title
+// Executes exactly `MOVEA.L #$40b62,A7` after the observed profile-selected title
 // prefix.  It stops before `MOVEA.L $4.W,A6`; no Exec base, vector, stack
 // memory, graphics library, or custom hardware is supplied or touched.
 [[nodiscard]] DeuterosAmigaTitleExecPrelude

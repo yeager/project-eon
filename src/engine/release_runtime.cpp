@@ -298,6 +298,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
 void ReleaseRuntimeCoordinator::reset() {
     deuteros_amiga_bootstrap_frame_.reset();
     deuteros_amiga_bootstrap_frame_generation_ = 0;
+    deuteros_amiga_title_program_entry_.reset();
     native_runtime_memory_.reset();
     millennium_atari_config_consumer_.reset();
     millennium_dos_title_to_game_.reset();
@@ -2871,6 +2872,81 @@ ReleaseRuntimeCoordinator::deuteros_amiga_bootstrap_frame() const {
     return deuteros_amiga_bootstrap_frame_;
 }
 
+std::optional<DeuterosAmigaTitleProgramEntrySnapshot>
+ReleaseRuntimeCoordinator::deuteros_amiga_title_program_entry() const {
+    if (!active_ || !session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_title_program_entry) {
+        return std::nullopt;
+    }
+    return deuteros_amiga_title_program_entry_;
+}
+
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::advance_deuteros_amiga_title_program_entry() {
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if (!active_ || !session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_title_program_entry
+        || !deuteros_amiga_ || !native_runtime_memory_ || !deuteros_amiga_title_program_entry_) {
+        result.error = "Deuteros title program entry requires its active owned boundary";
+        return result;
+    }
+    try {
+        auto memory = *native_runtime_memory_;
+        constexpr std::array<std::uint8_t, 6> expected{{0x4e,0xf9,0x00,0x04,0x04,0x26}};
+        for (std::size_t i=0;i<expected.size();++i) {
+            const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,
+                deuteros_amiga_title_program_entry_->entry_address+i});
+            if (!byte || *byte!=expected[i])
+                throw std::runtime_error("Deuteros title program-entry JMP is not owned");
+        }
+        if (deuteros_amiga_title_program_entry_->runtime_memory_checksum!=memory.checkpoint().checksum
+            ||deuteros_amiga_title_program_entry_->jmp_sha256!=to_hex(sha256(expected)))
+            throw std::runtime_error("Deuteros title program-entry ownership changed");
+
+        const auto prefix=deuteros_amiga_->prepare_title_stage_profile_five();
+        if(!prefix||prefix->exec_boundary_address!=0x40456)
+            throw std::runtime_error("Deuteros profile-five title re-entry was not admitted");
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-title-profile-five-entry",true,{}};
+        batch.effects.reserve(prefix->write_count+1);
+        batch.effects.push_back({1,
+            {NativeRuntimeAddressSpace::linear,std::nullopt,0x206a0},
+            MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,
+            deuteros_amiga_title_program_entry_->controller_pointer});
+        for(std::size_t index=0;index<prefix->write_count;++index){
+            const auto& write=prefix->writes[index];
+            if(write.width_bytes!=1&&write.width_bytes!=2&&write.width_bytes!=4)
+                throw std::runtime_error("Deuteros title re-entry prefix width is invalid");
+            batch.effects.push_back({batch.effects.size()+1,
+                {NativeRuntimeAddressSpace::linear,std::nullopt,write.address},
+                static_cast<MemoryTransferElementWidth>(write.width_bytes),
+                NativeRuntimeByteOrder::big_endian,write.value});
+        }
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted)throw std::runtime_error(applied.error);
+
+        const auto committed=deuteros_amiga_->reenter_title_stage_profile_five();
+        if(!committed||*committed!=*prefix)
+            throw std::runtime_error("Deuteros profile-five title re-entry changed before commit");
+        *native_runtime_memory_=std::move(memory);
+        deuteros_amiga_title_program_entry_.reset();
+        deuteros_amiga_title_load_copy_.reset();
+        deuteros_amiga_title_load_copy_generation_=0;
+        deuteros_amiga_title_command_generation_=0;
+        deuteros_amiga_title_service_setup_plan_.reset();
+        deuteros_amiga_title_second_service_plan_.reset();
+        deuteros_amiga_title_third_service_plan_.reset();
+        deuteros_amiga_title_fourth_service_plan_.reset();
+        deuteros_amiga_title_fifth_service_plan_.reset();
+        deuteros_amiga_title_planar_base_.reset();
+        deuteros_amiga_title_planar_generation_=0;
+        deuteros_amiga_title_planar_surface_.reset();
+        deuteros_amiga_title_display_trace_.reset();
+        session_snapshot_=make_runtime_session_snapshot(*active_,RuntimeSessionKind::deuteros_amiga_title_stage);
+        result.accepted=true;
+    }catch(const std::exception& e){result.error=e.what();}
+    return result;
+}
+
 #define EON_DEUTEROS_TITLE_ADVANCE(name, expression) \
 DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::name { \
     DeuterosAmigaTitleDependencyObservationResult result; \
@@ -4927,6 +5003,7 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_service(const DeuterosAm
             if(!applied.accepted)throw std::runtime_error(applied.error);
         }
         std::optional<DeuterosAmigaBootstrapFrameSnapshot> bootstrap_frame;
+        std::optional<DeuterosAmigaTitleProgramEntrySnapshot> program_entry;
         // Publish only after the observed graphics.library LoadRGB4 call has
         // returned. Reaching its call boundary after decrunch/deinterleave is
         // necessary, but is not evidence that the original accepted it.
@@ -4937,6 +5014,19 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_service(const DeuterosAm
             if(!bootstrap_frame){
                 result.error="Deuteros bootstrap frame bytes did not match the admitted frame";return result;
             }
+        }
+        if(current->next_call_address==0x12b0a&&plan.next_instruction_address==0x13000
+            &&(plan.d0_value&0xffffU)==5&&plan.next_call_address==0&&plan.next_vector==0){
+            constexpr std::array<std::uint8_t,6> expected{{0x4e,0xf9,0x00,0x04,0x04,0x26}};
+            std::array<std::uint8_t,6> owned{};
+            for(std::size_t i=0;i<owned.size();++i){
+                const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,0x13000+i});
+                if(!byte){result.error="Deuteros title program-entry JMP is not owned";return result;}
+                owned[i]=*byte;
+            }
+            if(owned!=expected){result.error="Deuteros title program-entry JMP did not match admitted media";return result;}
+            program_entry=DeuterosAmigaTitleProgramEntrySnapshot{
+                5,0x13000,0x40426,plan.a1_value,memory.checkpoint().checksum,to_hex(sha256(owned))};
         }
         if(!deuteros_amiga_->observe_main_stage_outer_service(o,service_plan)){
             result.error="Deuteros outer service disappeared before commit";return result;
@@ -4949,7 +5039,13 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_service(const DeuterosAm
             deuteros_amiga_bootstrap_frame_=std::move(bootstrap_frame);
             ++deuteros_amiga_bootstrap_frame_generation_;
         }
-        *native_runtime_memory_=std::move(memory);result.accepted=true;
+        *native_runtime_memory_=std::move(memory);
+        if(program_entry){
+            deuteros_amiga_title_program_entry_=std::move(program_entry);
+            session_snapshot_=make_runtime_session_snapshot(
+                *active_,RuntimeSessionKind::deuteros_amiga_title_program_entry);
+        }
+        result.accepted=true;
     }catch(const std::exception&e){result.error=e.what();}
     return result;
 }

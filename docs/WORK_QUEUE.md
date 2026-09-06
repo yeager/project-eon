@@ -509,6 +509,13 @@ four private phases, performs both hash-locked media transfers and the
 owned-memory copy, then joins the three-return common cleanup and reaches the
 real `$13000` program entry with profile 5 retained. Failed or reordered
 returns roll back their pending effects.
+The restored `$13000` JMP is now a distinct typed program-entry boundary,
+not the bootstrap graphics routine that previously occupied that address.
+Its explicit local advance validates owned runtime bytes/checksum, applies the
+profile-five controller/mode stores, resets stale title receipts, and rejoins
+the shared title startup at `$40456` without executing profile-one's normal
+mode store. The SDL runtime advances this deterministic boundary before its
+next presentation query so production cannot remain stranded at the JMP.
 The successful `$12ad2` path now transfers the exact parsed main/title range
 into private native memory, clears the request length and issues command 9,
 then admits the separate `$12aee`, `$12afc` and `$12b0a` returns. Final RTS

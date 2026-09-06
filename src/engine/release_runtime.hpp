@@ -123,6 +123,18 @@ struct DeuterosAmigaTitleDependencyChainCheckpoint {
 };
 struct DeuterosAmigaTitleDependencyObservationResult { bool accepted=false; std::string error; };
 
+// Immutable ownership boundary reached only after profile five has restored
+// the title image and the final bootstrap service has returned to its real
+// entry stub.  The bytes remain in coordinator-owned runtime memory.
+struct DeuterosAmigaTitleProgramEntrySnapshot {
+    std::uint16_t profile = 5;
+    std::uint32_t entry_address = 0x13000;
+    std::uint32_t target_address = 0x40426;
+    std::uint32_t controller_pointer = 0;
+    std::uint64_t runtime_memory_checksum = 0;
+    std::string jmp_sha256;
+};
+
 // Media-safe facts for the exact Deuteros Atari ST bootstrap boundary.  The
 // retained prefixes are only local copy/entry results; this DTO cannot select
 // a protected state, issue Floprd, or cross the unrecovered XBIOS boundary.
@@ -773,6 +785,10 @@ public:
     deuteros_amiga_title_dependency_chain_checkpoint() const;
     [[nodiscard]] std::optional<DeuterosAmigaBootstrapFrameSnapshot>
     deuteros_amiga_bootstrap_frame() const;
+    [[nodiscard]] std::optional<DeuterosAmigaTitleProgramEntrySnapshot>
+    deuteros_amiga_title_program_entry() const;
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    advance_deuteros_amiga_title_program_entry();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_local_prefix();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_exec_return(DeuterosAmigaObservedExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_open_library_return(DeuterosAmigaObservedOpenLibraryReturn);
@@ -1220,6 +1236,7 @@ private:
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;
     std::optional<DeuterosAmigaBootstrapFrameSnapshot> deuteros_amiga_bootstrap_frame_;
     std::uint64_t deuteros_amiga_bootstrap_frame_generation_ = 0;
+    std::optional<DeuterosAmigaTitleProgramEntrySnapshot> deuteros_amiga_title_program_entry_;
     std::optional<DeuterosAmigaTitleServiceSetupLocalPlan> deuteros_amiga_title_service_setup_plan_;
     std::optional<DeuterosAmigaTitleSecondServiceLocalPlan> deuteros_amiga_title_second_service_plan_;
     std::optional<DeuterosAmigaTitleThirdServiceLocalPlan> deuteros_amiga_title_third_service_plan_;

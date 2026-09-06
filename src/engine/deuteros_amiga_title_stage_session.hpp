@@ -32,7 +32,7 @@ public:
     [[nodiscard]] const DeuterosAmigaTitleEntryPrefix& entry_prefix() const noexcept {
         return entry_prefix_;
     }
-    // These two writes are the complete caller-proven title RAM effect before
+    // These writes are the complete caller-proven profile-selected RAM effect before
     // the first unresolved Exec vector. They are sparse records only; no
     // synthetic address space is allocated or exposed.
     [[nodiscard]] const DeuterosAmigaTitleEntryPrefixState& entry_prefix_state() const noexcept {
@@ -84,9 +84,11 @@ public:
     // writes followed by the A7 literal. It deliberately stops before the
     // first Exec-base read and never creates host memory for those addresses.
     struct LocalPrefixAdvance {
-        std::array<DeuterosAmigaTitleEntryWrite, 2> writes{};
+        std::array<DeuterosAmigaTitleEntryWrite, 3> writes{};
+        std::size_t write_count = 0;
         std::uint32_t stack_pointer_value = 0;
         std::uint32_t exec_boundary_address = 0;
+        bool operator==(const LocalPrefixAdvance&) const = default;
     };
     [[nodiscard]] std::optional<LocalPrefixAdvance> execute_local_prefix();
     [[nodiscard]] bool local_prefix_executed() const noexcept { return local_prefix_executed_; }

@@ -34,6 +34,8 @@ std::string_view runtime_session_kind_label(const RuntimeSessionKind kind) {
     case RuntimeSessionKind::millennium_atari_bootstrap: return "MILLENNIUM ATARI ST BOOTSTRAP";
     case RuntimeSessionKind::deuteros_amiga_opening: return "DEUTEROS AMIGA OPENING";
     case RuntimeSessionKind::deuteros_amiga_title_stage: return "DEUTEROS AMIGA TITLE STAGE";
+    case RuntimeSessionKind::deuteros_amiga_title_program_entry:
+        return "DEUTEROS AMIGA TITLE PROGRAM ENTRY";
     case RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary:
         return "DEUTEROS AMIGA TITLE DISPLAY TRACE BOUNDARY";
     case RuntimeSessionKind::deuteros_atari_bootstrap: return "DEUTEROS ATARI ST BOOTSTRAP";
@@ -75,6 +77,7 @@ RuntimeInputContract runtime_input_contract_for_session(const RuntimeSessionKind
     case RuntimeSessionKind::millennium_amiga_bootstrap:
     case RuntimeSessionKind::millennium_atari_bootstrap:
     case RuntimeSessionKind::deuteros_amiga_title_stage:
+    case RuntimeSessionKind::deuteros_amiga_title_program_entry:
     case RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary:
     case RuntimeSessionKind::deuteros_atari_bootstrap:
         return RuntimeInputContract::none;
@@ -143,6 +146,7 @@ bool runtime_session_declaration_is_valid(const RuntimeSessionKind kind,
     case RuntimeSessionKind::millennium_amiga_bootstrap:
     case RuntimeSessionKind::millennium_atari_bootstrap:
     case RuntimeSessionKind::deuteros_amiga_title_stage:
+    case RuntimeSessionKind::deuteros_amiga_title_program_entry:
     case RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary:
     case RuntimeSessionKind::deuteros_atari_bootstrap:
         break;
@@ -197,6 +201,7 @@ RuntimeSessionSnapshot make_runtime_session_snapshot(const ResolvedLaunchRequest
         snapshot.capabilities.admitted_input = true;
         break;
     case RuntimeSessionKind::deuteros_amiga_title_stage:
+    case RuntimeSessionKind::deuteros_amiga_title_program_entry:
     case RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary:
         // The title handoff proves only the loaded original interval and its
         // local pre-Exec writes. Do not retain opening presentation/audio or

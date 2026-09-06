@@ -11,7 +11,10 @@ DeuterosAmigaTitleStageSession::DeuterosAmigaTitleStageSession(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const std::uint16_t incoming_profile)
     : disk_(&disk), stage_(plan.title_stage), profile_(parse_deuteros_amiga_title_stage(disk, plan)),
-      entry_prefix_(execute_deuteros_amiga_title_entry_prefix(disk, plan, incoming_profile)),
+      entry_prefix_(incoming_profile == 1
+          ? execute_deuteros_amiga_title_entry_prefix(disk, plan, incoming_profile)
+          : DeuterosAmigaTitleEntryPrefix{incoming_profile, 0x206a0, 0x4040e,
+                incoming_profile, 0, 0, 0x40450}),
       entry_prefix_state_(materialize_deuteros_amiga_title_entry_prefix_state(
           disk, plan, incoming_profile)),
       exec_prelude_(execute_deuteros_amiga_title_exec_prelude(disk, plan, incoming_profile)),
@@ -40,14 +43,22 @@ DeuterosAmigaTitleStageSession::DeuterosAmigaTitleStageSession(
     // as part of admitting this live title-stage boundary.  They describe
     // original bytes and operands only: neither helper is executed and no
     // display memory is allocated from their externally supplied pointer.
+    const bool profile_one = incoming_profile == 1;
     if (entry_prefix_state_.incoming_profile != entry_prefix_.incoming_profile
         || entry_prefix_state_.stop_before_exec_address != entry_prefix_.stop_before_exec_address
+        || entry_prefix_state_.write_count != (profile_one ? 2U : 3U)
         || entry_prefix_state_.writes[0].address != entry_prefix_.mode_word_address
         || entry_prefix_state_.writes[0].width_bytes != 2
         || entry_prefix_state_.writes[0].value != entry_prefix_.mode_word_value
-        || entry_prefix_state_.writes[1].address != entry_prefix_.normal_mode_byte_address
-        || entry_prefix_state_.writes[1].width_bytes != 1
-        || entry_prefix_state_.writes[1].value != entry_prefix_.normal_mode_byte_value) {
+        || (profile_one && (entry_prefix_state_.writes[1].address != entry_prefix_.normal_mode_byte_address
+            || entry_prefix_state_.writes[1].width_bytes != 1
+            || entry_prefix_state_.writes[1].value != entry_prefix_.normal_mode_byte_value))
+        || (!profile_one && (entry_prefix_state_.writes[1].address != 0x3717e
+            || entry_prefix_state_.writes[1].width_bytes != 1
+            || entry_prefix_state_.writes[1].value != 5
+            || entry_prefix_state_.writes[2].address != 0x38092
+            || entry_prefix_state_.writes[2].width_bytes != 2
+            || entry_prefix_state_.writes[2].value != 0x0101))) {
         throw std::runtime_error("Deuteros title prefix state detached from original entry evidence");
     }
     if (exec_prelude_.incoming_profile != entry_prefix_.incoming_profile
@@ -132,7 +143,8 @@ DeuterosAmigaTitleStageSession::execute_local_prefix() {
             != DeuterosAmigaTitleExecBoundaryState::awaiting_exec_base_read) {
         throw std::runtime_error("Deuteros title Exec boundary did not advance");
     }
-    return LocalPrefixAdvance{entry_prefix_state_.writes, exec_prelude_.stack_pointer_value,
+    return LocalPrefixAdvance{entry_prefix_state_.writes, entry_prefix_state_.write_count,
+        exec_prelude_.stack_pointer_value,
         exec_prelude_.stop_before_exec_base_read_address};
 }
 

@@ -38,6 +38,8 @@ std::string_view native_session_state_label(const NativeSessionState state) {
     case NativeSessionState::deuteros_amiga_opening: return "DEUTEROS AMIGA OPENING";
     case NativeSessionState::deuteros_amiga_title_stage_boundary:
         return "DEUTEROS AMIGA TITLE STAGE BOUNDARY";
+    case NativeSessionState::deuteros_amiga_title_program_entry:
+        return "DEUTEROS AMIGA TITLE PROGRAM ENTRY";
     case NativeSessionState::deuteros_amiga_title_display_trace_boundary:
         return "DEUTEROS AMIGA TITLE DISPLAY TRACE BOUNDARY";
     case NativeSessionState::deuteros_atari_bootstrap: return "DEUTEROS ATARI ST BOOTSTRAP";
@@ -85,6 +87,8 @@ NativeSessionState native_session_state_for(const std::optional<RuntimeSessionSn
     case RuntimeSessionKind::deuteros_amiga_opening: return NativeSessionState::deuteros_amiga_opening;
     case RuntimeSessionKind::deuteros_amiga_title_stage:
         return NativeSessionState::deuteros_amiga_title_stage_boundary;
+    case RuntimeSessionKind::deuteros_amiga_title_program_entry:
+        return NativeSessionState::deuteros_amiga_title_program_entry;
     case RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary:
         return NativeSessionState::deuteros_amiga_title_display_trace_boundary;
     case RuntimeSessionKind::deuteros_atari_bootstrap: return NativeSessionState::deuteros_atari_bootstrap;
@@ -520,6 +524,19 @@ std::optional<DeuterosAmigaBootstrapFrameSnapshot>
 NativeSessionController::deuteros_amiga_bootstrap_frame() const {
     if (state_ != NativeSessionState::deuteros_amiga_title_stage_boundary) return std::nullopt;
     return runtime_.deuteros_amiga_bootstrap_frame();
+}
+std::optional<DeuterosAmigaTitleProgramEntrySnapshot>
+NativeSessionController::deuteros_amiga_title_program_entry() const {
+    if(state_!=NativeSessionState::deuteros_amiga_title_program_entry)return std::nullopt;
+    return runtime_.deuteros_amiga_title_program_entry();
+}
+DeuterosAmigaTitleDependencyObservationResult
+NativeSessionController::advance_deuteros_amiga_title_program_entry(){
+    if(state_!=NativeSessionState::deuteros_amiga_title_program_entry)
+        return {false,"Deuteros title program entry requires its active boundary"};
+    auto result=runtime_.advance_deuteros_amiga_title_program_entry();
+    if(result.accepted)synchronize_after_runtime_change();
+    return result;
 }
 #define EON_NATIVE_DEUTEROS_TITLE(name,signature,arg) DeuterosAmigaTitleDependencyObservationResult NativeSessionController::name signature { if(state_!=NativeSessionState::deuteros_amiga_title_stage_boundary) return {false,"Deuteros title observation requires the active title stage"}; return runtime_.name arg; }
 EON_NATIVE_DEUTEROS_TITLE(advance_deuteros_amiga_title_local_prefix,(),())

@@ -1528,22 +1528,34 @@ DeuterosAmigaTitleEntryPrefixState
 materialize_deuteros_amiga_title_entry_prefix_state(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const std::uint16_t incoming_profile) {
-    // Reuse the complete hash/opcode-locked parser rather than copying its
-    // acceptance conditions into a second, weaker runtime path.
-    const auto prefix = execute_deuteros_amiga_title_entry_prefix(disk, plan, incoming_profile);
+    if (incoming_profile == 1) {
+        // Reuse the complete hash/opcode-locked parser rather than copying its
+        // acceptance conditions into a second, weaker runtime path.
+        const auto prefix = execute_deuteros_amiga_title_entry_prefix(
+            disk, plan, incoming_profile);
+        return {prefix.incoming_profile, {{
+            {prefix.mode_word_address, 2, prefix.mode_word_value},
+            {prefix.normal_mode_byte_address, 1, prefix.normal_mode_byte_value},
+            {},
+        }}, 2, prefix.stop_before_exec_address};
+    }
+    const auto prefix = execute_deuteros_amiga_title_entry_mode_five_prefix(
+        disk, plan, incoming_profile);
     return {prefix.incoming_profile, {{
         {prefix.mode_word_address, 2, prefix.mode_word_value},
-        {prefix.normal_mode_byte_address, 1, prefix.normal_mode_byte_value},
-    }}, prefix.stop_before_exec_address};
+        {prefix.low_byte_destination_address, 1, prefix.low_byte_value},
+        {prefix.literal_word_destination_address, 2, prefix.literal_word_value},
+    }}, 3, prefix.stop_before_exec_address};
 }
 
 DeuterosAmigaTitleExecPrelude execute_deuteros_amiga_title_exec_prelude(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const std::uint16_t incoming_profile) {
-    // The preceding parser is the complete, caller-connected validation of
-    // the profile-one route, including the exact boundary bytes. Do not make
+    // The preceding materializer is the complete, caller-connected validation
+    // of the selected route, including the exact boundary bytes. Do not make
     // this a weaker second acceptance path.
-    const auto prefix = execute_deuteros_amiga_title_entry_prefix(disk, plan, incoming_profile);
+    const auto prefix = materialize_deuteros_amiga_title_entry_prefix_state(
+        disk, plan, incoming_profile);
     constexpr std::array<std::uint8_t, 6> stack_setup{{
         0x2e, 0x7c, 0x00, 0x04, 0x0b, 0x62,
     }};

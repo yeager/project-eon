@@ -29,7 +29,8 @@ DeuterosAmigaTitleExecBoundarySession::DeuterosAmigaTitleExecBoundarySession(
     const DeuterosAmigaTitleStageProfile& profile) {
     constexpr std::uint32_t boundary_address = 0x40450;
     constexpr std::size_t boundary_length = 28;
-    if (prelude.incoming_profile != 1 || prelude.entry_address != boundary_address
+    if ((prelude.incoming_profile != 1 && prelude.incoming_profile != 5)
+        || prelude.entry_address != boundary_address
         || prelude.stack_pointer_value != profile.initialization_stack_address
         || prelude.stop_before_exec_base_read_address != 0x40456
         || profile.initialization_exec_base_address != 4

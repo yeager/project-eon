@@ -59,6 +59,25 @@ DeuterosAmigaOpening::DeuterosAmigaOpening(std::vector<std::uint8_t> system_adf,
     static_cast<void>(inspect_deuteros_amiga_data_disk_header(data_disk_));
 }
 
+std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
+DeuterosAmigaOpening::prepare_title_stage_profile_five() const {
+    DeuterosAmigaTitleStageSession candidate(disk_, load_plan_, 5);
+    return candidate.execute_local_prefix();
+}
+
+std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
+DeuterosAmigaOpening::reenter_title_stage_profile_five() {
+    // Construct and advance privately. In particular, do not revoke the
+    // existing session if a future media/profile gate rejects this re-entry.
+    DeuterosAmigaTitleStageSession replacement(disk_, load_plan_, 5);
+    auto prefix = replacement.execute_local_prefix();
+    if (!prefix) {
+        return std::nullopt;
+    }
+    title_stage_session_ = std::move(replacement);
+    return prefix;
+}
+
 DeuterosAmigaVmEvents DeuterosAmigaOpening::tick(bool input_pressed) {
     // The exact $0f,$0b38 handoff returns to the bootstrap loader, which
     // reads the separately hash-verified title stage. Continuing to tick the

@@ -333,6 +333,16 @@ RuntimeHost::deuteros_amiga_bootstrap_frame() const {
     if (revoking()) return std::nullopt;
     return NativeSessionController::deuteros_amiga_bootstrap_frame();
 }
+std::optional<DeuterosAmigaTitleProgramEntrySnapshot>
+RuntimeHost::deuteros_amiga_title_program_entry() const {
+    if(revoking())return std::nullopt;
+    return NativeSessionController::deuteros_amiga_title_program_entry();
+}
+DeuterosAmigaTitleDependencyObservationResult
+RuntimeHost::advance_deuteros_amiga_title_program_entry(){
+    if(revoking())return {false,"Deuteros title program entry rejected during source revocation"};
+    return NativeSessionController::advance_deuteros_amiga_title_program_entry();
+}
 #define EON_HOST_DEUTEROS_TITLE(name,signature,arg) DeuterosAmigaTitleDependencyObservationResult RuntimeHost::name signature { if(revoking()) return {false,"Deuteros title observation rejected during source revocation"}; return NativeSessionController::name arg; }
 EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_local_prefix,(),())
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_exec_return,(const DeuterosAmigaObservedExecReturn o),(o))

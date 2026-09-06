@@ -1328,6 +1328,8 @@ int main() {
             eon::NativeSessionState::deuteros_amiga_opening},
         std::pair{eon::RuntimeSessionKind::deuteros_amiga_title_stage,
             eon::NativeSessionState::deuteros_amiga_title_stage_boundary},
+        std::pair{eon::RuntimeSessionKind::deuteros_amiga_title_program_entry,
+            eon::NativeSessionState::deuteros_amiga_title_program_entry},
         std::pair{eon::RuntimeSessionKind::deuteros_atari_bootstrap,
             eon::NativeSessionState::deuteros_atari_bootstrap},
     };
@@ -1371,6 +1373,8 @@ int main() {
         std::pair{eon::RuntimeSessionKind::deuteros_amiga_opening,
             eon::RuntimePresentationKind::deuteros_amiga_opening},
         std::pair{eon::RuntimeSessionKind::deuteros_amiga_title_stage,
+            eon::RuntimePresentationKind::deuteros_amiga_title_stage_boundary},
+        std::pair{eon::RuntimeSessionKind::deuteros_amiga_title_program_entry,
             eon::RuntimePresentationKind::deuteros_amiga_title_stage_boundary},
         std::pair{eon::RuntimeSessionKind::deuteros_atari_bootstrap,
             eon::RuntimePresentationKind::deuteros_atari_bootstrap},
@@ -13569,6 +13573,8 @@ int main() {
     const auto local_prefix_advance = title_stage_session.execute_local_prefix();
     assert(local_prefix_advance);
     assert(local_prefix_advance->writes == title_stage_session.entry_prefix_state().writes);
+    assert(local_prefix_advance->write_count == 2);
+    assert(title_stage_session.entry_prefix_state().write_count == 2);
     assert(local_prefix_advance->stack_pointer_value == 0x40b62);
     assert(local_prefix_advance->exec_boundary_address == 0x40456);
     assert(title_stage_session.local_prefix_executed());
@@ -13580,6 +13586,31 @@ int main() {
     assert(title_exec_boundary.exec_base_source_address == 4);
     assert(title_exec_boundary.boundary_sha256
         == "24f5fb4f5019bf450f8b6931fe1c77747461704b139bbe14ec079b1008af1f49");
+    {
+        eon::DeuterosAmigaTitleStageSession profile_five_session(
+            system_disk, load_plan, 5);
+        const auto& state = profile_five_session.entry_prefix_state();
+        assert(state.incoming_profile == 5);
+        assert(state.write_count == 3);
+        assert((state.writes == std::array<eon::DeuterosAmigaTitleEntryWrite, 3>{{
+            {0x4040e, 2, 5}, {0x3717e, 1, 5}, {0x38092, 2, 0x0101}}}));
+        for (std::size_t index = 0; index < state.write_count; ++index)
+            assert(state.writes[index].address != 0x19d52);
+        assert(profile_five_session.exec_prelude().incoming_profile == 5);
+        const auto advanced = profile_five_session.execute_local_prefix();
+        assert(advanced && advanced->write_count == 3
+            && advanced->writes == state.writes
+            && advanced->stack_pointer_value == 0x40b62
+            && advanced->exec_boundary_address == 0x40456);
+        const auto first = profile_five_session.observe_exec_return(
+            {1, 4, 0x4045a, -0x96, 0x4045e, 0x12345678, 0x2000});
+        assert(first && first->state
+            == eon::DeuterosAmigaTitleExecBoundaryState::awaiting_second_exec_return);
+        const auto second = profile_five_session.observe_exec_return(
+            {2, 4, 0x40468, -0x9c, 0x4046c, 0x87654321, 0x2000});
+        assert(second && second->state
+            == eon::DeuterosAmigaTitleExecBoundaryState::before_open_library_boundary);
+    }
     assert(title_exec_boundary.deferred_calls[0].call_address == 0x4045a
         && title_exec_boundary.deferred_calls[0].vector == -0x96
         && title_exec_boundary.deferred_calls[0].return_address == 0x4045e
@@ -17442,6 +17473,31 @@ int main() {
     const std::vector<std::uint8_t> expected_alternate_glyphs{
         'p', 'l', 'e', 'a', 's', 'e', ' ', 'w', 'a', 'i', 't'};
     assert(alternate_trace->glyph_codes == expected_alternate_glyphs);
+    // Profile five performs a split in-place title reload later in the live
+    // title session. Re-entry must publish a fresh receipt/session only after
+    // an explicit owner advance; the opening frame, clock and bootstrap
+    // provenance are not rebuilt or mutated by this lifecycle operation.
+    const auto reentry_frame = live_input_opening.rgba_frame();
+    const auto reentry_ticks = live_input_opening.ticks();
+    const auto reentry_vblank = live_input_opening.vblank_counter();
+    const auto reentry = live_input_opening.reenter_title_stage_profile_five();
+    assert(reentry && reentry->write_count == 3
+        && reentry->stack_pointer_value == 0x40b62
+        && reentry->exec_boundary_address == 0x40456);
+    assert((reentry->writes[0] == eon::DeuterosAmigaTitleEntryWrite{0x4040e,2,5}));
+    assert((reentry->writes[1] == eon::DeuterosAmigaTitleEntryWrite{0x3717e,1,5}));
+    assert((reentry->writes[2] == eon::DeuterosAmigaTitleEntryWrite{0x38092,2,0x0101}));
+    const auto& profile_five_session = live_input_opening.title_stage_session();
+    assert(profile_five_session && profile_five_session->local_prefix_executed()
+        && profile_five_session->entry_prefix().incoming_profile == 5
+        && profile_five_session->entry_prefix_state().write_count == 3
+        && profile_five_session->exec_boundary().state
+            == eon::DeuterosAmigaTitleExecBoundaryState::awaiting_exec_base_read);
+    assert(live_input_opening.title_bootstrap_session()
+        && live_input_opening.title_bootstrap_session()->complete());
+    assert(live_input_opening.rgba_frame() == reentry_frame
+        && live_input_opening.ticks() == reentry_ticks
+        && live_input_opening.vblank_counter() == reentry_vblank);
     // $206e6 reads the genuine eight-byte `p` glyph at $201b0 + ($70-$20)*8
     // and combines it with selectors one/zero.  The selector-one table starts
     // with $ffff, so the recovered four-plane write formula makes set bits

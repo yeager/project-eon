@@ -303,6 +303,14 @@ std::optional<DeuterosAmigaBootstrapFrameSnapshot>
 LauncherRuntimeController::deuteros_amiga_bootstrap_frame() const {
     return coordinator_.deuteros_amiga_bootstrap_frame();
 }
+std::optional<DeuterosAmigaTitleProgramEntrySnapshot>
+LauncherRuntimeController::deuteros_amiga_title_program_entry() const {
+    return coordinator_.deuteros_amiga_title_program_entry();
+}
+DeuterosAmigaTitleDependencyObservationResult
+LauncherRuntimeController::advance_deuteros_amiga_title_program_entry(){
+    return coordinator_.advance_deuteros_amiga_title_program_entry();
+}
 EON_LAUNCHER_DEUTEROS_TITLE(advance_deuteros_amiga_title_local_prefix,(),())
 EON_LAUNCHER_DEUTEROS_TITLE(observe_deuteros_amiga_title_exec_return,(const DeuterosAmigaObservedExecReturn o),(o))
 EON_LAUNCHER_DEUTEROS_TITLE(observe_deuteros_amiga_title_open_library_return,(const DeuterosAmigaObservedOpenLibraryReturn o),(o))

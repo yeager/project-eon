@@ -6435,6 +6435,16 @@ int main(int argc, char** argv) {
                 // copied through the native-session firewall.  In particular,
                 // this renderer never inspects the coordinator-owned VM or
                 // title-stage adapter after a lifecycle transition.
+                // The profile-five program-entry boundary is wholly local and
+                // hash-validated. Advance it before querying presentation so
+                // the SDL loop cannot strand the native engine at $13000.
+                if (runtime.deuteros_amiga_title_program_entry()) {
+                    const auto advanced = runtime.advance_deuteros_amiga_title_program_entry();
+                    if (!advanced.accepted) {
+                        std::cerr << "Unable to advance Deuteros title program entry: "
+                                  << advanced.error << '\n';
+                    }
+                }
                 const auto opening = runtime.deuteros_amiga_opening_presentation();
                 const auto title_stage = runtime.deuteros_amiga_title_stage_boundary();
                 const auto title_surface = runtime.deuteros_amiga_title_planar_surface();
