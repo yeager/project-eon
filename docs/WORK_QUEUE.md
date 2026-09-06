@@ -461,8 +461,9 @@ local `$2132e->$20888` call and its four native stores. Continue from the
 typed `$208b0` ExecBase read and `-$a8` return, then the owned `$2126a`
 conditional: `$2133c->$22330` when nonzero or local `$21342` when zero.
 The zero branch now executes the complete native record construction and
-first processing pass through `$2143a/$dff01f`. Continue with that hardware
-read and recover the separate `$22330` and `$214aa` paths. Do not reuse unrelated observed bases or assign graphics,
+first processing pass, typed buffer selection, full buffer clear, and initial
+no-draw record walk through `$216d0`. Continue with view selection and recover
+the separate sprite, `$22330`, and `$214aa` paths. Do not reuse unrelated observed bases or assign graphics,
 audio, scheduler, input, or resource semantics.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,

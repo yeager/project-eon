@@ -1406,6 +1406,12 @@ struct DeuterosAmigaObservedLoopRequestService {
     std::uint32_t call_address=0,return_address=0,result_d0=0;
     std::int16_t vector=0;
 };
+struct DeuterosAmigaObservedFrameBuffer {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t port_instruction=0,port_address=0;
+    std::uint8_t port_bit=0,port_value=0;
+    std::uint32_t pointer_instruction=0,pointer_address=0,buffer_address=0;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -1493,7 +1499,11 @@ public:
             ||to_hex(sha256(main_stage.subspan(0x1342,62)))
                 !="0f6c9cbfd143d0540aeb4caa006c61840bc342237d219e77f4b59d9d5f3029c0"
             ||to_hex(sha256(main_stage.subspan(0x1380,194)))
-                !="777b0e4dc59422f31892aabdb2ea934596a11ee31861be74eaa251c719751dee")
+                !="777b0e4dc59422f31892aabdb2ea934596a11ee31861be74eaa251c719751dee"
+            ||to_hex(sha256(main_stage.subspan(0x1698,56)))
+                !="e537c609f36408953a72013a90cb2f44b16769130dffce866ea15e189e8fcf9e"
+            ||to_hex(sha256(main_stage.subspan(0x1448,96)))
+                !="6cf485579953c408c31d2409669cc943431ecb878bae5dae7669f03159046f44")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
@@ -3870,6 +3880,24 @@ public:
         ++main_stage_loop_graphics_returns_;
         last_command_sequence_=o.trace_sequence;
         main_stage_loop_graphics_plan_=plan;
+        return plan;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    advance_main_stage_frame_buffer(const DeuterosAmigaObservedFrameBuffer&o,std::uint16_t next_counter){
+        if(!main_stage_loop_graphics_plan_||main_stage_loop_graphics_plan_->pending_read_instruction!=0x2143a)
+            return std::nullopt;
+        const bool odd=(next_counter&1U)!=0;
+        if(o.trace_sequence<=last_command_sequence_||o.port_instruction!=0x2143a
+            ||o.port_address!=0xdff01f||o.port_bit!=5
+            ||o.pointer_instruction!=(odd?0x216b0U:0x216a4U)
+            ||o.pointer_address!=(odd?0x12ff0U:0x12ff4U)
+            ||o.buffer_address==0||(o.buffer_address&1U)||o.buffer_address>0x1000000U-0x7d00U)
+            throw std::runtime_error("Deuteros frame buffer observation does not match boundary");
+        auto plan=*main_stage_loop_graphics_plan_;
+        plan.pending_read_instruction=0x216d0;plan.pending_read_address=0x21696;
+        plan.next_call_address=0x216ee;plan.next_return_address=0x216f2;
+        plan.next_vector=-0xde;plan.local_call_target=0;
+        main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;
         return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>

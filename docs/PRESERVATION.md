@@ -3564,6 +3564,24 @@ uses type 3 and decrements each countdown from 1 to 0 while preserving its
 continuation pointer. The next boundary is the bit-5 read at `$2143a` from
 `$dff01f`, before `$21442->$21698`. No timing, frame, audio, or input meaning
 is assigned to that raw hardware read.
+
+The first buffer switch now accepts an exact typed `$2143a/$dff01f` bit-5
+read and the counter-selected buffer-pointer read. The 56-byte clear routine
+at ADF `$6e98` hashes to
+`e537c609f36408953a72013a90cb2f44b16769130dffce866ea15e189e8fcf9e`;
+the following 96-byte record walk at ADF `$6c48` hashes to
+`6cf485579953c408c31d2409669cc943431ecb878bae5dae7669f03159046f44`.
+The owned `$21696` word increments with 16-bit wraparound. `$12ff4` is read
+unconditionally; odd parity then selects `$12ff0` at `$216b0`, while even
+parity retains `$12ff4` from `$216a4`. Existing pointer bytes must match the
+observation. The selected address is stored at `$20128`, and 8000 longwords
+are cleared with aligned 24-bit bounds. The native post-clear walk counts
+active records with the original byte-width wrapping and admits selector
+`$ff` without drawing. Other selectors require their real renderer paths and
+reject the transaction rather than fabricating a draw. Both internal memory
+batches and the session transition publish atomically. The supplied opening
+resource takes the four-active/no-draw route and reaches `$216d0`, before its
+view-selection and library call. This is not a displayed-frame or parity claim.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,

@@ -6368,6 +6368,25 @@ int main() {
                 &&scheduler_checkpoint->main_stage_loop_graphics->pending_read_address==0xdff01f);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_scheduler_pass->checksum);
+            eon::DeuterosAmigaObservedFrameBuffer first_frame_buffer{
+                runtime_copy_sequence+108,0x2143a,0xdff01f,5,0x20,0x216b0,0x12ff0,0x90000};
+            auto wrong_frame_buffer=first_frame_buffer;
+            wrong_frame_buffer.pointer_address=0x12ff4;
+            assert(!opening_controller.observe_deuteros_amiga_frame_buffer(wrong_frame_buffer).accepted);
+            wrong_frame_buffer=first_frame_buffer;wrong_frame_buffer.buffer_address=0xfff000;
+            assert(!opening_controller.observe_deuteros_amiga_frame_buffer(wrong_frame_buffer).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_scheduler_pass->checksum);
+            assert(opening_controller.observe_deuteros_amiga_frame_buffer(first_frame_buffer).accepted);
+            const auto after_first_frame_buffer=opening_controller.native_runtime_memory_checkpoint();
+            assert(after_first_frame_buffer&&after_first_frame_buffer->applied_batch_count==after_scheduler_pass->applied_batch_count+2);
+            assert(runtime_byte(*after_first_frame_buffer,0x21696)==0&&runtime_byte(*after_first_frame_buffer,0x21697)==1);
+            assert(runtime_byte(*after_first_frame_buffer,0x20129)==9&&runtime_byte(*after_first_frame_buffer,0x12ff1)==9);
+            assert(runtime_byte(*after_first_frame_buffer,0x210f2)==0&&runtime_byte(*after_first_frame_buffer,0x210f3)==4);
+            assert(std::count_if(after_first_frame_buffer->initialized_bytes.begin(),after_first_frame_buffer->initialized_bytes.end(),
+                [](const auto& byte){return byte.location.offset>=0x90000&&byte.location.offset<0x97d00&&byte.value==0;})==0x7d00);
+            assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x216d0);
+            assert(!opening_controller.observe_deuteros_amiga_frame_buffer(first_frame_buffer).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_first_frame_buffer->checksum);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

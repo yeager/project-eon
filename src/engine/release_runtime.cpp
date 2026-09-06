@@ -4589,6 +4589,69 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_scheduler_pass(){
     return result;
 }
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_frame_buffer(const DeuterosAmigaObservedFrameBuffer o){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
+        result.error="Deuteros frame buffer requires active owned memory";return result;
+    }
+    try{
+        auto memory=*native_runtime_memory_;
+        const auto read=[&](std::uint32_t address,std::uint32_t width){
+            std::uint32_t value=0;
+            for(std::uint32_t i=0;i<width;++i){
+                const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
+                if(!byte)throw std::runtime_error("Deuteros frame source is not owned");
+                value=(value<<8U)|*byte;
+            }
+            return value;
+        };
+        const auto counter=static_cast<std::uint16_t>(read(0x21696,2)+1U);
+        // $216a4 reads this cell even on the odd branch that overwrites A0.
+        static_cast<void>(read(0x12ff4,4));
+        auto pending=*deuteros_amiga_->title_stage_session();
+        if(!pending.advance_main_stage_frame_buffer(o,counter)){
+            result.error="Deuteros frame buffer did not match boundary";return result;
+        }
+        for(std::uint32_t i=0;i<4;++i){
+            const auto existing=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,o.pointer_address+i});
+            if(existing&&*existing!=((o.buffer_address>>(24U-i*8U))&0xffU))
+                throw std::runtime_error("Deuteros frame pointer contradicts owned memory");
+        }
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-first-frame-clear",true,{}};
+        batch.effects.reserve(8004);
+        const auto add=[&](std::uint32_t address,MemoryTransferElementWidth width,std::uint32_t value){
+            batch.effects.push_back({batch.effects.size()+1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},
+                width,NativeRuntimeByteOrder::big_endian,value});
+        };
+        add(o.port_address,MemoryTransferElementWidth::byte,o.port_value);
+        add(o.pointer_address,MemoryTransferElementWidth::longword,o.buffer_address);
+        add(0x21696,MemoryTransferElementWidth::word,counter);
+        add(0x20128,MemoryTransferElementWidth::longword,o.buffer_address);
+        for(std::uint32_t i=0;i<0x7d00;i+=4)
+            add(o.buffer_address+i,MemoryTransferElementWidth::longword,0);
+        const auto cleared=memory.apply(batch);
+        if(!cleared.accepted){result.error=cleared.error;return result;}
+        const auto count=read(0x21248,2);
+        std::uint8_t active_count=0;
+        for(std::uint32_t i=0;i<(count?count:0x10000U);++i){
+            const auto record=0x210f8+i*24U;
+            if(read(record+6,2)==0)continue;
+            active_count=static_cast<std::uint8_t>(active_count+1U);
+            if(read(record,2)!=0xff)
+                throw std::runtime_error("Deuteros frame requires its original sprite renderer continuation");
+        }
+        const auto counted=memory.apply({"deuteros-amiga-first-frame-active-count",true,{{
+            1,{NativeRuntimeAddressSpace::linear,std::nullopt,0x210f2},MemoryTransferElementWidth::word,
+            NativeRuntimeByteOrder::big_endian,active_count}}});
+        if(!counted.accepted){result.error=counted.error;return result;}
+        if(!deuteros_amiga_->advance_main_stage_frame_buffer(o,counter)){
+            result.error="Deuteros frame buffer disappeared before commit";return result;
+        }
+        *native_runtime_memory_=std::move(memory);result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_prepare_return(
     const DeuterosAmigaObservedLocalCallReturn o){
     DeuterosAmigaTitleDependencyObservationResult r;
