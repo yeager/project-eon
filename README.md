@@ -560,7 +560,8 @@ inferring the `ILLEGAL` exception result or a game loop.
 Deuteros' clean Amiga system and data disks are also opened natively as ADF.
 Geometry, boot identifiers, carry-around checksums and arbitrary sectors are
 validated against the real images. The 68000 bootloader's decoded-track request is
-documented in [the generated disassembly](docs/generated/deuteros-amiga-boot.md).
+documented as hash-addressed metadata in
+[the preservation ledger](docs/PRESERVATION.md).
 Both discovered four-bitplane RLE layouts are implemented, covering all 216
 bitmap records in the first two resource bundles. The SDL launch view exercises
 the same importer, channel VM, compositor, original palettes, VBL tick

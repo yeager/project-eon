@@ -2461,8 +2461,9 @@ which name these verified bundles:
 
 Each 60-byte header has a big-endian length, object count, seven relative
 channel pointers, six relative auxiliary pointers, and a mode word. The native
-importer rejects an out-of-range bundle or non-null pointer. See the
-[annotated disassembly](generated/deuteros-amiga-boot.md).
+importer rejects an out-of-range bundle or non-null pointer. Raw instruction
+listings are reproduced only into the external analysis cache and are never
+retained in Git.
 
 The three following longwords (`0x37000`, `0x59600`, and `0x6e000`) are raw
 main-stage bytes adjacent to the two proven entries. Their locations begin
@@ -5167,8 +5168,9 @@ recovered for that release.
 `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are flat 16-bit binaries despite
 their suffix. `MILL.COM` provides a private runtime through interrupts 91h,
 92h, and 95h. `2200AD.EXE` jumps from file offset `0x0004` to `0xd1b0`, then
-uses DOS services and loads original libraries. See the
-[DOS analysis](generated/dos-millennium.md).
+uses DOS services and loads original libraries. Reproducible raw DOS listings
+remain in the external analysis cache; Git retains the hashes, ranges and
+conclusions recorded here.
 
 The English DOS `2200AD.EXE` does have a separately bounded caller-connected
 overlay load for the original `2200GX.EXE` (SHA-256

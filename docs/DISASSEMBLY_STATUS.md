@@ -461,10 +461,12 @@ For 68000 media, Project Eon does **not** make a temporary extracted stage just
 to satisfy an external disassembler. The range is instead addressed through
 the in-memory, bounded ADF/ST parsers and decoded only after its source span
 and relocation are established. Generic ADF/ST linear decoding would mislabel
-resources, compressed data and sectors as instructions. The existing generated
-reports are navigation aids: `docs/generated/dos-millennium.md`,
-`docs/generated/deuteros-amiga-boot.md`, and
-`docs/generated/deuteros-atari-protected-boot.md`.
+resources, compressed data and sectors as instructions. Raw and generated
+disassembly reports are external navigation aids and must never be committed
+or pushed. Git retains only reproducible tooling and hash-addressed metadata.
+The protected-boot technical note at
+`docs/generated/deuteros-atari-protected-boot.md` contains no instruction
+listing.
 
 `tools/analyze_m68k.py` accepts either a direct hash-verified ADF or an exact
 direct/nested ZIP source. ZIP analysis pins outer, optional nested, and ADF
