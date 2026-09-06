@@ -4463,6 +4463,80 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_record_loop(){
     return result;
 }
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_scheduler_pass(){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
+        result.error="Deuteros scheduler requires active owned memory";return result;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        if(!pending.advance_main_stage_scheduler_pass()){
+            result.error="Deuteros scheduler did not match boundary";return result;
+        }
+        auto memory=*native_runtime_memory_;
+        const auto read=[&](std::uint32_t address,std::uint32_t width){
+            if((width>1&&(address&1U))||address>0x1000000U-width)
+                throw std::runtime_error("Deuteros scheduler source is outside aligned native memory");
+            std::uint32_t value=0;
+            for(std::uint32_t i=0;i<width;++i){
+                const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
+                if(!byte)throw std::runtime_error("Deuteros scheduler source is not owned");
+                value=(value<<8U)|*byte;
+            }
+            return value;
+        };
+        std::size_t stores=0;
+        const auto write=[&](std::uint32_t address,MemoryTransferElementWidth width,std::uint32_t value){
+            const auto applied=memory.apply({"deuteros-amiga-scheduler-store-"+std::to_string(stores++),true,{{
+                1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},width,NativeRuntimeByteOrder::big_endian,value}}});
+            if(!applied.accepted)throw std::runtime_error(applied.error);
+        };
+        const auto command_boundary=[](){
+            throw std::runtime_error("Deuteros scheduler requires the local $214aa command continuation");
+        };
+        const auto count=read(0x21248,2);
+        for(std::uint32_t i=0;i<(count?count:0x10000U);++i){
+            const auto record=0x210f8+i*24U;
+            if(read(record+16,4)==0)continue;
+            const auto mode=read(record+6,2);
+            const auto timer=[&](){
+                const auto value=read(record+8,2);
+                if(value==0)command_boundary();
+                write(record+8,MemoryTransferElementWidth::word,value-1U);
+            };
+            if(mode!=0&&(mode&0xffU)==3){timer();continue;}
+            if(mode!=0&&(mode&0xffU)==5){
+                if(((read(0x22a20,4)-1U)&0xffffU)==read(record+8,2)
+                    &&read(record+10,2)<read(0x22a16,2))command_boundary();
+                continue;
+            }
+            if(mode!=0&&(mode&0xffU)==6){
+                const auto value=read(record+12,4);
+                const auto low=value&0xffffU;
+                if((low&0xffU)!=0){
+                    write(record+14,MemoryTransferElementWidth::word,(low-1U)&0xffffU);
+                }else{
+                    write(record+14,MemoryTransferElementWidth::word,value>>16U);
+                    write(record+4,MemoryTransferElementWidth::word,
+                        (read(record+4,2)+read(record+10,2))&0xffffU);
+                    timer();
+                }
+                continue;
+            }
+            if(mode!=0&&(mode&0xffU)==0x14){
+                if(read(0x2171e,1)!=0&&read(0x21720,2)!=0)command_boundary();
+                continue;
+            }
+            write(record+16,MemoryTransferElementWidth::longword,0);
+        }
+        if(!deuteros_amiga_->advance_main_stage_scheduler_pass()){
+            result.error="Deuteros scheduler disappeared before commit";return result;
+        }
+        *native_runtime_memory_=std::move(memory);result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_prepare_return(
     const DeuterosAmigaObservedLocalCallReturn o){
     DeuterosAmigaTitleDependencyObservationResult r;

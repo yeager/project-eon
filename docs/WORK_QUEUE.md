@@ -460,8 +460,9 @@ sources. Ordered typed returns at `$21310` and `$2132a` now continue to the
 local `$2132e->$20888` call and its four native stores. Continue from the
 typed `$208b0` ExecBase read and `-$a8` return, then the owned `$2126a`
 conditional: `$2133c->$22330` when nonzero or local `$21342` when zero.
-The zero branch now executes the complete native record loop through `$21380`;
-continue there and recover the separate `$22330` branch. Do not reuse unrelated observed bases or assign graphics,
+The zero branch now executes the complete native record construction and
+first processing pass through `$2143a/$dff01f`. Continue with that hardware
+read and recover the separate `$22330` and `$214aa` paths. Do not reuse unrelated observed bases or assign graphics,
 audio, scheduler, input, or resource semantics.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,

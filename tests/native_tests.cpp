@@ -6329,6 +6329,22 @@ int main() {
             assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x21380);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_record_loop().accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_record_loop->checksum);
+            assert(opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
+            const auto after_scheduler_pass=opening_controller.native_runtime_memory_checkpoint();
+            assert(after_scheduler_pass&&after_scheduler_pass->applied_batch_count==after_record_loop->applied_batch_count+4);
+            for(std::uint32_t record=0;record<4;++record){
+                assert(runtime_byte(*after_record_loop,0x21101+record*24)==1);
+                assert(runtime_byte(*after_scheduler_pass,0x21100+record*24)==0);
+                assert(runtime_byte(*after_scheduler_pass,0x21101+record*24)==0);
+                for(std::uint32_t byte=0;byte<4;++byte)
+                    assert(runtime_byte(*after_scheduler_pass,0x21108+record*24+byte)
+                        ==runtime_byte(*after_record_loop,0x21108+record*24+byte));
+            }
+            const auto scheduler_checkpoint=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+            assert(scheduler_checkpoint&&scheduler_checkpoint->stop_before_address==0x2143a
+                &&scheduler_checkpoint->main_stage_loop_graphics->pending_read_address==0xdff01f);
+            assert(!opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_scheduler_pass->checksum);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

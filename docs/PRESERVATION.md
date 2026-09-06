@@ -3535,6 +3535,21 @@ The genuine resource-zero test constructs four records with 16 stores and
 checks their copied bytes and advanced pointers. Execution falls through to
 `$21380`; it does not fabricate a return from `$21276`. The nonzero optional
 branch at `$22330` remains separate and cannot enter this path prematurely.
+
+The first processing pass at `$21380..$21439` is now native as well. The
+194-byte span through the following pending bit test (ADF `$6b80`) hashes to
+`777b0e4dc59422f31892aabdb2ea934596a11ee31861be74eaa251c719751dee`.
+It skips null continuation pointers, clears inactive/unrecognised record
+pointers, decrements type-3 words, compares type-5 conditions, handles the
+type-6 low-byte test/full-word decrement and position addition, and checks
+the two type-20 flags. All reads require owned bytes and all writes remain
+private until the complete pass succeeds. A path requiring `$214aa` rejects
+without publishing earlier record updates; its command interpreter is not
+silently treated as a completed call. The real four-record initialization
+uses type 3 and decrements each countdown from 1 to 0 while preserving its
+continuation pointer. The next boundary is the bit-5 read at `$2143a` from
+`$dff01f`, before `$21442->$21698`. No timing, frame, audio, or input meaning
+is assigned to that raw hardware read.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,
