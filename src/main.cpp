@@ -6470,6 +6470,12 @@ int main(int argc, char** argv) {
                                   << advanced.error << '\n';
                     }
                 }
+                const auto main_stage_drive = runtime.drive_deuteros_amiga_main_stage();
+                if (!main_stage_drive.accepted && !main_stage_drive.error.empty()
+                    && main_stage_drive.error.find("requires") == std::string::npos) {
+                    std::cerr << "Unable to drive Deuteros main stage: "
+                              << main_stage_drive.error << '\n';
+                }
                 const auto opening = runtime.deuteros_amiga_opening_presentation();
                 const auto title_stage = runtime.deuteros_amiga_title_stage_boundary();
                 const auto title_surface = runtime.deuteros_amiga_title_planar_surface();

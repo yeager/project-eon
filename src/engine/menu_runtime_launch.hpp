@@ -169,6 +169,8 @@ public:
     [[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_other_mode_byte(MillenniumDosBdfByteObservation);[[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_other_mode_word(MillenniumDosBdfWordObservation);[[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_other_mode_external_return(MillenniumDosBdfExternalReturnObservation);[[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_other_mode_far_word(MillenniumDosBdfModeTwoFarWordObservation);[[nodiscard]] MillenniumDosBdfObservationResult observe_millennium_dos_bdf_other_mode_far_byte(MillenniumDosBdfModeTwoFarByteObservation);
     [[nodiscard]] std::optional<MillenniumDosOwnedFunctionDiagnostics> millennium_dos_owned_function_diagnostics() const;
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
+    [[nodiscard]] DeuterosAmigaMainStageDriveResult
+    drive_deuteros_amiga_main_stage(std::uint32_t step_limit = 64);
     [[nodiscard]] std::optional<std::vector<float>>
     render_deuteros_amiga_opening_audio(std::size_t frames);
     [[nodiscard]] std::optional<DeuterosAmigaNativeAudioCheckpoint> deuteros_amiga_native_audio_checkpoint() const;

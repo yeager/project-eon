@@ -274,6 +274,11 @@ std::optional<DeuterosAmigaVmEvents> LauncherRuntimeController::tick_deuteros_am
     return coordinator_.tick_deuteros_amiga_opening();
 }
 
+DeuterosAmigaMainStageDriveResult
+LauncherRuntimeController::drive_deuteros_amiga_main_stage(const std::uint32_t step_limit) {
+    return coordinator_.drive_deuteros_amiga_main_stage(step_limit);
+}
+
 std::optional<std::vector<float>>
 LauncherRuntimeController::render_deuteros_amiga_opening_audio(const std::size_t frames) {
     return coordinator_.render_deuteros_amiga_opening_audio(frames);

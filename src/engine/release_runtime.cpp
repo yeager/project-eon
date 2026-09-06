@@ -2806,6 +2806,67 @@ std::optional<DeuterosAmigaVmEvents> ReleaseRuntimeCoordinator::tick_deuteros_am
     return events;
 }
 
+DeuterosAmigaMainStageDriveResult
+ReleaseRuntimeCoordinator::drive_deuteros_amiga_main_stage(const std::uint32_t step_limit) {
+    DeuterosAmigaMainStageDriveResult result;
+    if (step_limit == 0) {
+        result.error = "Deuteros main-stage drive requires a nonzero step limit";
+        return result;
+    }
+    if (!active_ || !deuteros_amiga_ || !deuteros_amiga_->title_stage_session()
+        || !native_runtime_memory_) {
+        result.error = "Deuteros main-stage drive requires an active title session";
+        return result;
+    }
+    result.accepted = true;
+    for (; result.steps < step_limit;) {
+        const auto checkpoint = deuteros_amiga_title_dependency_chain_checkpoint();
+        if (!checkpoint) {
+            result.accepted = false;
+            result.error = "Deuteros main-stage checkpoint disappeared during drive";
+            return result;
+        }
+        DeuterosAmigaTitleDependencyObservationResult advanced;
+        bool deterministic = true;
+        if (checkpoint->main_stage_state == DeuterosAmigaMainStageState::awaiting_20994_entry) {
+            advanced = advance_deuteros_amiga_main_stage_20994_exec_entry();
+        } else if (checkpoint->main_stage_state == DeuterosAmigaMainStageState::awaiting_loop_prepare_body) {
+            advanced = advance_deuteros_amiga_main_stage_loop_prepare_body();
+        } else if (checkpoint->main_stage_state == DeuterosAmigaMainStageState::awaiting_record_loop) {
+            advanced = advance_deuteros_amiga_main_stage_record_loop();
+        } else if (checkpoint->main_stage_loop_graphics
+            && (checkpoint->main_stage_loop_graphics->next_instruction_address == 0x21380
+                || checkpoint->main_stage_loop_graphics->next_instruction_address == 0x214aa)) {
+            advanced = advance_deuteros_amiga_main_stage_scheduler_pass();
+        } else if (checkpoint->main_stage_loop_graphics
+            && checkpoint->main_stage_loop_graphics->pending_read_instruction == 0x216d0) {
+            advanced = advance_deuteros_amiga_view_selection();
+        } else if (checkpoint->main_stage_loop_graphics
+            && checkpoint->main_stage_loop_graphics->next_instruction_address == 0x214ee) {
+            advanced = advance_deuteros_amiga_command_palette();
+        } else if (checkpoint->main_stage_loop_graphics
+            && checkpoint->main_stage_loop_graphics->next_call_address == 0x2231e) {
+            advanced = advance_deuteros_amiga_fade_buffers();
+        } else {
+            deterministic = false;
+        }
+        if (!deterministic) {
+            result.awaiting_external_observation = true;
+            return result;
+        }
+        if (!advanced.accepted) {
+            result.accepted = false;
+            result.error = advanced.error.empty()
+                ? "Deuteros deterministic main-stage transition failed"
+                : advanced.error;
+            return result;
+        }
+        ++result.steps;
+    }
+    result.step_limit_reached = true;
+    return result;
+}
+
 std::optional<std::vector<float>>
 ReleaseRuntimeCoordinator::render_deuteros_amiga_opening_audio(const std::size_t frames) {
     if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_opening

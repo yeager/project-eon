@@ -611,6 +611,13 @@ remaining asynchronous `$224cc` audio/control interrupt path. Do not reuse
 unrelated observed bases or assign graphics, audio, scheduler, input, or
 resource semantics.
 
+The runtime now has a bounded main-stage deterministic driver. Each SDL pass
+runs already-proven local transactions until the next typed external
+observation, then stops idempotently. It never creates an Exec, graphics,
+custom-register, counter, input, or media observation. A nonzero step cap
+guards accidental local cycles, and every constituent transition retains its
+copy/validate/commit rollback contract.
+
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated
 pixels, and user saves outside the repository. When an item remains blocked,

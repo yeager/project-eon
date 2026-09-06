@@ -2682,9 +2682,13 @@ clean system disk. Its exact control-flow encodings are: zero branch `$21898
 `$218a2 → $22a5a`; an equality loop `$218b6 → $218ae` after reads from
 `$2079e`; JSR `$218b8 → $208ba`; bit-6 test at `$218be` with zero loop
 `$218c6 → $218be`; and final branch `$218c8 → $217f6`.
-`DeuterosAmigaChannelRequestContinuation` reports these byte-addressed facts
-only. It does not select a condition, invoke a service, simulate the input
-port, or assign names to cells and targets.
+`DeuterosAmigaChannelRequestContinuation` retains these byte-addressed facts.
+The production native outer-loop transaction reaches this entry only from the
+owned `$210f4` request test. It selects the `$2126a` branch, uses typed port
+observations for the reached bit-5 and bit-6 polls, admits both ordered
+graphics-library returns, and follows the asynchronous counter receipt back
+into fresh `$21276` preparation. It does not synthesize a port/library result
+or assign gameplay semantics to the request.
 
 The first direct BSR target is independently retained as `$2229c..$2232f`,
 ADF `+$7a9c`, 148 bytes, SHA-256
@@ -2693,18 +2697,22 @@ It encodes a bit-5 test at `$222ac` with zero branch `$222b4 → $2232c`, a
 literal counter `$000f` and DBRA `$222e0 → $222be`, two `-$c0(A6)` ABI calls
 at `$222fc` and `$22312` using A6 from `$12fec`, a subtract-eight test at
 `$2231c`, two `$21698` calls, and `RTS $2232a`. The complete range is
-hash-locked by `DeuterosAmigaChannelRequestFirstCallee`; its custom-register
-poll, state writes, vector calls, service calls, and return-dependent paths
-are never performed or named by the runtime.
+hash-locked by `DeuterosAmigaChannelRequestFirstCallee`. The reached native
+fade transaction performs the 16 bounded RGB4 updates, admits both ordered
+`-$c0` graphics calls, and repeats for the owned 32-step counter. The bit-5
+register value and both call results remain typed external observations; no
+display meaning is inferred.
 
 The second direct BSR target is separately hash-locked at `$224a2..$224cb`
 (ADF `+$7ca2`): 42 bytes, SHA-256
 `d4e9a1ee0065537a627cdd9ee8827f11d5fa28e0f860aacb21bbdc7e11784bd1`.
 It encodes a longword transfer `$224e6 → $006c`, four literal word clears at
 `$dff0a8/$dff0b8/$dff0c8/$dff0d8`, a literal `$000f` at `$dff096`, and RTS
-`$224ca`. `DeuterosAmigaChannelRequestSecondCallee` retains only those raw
-encodings; it neither reads `$224e6` nor applies low-memory/custom-register
-writes, names hardware effects, or executes the return.
+`$224ca`. `DeuterosAmigaChannelRequestSecondCallee` gates those encodings. A
+completed fade reads `$224e6` only from owned memory, applies the exact
+low-memory and custom-register writes atomically, returns, and invokes the
+native software-sound reset. These raw writes are not host-audio playback and
+do not recover the asynchronous `$224cc` cadence.
 
 The following JSR target `$22a5a..$22b89` maps to ADF `+$825a`, is 304 bytes,
 and hashes to `d5fdbdacd004d2cf377ea0dbaefb9d8b308ba23b568cfb3785456622bde49d19`.

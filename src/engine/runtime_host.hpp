@@ -60,6 +60,8 @@ public:
     [[nodiscard]] ReleaseRuntimeAdmission admission() const;
     [[nodiscard]] ReleaseRuntimeRejection rejection() const;
     [[nodiscard]] std::optional<RuntimeSessionSnapshot> session_snapshot() const;
+    [[nodiscard]] DeuterosAmigaMainStageDriveResult
+    drive_deuteros_amiga_main_stage(std::uint32_t step_limit = 64);
     [[nodiscard]] NativeCodeImageRegistryDiagnostics native_code_image_registry_diagnostics() const;
 
     [[nodiscard]] std::optional<MillenniumDosPresentationSnapshot>

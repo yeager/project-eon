@@ -310,6 +310,11 @@ std::optional<std::vector<float>> RuntimeHost::render_deuteros_amiga_opening_aud
     if (revoking()) return std::nullopt;
     return NativeSessionController::render_deuteros_amiga_opening_audio(frames);
 }
+DeuterosAmigaMainStageDriveResult
+RuntimeHost::drive_deuteros_amiga_main_stage(const std::uint32_t step_limit) {
+    if (revoking()) return {false, 0, false, false, "Runtime source is being revoked"};
+    return NativeSessionController::drive_deuteros_amiga_main_stage(step_limit);
+}
 std::optional<DeuterosAmigaNativeAudioCheckpoint>
 RuntimeHost::deuteros_amiga_native_audio_checkpoint()const{
     if(revoking())return std::nullopt;

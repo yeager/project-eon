@@ -4065,6 +4065,7 @@ int main() {
     assert(controlled_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('1'))
         == eon::RuntimeInputDisposition::rejected);
     assert(!controlled_dos_runtime.tick_deuteros_amiga_opening());
+    assert(!controlled_dos_runtime.drive_deuteros_amiga_main_stage().accepted);
     assert(!controlled_dos_runtime.launch_direct(controlled_dos_request, releases).accepted());
     assert(controlled_dos_runtime.state() == eon::NativeSessionState::returning_to_menu);
     controlled_dos_runtime.finish_return_to_menu();
@@ -6268,8 +6269,28 @@ int main() {
             assert(runtime_byte(*after_audio_setup,0x2197f)==0x03);
             assert(runtime_byte(*after_audio_setup,0x21980)==0x20);
             assert(runtime_byte(*after_audio_setup,0x21981)==0x04);
-            assert(opening_controller.advance_deuteros_amiga_main_stage_20994_exec_entry().accepted);
+            const auto rejected_zero_drive =
+                opening_controller.drive_deuteros_amiga_main_stage(0);
+            assert(!rejected_zero_drive.accepted && rejected_zero_drive.steps == 0);
+            const auto driven_20994 =
+                opening_controller.drive_deuteros_amiga_main_stage(1);
+            assert(driven_20994.accepted && driven_20994.steps == 1
+                && driven_20994.step_limit_reached
+                && !driven_20994.awaiting_external_observation);
             assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_2099e_exec_return);
+            const auto before_blocked_drive =
+                opening_controller.native_runtime_memory_checkpoint();
+            const auto blocked_2099e =
+                opening_controller.drive_deuteros_amiga_main_stage();
+            assert(blocked_2099e.accepted && blocked_2099e.steps == 0
+                && blocked_2099e.awaiting_external_observation
+                && !blocked_2099e.step_limit_reached);
+            const auto blocked_2099e_again =
+                opening_controller.drive_deuteros_amiga_main_stage();
+            assert(blocked_2099e_again.accepted && blocked_2099e_again.steps == 0
+                && blocked_2099e_again.awaiting_external_observation);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum
+                == before_blocked_drive->checksum);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_20994_exec_entry().accepted);
             const auto after_20994_exec_entry=
                 opening_controller.native_runtime_memory_checkpoint();
