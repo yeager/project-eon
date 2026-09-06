@@ -79,6 +79,9 @@ public:
     main_stage_loop_prepare_body_plan() const { return service_batch_boundary_session_.main_stage_loop_prepare_body_plan(); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
     main_stage_loop_graphics_plan() const { return service_batch_boundary_session_.main_stage_loop_graphics_plan(); }
+    [[nodiscard]] DeuterosAmigaMainStageState main_stage_state() const noexcept {
+        return service_batch_boundary_session_.main_stage_state();
+    }
 
     // Executes the complete caller-proven local prefix once: its two sparse
     // writes followed by the A7 literal. It deliberately stops before the

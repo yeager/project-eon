@@ -2170,8 +2170,28 @@ inline DeuterosAmigaMainStageLoopGraphicsPlan resume_deuteros_amiga_recurring_re
     return current;
 }
 
+// Coarse production lifecycle for the main-stage startup. The detailed plan
+// structs remain the instruction-level authority; this state prevents the
+// coordinator from treating a collection of independently callable helpers
+// as an unordered facade.
+enum class DeuterosAmigaMainStageState {
+    awaiting_profile_two_bootstrap,
+    awaiting_reentry_d0,
+    awaiting_first_exec_return,
+    awaiting_second_exec_return,
+    awaiting_first_local_return,
+    awaiting_pointer_service_return,
+    awaiting_audio_setup,
+    awaiting_20994_entry,
+    awaiting_2099e_exec_return,
+    startup_continuation,
+};
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
+    [[nodiscard]] DeuterosAmigaMainStageState main_stage_state() const noexcept {
+        return main_stage_state_;
+    }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>
     main_stage_loop_prepare_body_plan() const { return main_stage_loop_prepare_body_plan_; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
@@ -4510,8 +4530,11 @@ public:
     }
     [[nodiscard]] std::optional<DeuterosAmigaTitleProfileTwoBootstrapPlan>
     advance_title_profile_two_bootstrap(){
-        if(!title_tail_bootstrap_||title_profile_two_bootstrap_advanced_)return std::nullopt;
+        if(!title_tail_bootstrap_||title_profile_two_bootstrap_advanced_
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_profile_two_bootstrap)
+            return std::nullopt;
         title_profile_two_bootstrap_advanced_=true;
+        main_stage_state_=DeuterosAmigaMainStageState::awaiting_reentry_d0;
         return DeuterosAmigaTitleProfileTwoBootstrapPlan{0x12ff8,title_tail_bootstrap_->value,
             0x12ffc,2,0x12800,0x12a4e,0x12a36,0x12b44,0x12b1c,
             0x5800,0x20000,0x4200,0x21734,
@@ -4520,55 +4543,72 @@ public:
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageReentryPrefixPlan>
     observe_main_stage_reentry_d0(const DeuterosAmigaObservedMainStageReentryD0&o){
-        if(!title_profile_two_bootstrap_advanced_||main_stage_reentry_d0_)return std::nullopt;
+        if(!title_profile_two_bootstrap_advanced_||main_stage_reentry_d0_
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_reentry_d0)
+            return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.entry_address!=0x21734)
             throw std::runtime_error("Deuteros main-stage re-entry D0 does not match boundary");
         main_stage_reentry_d0_=o;last_command_sequence_=o.trace_sequence;
+        main_stage_state_=DeuterosAmigaMainStageState::awaiting_first_exec_return;
         return DeuterosAmigaMainStageReentryPrefixPlan{o,0x20976,title_tail_bootstrap_->value,
             0x21704,static_cast<std::uint16_t>(o.result_d0),0x22296,4,0x2174a,0x2174e,-0x96};
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageFirstExecReturnPlan>
     observe_main_stage_first_exec_return(const DeuterosAmigaObservedMainStageExecReturn&o){
-        if(!main_stage_reentry_d0_||main_stage_first_exec_return_)return std::nullopt;
+        if(!main_stage_reentry_d0_||main_stage_first_exec_return_
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_first_exec_return)
+            return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x2174a
             ||o.vector!=-0x96||o.return_address!=0x2174e)
             throw std::runtime_error("Deuteros main-stage first Exec return does not match boundary");
         main_stage_first_exec_return_=o;last_command_sequence_=o.trace_sequence;
+        main_stage_state_=DeuterosAmigaMainStageState::awaiting_second_exec_return;
         return DeuterosAmigaMainStageFirstExecReturnPlan{o,0x7fff0,4,0x21758,0x2175c,-0x9c};
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageSecondExecReturnPlan>
     observe_main_stage_second_exec_return(const DeuterosAmigaObservedMainStageExecReturn&o){
-        if(!main_stage_first_exec_return_||main_stage_second_exec_return_)return std::nullopt;
+        if(!main_stage_first_exec_return_||main_stage_second_exec_return_
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_second_exec_return)
+            return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x21758
             ||o.vector!=-0x9c||o.return_address!=0x2175c)
             throw std::runtime_error("Deuteros main-stage second Exec return does not match boundary");
         main_stage_second_exec_return_=o;last_command_sequence_=o.trace_sequence;
+        main_stage_state_=DeuterosAmigaMainStageState::awaiting_first_local_return;
         return DeuterosAmigaMainStageSecondExecReturnPlan{o,0x2175c,0x20068,0x21762};
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageFirstLocalReturnPlan>
     observe_main_stage_first_local_return(const DeuterosAmigaObservedLocalCallReturn&o){
-        if(!main_stage_second_exec_return_||main_stage_first_local_return_)return std::nullopt;
+        if(!main_stage_second_exec_return_||main_stage_first_local_return_
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_first_local_return)
+            return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x2175c
             ||o.call_target!=0x20068||o.return_address!=0x21762)
             throw std::runtime_error("Deuteros main-stage first local return does not match boundary");
         main_stage_first_local_return_=o;last_command_sequence_=o.trace_sequence;
+        main_stage_state_=DeuterosAmigaMainStageState::awaiting_pointer_service_return;
         return DeuterosAmigaMainStageFirstLocalReturnPlan{o,0x21762,0x2013a,0x21768};
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStagePointerServiceReturnPlan>
     observe_main_stage_pointer_service_return(
         const DeuterosAmigaObservedMainStagePointerServiceReturn&o){
-        if(!main_stage_first_local_return_||main_stage_pointer_service_return_)return std::nullopt;
+        if(!main_stage_first_local_return_||main_stage_pointer_service_return_
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_pointer_service_return)
+            return std::nullopt;
         if(o.call.trace_sequence<=last_command_sequence_||o.call.call_address!=0x21762
             ||o.call.call_target!=0x2013a||o.call.return_address!=0x21768
             ||o.source_address!=0x20128)
             throw std::runtime_error("Deuteros main-stage pointer service return does not match boundary");
         main_stage_pointer_service_return_=o;last_command_sequence_=o.call.trace_sequence;
+        main_stage_state_=DeuterosAmigaMainStageState::awaiting_audio_setup;
         return DeuterosAmigaMainStagePointerServiceReturnPlan{
             o,0x2012c,{0x20510,0x20c20},0x2177c,0x22a5a,0x21782};
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageAudioSetupPlan>
     observe_main_stage_audio_setup(const DeuterosAmigaObservedMainStageAudioSetup&o){
-        if(!main_stage_pointer_service_return_||main_stage_audio_setup_)return std::nullopt;
+        if(!main_stage_pointer_service_return_||main_stage_audio_setup_
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_audio_setup)
+            return std::nullopt;
         static constexpr std::array<std::array<std::uint32_t,3>,3> expected{{
             {{0x2177c,0x22a5a,0x21782}},{{0x21782,0x22bea,0x21788}},
             {{0x21788,0x22bea,0x2178e}}}};
@@ -4583,14 +4623,18 @@ public:
         if(o.pointer_root_addresses!=std::array<std::uint32_t,2>{0x12e00,0x12f00})
             throw std::runtime_error("Deuteros main-stage audio pointer roots do not match boundary");
         main_stage_audio_setup_=o;last_command_sequence_=sequence;
+        main_stage_state_=DeuterosAmigaMainStageState::awaiting_20994_entry;
         return DeuterosAmigaMainStageAudioSetupPlan{o,
             {0xdff040,0xdff042,0xdff09a,0xdff096},{0x7fff,0x7fff,0xc000,0x87ff},
             {0x2197a,0x2197e},0x217d8,0x20994,0x217de};
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStage20994ExecEntryPlan>
     advance_main_stage_20994_exec_entry(){
-        if(!main_stage_audio_setup_||main_stage_audio_service_entered_)return std::nullopt;
+        if(!main_stage_audio_setup_||main_stage_audio_service_entered_
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_20994_entry)
+            return std::nullopt;
         main_stage_audio_service_entered_=true;
+        main_stage_state_=DeuterosAmigaMainStageState::awaiting_2099e_exec_return;
         return DeuterosAmigaMainStage20994ExecEntryPlan{0x217d8,0x20994,0x217de,
             0,4,0x2099e,0x209a2,-0x126,
             "a5c916b3959fe074f18e12a12d0488a38b2c8b638079fb05d1ad3a0739848001"};
@@ -4598,12 +4642,14 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaMainStage2099eExecReturnPlan>
     observe_main_stage_2099e_exec_return(
         const DeuterosAmigaObservedMainStageExecReturn&o){
-        if(!main_stage_audio_service_entered_||main_stage_2099e_exec_return_)
+        if(!main_stage_audio_service_entered_||main_stage_2099e_exec_return_
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_2099e_exec_return)
             return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x2099e
             ||o.vector!=-0x126||o.return_address!=0x209a2)
             throw std::runtime_error("Deuteros main-stage $2099e Exec return does not match boundary");
         main_stage_2099e_exec_return_=o;last_command_sequence_=o.trace_sequence;
+        main_stage_state_=DeuterosAmigaMainStageState::startup_continuation;
         return DeuterosAmigaMainStage2099eExecReturnPlan{o,
             {0x2095e,0x2095d,0x2095c,0x20963,0x20964},
             {0x20982,0x7f,0x04,0x01,o.result_d0},0x209ca,0x209ce,-0x162,
@@ -5403,6 +5449,8 @@ private:
     bool title_tail_compare_pending_=false,title_tail_subroutine_returned_=false;
     std::optional<DeuterosAmigaObservedTitleTailControllerLong> title_tail_bootstrap_;
     bool title_profile_two_bootstrap_advanced_=false;
+    DeuterosAmigaMainStageState main_stage_state_=
+        DeuterosAmigaMainStageState::awaiting_profile_two_bootstrap;
     std::vector<std::uint8_t> main_stage_source_bytes_;
     std::optional<DeuterosAmigaObservedMainStageReentryD0> main_stage_reentry_d0_;
     std::optional<DeuterosAmigaObservedMainStageExecReturn> main_stage_first_exec_return_;

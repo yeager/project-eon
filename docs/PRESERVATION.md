@@ -8057,6 +8057,14 @@ dedicated title program-entry transaction component; native tests exercise
 that component independently, while the genuine-media coordinator path
 continues to supply the hash-addressed boundary and profile-five prefix.
 
+The profile-two main-stage startup now also exposes an explicit coarse native
+state machine from the committed `$20000` load through the `$20994` entry and
+typed `$2099e` return. Each accepted boundary advances exactly one state;
+malformed, stale, repeated, or out-of-order calls retain the prior state and
+memory. Instruction-level plan records remain the authority for addresses and
+effects, while the lifecycle checkpoint prevents callers from treating the
+startup helpers as an unordered collection of operations.
+
 The production-checkpoint profile matrix now checks these request fields,
 both disk offsets, the mutable copy, all eight ordered returns including the
 shared cleanup, and the resulting `$13000` continuation.

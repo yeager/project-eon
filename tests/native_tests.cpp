@@ -6034,6 +6034,11 @@ int main() {
             assert(runtime_byte(*after_title_bootstrap,0x12fff)==0x02);
             assert(opening_controller.advance_deuteros_amiga_title_profile_two_bootstrap().accepted);
             assert(!opening_controller.advance_deuteros_amiga_title_profile_two_bootstrap().accepted);
+            const auto main_stage_state=[&]{
+                const auto checkpoint=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+                assert(checkpoint);return checkpoint->main_stage_state;
+            };
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_reentry_d0);
             const auto after_main_stage_load=opening_controller.native_runtime_memory_checkpoint();
             assert(after_main_stage_load
                 && after_main_stage_load->applied_batch_count
@@ -6053,6 +6058,7 @@ int main() {
                 bad_reentry_d0).accepted);
             assert(opening_controller.observe_deuteros_amiga_main_stage_reentry_d0(
                 reentry_d0).accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_first_exec_return);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_reentry_d0(
                 reentry_d0).accepted);
             const auto after_main_stage_prefix=opening_controller.native_runtime_memory_checkpoint();
@@ -6072,6 +6078,7 @@ int main() {
                 bad_first_main_exec).accepted);
             assert(opening_controller.observe_deuteros_amiga_main_stage_first_exec_return(
                 first_main_exec).accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_second_exec_return);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_first_exec_return(
                 first_main_exec).accepted);
             const auto after_first_main_exec=opening_controller.native_runtime_memory_checkpoint();
@@ -6085,6 +6092,7 @@ int main() {
                 bad_second_main_exec).accepted);
             assert(opening_controller.observe_deuteros_amiga_main_stage_second_exec_return(
                 second_main_exec).accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_first_local_return);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_second_exec_return(
                 second_main_exec).accepted);
             eon::DeuterosAmigaObservedLocalCallReturn first_main_local{
@@ -6094,6 +6102,7 @@ int main() {
                 bad_first_main_local).accepted);
             assert(opening_controller.observe_deuteros_amiga_main_stage_first_local_return(
                 first_main_local).accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_pointer_service_return);
             eon::DeuterosAmigaObservedMainStagePointerServiceReturn pointer_service{
                 {runtime_copy_sequence+95,0x21762,0x2013a,0x21768,0,0},
                 0x20128,0x00045678};
@@ -6102,6 +6111,7 @@ int main() {
                 bad_pointer_service).accepted);
             assert(opening_controller.observe_deuteros_amiga_main_stage_pointer_service_return(
                 pointer_service).accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_audio_setup);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_pointer_service_return(
                 pointer_service).accepted);
             const auto after_pointer_service=opening_controller.native_runtime_memory_checkpoint();
@@ -6128,6 +6138,7 @@ int main() {
                 bad_audio_setup).accepted);
             assert(opening_controller.observe_deuteros_amiga_main_stage_audio_setup(
                 audio_setup).accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_20994_entry);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_audio_setup(
                 audio_setup).accepted);
             const auto after_audio_setup=opening_controller.native_runtime_memory_checkpoint();
@@ -6151,6 +6162,7 @@ int main() {
             assert(runtime_byte(*after_audio_setup,0x21980)==0x20);
             assert(runtime_byte(*after_audio_setup,0x21981)==0x04);
             assert(opening_controller.advance_deuteros_amiga_main_stage_20994_exec_entry().accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_2099e_exec_return);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_20994_exec_entry().accepted);
             const auto after_20994_exec_entry=
                 opening_controller.native_runtime_memory_checkpoint();
@@ -6165,6 +6177,7 @@ int main() {
                 bad_exec_2099e_return).accepted);
             assert(opening_controller.observe_deuteros_amiga_main_stage_2099e_exec_return(
                 exec_2099e_return).accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::startup_continuation);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_2099e_exec_return(
                 exec_2099e_return).accepted);
             const auto after_2099e_return=

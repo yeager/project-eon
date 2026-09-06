@@ -2871,6 +2871,7 @@ ReleaseRuntimeCoordinator::deuteros_amiga_title_dependency_chain_checkpoint() co
     }
     result.main_stage_loop_prepare=title.main_stage_loop_prepare_body_plan();
     result.main_stage_loop_graphics=title.main_stage_loop_graphics_plan();
+    result.main_stage_state=title.main_stage_state();
     if(result.main_stage_loop_graphics){
         const auto& plan=*result.main_stage_loop_graphics;
         result.stop_before_address=plan.pending_read_instruction!=0
