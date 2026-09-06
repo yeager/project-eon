@@ -3478,7 +3478,8 @@ actual caller return and store instruction.
 
 The subsequent typed `$1eda6/$12ff4` display-base read now commits the
 already recovered complete local display setup, rather than discarding its
-plan: the two original base pointers, all 20 original palette words at
+plan: the two original base pointers, the palette descriptor word 20 at
+`$12ec6`, its `$12ecc` pointer at `$12ec8`, all 20 original palette words at
 `$12ecc`, the base+$7d00 pointer, local zero word, caller pointer copies, and
 the 8000-longword clear of the observed display buffer. The observed source
 cell is retained separately as read evidence. The existing hash-bound setup
@@ -3489,6 +3490,17 @@ Invalid address, replay or batch failure leaves both unchanged. Tests compare
 all 20 colors with the original title palette and verify all 32000 cleared
 bytes. This establishes native buffer contents, not a displayed title frame
 or a new graphics-library return.
+
+At the opening-to-title handoff the coordinator now retains the `$1ed70` word
+from the completed, hash-admitted `$13000` title-stage load in native runtime
+memory. The later ADDQ therefore consumes owned mutable RAM; the ADF remains a
+read-only load source and is not consulted as a substitute at execution time.
+
+The preceding nonzero local route also applies the instruction-defined
+`addq.w #1,$1ed70` against the already owned big-endian word, including
+16-bit wraparound, in the same transaction as the `$12fec` library-base
+store. A missing counter byte rejects the whole transaction; the runtime no
+longer records this deterministic effect without executing it.
 
 The two subsequent `-$c0(A6)` returns now have a strict ordered continuation:
 `$21310->$21314`, then `$2132a->$2132e`. The 32 bytes at clean disk-1 ADF

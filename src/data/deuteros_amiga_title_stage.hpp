@@ -908,6 +908,9 @@ struct DeuterosAmigaTitleGraphicsSetupProfile {
     std::array<std::uint32_t, 2> external_display_base_destinations{};
     std::uint32_t palette_source_address = 0;
     std::uint32_t palette_destination_address = 0;
+    std::uint32_t palette_count_address = 0;
+    std::uint16_t palette_count = 0;
+    std::uint32_t palette_pointer_address = 0;
     std::array<std::uint16_t, 20> palette_words{};
     std::uint32_t derived_pointer_source_address = 0;
     std::uint32_t derived_pointer_destination_address = 0;

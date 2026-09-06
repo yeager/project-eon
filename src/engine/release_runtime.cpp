@@ -2750,7 +2750,26 @@ std::optional<DeuterosAmigaVmEvents> ReleaseRuntimeCoordinator::tick_deuteros_am
         // evidence, but the live session has crossed its last recovered VBL
         // frame. Publish the narrower state atomically so diagnostics and
         // input routing cannot describe or tick a completed opening.
-        if (!active_ || !deuteros_amiga_->title_stage_session()) return std::nullopt;
+        if (!active_ || !deuteros_amiga_->title_stage_session()
+            || !native_runtime_memory_) return std::nullopt;
+        // The local OpenLibrary helper increments this mutable word before
+        // any later recovered writer can reach it. Retain its two bytes from
+        // the completed, hash-admitted disk-to-RAM title load so ADDQ can
+        // consume owned state instead of consulting the source ADF later.
+        const auto& title=*deuteros_amiga_->title_stage_session();
+        const auto bytes=title.original_bytes();
+        constexpr std::uint32_t counter_address=0x1ed70;
+        const auto counter_offset=counter_address-title.stage().destination;
+        if(counter_offset>bytes.size()||bytes.size()-counter_offset<2)return std::nullopt;
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-title-open-count-load",true,{{
+            1,{NativeRuntimeAddressSpace::linear,std::nullopt,counter_address},
+            MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,
+            static_cast<std::uint16_t>((static_cast<std::uint16_t>(bytes[counter_offset])<<8U)
+                |bytes[counter_offset+1U])}}};
+        auto memory=*native_runtime_memory_;
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted)return std::nullopt;
+        *native_runtime_memory_=std::move(memory);
         session_snapshot_ = make_runtime_session_snapshot(*active_,
             RuntimeSessionKind::deuteros_amiga_title_stage);
         deuteros_amiga_opening_input_held_ = false;
@@ -2982,7 +3001,7 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_display_base(
                 throw std::runtime_error("Deuteros display-base observation contradicts owned memory");
         }
         NativeRuntimeEffectBatch batch{"deuteros-amiga-title-display-setup",true,{}};
-        batch.effects.reserve(28U+plan->clear_byte_count/4U);
+        batch.effects.reserve(30U+plan->clear_byte_count/4U);
         const auto add=[&](std::uint32_t address,MemoryTransferElementWidth width,std::uint32_t value){
             batch.effects.push_back({batch.effects.size()+1,
                 {NativeRuntimeAddressSpace::linear,std::nullopt,address},width,
@@ -2993,6 +3012,10 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_display_base(
         add(o.source_address,MemoryTransferElementWidth::longword,o.observed_value);
         for(const auto address:plan->base_pointer_destinations)
             add(address,MemoryTransferElementWidth::longword,o.observed_value);
+        add(plan->palette_count_address,MemoryTransferElementWidth::word,
+            plan->palette_count);
+        add(plan->palette_pointer_address,MemoryTransferElementWidth::longword,
+            plan->palette_destination_address);
         for(std::size_t i=0;i<plan->palette_words.size();++i)
             add(plan->palette_destination_address+static_cast<std::uint32_t>(i)*2U,
                 MemoryTransferElementWidth::word,plan->palette_words[i]);
@@ -3024,10 +3047,21 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_title_post_open_library_local_
         const auto plan=pending.advance_post_open_library_local_path();
         if(!plan){result.error="Deuteros post-OpenLibrary path did not match boundary";return result;}
         auto memory=*native_runtime_memory_;
+        const auto increment_high=memory.read_byte({NativeRuntimeAddressSpace::linear,
+            std::nullopt,plan->increment_word_address});
+        const auto increment_low=memory.read_byte({NativeRuntimeAddressSpace::linear,
+            std::nullopt,plan->increment_word_address+1U});
+        if(!increment_high||!increment_low)
+            throw std::runtime_error("Deuteros graphics setup counter is not owned");
+        const auto prior=static_cast<std::uint16_t>(
+            (static_cast<std::uint16_t>(*increment_high)<<8U)|*increment_low);
+        const auto incremented=static_cast<std::uint16_t>(prior+plan->increment_delta);
         NativeRuntimeEffectBatch batch{"deuteros-amiga-graphics-library-base",true,{{
             1,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->observed_result_store_address},
             MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,
-            plan->observed_result_store_value}}};
+            plan->observed_result_store_value},{
+            2,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->increment_word_address},
+            MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,incremented}}};
         const auto applied=memory.apply(batch);
         if(!applied.accepted){result.error=applied.error;return result;}
         if(!deuteros_amiga_->advance_title_post_open_library_local_path()){

@@ -5276,19 +5276,23 @@ int main() {
             assert(opening_controller.observe_deuteros_amiga_title_open_library_return({12,0x1ed80,0x1ed02,4,0x1ed8c,-0x228,0x1ed90,0x00abcdef,0x2000}).accepted);
             assert(opening_controller.advance_deuteros_amiga_title_post_open_library_local_path().accepted);
             const auto graphics_base_memory=opening_controller.native_runtime_memory_checkpoint();
-            assert(graphics_base_memory&&graphics_base_memory->applied_batch_count==2);
+            assert(graphics_base_memory&&graphics_base_memory->applied_batch_count==3);
             assert(!opening_controller.observe_deuteros_amiga_title_display_base({13,0x1eda6,0x12ff4,0x00080001}).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_display_base({13,0x1eda6,0x12ff4,0x00fff000}).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==graphics_base_memory->checksum);
             assert(opening_controller.observe_deuteros_amiga_title_display_base({13,0x1eda6,0x12ff4,0x00080000}).accepted);
             const auto display_setup_memory=opening_controller.native_runtime_memory_checkpoint();
-            assert(display_setup_memory&&display_setup_memory->applied_batch_count==3);
+            assert(display_setup_memory&&display_setup_memory->applied_batch_count==4);
             const auto display_byte=[&](std::uint32_t address){
                 const auto it=std::find_if(display_setup_memory->initialized_bytes.begin(),display_setup_memory->initialized_bytes.end(),
                     [&](const auto& byte){return byte.location.address_space==eon::NativeRuntimeAddressSpace::linear&&byte.location.offset==address;});
                 assert(it!=display_setup_memory->initialized_bytes.end());return it->value;
             };
             assert(display_byte(0x12ff5)==8&&display_byte(0x1f169)==8&&display_byte(0x410d9)==8);
+            assert(display_byte(0x1ed70)==0&&display_byte(0x1ed71)==1);
+            assert(display_byte(0x12ec6)==0&&display_byte(0x12ec7)==20);
+            assert(display_byte(0x12ec8)==0&&display_byte(0x12ec9)==1
+                &&display_byte(0x12eca)==0x2e&&display_byte(0x12ecb)==0xcc);
             assert(display_byte(0x1f16f)==8&&display_byte(0x1f170)==0x7d&&display_byte(0x1f171)==0);
             assert(std::count_if(display_setup_memory->initialized_bytes.begin(),display_setup_memory->initialized_bytes.end(),
                 [](const auto& byte){return byte.location.offset>=0x80000&&byte.location.offset<0x87d00&&byte.value==0;})==0x7d00);
@@ -5364,14 +5368,17 @@ int main() {
             assert(opening_controller.observe_deuteros_amiga_title_load_service_return({38,0x389f4,0x208c0,0x389fa,0x12345678,0x2040}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_load_selector({39,0x389fa,0x12fd8,3}).accepted);
             const auto before_copy_memory=opening_controller.native_runtime_memory_diagnostics();
-            assert(before_copy_memory && before_copy_memory->initialized_byte_count==display_setup_memory->initialized_bytes.size() && before_copy_memory->applied_batch_count==3);
+            assert(before_copy_memory && before_copy_memory->initialized_byte_count==display_setup_memory->initialized_bytes.size() && before_copy_memory->applied_batch_count==4);
             std::uint32_t runtime_copied=0;
             std::uint64_t runtime_copy_sequence=40;
             while(runtime_copied<0xa20){const auto count=std::min<std::uint32_t>(256,0xa20-runtime_copied);std::vector<std::uint32_t> values;values.reserve(count);for(std::uint32_t i=0;i<count;++i)values.push_back(0x80000000U+runtime_copied+i);assert(opening_controller.observe_deuteros_amiga_title_load_copy_chunk({runtime_copy_sequence++,0x38a28,0x29540+runtime_copied*4U,0x1c482+runtime_copied*4U,runtime_copied,values}).accepted);runtime_copied+=count;}
             const auto completed_copy_memory=opening_controller.native_runtime_memory_checkpoint();
-            assert(completed_copy_memory && completed_copy_memory->initialized_bytes.size()==0xa20*4+before_copy_memory->initialized_byte_count && completed_copy_memory->applied_batch_count==4);
+            assert(completed_copy_memory
+                && completed_copy_memory->initialized_bytes.size()
+                    == 0xa20*4+before_copy_memory->initialized_byte_count
+                && completed_copy_memory->applied_batch_count==5);
             const auto completed_copy_diagnostics=opening_controller.native_runtime_memory_diagnostics();
-            assert(completed_copy_diagnostics && completed_copy_diagnostics->initialized_byte_count==completed_copy_memory->initialized_bytes.size() && completed_copy_diagnostics->applied_batch_count==4 && completed_copy_diagnostics->checksum!=0);
+            assert(completed_copy_diagnostics && completed_copy_diagnostics->initialized_byte_count==completed_copy_memory->initialized_bytes.size() && completed_copy_diagnostics->applied_batch_count==5 && completed_copy_diagnostics->checksum!=0);
             assert(!opening_controller.observe_deuteros_amiga_title_load_copy_chunk({runtime_copy_sequence,0x38a28,0x2bdc0,0x1ed02,0,{1}}).accepted);
             assert(opening_controller.native_runtime_memory_diagnostics()->checksum==completed_copy_diagnostics->checksum);
             assert(opening_controller.observe_deuteros_amiga_title_load_dispatch_table_base({runtime_copy_sequence,0x1fb9a,0x1f97c,0x30000}).accepted);
@@ -5389,7 +5396,11 @@ int main() {
             assert(opening_controller.observe_deuteros_amiga_title_command_eight_scale({runtime_copy_sequence+12,0x1fa80,0x1f994,0x12340003}).accepted);
             const auto command_memory=opening_controller.native_runtime_memory_diagnostics();
             // The command rewrites the already owned four-byte $1f974 cell.
-            assert(command_memory && command_memory->initialized_byte_count==completed_copy_diagnostics->initialized_byte_count+13 && command_memory->applied_batch_count==9 && command_memory->checksum!=completed_copy_diagnostics->checksum);
+            assert(command_memory
+                && command_memory->initialized_byte_count
+                    == completed_copy_diagnostics->initialized_byte_count+13
+                && command_memory->applied_batch_count==10
+                && command_memory->checksum!=completed_copy_diagnostics->checksum);
             assert(!opening_controller.observe_deuteros_amiga_title_command_eight_scale({runtime_copy_sequence+13,0x1fa80,0x1f994,0}).accepted);
             assert(opening_controller.native_runtime_memory_diagnostics()->checksum==command_memory->checksum);
             assert(opening_controller.observe_deuteros_amiga_title_command_opcode(
@@ -5429,7 +5440,7 @@ int main() {
             const auto planar_memory=opening_controller.native_runtime_memory_checkpoint();
             assert(planar_memory
                 && planar_memory->initialized_bytes.size()==command_memory->initialized_byte_count+32
-                && planar_memory->applied_batch_count==10
+                && planar_memory->applied_batch_count==11
                 && planar_memory->checksum!=command_memory->checksum);
             const auto memory_byte_at=[&](const std::uint64_t address)->std::optional<std::uint8_t>{
                 const auto found=std::find_if(planar_memory->initialized_bytes.begin(),
@@ -5484,7 +5495,7 @@ int main() {
             const auto variant_memory=opening_controller.native_runtime_memory_checkpoint();
             assert(variant_memory
                 && variant_memory->initialized_bytes.size()==planar_memory->initialized_bytes.size()+32
-                && variant_memory->applied_batch_count==11
+                && variant_memory->applied_batch_count==12
                 && variant_memory->checksum!=planar_memory->checksum);
             assert(opening_controller.observe_deuteros_amiga_title_command_opcode(
                 {runtime_copy_sequence+17,0x1fa0a,0x2ff09,0x21}).accepted);
@@ -5552,7 +5563,8 @@ int main() {
                 .accepted);
             const auto decoded_memory=opening_controller.native_runtime_memory_checkpoint();
             assert(decoded_memory && decoded_memory->initialized_bytes.size()
-                >= first_packet_memory->initialized_bytes.size()+2174U);
+                >= first_packet_memory->initialized_bytes.size()+2174U
+                && decoded_memory->checksum!=first_packet_memory->checksum);
             assert(opening_controller.advance_deuteros_amiga_title_post_command_first_dispatch_caller_tail()
                 .accepted);
             assert(!opening_controller.advance_deuteros_amiga_title_post_command_first_dispatch_caller_tail()
@@ -13717,6 +13729,9 @@ int main() {
     assert((display_local->base_pointer_destinations
         == std::array<std::uint32_t, 2>{0x1f168, 0x1f164}));
     assert(display_local->palette_destination_address == 0x12ecc);
+    assert(display_local->palette_count_address == 0x12ec6);
+    assert(display_local->palette_count == 20);
+    assert(display_local->palette_pointer_address == 0x12ec8);
     assert(display_local->palette_words.front() == 0x0000);
     assert(display_local->palette_words.back() == 0x0cc0);
     assert(display_local->derived_pointer_destination_address == 0x1f16e);
@@ -16057,6 +16072,9 @@ int main() {
         == std::array<std::uint32_t, 2>{{0x1f168, 0x1f164}}));
     assert(title_graphics_setup.palette_source_address == 0x1ed24);
     assert(title_graphics_setup.palette_destination_address == 0x12ecc);
+    assert(title_graphics_setup.palette_count_address == 0x12ec6);
+    assert(title_graphics_setup.palette_count == 20);
+    assert(title_graphics_setup.palette_pointer_address == 0x12ec8);
     assert(title_graphics_setup.palette_words.front() == 0x0000);
     assert(title_graphics_setup.palette_words[1] == 0x09a7);
     assert(title_graphics_setup.palette_words.back() == 0x0cc0);

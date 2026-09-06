@@ -29,6 +29,9 @@ struct DeuterosAmigaTitleDisplayLocalAdvance {
     DeuterosAmigaObservedDisplayBaseRead observation;
     std::array<std::uint32_t, 2> base_pointer_destinations{};
     std::uint32_t palette_destination_address = 0;
+    std::uint32_t palette_count_address = 0;
+    std::uint16_t palette_count = 0;
+    std::uint32_t palette_pointer_address = 0;
     std::array<std::uint16_t, 20> palette_words{};
     std::uint32_t derived_pointer_destination_address = 0;
     std::uint32_t derived_pointer_value = 0;
@@ -101,6 +104,10 @@ public:
             || setup.following_entry_address != 0x1f172
             || setup.palette_copy_entry_address != 0x1eda6
             || setup.external_display_base_source_address != 0x12ff4
+            || setup.palette_count_address != 0x12ec6
+            || setup.palette_count != 0x0014
+            || setup.palette_pointer_address != 0x12ec8
+            || setup.palette_destination_address != 0x12ecc
             || setup.following_callee_sha256
                 != "d6b37bc6431a1fe9145ae9403a5165028ccfd856a6529d1752f824b166807223"
             || stage.initialization_internal_calls[0] != 0x1ed80
@@ -193,6 +200,8 @@ public:
         checkpoint_.stop_before_address = 0x40498;
         return DeuterosAmigaTitleDisplayLocalAdvance{observation,
             setup_.external_display_base_destinations, setup_.palette_destination_address,
+            setup_.palette_count_address, setup_.palette_count,
+            setup_.palette_pointer_address,
             setup_.palette_words, setup_.derived_pointer_destination_address,
             observation.observed_value + setup_.derived_pointer_addend, 0x1f16c,
             {0x1f974, 0x410d8}, observation.observed_value,

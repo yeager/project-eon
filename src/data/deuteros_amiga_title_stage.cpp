@@ -760,6 +760,9 @@ parse_deuteros_amiga_title_graphics_setup_profile(
     result.external_display_base_destinations = {0x1f168, 0x1f164};
     result.palette_source_address = 0x1ed24;
     result.palette_destination_address = 0x12ecc;
+    result.palette_count_address = 0x12ec6;
+    result.palette_count = 0x0014;
+    result.palette_pointer_address = 0x12ec8;
     for (std::size_t index = 0; index < result.palette_words.size(); ++index) {
         result.palette_words[index] = big16(palette, index * 2U);
     }
