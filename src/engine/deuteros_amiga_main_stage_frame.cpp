@@ -2,8 +2,6 @@
 
 #include "data/sha256.hpp"
 
-#include <algorithm>
-
 namespace eon {
 
 namespace {
@@ -30,7 +28,7 @@ bool append_rgba(const std::vector<std::uint8_t>& color_indices,
 
 std::optional<DeuterosAmigaMainStageFrameSnapshot>
 decode_deuteros_amiga_main_stage_frame(
-    const NativeRuntimeMemoryCheckpoint& memory,
+    const NativeRuntimeMemory& memory,
     const std::uint32_t plane_base,
     const std::uint16_t frame_counter,
     const std::array<std::uint16_t, 16>& palette_rgb4,
@@ -43,27 +41,15 @@ decode_deuteros_amiga_main_stage_frame(
     for (const auto color : palette_rgb4)
         if ((color & 0xf000U) != 0) return std::nullopt;
 
-    std::vector<std::uint8_t> planar(4U * plane_size);
-    std::vector<bool> initialized(planar.size(), false);
-    for (const auto& cell : memory.initialized_bytes) {
-        if (cell.location.address_space != NativeRuntimeAddressSpace::linear
-            || cell.location.segment || cell.location.offset > 0xffffffffULL) continue;
-        const auto address = static_cast<std::uint32_t>(cell.location.offset);
-        if (address < plane_base || address >= plane_base + planar.size()) continue;
-        const auto index = static_cast<std::size_t>(address - plane_base);
-        if (initialized[index]) return std::nullopt;
-        planar[index] = cell.value;
-        initialized[index] = true;
-    }
-    if (!std::all_of(initialized.begin(), initialized.end(), [](const bool value) {
-            return value;
-        })) return std::nullopt;
+    const auto planar_bytes = memory.read_linear_range(plane_base, 4U * plane_size);
+    if (!planar_bytes) return std::nullopt;
+    const auto& planar = *planar_bytes;
 
     DeuterosAmigaMainStageFrameSnapshot result;
     result.generation = generation;
     result.plane_base = plane_base;
     result.frame_counter = frame_counter;
-    result.runtime_memory_checksum = memory.checksum;
+    result.runtime_memory_revision = memory.revision();
     result.palette_rgb4 = palette_rgb4;
     result.color_indices.reserve(320U * height);
     result.rgba.reserve(320U * height * 4U);

@@ -114,6 +114,24 @@ std::optional<std::uint8_t> NativeRuntimeMemory::read_byte(
     return found->second;
 }
 
+std::optional<std::vector<std::uint8_t>> NativeRuntimeMemory::read_linear_range(
+    const std::uint64_t address, const std::size_t size) const {
+    if (address > linear_limit_exclusive_
+        || size > linear_limit_exclusive_ - address) return std::nullopt;
+    std::vector<std::uint8_t> result;
+    result.reserve(size);
+    auto current = bytes_.lower_bound(
+        {NativeRuntimeAddressSpace::linear, std::nullopt, address});
+    for (std::size_t index = 0; index < size; ++index) {
+        const NativeRuntimeLocation expected{NativeRuntimeAddressSpace::linear,
+            std::nullopt, address + index};
+        if (current == bytes_.end() || current->first != expected) return std::nullopt;
+        result.push_back(current->second);
+        ++current;
+    }
+    return result;
+}
+
 NativeRuntimeMemoryCheckpoint NativeRuntimeMemory::checkpoint() const {
     NativeRuntimeMemoryCheckpoint result;
     result.applied_batch_count=applied_batch_ids_.size();

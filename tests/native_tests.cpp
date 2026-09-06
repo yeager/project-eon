@@ -6548,7 +6548,7 @@ int main() {
             const auto first_main_frame=opening_controller.deuteros_amiga_main_stage_frame();
             assert(first_main_frame&&first_main_frame->generation==1
                 &&first_main_frame->frame_counter==1&&first_main_frame->plane_base==0x90000
-                &&first_main_frame->runtime_memory_checksum==after_first_frame_buffer->checksum
+                &&first_main_frame->runtime_memory_revision==after_first_frame_buffer->applied_batch_count
                 &&first_main_frame->planar_sha256
                     =="0c92bddb4e96f3ea9ec9f0f64a668255a6c15527ac09f6f119cafde60c7c4a39"
                 &&first_main_frame->color_indices.size()==320*200
@@ -6835,7 +6835,7 @@ int main() {
             const auto second_main_frame=opening_controller.deuteros_amiga_main_stage_frame();
             assert(second_main_frame&&second_main_frame->generation==3
                 &&second_main_frame->frame_counter==2&&second_main_frame->plane_base==0x80000
-                &&second_main_frame->runtime_memory_checksum==second_frame_memory->checksum);
+                &&second_main_frame->runtime_memory_revision==second_frame_memory->applied_batch_count);
             assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x21822);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
             const auto before_outer_input=opening_controller.native_runtime_memory_checkpoint();
@@ -6936,7 +6936,7 @@ int main() {
             const auto fourth_main_frame=opening_controller.deuteros_amiga_main_stage_frame();
             assert(fourth_main_frame&&fourth_main_frame->generation==5
                 &&fourth_main_frame->frame_counter==4&&fourth_main_frame->plane_base==0x80000
-                &&fourth_main_frame->runtime_memory_checksum==first_masked_memory->checksum
+                &&fourth_main_frame->runtime_memory_revision==first_masked_memory->applied_batch_count
                 &&fourth_main_frame->planar_sha256
                     =="4fb915381f0db119da828286b42ed06dadf29486310df04cae2b249e40849f23");
 

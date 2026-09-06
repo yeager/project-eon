@@ -20,7 +20,7 @@ struct DeuterosAmigaMainStageFrameSnapshot {
     std::uint64_t generation = 0;
     std::uint32_t plane_base = 0;
     std::uint16_t frame_counter = 0;
-    std::uint64_t runtime_memory_checksum = 0;
+    std::size_t runtime_memory_revision = 0;
     std::array<std::uint16_t, 16> palette_rgb4{};
     std::vector<std::uint8_t> color_indices;
     std::vector<std::uint8_t> rgba;
@@ -35,7 +35,7 @@ using DeuterosAmigaMainStageFrame =
 
 [[nodiscard]] std::optional<DeuterosAmigaMainStageFrameSnapshot>
 decode_deuteros_amiga_main_stage_frame(
-    const NativeRuntimeMemoryCheckpoint& memory,
+    const NativeRuntimeMemory& memory,
     std::uint32_t plane_base,
     std::uint16_t frame_counter,
     const std::array<std::uint16_t, 16>& palette_rgb4,

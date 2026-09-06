@@ -8480,9 +8480,11 @@ return and a following `$216f2` observation with custom-register bit 5 set.
 A clear-bit wait retains the pending snapshot. This distinction prevents SDL
 from presenting a buffer that the recovered original control flow has not yet
 made visible. Published snapshots carry a monotonically increasing generation,
-the frame counter, plane base, engine-memory checksum and SHA-256 values for
-the planar, indexed and RGBA representations. Reset and host revocation withhold
-the snapshot.
+the frame counter, plane base, engine-memory effect revision and SHA-256 values
+for the planar, indexed and RGBA representations. The decoder performs one
+bounded, contiguous 32,000-byte read directly from owned memory; it neither
+materializes nor hashes unrelated runtime memory on the recurring frame path.
+Reset and host revocation withhold the snapshot.
 
 The genuine controlled route currently proves these planar hashes:
 

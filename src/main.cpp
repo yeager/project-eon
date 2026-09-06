@@ -4511,7 +4511,7 @@ int main(int argc, char** argv) {
     // replacement can never expose stale opening pixels behind it.
     SDL_Texture* deuteros_bootstrap_frame_texture = nullptr;
     std::optional<std::uint64_t> deuteros_bootstrap_frame_generation;
-    std::optional<std::uint64_t> deuteros_bootstrap_frame_memory_checksum;
+    std::optional<std::uint64_t> deuteros_native_frame_memory_identity;
     // A complete external Modern sequence is an alternative presentation of
     // the finite held-input route only.  It neither provides VM state nor
     // substitutes a single original pixel in Original mode.
@@ -4949,7 +4949,7 @@ int main(int argc, char** argv) {
         deuteros_title_planar_generation.reset();
         deuteros_title_planar_memory_checksum.reset();
         deuteros_bootstrap_frame_generation.reset();
-        deuteros_bootstrap_frame_memory_checksum.reset();
+        deuteros_native_frame_memory_identity.reset();
         discard_deuteros_external_modern_sequence();
     };
     const auto reset_active_runtime = [&] {
@@ -6498,12 +6498,13 @@ int main(int argc, char** argv) {
                                   << SDL_GetError() << '\n';
                     }
                 }
-                const auto update_native_frame_texture = [&](const auto& native_frame) {
+                const auto update_native_frame_texture = [&](const auto& native_frame,
+                    const std::uint64_t memory_identity) {
                     if (deuteros_bootstrap_frame_generation
                         && *deuteros_bootstrap_frame_generation == native_frame.generation
-                        && deuteros_bootstrap_frame_memory_checksum
-                        && *deuteros_bootstrap_frame_memory_checksum
-                            == native_frame.runtime_memory_checksum) return;
+                        && deuteros_native_frame_memory_identity
+                        && *deuteros_native_frame_memory_identity
+                            == memory_identity) return;
                     if (!deuteros_bootstrap_frame_texture) {
                         deuteros_bootstrap_frame_texture = SDL_CreateTexture(renderer,
                             SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING,
@@ -6513,21 +6514,22 @@ int main(int argc, char** argv) {
                         && SDL_UpdateTexture(deuteros_bootstrap_frame_texture, nullptr,
                             native_frame.rgba.data(), native_frame.width * 4)) {
                         deuteros_bootstrap_frame_generation = native_frame.generation;
-                        deuteros_bootstrap_frame_memory_checksum =
-                            native_frame.runtime_memory_checksum;
+                        deuteros_native_frame_memory_identity = memory_identity;
                     } else if (deuteros_bootstrap_frame_texture) {
                         std::cerr << "Unable to update Deuteros native frame texture: "
                                   << SDL_GetError() << '\n';
                     }
                 };
                 if (main_stage_frame) {
-                    update_native_frame_texture(*main_stage_frame);
+                    update_native_frame_texture(*main_stage_frame,
+                        main_stage_frame->runtime_memory_revision);
                 } else if (bootstrap_frame && (!deuteros_bootstrap_frame_generation
                         || *deuteros_bootstrap_frame_generation != bootstrap_frame->generation
-                        || !deuteros_bootstrap_frame_memory_checksum
-                        || *deuteros_bootstrap_frame_memory_checksum
+                        || !deuteros_native_frame_memory_identity
+                        || *deuteros_native_frame_memory_identity
                             != bootstrap_frame->runtime_memory_checksum)) {
-                    update_native_frame_texture(*bootstrap_frame);
+                    update_native_frame_texture(*bootstrap_frame,
+                        bootstrap_frame->runtime_memory_checksum);
                 }
                 if (opening) {
                     draw_text(renderer, 64, 220, tr("AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE"));

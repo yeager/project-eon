@@ -23,6 +23,12 @@ int main() {
     assert(memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x1c485})==0x44);
     assert(memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x1c486})==0xaa);
     assert(!memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x1c481}));
+    const auto contiguous=memory.read_linear_range(0x1c482,8);
+    assert(contiguous&&*contiguous==std::vector<std::uint8_t>({
+        0x11,0x22,0x33,0x44,0xaa,0xbb,0xcc,0xdd}));
+    assert(memory.revision()==1);
+    assert(!memory.read_linear_range(0x1c481,8));
+    assert(!memory.read_linear_range(0xffffffffULL,2));
     assert(!memory.apply(*batch).accepted);
     const auto before_rejection=memory.checkpoint();
 

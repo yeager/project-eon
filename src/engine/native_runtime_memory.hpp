@@ -67,6 +67,9 @@ public:
     [[nodiscard]] NativeRuntimeMemoryApplyResult apply(const NativeRuntimeEffectBatch& batch);
     [[nodiscard]] std::optional<std::uint8_t> read_byte(
         const NativeRuntimeLocation& location) const;
+    [[nodiscard]] std::optional<std::vector<std::uint8_t>> read_linear_range(
+        std::uint64_t address, std::size_t size) const;
+    [[nodiscard]] std::size_t revision() const noexcept { return applied_batch_ids_.size(); }
     [[nodiscard]] NativeRuntimeMemoryCheckpoint checkpoint() const;
     [[nodiscard]] NativeRuntimeMemoryDiagnostics diagnostics() const;
 

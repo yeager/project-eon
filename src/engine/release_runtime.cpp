@@ -4960,7 +4960,7 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_frame_buffer(const DeuterosAmi
             result.error="Deuteros frame has no accepted main-stage palette";return result;
         }
         auto staged_frame=decode_deuteros_amiga_main_stage_frame(
-            memory.checkpoint(),o.buffer_address,counter,*deuteros_amiga_main_stage_palette_,
+            memory,o.buffer_address,counter,*deuteros_amiga_main_stage_palette_,
             deuteros_amiga_main_stage_frame_generation_+1);
         if(!staged_frame){result.error="Deuteros composed frame is incomplete";return result;}
         if(!deuteros_amiga_->advance_main_stage_frame_buffer(o,counter)){
