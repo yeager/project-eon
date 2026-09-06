@@ -3476,6 +3476,20 @@ payload and permits the `$21276` body to reach `$21310`. A previously observed
 graphics-base value is not used as a substitute; ownership comes from the
 actual caller return and store instruction.
 
+The subsequent typed `$1eda6/$12ff4` display-base read now commits the
+already recovered complete local display setup, rather than discarding its
+plan: the two original base pointers, all 20 original palette words at
+`$12ecc`, the base+$7d00 pointer, local zero word, caller pointer copies, and
+the 8000-longword clear of the observed display buffer. The observed source
+cell is retained separately as read evidence. The existing hash-bound setup
+and clear profiles supply every destination, palette value and loop length.
+The complete transaction validates even 24-bit buffer bounds and agrees with
+any already owned source bytes before committing memory and session state.
+Invalid address, replay or batch failure leaves both unchanged. Tests compare
+all 20 colors with the original title palette and verify all 32000 cleared
+bytes. This establishes native buffer contents, not a displayed title frame
+or a new graphics-library return.
+
 The two subsequent `-$c0(A6)` returns now have a strict ordered continuation:
 `$21310->$21314`, then `$2132a->$2132e`. The 32 bytes at clean disk-1 ADF
 offset `$6b14` (runtime `$21314..$21333`) hash to

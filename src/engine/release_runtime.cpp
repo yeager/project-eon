@@ -2851,10 +2851,62 @@ DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::name { 
 EON_DEUTEROS_TITLE_ADVANCE(advance_deuteros_amiga_title_local_prefix(), deuteros_amiga_->advance_title_local_prefix())
 EON_DEUTEROS_TITLE_ADVANCE(observe_deuteros_amiga_title_exec_return(const DeuterosAmigaObservedExecReturn o), deuteros_amiga_->observe_title_exec_return(o))
 EON_DEUTEROS_TITLE_ADVANCE(observe_deuteros_amiga_title_open_library_return(const DeuterosAmigaObservedOpenLibraryReturn o), deuteros_amiga_->observe_title_open_library_return(o))
-EON_DEUTEROS_TITLE_ADVANCE(observe_deuteros_amiga_title_display_base(const DeuterosAmigaObservedDisplayBaseRead o), deuteros_amiga_->observe_title_display_base(o))
 EON_DEUTEROS_TITLE_ADVANCE(observe_deuteros_amiga_title_callback_exec_return(const DeuterosAmigaObservedCallbackExecReturn o), deuteros_amiga_->observe_title_callback_exec_return(o))
 #undef EON_DEUTEROS_TITLE_ADVANCE
 
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_display_base(
+    const DeuterosAmigaObservedDisplayBaseRead o){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::deuteros_amiga_title_stage
+        ||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
+        result.error="Deuteros display setup requires active owned memory";return result;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto plan=pending.observe_display_base_and_advance(o);
+        if(!plan){result.error="Deuteros display setup did not match boundary";return result;}
+        if(o.observed_value==0||(o.observed_value&1U)!=0
+            ||plan->clear_write_width!=4||plan->clear_byte_count!=0x7d00
+            ||o.observed_value>0x1000000U-plan->clear_byte_count)
+            throw std::runtime_error("Deuteros display clear is outside aligned native memory");
+        auto memory=*native_runtime_memory_;
+        for(std::uint32_t i=0;i<4;++i){
+            const auto existing=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,o.source_address+i});
+            if(existing&&*existing!=((o.observed_value>>(24U-i*8U))&0xffU))
+                throw std::runtime_error("Deuteros display-base observation contradicts owned memory");
+        }
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-title-display-setup",true,{}};
+        batch.effects.reserve(28U+plan->clear_byte_count/4U);
+        const auto add=[&](std::uint32_t address,MemoryTransferElementWidth width,std::uint32_t value){
+            batch.effects.push_back({batch.effects.size()+1,
+                {NativeRuntimeAddressSpace::linear,std::nullopt,address},width,
+                NativeRuntimeByteOrder::big_endian,value});
+        };
+        // The source cell is admitted by the exact read observation; all
+        // remaining writes below are the hash-verified local instructions.
+        add(o.source_address,MemoryTransferElementWidth::longword,o.observed_value);
+        for(const auto address:plan->base_pointer_destinations)
+            add(address,MemoryTransferElementWidth::longword,o.observed_value);
+        for(std::size_t i=0;i<plan->palette_words.size();++i)
+            add(plan->palette_destination_address+static_cast<std::uint32_t>(i)*2U,
+                MemoryTransferElementWidth::word,plan->palette_words[i]);
+        add(plan->derived_pointer_destination_address,MemoryTransferElementWidth::longword,
+            plan->derived_pointer_value);
+        add(plan->cleared_word_address,MemoryTransferElementWidth::word,0);
+        for(const auto address:plan->caller_pointer_copy_destinations)
+            add(address,MemoryTransferElementWidth::longword,o.observed_value);
+        for(std::uint32_t i=0;i<plan->clear_byte_count;i+=4)
+            add(plan->clear_destination+i,MemoryTransferElementWidth::longword,0);
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted){result.error=applied.error;return result;}
+        if(!deuteros_amiga_->observe_title_display_base(o)){
+            result.error="Deuteros display setup disappeared before commit";return result;
+        }
+        *native_runtime_memory_=std::move(memory);result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
 DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::advance_deuteros_amiga_title_post_open_library_local_path(){
     DeuterosAmigaTitleDependencyObservationResult result;
