@@ -52,6 +52,8 @@ class WindowsPackagingTests(unittest.TestCase):
         self.assertIn("installed package must not create a game-data directory", workflow)
         self.assertIn("did not retain its Windows default data boundary", workflow)
         self.assertIn("Data path does not exist:", workflow)
+        self.assertIn('$inspectNormalized = $inspect.Replace("\\\\", "\\")', workflow)
+        self.assertIn('$inspectNormalized.Contains(', workflow)
         self.assertIn("created its default game-data directory during lookup", workflow)
         self.assertIn("installed Project Eon executable did not load and print its CLI usage", workflow)
 

@@ -656,8 +656,12 @@ jobs:
           $inspect = (Get-Content -LiteralPath $inspectStdout -Raw) +
             (Get-Content -LiteralPath $inspectStderr -Raw)
           $expectedDataPath = Join-Path $installRoot "data"
+          # std::filesystem's Windows diagnostic is JSON-safe and may render
+          # each path separator twice. Compare the exact path after reducing
+          # only that representation detail; do not accept another directory.
+          $inspectNormalized = $inspect.Replace("\\", "\")
           if ($inspectProcess.ExitCode -ne 2 -or
-              $inspect -notmatch [regex]::Escape("Data path does not exist: `"$expectedDataPath`"")) {
+              -not $inspectNormalized.Contains("Data path does not exist: `"$expectedDataPath`"")) {
             throw "installed Project Eon executable did not retain its Windows default data boundary: $inspect"
           }
           if (Test-Path -LiteralPath $expectedDataPath) {
