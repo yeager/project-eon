@@ -5,6 +5,7 @@
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_amiga_title_program_entry_session.hpp"
 #include "engine/deuteros_amiga_bootstrap_frame.hpp"
+#include "engine/deuteros_amiga_main_stage_frame.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
 #include "engine/deuteros_amiga_title_display_trace_session.hpp"
 #include "engine/deuteros_amiga_title_planar_patch.hpp"
@@ -776,6 +777,8 @@ public:
     deuteros_amiga_title_dependency_chain_checkpoint() const;
     [[nodiscard]] std::optional<DeuterosAmigaBootstrapFrameSnapshot>
     deuteros_amiga_bootstrap_frame() const;
+    [[nodiscard]] DeuterosAmigaMainStageFrame
+        deuteros_amiga_main_stage_frame() const;
     [[nodiscard]] std::optional<DeuterosAmigaTitleProgramEntrySnapshot>
     deuteros_amiga_title_program_entry() const;
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
@@ -1228,6 +1231,10 @@ private:
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;
     std::optional<DeuterosAmigaBootstrapFrameSnapshot> deuteros_amiga_bootstrap_frame_;
     std::uint64_t deuteros_amiga_bootstrap_frame_generation_ = 0;
+    std::optional<std::array<std::uint16_t,16>> deuteros_amiga_main_stage_palette_;
+    std::optional<DeuterosAmigaMainStageFrameSnapshot> deuteros_amiga_pending_main_stage_frame_;
+    DeuterosAmigaMainStageFrame deuteros_amiga_main_stage_frame_;
+    std::uint64_t deuteros_amiga_main_stage_frame_generation_ = 0;
     std::optional<DeuterosAmigaTitleProgramEntrySnapshot> deuteros_amiga_title_program_entry_;
     std::optional<DeuterosAmigaTitleServiceSetupLocalPlan> deuteros_amiga_title_service_setup_plan_;
     std::optional<DeuterosAmigaTitleSecondServiceLocalPlan> deuteros_amiga_title_second_service_plan_;

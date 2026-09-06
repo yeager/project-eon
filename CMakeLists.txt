@@ -112,6 +112,7 @@ add_executable(project-eon
     src/presentation/modern_presentation_pipeline.cpp
     src/engine/deuteros_amiga_opening.cpp
     src/engine/deuteros_amiga_bootstrap_frame.cpp
+    src/engine/deuteros_amiga_main_stage_frame.cpp
     src/engine/bounded_memory_transfer.cpp
     src/engine/native_runtime_memory.cpp
     src/engine/deuteros_amiga_opening_runner.cpp

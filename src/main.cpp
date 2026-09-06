@@ -6449,7 +6449,9 @@ int main(int argc, char** argv) {
                 const auto title_stage = runtime.deuteros_amiga_title_stage_boundary();
                 const auto title_surface = runtime.deuteros_amiga_title_planar_surface();
                 const auto bootstrap_frame = runtime.deuteros_amiga_bootstrap_frame();
-                if (!opening && !title_stage && !title_surface && !bootstrap_frame) {
+                const auto main_stage_frame = runtime.deuteros_amiga_main_stage_frame();
+                if (!opening && !title_stage && !title_surface && !bootstrap_frame
+                    && !main_stage_frame) {
                     draw_text(renderer, 64, 220, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
                     continue;
                 }
@@ -6496,26 +6498,36 @@ int main(int argc, char** argv) {
                                   << SDL_GetError() << '\n';
                     }
                 }
-                if (bootstrap_frame && (!deuteros_bootstrap_frame_generation
+                const auto update_native_frame_texture = [&](const auto& native_frame) {
+                    if (deuteros_bootstrap_frame_generation
+                        && *deuteros_bootstrap_frame_generation == native_frame.generation
+                        && deuteros_bootstrap_frame_memory_checksum
+                        && *deuteros_bootstrap_frame_memory_checksum
+                            == native_frame.runtime_memory_checksum) return;
+                    if (!deuteros_bootstrap_frame_texture) {
+                        deuteros_bootstrap_frame_texture = SDL_CreateTexture(renderer,
+                            SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING,
+                            native_frame.width, native_frame.height);
+                    }
+                    if (deuteros_bootstrap_frame_texture
+                        && SDL_UpdateTexture(deuteros_bootstrap_frame_texture, nullptr,
+                            native_frame.rgba.data(), native_frame.width * 4)) {
+                        deuteros_bootstrap_frame_generation = native_frame.generation;
+                        deuteros_bootstrap_frame_memory_checksum =
+                            native_frame.runtime_memory_checksum;
+                    } else if (deuteros_bootstrap_frame_texture) {
+                        std::cerr << "Unable to update Deuteros native frame texture: "
+                                  << SDL_GetError() << '\n';
+                    }
+                };
+                if (main_stage_frame) {
+                    update_native_frame_texture(*main_stage_frame);
+                } else if (bootstrap_frame && (!deuteros_bootstrap_frame_generation
                         || *deuteros_bootstrap_frame_generation != bootstrap_frame->generation
                         || !deuteros_bootstrap_frame_memory_checksum
                         || *deuteros_bootstrap_frame_memory_checksum
                             != bootstrap_frame->runtime_memory_checksum)) {
-                    if (!deuteros_bootstrap_frame_texture) {
-                        deuteros_bootstrap_frame_texture = SDL_CreateTexture(renderer,
-                            SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING,
-                            bootstrap_frame->width, bootstrap_frame->height);
-                    }
-                    if (deuteros_bootstrap_frame_texture
-                        && SDL_UpdateTexture(deuteros_bootstrap_frame_texture, nullptr,
-                            bootstrap_frame->rgba.data(), bootstrap_frame->width * 4)) {
-                        deuteros_bootstrap_frame_generation = bootstrap_frame->generation;
-                        deuteros_bootstrap_frame_memory_checksum =
-                            bootstrap_frame->runtime_memory_checksum;
-                    } else if (deuteros_bootstrap_frame_texture) {
-                        std::cerr << "Unable to update Deuteros bootstrap frame texture: "
-                                  << SDL_GetError() << '\n';
-                    }
+                    update_native_frame_texture(*bootstrap_frame);
                 }
                 if (opening) {
                     draw_text(renderer, 64, 220, tr("AUTHENTIC AMIGA OPENING - ORIGINAL CHANNEL PROGRAM + PALETTE"));
@@ -6593,10 +6605,17 @@ int main(int argc, char** argv) {
                         << "; PATCH=" << title_surface->applied_patch_count
                         << "; PLANE-BYTES=" << title_surface->initialized_plane_byte_count;
                     draw_text(renderer, 64, 238, surface_provenance.str());
+                } else if (main_stage_frame) {
+                    std::ostringstream frame_provenance;
+                    frame_provenance << "FRAME=" << main_stage_frame->frame_counter
+                        << "; GEN=" << main_stage_frame->generation
+                        << "; PLANAR=" << main_stage_frame->planar_sha256.substr(0, 16);
+                    draw_text(renderer, 64, 238, frame_provenance.str());
                 }
                 SDL_Texture* texture = title_surface ? deuteros_title_planar_texture
-                    : bootstrap_frame ? deuteros_bootstrap_frame_texture : preview_texture;
-                if (modern && !title_surface && !bootstrap_frame) {
+                    : (main_stage_frame || bootstrap_frame)
+                        ? deuteros_bootstrap_frame_texture : preview_texture;
+                if (modern && !title_surface && !bootstrap_frame && !main_stage_frame) {
                     if (SDL_Texture* external = refresh_deuteros_external_modern_texture(source_tick,
                             title_stage.has_value())) {
                         texture = external;
@@ -6607,11 +6626,15 @@ int main(int argc, char** argv) {
                             + "; " + surface.provenance + "; T=1-82)");
                     }
                 }
-                if (texture == preview_texture && modern
-                    && modern_graphics_settings.pixel_reconstruction != PixelReconstruction::off && frame) {
+                if ((texture == preview_texture || main_stage_frame) && modern
+                    && modern_graphics_settings.pixel_reconstruction != PixelReconstruction::off
+                    && (frame || main_stage_frame)) {
                     if (const auto release = resolve_active_release(eon::Game::deuteros)) {
+                        const auto reconstruction_tick = main_stage_frame
+                            ? main_stage_frame->generation : source_tick;
                         const eon::ModernReconstructionCacheKey requested_key{release->sha256,
-                            "deuteros.amiga.opening", source_tick,
+                            main_stage_frame ? "deuteros.amiga.main-stage" : "deuteros.amiga.opening",
+                            reconstruction_tick,
                             modern_graphics_settings.pixel_reconstruction};
                         // A new source tick, release or F10 reconstruction mode
                         // has different dimensions/pixels. The pipeline revokes
@@ -6622,8 +6645,15 @@ int main(int argc, char** argv) {
                             SDL_DestroyTexture(modern_preview_texture);
                             modern_preview_texture = nullptr;
                         }
-                        const auto* enhanced = deuteros_modern_pipeline.resolve(requested_key, *frame,
-                            eon::DeuterosAmigaFrame::width, eon::DeuterosAmigaFrame::height);
+                        const auto source_rgba = main_stage_frame
+                            ? std::span<const std::uint8_t>(main_stage_frame->rgba)
+                            : std::span<const std::uint8_t>(*frame);
+                        const auto source_width = main_stage_frame
+                            ? int(main_stage_frame->width) : eon::DeuterosAmigaFrame::width;
+                        const auto source_height = main_stage_frame
+                            ? int(main_stage_frame->height) : eon::DeuterosAmigaFrame::height;
+                        const auto* enhanced = deuteros_modern_pipeline.resolve(requested_key,
+                            source_rgba, source_width, source_height);
                         if (enhanced) {
                             if (!modern_preview_texture) {
                                 modern_preview_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
@@ -6643,15 +6673,14 @@ int main(int argc, char** argv) {
                     }
                 }
                 if (texture) SDL_SetTextureScaleMode(texture,
-                    modern && !title_surface && !bootstrap_frame
-                        && modern_graphics_settings.smooth_scaling
+                    modern && modern_graphics_settings.smooth_scaling
                         ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
                 // Keep the original pixels intact while allowing the extra
                 // provenance boundary to remain visible after title handoff.
                 const auto preview_bounds = aspect_viewport(64,
-                    title_stage || title_surface || bootstrap_frame ? 350.0F
+                    title_stage || title_surface || bootstrap_frame || main_stage_frame ? 350.0F
                         : deuteros_title_resource ? 306.0F : 274.0F,
-                    576, title_stage || title_surface || bootstrap_frame ? 350.0F : 400.0F,
+                    576, title_stage || title_surface || bootstrap_frame || main_stage_frame ? 350.0F : 400.0F,
                     modern_graphics_settings);
                 if (modern && modern_graphics_settings.frame) draw_modern_surface_frame(renderer, preview_bounds);
                 if (texture) SDL_RenderTexture(renderer, texture, nullptr, &preview_bounds);

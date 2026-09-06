@@ -16,6 +16,10 @@ class RepositoryArtifactPolicyTests(unittest.TestCase):
             "analysis-work/member.bin",
             "reports/deuteros.disassembly.md",
             "reverse/millennium.objdump",
+            "reverse/project.gpr.ghidra",
+            "captures/memory.dump",
+            "media/original.ipf",
+            "media/original.zip",
         ]
         self.assertEqual(forbidden_tracked_paths(paths), sorted(paths))
 
@@ -50,6 +54,15 @@ class RepositoryArtifactPolicyTests(unittest.TestCase):
                 encoding="utf-8",
             )
             self.assertEqual(forbidden_tracked_content(["ledger.md"], root), [])
+
+    def test_checks_index_blob_instead_of_different_worktree_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "apparently-safe.md").write_text("safe worktree copy\n", encoding="utf-8")
+            self.assertEqual(forbidden_tracked_content(
+                ["apparently-safe.md"], root,
+                blob_reader=lambda _path: b"```objdump\n00000100  rts\n```\n",
+            ), ["apparently-safe.md"])
 
 
 if __name__ == "__main__":

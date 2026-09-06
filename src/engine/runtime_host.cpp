@@ -333,6 +333,11 @@ RuntimeHost::deuteros_amiga_bootstrap_frame() const {
     if (revoking()) return std::nullopt;
     return NativeSessionController::deuteros_amiga_bootstrap_frame();
 }
+DeuterosAmigaMainStageFrame
+RuntimeHost::deuteros_amiga_main_stage_frame() const {
+    if (revoking()) return {};
+    return NativeSessionController::deuteros_amiga_main_stage_frame();
+}
 std::optional<DeuterosAmigaTitleProgramEntrySnapshot>
 RuntimeHost::deuteros_amiga_title_program_entry() const {
     if(revoking())return std::nullopt;

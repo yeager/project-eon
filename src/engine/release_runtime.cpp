@@ -300,6 +300,10 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
 void ReleaseRuntimeCoordinator::reset() {
     deuteros_amiga_bootstrap_frame_.reset();
     deuteros_amiga_bootstrap_frame_generation_ = 0;
+    deuteros_amiga_main_stage_palette_.reset();
+    deuteros_amiga_pending_main_stage_frame_.reset();
+    deuteros_amiga_main_stage_frame_.reset();
+    deuteros_amiga_main_stage_frame_generation_ = 0;
     deuteros_amiga_title_program_entry_.reset();
     native_runtime_memory_.reset();
     millennium_atari_config_consumer_.reset();
@@ -2894,6 +2898,15 @@ ReleaseRuntimeCoordinator::deuteros_amiga_bootstrap_frame() const {
     return deuteros_amiga_bootstrap_frame_;
 }
 
+DeuterosAmigaMainStageFrame
+ReleaseRuntimeCoordinator::deuteros_amiga_main_stage_frame() const {
+    if (!active_ || !session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_title_stage) {
+        return {};
+    }
+    return deuteros_amiga_main_stage_frame_;
+}
+
 std::optional<DeuterosAmigaTitleProgramEntrySnapshot>
 ReleaseRuntimeCoordinator::deuteros_amiga_title_program_entry() const {
     if (!active_ || !session_snapshot_
@@ -4555,11 +4568,27 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_graphics_retur
         const auto a1=o.call_address==0x21310?read_long(0x21266):0U;
         const auto a6=o.call_address==0x21310?read_long(0x12fec):0U;
         auto pending=*deuteros_amiga_->title_stage_session();
+        const auto current=pending.main_stage_loop_graphics_plan();
         const auto plan=pending.advance_main_stage_loop_graphics_return(o,a1,a6);
         if(!plan){
             result.error="Deuteros loop graphics return did not match boundary";return result;
         }
         auto memory=*native_runtime_memory_;
+        std::optional<std::array<std::uint16_t,16>> accepted_palette;
+        if(o.call_address==0x2132a){
+            if(!current||current->next_call_address!=0x2132a)
+                throw std::runtime_error("Deuteros main-stage palette call is not pending");
+            const auto source=current->a1_value;
+            std::array<std::uint16_t,16> palette{};
+            for(std::uint32_t color=0;color<palette.size();++color){
+                const auto high=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,source+color*2U});
+                const auto low=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,source+color*2U+1U});
+                if(!high||!low)throw std::runtime_error("Deuteros main-stage palette is not owned");
+                palette[color]=static_cast<std::uint16_t>((std::uint16_t(*high)<<8U)|*low);
+                if((palette[color]&0xf000U)!=0)throw std::runtime_error("Deuteros main-stage palette is not RGB4");
+            }
+            accepted_palette=palette;
+        }
         if(plan->write_count!=0){
             NativeRuntimeEffectBatch batch{"deuteros-amiga-loop-local-request-"+std::to_string(o.trace_sequence),true,{}};
             for(std::size_t i=0;i<plan->write_count;++i)
@@ -4573,6 +4602,25 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_graphics_retur
             result.error="Deuteros loop graphics return disappeared before commit";return result;
         }
         *native_runtime_memory_=std::move(memory);
+        if(accepted_palette){
+            deuteros_amiga_main_stage_palette_=*accepted_palette;
+            if(deuteros_amiga_pending_main_stage_frame_){
+                auto recolored=recolor_deuteros_amiga_main_stage_frame(
+                    *deuteros_amiga_pending_main_stage_frame_,*accepted_palette,
+                    deuteros_amiga_pending_main_stage_frame_->generation);
+                if(!recolored)throw std::runtime_error("Deuteros pending frame palette update failed");
+                deuteros_amiga_pending_main_stage_frame_=std::move(*recolored);
+            }
+            if(deuteros_amiga_main_stage_frame_){
+                auto recolored=recolor_deuteros_amiga_main_stage_frame(
+                    *deuteros_amiga_main_stage_frame_,*accepted_palette,
+                    deuteros_amiga_main_stage_frame_generation_+1);
+                if(!recolored)throw std::runtime_error("Deuteros published frame palette update failed");
+                deuteros_amiga_main_stage_frame_=
+                    std::make_shared<const DeuterosAmigaMainStageFrameSnapshot>(std::move(*recolored));
+                ++deuteros_amiga_main_stage_frame_generation_;
+            }
+        }
         result.accepted=true;
     }catch(const std::exception&e){result.error=e.what();}
     return result;
@@ -4908,10 +4956,19 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_frame_buffer(const DeuterosAmi
             1,{NativeRuntimeAddressSpace::linear,std::nullopt,0x210f2},MemoryTransferElementWidth::word,
             NativeRuntimeByteOrder::big_endian,active_count}}});
         if(!counted.accepted){result.error=counted.error;return result;}
+        if(!deuteros_amiga_main_stage_palette_){
+            result.error="Deuteros frame has no accepted main-stage palette";return result;
+        }
+        auto staged_frame=decode_deuteros_amiga_main_stage_frame(
+            memory.checkpoint(),o.buffer_address,counter,*deuteros_amiga_main_stage_palette_,
+            deuteros_amiga_main_stage_frame_generation_+1);
+        if(!staged_frame){result.error="Deuteros composed frame is incomplete";return result;}
         if(!deuteros_amiga_->advance_main_stage_frame_buffer(o,counter)){
             result.error="Deuteros frame buffer disappeared before commit";return result;
         }
-        *native_runtime_memory_=std::move(memory);result.accepted=true;
+        *native_runtime_memory_=std::move(memory);
+        deuteros_amiga_pending_main_stage_frame_=std::move(*staged_frame);
+        result.accepted=true;
     }catch(const std::exception&e){result.error=e.what();}
     return result;
 }
@@ -5258,6 +5315,21 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_command_palette_return(const D
             }
         }
         auto memory=*native_runtime_memory_;
+        std::optional<std::array<std::uint16_t,16>> accepted_palette;
+        const bool second_command_palette=current&&current->next_call_address==0x2152a;
+        const bool second_fade_palette=current&&current->next_call_address==0x22312;
+        if(second_command_palette||second_fade_palette){
+            const auto source=second_fade_palette?0x12eccU:current->command_palette_address;
+            std::array<std::uint16_t,16> palette{};
+            for(std::uint32_t color=0;color<palette.size();++color){
+                const auto high=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,source+color*2U});
+                const auto low=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,source+color*2U+1U});
+                if(!high||!low)throw std::runtime_error("Deuteros accepted palette source is not owned");
+                palette[color]=static_cast<std::uint16_t>((std::uint16_t(*high)<<8U)|*low);
+                if((palette[color]&0xf000U)!=0)throw std::runtime_error("Deuteros accepted palette source is not RGB4");
+            }
+            accepted_palette=palette;
+        }
         std::optional<std::uint16_t> fade_remaining;
         if(current&&current->outer_fade_return!=0&&current->next_call_address==0x22312){
             const auto high=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,0x2229a});
@@ -5275,7 +5347,27 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_command_palette_return(const D
         if(!deuteros_amiga_->observe_main_stage_command_palette_return(o,library,fade_remaining)){
             result.error="Deuteros command palette return disappeared before commit";return result;
         }
-        *native_runtime_memory_=std::move(memory);result.accepted=true;
+        *native_runtime_memory_=std::move(memory);
+        if(accepted_palette){
+            deuteros_amiga_main_stage_palette_=*accepted_palette;
+            if(deuteros_amiga_pending_main_stage_frame_){
+                auto recolored=recolor_deuteros_amiga_main_stage_frame(
+                    *deuteros_amiga_pending_main_stage_frame_,*accepted_palette,
+                    deuteros_amiga_pending_main_stage_frame_->generation);
+                if(!recolored)throw std::runtime_error("Deuteros pending frame palette update failed");
+                deuteros_amiga_pending_main_stage_frame_=std::move(*recolored);
+            }
+            if(deuteros_amiga_main_stage_frame_){
+                auto recolored=recolor_deuteros_amiga_main_stage_frame(
+                    *deuteros_amiga_main_stage_frame_,*accepted_palette,
+                    deuteros_amiga_main_stage_frame_generation_+1);
+                if(!recolored)throw std::runtime_error("Deuteros published frame palette update failed");
+                deuteros_amiga_main_stage_frame_=
+                    std::make_shared<const DeuterosAmigaMainStageFrameSnapshot>(std::move(*recolored));
+                ++deuteros_amiga_main_stage_frame_generation_;
+            }
+        }
+        result.accepted=true;
     }catch(const std::exception&e){result.error=e.what();}
     return result;
 }
@@ -5298,7 +5390,15 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_view_wait(const DeuterosAmigaO
         if(!deuteros_amiga_->observe_main_stage_view_wait(o)){
             result.error="Deuteros view wait disappeared before commit";return result;
         }
-        *native_runtime_memory_=std::move(memory);result.accepted=true;
+        *native_runtime_memory_=std::move(memory);
+        if((o.value&0x20U)!=0&&deuteros_amiga_pending_main_stage_frame_){
+            deuteros_amiga_main_stage_frame_=
+                std::make_shared<const DeuterosAmigaMainStageFrameSnapshot>(
+                    std::move(*deuteros_amiga_pending_main_stage_frame_));
+            deuteros_amiga_pending_main_stage_frame_.reset();
+            ++deuteros_amiga_main_stage_frame_generation_;
+        }
+        result.accepted=true;
     }catch(const std::exception&e){result.error=e.what();}
     return result;
 }

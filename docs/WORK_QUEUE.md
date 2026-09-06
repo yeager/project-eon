@@ -587,8 +587,11 @@ The restart route
 at `$217f6` now executes sound/flag reset and re-enters `$21276` using fresh
 per-loop continuation state and effect identifiers. Continue verifying its
 new ordered service returns without reusing previous observations.
-Publish the owned recurring main-stage framebuffer and palette through the
-coordinator and SDL renderer. Connect the separately staged sound descriptors
+The owned recurring main-stage framebuffer and accepted RGB4 palette now pass
+through the coordinator, revocation-aware host and SDL renderer. A completed
+buffer remains pending until the original LoadView/bit-5 visibility boundary;
+tests cover four successive publications and genuine planar hashes. Continue
+from the next main-loop control/input boundary. Connect the separately staged sound descriptors
 to the `$22bea` consumer without
 claiming that a software descriptor write already started audio hardware.
 The caller-connected ordinary, masked, saved-scanline, restored and `$fe`

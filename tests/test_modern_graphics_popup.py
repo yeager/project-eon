@@ -250,12 +250,14 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertNotIn("SDL_", pipeline_header + pipeline_source)
         self.assertIn('"millennium.dos.title"', SOURCE)
         self.assertIn('"deuteros.amiga.opening"', SOURCE)
+        self.assertIn('"deuteros.amiga.main-stage"', SOURCE)
         self.assertIn("millennium_modern_pipeline.matches(requested_key)", SOURCE)
         self.assertIn("deuteros_modern_pipeline.matches(requested_key)", SOURCE)
         self.assertIn("opening->checkpoint.tick", SOURCE)
         self.assertIn("opening->rgba_frame", SOURCE)
         self.assertIn("runtime.deuteros_amiga_opening_presentation()", SOURCE)
-        self.assertIn("deuteros_modern_pipeline.resolve(requested_key, *frame", SOURCE)
+        self.assertIn("deuteros_modern_pipeline.resolve(requested_key,\n                            source_rgba", SOURCE)
+        self.assertIn("std::span<const std::uint8_t>(main_stage_frame->rgba)", SOURCE)
         self.assertIn("SDL_DestroyTexture(modern_preview_texture)", SOURCE)
 
     def test_deuteros_external_opening_pack_is_modern_only_and_tick_bound(self) -> None:
@@ -273,10 +275,10 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("deuteros_external_modern_resolver->resolve(source_tick, title_handed_off)", refresh_block)
         self.assertIn("deuteros_external_modern_resolver.reset()", refresh_block)
         render_block = SOURCE[renderer:SOURCE.index("SDL_SetTextureScaleMode(texture", renderer)]
-        self.assertIn("if (modern && !title_surface && !bootstrap_frame)", render_block)
+        self.assertIn("if (modern && !title_surface && !bootstrap_frame && !main_stage_frame)", render_block)
         self.assertIn("refresh_deuteros_external_modern_texture(source_tick", render_block)
         self.assertLess(render_block.index("refresh_deuteros_external_modern_texture"),
-                        render_block.index("deuteros_modern_pipeline.resolve(requested_key, *frame"))
+                        render_block.index("deuteros_modern_pipeline.resolve(requested_key,"))
 
     def test_sparse_deuteros_title_surface_never_fabricates_missing_pixels(self) -> None:
         query = SOURCE.index("runtime.deuteros_amiga_title_planar_surface()")
@@ -286,8 +288,9 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("title_surface->rgba.data()", block)
         self.assertIn("title_surface->decoded_pixel_count", block)
         self.assertIn("? deuteros_title_planar_texture", block)
-        self.assertIn(": bootstrap_frame ? deuteros_bootstrap_frame_texture : preview_texture", block)
-        self.assertIn("if (modern && !title_surface && !bootstrap_frame)", block)
+        self.assertIn(": (main_stage_frame || bootstrap_frame)", block)
+        self.assertIn("? deuteros_bootstrap_frame_texture : preview_texture", block)
+        self.assertIn("if (modern && !title_surface && !bootstrap_frame && !main_stage_frame)", block)
         reset = SOURCE.index("const auto reset_deuteros_runtime")
         reset_block = SOURCE[reset:SOURCE.index("const auto reset_active_runtime", reset)]
         self.assertIn("SDL_DestroyTexture(deuteros_title_planar_texture)", reset_block)

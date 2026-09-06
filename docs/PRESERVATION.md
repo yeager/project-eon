@@ -8448,3 +8448,56 @@ and produces the same length and output hash. Component tests verify every
 decoded byte and every destination plane word, reject changed source data and
 an invalid plane base, and cross the typed palette return. This is still not a
 full graphics-library side-effect implementation or gameplay-parity claim.
+
+### Deuteros recurring main-stage frame publication
+
+The caller-connected main loop now has an immutable Original-mode presentation
+bridge for its recurring 320x200, four-plane buffers. The bridge does not run
+68k code and is not an emulator: it decodes only the engine-owned memory that
+the admitted native caller path has already produced. Each plane is exactly
+8,000 bytes, rows are 40 bytes, bits are MSB-first, and plane zero supplies the
+least-significant colour-index bit. All 32,000 bytes must be initialized at the
+even, bounded plane base before a snapshot can be staged.
+
+Palette ownership follows the original `LoadRGB4` call sites. The initial
+main-loop palette is copied from the A1 pointer retained across the accepted
+`$21310 -> $21314` and `$2132a -> $2132e` pair. Command palette changes are
+committed only after the second `$2152a` return, and fade palette changes only
+after the second `$22312` return from source `$12ecc`. Every colour must be a
+12-bit RGB4 word; high-nibble data is rejected rather than masked. This keeps
+the rendered colours tied to the same accepted native service boundary as the
+game state.
+
+An accepted palette change recolours both the pending indexed buffer and any
+already published indexed buffer without rereading or changing its bitplanes.
+The visible recolour receives a new presentation generation immediately; it
+does not wait for another pixel-composition pass. The planar and indexed hashes
+therefore remain stable while the RGBA hash records the new accepted palette.
+
+Completing the caller's frame-buffer effects stages, but does not publish, a
+snapshot. Publication occurs only after the accepted `$216ee/-$de` `LoadView`
+return and a following `$216f2` observation with custom-register bit 5 set.
+A clear-bit wait retains the pending snapshot. This distinction prevents SDL
+from presenting a buffer that the recovered original control flow has not yet
+made visible. Published snapshots carry a monotonically increasing generation,
+the frame counter, plane base, engine-memory checksum and SHA-256 values for
+the planar, indexed and RGBA representations. Reset and host revocation withhold
+the snapshot.
+
+The genuine controlled route currently proves these planar hashes:
+
+- all-zero frame: `0c92bddb4e96f3ea9ec9f0f64a668255a6c15527ac09f6f119cafde60c7c4a39`;
+- ordinary `$90000` frame: `f80cb36153a70203f4d42d6abb286f0f83038f4b6f7ed83e489915b2f03e91f1`;
+- masked `$80000` frame: `4fb915381f0db119da828286b42ed06dadf29486310df04cae2b249e40849f23`.
+
+SDL gives the published recurring frame precedence over the bootstrap and
+opening previews, while the separately admitted title surface remains the
+higher-priority title artifact. Modern asset packs cannot replace this native
+Original pixel source. The immutable snapshot is shared through the runtime,
+host and launcher façades so the SDL loop does not copy its indexed and RGBA
+planes every render tick. In Modern mode the existing renderer-only pixel
+reconstruction and smooth-scaling controls may consume that snapshot; their
+cache key includes the presentation generation and they never write back to
+the snapshot or original media. Raw disassembly, dumps and trace material used
+to derive the boundaries remain external analysis artifacts and are never
+committed.

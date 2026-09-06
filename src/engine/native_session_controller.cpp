@@ -525,6 +525,11 @@ NativeSessionController::deuteros_amiga_bootstrap_frame() const {
     if (state_ != NativeSessionState::deuteros_amiga_title_stage_boundary) return std::nullopt;
     return runtime_.deuteros_amiga_bootstrap_frame();
 }
+DeuterosAmigaMainStageFrame
+NativeSessionController::deuteros_amiga_main_stage_frame() const {
+    if (state_ != NativeSessionState::deuteros_amiga_title_stage_boundary) return {};
+    return runtime_.deuteros_amiga_main_stage_frame();
+}
 std::optional<DeuterosAmigaTitleProgramEntrySnapshot>
 NativeSessionController::deuteros_amiga_title_program_entry() const {
     if(state_!=NativeSessionState::deuteros_amiga_title_program_entry)return std::nullopt;

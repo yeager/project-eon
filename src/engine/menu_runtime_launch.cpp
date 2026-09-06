@@ -303,6 +303,10 @@ std::optional<DeuterosAmigaBootstrapFrameSnapshot>
 LauncherRuntimeController::deuteros_amiga_bootstrap_frame() const {
     return coordinator_.deuteros_amiga_bootstrap_frame();
 }
+DeuterosAmigaMainStageFrame
+LauncherRuntimeController::deuteros_amiga_main_stage_frame() const {
+    return coordinator_.deuteros_amiga_main_stage_frame();
+}
 std::optional<DeuterosAmigaTitleProgramEntrySnapshot>
 LauncherRuntimeController::deuteros_amiga_title_program_entry() const {
     return coordinator_.deuteros_amiga_title_program_entry();

@@ -6505,6 +6505,7 @@ int main() {
             assert(!opening_controller.observe_deuteros_amiga_frame_buffer(wrong_frame_buffer).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_scheduler_pass->checksum);
             assert(opening_controller.observe_deuteros_amiga_frame_buffer(first_frame_buffer).accepted);
+            assert(!opening_controller.deuteros_amiga_main_stage_frame());
             const auto after_first_frame_buffer=opening_controller.native_runtime_memory_checkpoint();
             assert(after_first_frame_buffer&&after_first_frame_buffer->applied_batch_count==after_scheduler_pass->applied_batch_count+2);
             assert(runtime_byte(*after_first_frame_buffer,0x21696)==0&&runtime_byte(*after_first_frame_buffer,0x21697)==1);
@@ -6532,6 +6533,7 @@ int main() {
             assert(!opening_controller.observe_deuteros_amiga_view_wait(bad_view_wait).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_first_frame_buffer->checksum);
             assert(opening_controller.observe_deuteros_amiga_view_wait(view_wait).accepted);
+            assert(!opening_controller.deuteros_amiga_main_stage_frame());
             assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x216f2);
             const auto after_view_wait=opening_controller.native_runtime_memory_checkpoint();
             assert(!opening_controller.observe_deuteros_amiga_view_wait(view_wait).accepted);
@@ -6543,6 +6545,14 @@ int main() {
             assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x216f2);
             view_wait.trace_sequence=runtime_copy_sequence+112;view_wait.value=0x20;
             assert(opening_controller.observe_deuteros_amiga_view_wait(view_wait).accepted);
+            const auto first_main_frame=opening_controller.deuteros_amiga_main_stage_frame();
+            assert(first_main_frame&&first_main_frame->generation==1
+                &&first_main_frame->frame_counter==1&&first_main_frame->plane_base==0x90000
+                &&first_main_frame->runtime_memory_checksum==after_first_frame_buffer->checksum
+                &&first_main_frame->planar_sha256
+                    =="0c92bddb4e96f3ea9ec9f0f64a668255a6c15527ac09f6f119cafde60c7c4a39"
+                &&first_main_frame->color_indices.size()==320*200
+                &&first_main_frame->rgba.size()==320*200*4);
             assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x21380);
             const auto after_view_release=opening_controller.native_runtime_memory_checkpoint();
             assert(opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
@@ -6773,6 +6783,20 @@ int main() {
             assert(palette_other_view->main_stage_loop_graphics->d0_value==0x12340010);
             assert(!opening_controller.observe_deuteros_amiga_command_palette_return(palette_first).accepted);
             assert(opening_controller.observe_deuteros_amiga_command_palette_return(palette_second).accepted);
+            const auto recolored_first_main_frame=
+                opening_controller.deuteros_amiga_main_stage_frame();
+            assert(recolored_first_main_frame);
+            assert(recolored_first_main_frame->generation==2);
+            assert(recolored_first_main_frame->plane_base==first_main_frame->plane_base);
+            assert(recolored_first_main_frame->frame_counter==first_main_frame->frame_counter);
+            assert(recolored_first_main_frame->planar_sha256==first_main_frame->planar_sha256);
+            assert(recolored_first_main_frame->color_indices_sha256
+                ==first_main_frame->color_indices_sha256);
+            assert(recolored_first_main_frame->palette_rgb4!=first_main_frame->palette_rgb4);
+            // This first buffer is all colour index zero. The accepted
+            // command palette differs, but leaves its RGBA pixels unchanged
+            // because palette entry zero itself remains black.
+            assert(recolored_first_main_frame->rgba_sha256==first_main_frame->rgba_sha256);
             const auto resumed_palette=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
             assert(resumed_palette&&resumed_palette->stop_before_address==0x214aa);
             assert(resumed_palette->main_stage_loop_graphics->a0_value==command_stop.record);
@@ -6808,6 +6832,10 @@ int main() {
                 eon::DeuterosAmigaObservedMainStageExecReturn{runtime_copy_sequence+116,0x216ee,-0xde,0x216f2,0},
                 0x216f2,0xdff01f,5,0x20};
             assert(opening_controller.observe_deuteros_amiga_view_wait(second_view_wait).accepted);
+            const auto second_main_frame=opening_controller.deuteros_amiga_main_stage_frame();
+            assert(second_main_frame&&second_main_frame->generation==3
+                &&second_main_frame->frame_counter==2&&second_main_frame->plane_base==0x80000
+                &&second_main_frame->runtime_memory_checksum==second_frame_memory->checksum);
             assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x21822);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
             const auto before_outer_input=opening_controller.native_runtime_memory_checkpoint();
@@ -6871,6 +6899,11 @@ int main() {
                 eon::DeuterosAmigaObservedMainStageExecReturn{runtime_copy_sequence+121,0x216ee,-0xde,0x216f2,0},
                 0x216f2,0xdff01f,5,0x20};
             assert(opening_controller.observe_deuteros_amiga_view_wait(third_view_wait).accepted);
+            const auto third_main_frame=opening_controller.deuteros_amiga_main_stage_frame();
+            assert(third_main_frame&&third_main_frame->generation==4
+                &&third_main_frame->frame_counter==3&&third_main_frame->plane_base==0x90000
+                &&third_main_frame->planar_sha256
+                    =="f80cb36153a70203f4d42d6abb286f0f83038f4b6f7ed83e489915b2f03e91f1");
             assert(opening_controller.observe_deuteros_amiga_outer_input(
                 {runtime_copy_sequence+123,0x21822,0xdff016,10,4}).accepted);
             assert(opening_controller.observe_deuteros_amiga_outer_input(
@@ -6893,6 +6926,19 @@ int main() {
             assert(runtime_byte(*first_masked_memory,0x20c8a)==0x80&&runtime_byte(*first_masked_memory,0x20c8b)==0);
             assert(!opening_controller.observe_deuteros_amiga_frame_buffer(fourth_frame_buffer).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==first_masked_memory->checksum);
+            assert(opening_controller.deuteros_amiga_main_stage_frame()==third_main_frame);
+            assert(opening_controller.advance_deuteros_amiga_view_selection().accepted);
+            const eon::DeuterosAmigaObservedViewWait fourth_view_wait{
+                runtime_copy_sequence+127,
+                eon::DeuterosAmigaObservedMainStageExecReturn{runtime_copy_sequence+126,0x216ee,-0xde,0x216f2,0},
+                0x216f2,0xdff01f,5,0x20};
+            assert(opening_controller.observe_deuteros_amiga_view_wait(fourth_view_wait).accepted);
+            const auto fourth_main_frame=opening_controller.deuteros_amiga_main_stage_frame();
+            assert(fourth_main_frame&&fourth_main_frame->generation==5
+                &&fourth_main_frame->frame_counter==4&&fourth_main_frame->plane_base==0x80000
+                &&fourth_main_frame->runtime_memory_checksum==first_masked_memory->checksum
+                &&fourth_main_frame->planar_sha256
+                    =="4fb915381f0db119da828286b42ed06dadf29486310df04cae2b249e40849f23");
 
             // Branch-condition tests use private owned-state variations, not
             // claimed captures or substituted source media.
@@ -7842,6 +7888,8 @@ int main() {
             && !revocation_host.deuteros_amiga_title_dependency_chain_checkpoint()
             && !revocation_host.native_runtime_memory_checkpoint()
             && !revocation_host.native_runtime_memory_diagnostics()
+            && !revocation_host.deuteros_amiga_bootstrap_frame()
+            && !revocation_host.deuteros_amiga_main_stage_frame()
             && !revocation_host.deuteros_amiga_title_planar_patch()
             && !revocation_host.deuteros_atari_bootstrap_checkpoint()
             && !revocation_host.deuteros_atari_bootstrap_presentation()
