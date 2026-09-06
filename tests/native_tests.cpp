@@ -6291,6 +6291,7 @@ int main() {
             bad_loop_request_service.return_address=0x208ba;
             assert(!opening_controller.observe_deuteros_amiga_loop_request_service(bad_loop_request_service).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_loop_local_request->checksum);
+            assert(!opening_controller.advance_deuteros_amiga_main_stage_record_loop().accepted);
             assert(opening_controller.observe_deuteros_amiga_loop_request_service(loop_request_service).accepted);
             const auto after_loop_request_service=opening_controller.native_runtime_memory_checkpoint();
             assert(after_loop_request_service&&after_loop_request_service->applied_batch_count
@@ -6308,6 +6309,26 @@ int main() {
                 &&loop_request_checkpoint->stop_before_address==(optional_loop_pointer?0x2133c:0x21342));
             assert(!opening_controller.observe_deuteros_amiga_loop_request_service(loop_request_service).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_loop_request_service->checksum);
+            assert(optional_loop_pointer==0);
+            assert(opening_controller.advance_deuteros_amiga_main_stage_record_loop().accepted);
+            const auto after_record_loop=opening_controller.native_runtime_memory_checkpoint();
+            assert(after_record_loop&&after_record_loop->applied_batch_count
+                ==after_loop_request_service->applied_batch_count+16);
+            for(std::uint32_t record=0;record<4;++record){
+                std::uint32_t pointer=0;
+                for(std::uint32_t i=0;i<4;++i)
+                    pointer=(pointer<<8U)|*runtime_byte(*after_loop_request_service,0x2124a+record*4+i);
+                assert(pointer!=0);
+                for(std::uint32_t i=0;i<10;++i)
+                    assert(runtime_byte(*after_record_loop,0x210f8+record*24+i)
+                        ==runtime_byte(*after_loop_request_service,pointer+i));
+                for(std::uint32_t i=0;i<4;++i)
+                    assert(runtime_byte(*after_record_loop,0x21108+record*24+i)
+                        ==((pointer+10U)>>(24U-i*8U)&0xffU));
+            }
+            assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x21380);
+            assert(!opening_controller.advance_deuteros_amiga_main_stage_record_loop().accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_record_loop->checksum);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

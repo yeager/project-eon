@@ -3517,6 +3517,24 @@ It overwrites the service result D0 with the owned longword at `$2126a`.
 Nonzero stops at `$2133c->$22330`; zero reaches local entry `$21342`.
 No behavior inside `$22330`, OS service effects, or subsequent record-loop
 execution is inferred. Diagnostics report the selected boundary.
+
+On the zero-pointer branch the full `$21342..$2137f` record-construction
+loop is native. Its 62 original bytes at ADF `$6b42` have SHA-256
+`0f6c9cbfd143d0540aeb4caa006c61840bc342237d219e77f4b59d9d5f3029c0`.
+The loop reads the owned word at `$21248`, iterates pointers from `$2124a`,
+and advances destination records from `$210f8` by 24 bytes. Nonzero pointers
+copy two longwords and one word, then store pointer+10 at destination+16;
+null pointers leave their destination record unchanged. SUBQ.W/DBRA semantics
+are retained: a zero count means 65536 iterations. Reads require aligned,
+owned 24-bit memory; unknown high-address aliasing is not invented.
+Writes execute in original instruction order against a private memory copy,
+so overlapping sources see earlier stores. Each original store is tracked as
+an internal batch, while publication of all memory and session changes is
+atomic. Missing source bytes or an invalid access discard the entire attempt.
+The genuine resource-zero test constructs four records with 16 stores and
+checks their copied bytes and advanced pointers. Execution falls through to
+`$21380`; it does not fabricate a return from `$21276`. The nonzero optional
+branch at `$22330` remains separate and cannot enter this path prematurely.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,

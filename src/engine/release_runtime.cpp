@@ -4407,6 +4407,62 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_loop_request_service(
     return result;
 }
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_record_loop(){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
+        result.error="Deuteros record loop requires active owned memory";return result;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        if(!pending.advance_main_stage_record_loop()){
+            result.error="Deuteros record loop did not match boundary";return result;
+        }
+        auto memory=*native_runtime_memory_;
+        const auto read=[&](const std::uint32_t address,const std::uint32_t width){
+            if((address&1U)!=0||address>0x1000000U-width)
+                throw std::runtime_error("Deuteros record source is outside aligned native memory");
+            std::uint32_t value=0;
+            for(std::uint32_t i=0;i<width;++i){
+                const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
+                if(!byte)throw std::runtime_error("Deuteros record source is not owned");
+                value=(value<<8U)|*byte;
+            }
+            return value;
+        };
+        std::size_t store_index=0;
+        const auto write=[&](const std::uint32_t address,const MemoryTransferElementWidth width,
+            const std::uint32_t value){
+            const auto applied=memory.apply({"deuteros-amiga-record-store-"+std::to_string(store_index++),true,{{
+                1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},width,
+                NativeRuntimeByteOrder::big_endian,value}}});
+            if(!applied.accepted)throw std::runtime_error(applied.error);
+        };
+        const auto count=read(0x21248,2);
+        // SUBQ.W then DBRA: zero is 65536 iterations, not an empty loop.
+        const std::uint32_t iterations=count==0?0x10000U:count;
+        std::uint32_t last_a1=0,last_d0=0;
+        for(std::uint32_t i=0;i<iterations;++i){
+            const auto pointer=read(0x2124a+i*4U,4);
+            last_d0=pointer;
+            if(pointer==0)continue;
+            last_a1=pointer;
+            const auto destination=0x210f8+i*24U;
+            // Preserve instruction order even when source and destination
+            // overlap. All stores remain private until the whole loop succeeds.
+            write(destination,MemoryTransferElementWidth::longword,read(pointer,4));
+            write(destination+4,MemoryTransferElementWidth::longword,read(pointer+4,4));
+            write(destination+8,MemoryTransferElementWidth::word,read(pointer+8,2));
+            write(destination+16,MemoryTransferElementWidth::longword,pointer+10U);
+            last_d0=pointer+10U;
+        }
+        if(!deuteros_amiga_->advance_main_stage_record_loop(0x2124a+iterations*4U,last_a1,last_d0)){
+            result.error="Deuteros record loop disappeared before commit";return result;
+        }
+        *native_runtime_memory_=std::move(memory);result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_prepare_return(
     const DeuterosAmigaObservedLocalCallReturn o){
     DeuterosAmigaTitleDependencyObservationResult r;
