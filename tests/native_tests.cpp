@@ -7,6 +7,7 @@
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_amiga_opening_runner.hpp"
 #include "engine/deuteros_amiga_bootstrap_frame.hpp"
+#include "engine/deuteros_amiga_title_program_entry_session.hpp"
 #include "engine/release_runtime.hpp"
 #include "engine/release_runtime_capability.hpp"
 #include "engine/menu_runtime_launch.hpp"
@@ -2982,6 +2983,40 @@ int main() {
             rejected_local_entry_in_central_directory = true;
         }
         assert(rejected_local_entry_in_central_directory);
+    }
+    {
+        eon::NativeRuntimeMemory memory;
+        eon::NativeRuntimeEffectBatch image{"program-entry-test-image",true,{}};
+        constexpr std::array<std::uint8_t,6> jmp{{0x4e,0xf9,0x00,0x04,0x04,0x26}};
+        for(std::size_t i=0;i<jmp.size();++i)
+            image.effects.push_back({i+1,
+                {eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x13000+i},
+                eon::MemoryTransferElementWidth::byte,eon::NativeRuntimeByteOrder::big_endian,jmp[i]});
+        assert(memory.apply(image).accepted);
+        const eon::DeuterosAmigaTitleProgramEntrySnapshot boundary{
+            5,0x13000,0x40426,0x12345678,memory.checkpoint().checksum,
+            "410c25318444feb62dc9df59396b5940ff4631c153984f7d908fc3366e280cfe"};
+        eon::DeuterosAmigaTitleStageSession::LocalPrefixAdvance prefix;
+        prefix.writes={{{0x4040e,2,5},{0x3717e,1,5},{0x38092,2,0x0101}}};
+        prefix.write_count=3;
+        prefix.stack_pointer_value=0x40b62;
+        prefix.exec_boundary_address=0x40456;
+        const auto transaction=eon::prepare_deuteros_amiga_title_program_entry_transaction(
+            boundary,memory,prefix);
+        assert(transaction.accepted&&transaction.error.empty());
+        assert(transaction.batch.id=="deuteros-amiga-title-profile-five-entry"
+            &&transaction.batch.fully_admitted&&transaction.batch.effects.size()==4);
+        assert(transaction.batch.effects[0].location.offset==0x206a0
+            &&transaction.batch.effects[0].value==0x12345678
+            &&transaction.batch.effects[1].location.offset==0x4040e
+            &&transaction.batch.effects[1].value==5);
+
+        auto stale=boundary;
+        ++stale.runtime_memory_checksum;
+        const auto rejected=eon::prepare_deuteros_amiga_title_program_entry_transaction(
+            stale,memory,prefix);
+        assert(!rejected.accepted
+            &&rejected.error=="Deuteros title program-entry ownership changed");
     }
     const std::filesystem::path data_directory = EON_REAL_DATA_DIR;
     if (data_directory.empty() || !std::filesystem::is_directory(data_directory)) {
@@ -13559,6 +13594,26 @@ int main() {
     eon::DeuterosAmigaTitleStageSession title_stage_session(system_disk, load_plan, 1);
     assert(title_stage_session.stage().disk_offset == 0x6e000);
     assert(title_stage_session.stage().length == 0x6ca00);
+    {
+        eon::NativeRuntimeMemory memory;
+        eon::NativeRuntimeEffectBatch image{"real-profile-five-entry-jmp",true,{}};
+        const auto owned_jmp=system_disk.bytes(load_plan.title_stage.disk_offset,6);
+        for(std::size_t i=0;i<owned_jmp.size();++i)
+            image.effects.push_back({i+1,
+                {eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x13000+i},
+                eon::MemoryTransferElementWidth::byte,eon::NativeRuntimeByteOrder::big_endian,
+                owned_jmp[i]});
+        assert(memory.apply(image).accepted);
+        eon::DeuterosAmigaTitleStageSession profile_five(system_disk,load_plan,5);
+        const auto prefix=profile_five.execute_local_prefix();
+        assert(prefix);
+        const eon::DeuterosAmigaTitleProgramEntrySnapshot boundary{
+            5,0x13000,0x40426,0x206d4,memory.checkpoint().checksum,
+            eon::to_hex(eon::sha256(owned_jmp))};
+        const auto transaction=eon::prepare_deuteros_amiga_title_program_entry_transaction(
+            boundary,memory,*prefix);
+        assert(transaction.accepted&&transaction.batch.effects.size()==prefix->write_count+1);
+    }
     assert(title_stage_session.stage().destination == 0x13000);
     assert(title_stage_session.stage().entry_address == 0x40426);
     assert(title_stage_session.original_bytes().size() == 0x6ca00);

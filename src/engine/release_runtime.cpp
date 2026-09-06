@@ -2911,36 +2911,13 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_title_program_entry() {
     }
     try {
         auto memory = *native_runtime_memory_;
-        constexpr std::array<std::uint8_t, 6> expected{{0x4e,0xf9,0x00,0x04,0x04,0x26}};
-        for (std::size_t i=0;i<expected.size();++i) {
-            const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,
-                deuteros_amiga_title_program_entry_->entry_address+i});
-            if (!byte || *byte!=expected[i])
-                throw std::runtime_error("Deuteros title program-entry JMP is not owned");
-        }
-        if (deuteros_amiga_title_program_entry_->runtime_memory_checksum!=memory.checkpoint().checksum
-            ||deuteros_amiga_title_program_entry_->jmp_sha256!=to_hex(sha256(expected)))
-            throw std::runtime_error("Deuteros title program-entry ownership changed");
-
         const auto prefix=deuteros_amiga_->prepare_title_stage_profile_five();
-        if(!prefix||prefix->exec_boundary_address!=0x40456)
+        if(!prefix)
             throw std::runtime_error("Deuteros profile-five title re-entry was not admitted");
-        NativeRuntimeEffectBatch batch{"deuteros-amiga-title-profile-five-entry",true,{}};
-        batch.effects.reserve(prefix->write_count+1);
-        batch.effects.push_back({1,
-            {NativeRuntimeAddressSpace::linear,std::nullopt,0x206a0},
-            MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,
-            deuteros_amiga_title_program_entry_->controller_pointer});
-        for(std::size_t index=0;index<prefix->write_count;++index){
-            const auto& write=prefix->writes[index];
-            if(write.width_bytes!=1&&write.width_bytes!=2&&write.width_bytes!=4)
-                throw std::runtime_error("Deuteros title re-entry prefix width is invalid");
-            batch.effects.push_back({batch.effects.size()+1,
-                {NativeRuntimeAddressSpace::linear,std::nullopt,write.address},
-                static_cast<MemoryTransferElementWidth>(write.width_bytes),
-                NativeRuntimeByteOrder::big_endian,write.value});
-        }
-        const auto applied=memory.apply(batch);
+        const auto transaction=prepare_deuteros_amiga_title_program_entry_transaction(
+            *deuteros_amiga_title_program_entry_,memory,*prefix);
+        if(!transaction.accepted)throw std::runtime_error(transaction.error);
+        const auto applied=memory.apply(transaction.batch);
         if(!applied.accepted)throw std::runtime_error(applied.error);
 
         const auto committed=deuteros_amiga_->reenter_title_stage_profile_five();

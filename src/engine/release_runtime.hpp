@@ -3,6 +3,7 @@
 #include "launcher.hpp"
 #include "game_text_localization.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
+#include "engine/deuteros_amiga_title_program_entry_session.hpp"
 #include "engine/deuteros_amiga_bootstrap_frame.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
 #include "engine/deuteros_amiga_title_display_trace_session.hpp"
@@ -122,18 +123,6 @@ struct DeuterosAmigaTitleDependencyChainCheckpoint {
     std::uint32_t stop_before_address = 0;
 };
 struct DeuterosAmigaTitleDependencyObservationResult { bool accepted=false; std::string error; };
-
-// Immutable ownership boundary reached only after profile five has restored
-// the title image and the final bootstrap service has returned to its real
-// entry stub.  The bytes remain in coordinator-owned runtime memory.
-struct DeuterosAmigaTitleProgramEntrySnapshot {
-    std::uint16_t profile = 5;
-    std::uint32_t entry_address = 0x13000;
-    std::uint32_t target_address = 0x40426;
-    std::uint32_t controller_pointer = 0;
-    std::uint64_t runtime_memory_checksum = 0;
-    std::string jmp_sha256;
-};
 
 // Media-safe facts for the exact Deuteros Atari ST bootstrap boundary.  The
 // retained prefixes are only local copy/entry results; this DTO cannot select

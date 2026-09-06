@@ -8052,6 +8052,10 @@ title-stage receipt at the shared `$40456` Exec boundary. Profile five never
 performs profile one's `$19d52.b=1` store. Preparation happens against cloned
 memory and a temporary session; stale title callbacks and cached display
 receipts are cleared only when the complete transaction commits.
+The JMP/checksum gate and ordered write-batch construction live in the
+dedicated title program-entry transaction component; native tests exercise
+that component independently, while the genuine-media coordinator path
+continues to supply the hash-addressed boundary and profile-five prefix.
 
 The production-checkpoint profile matrix now checks these request fields,
 both disk offsets, the mutable copy, all eight ordered returns including the

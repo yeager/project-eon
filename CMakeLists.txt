@@ -119,6 +119,7 @@ add_executable(project-eon
     src/engine/deuteros_amiga_title_exec_boundary_session.cpp
     src/engine/deuteros_amiga_title_display_trace_session.cpp
     src/engine/deuteros_amiga_title_planar_patch.cpp
+    src/engine/deuteros_amiga_title_program_entry_session.cpp
     src/engine/menu_runtime_launch.cpp
     src/engine/native_session_controller.cpp
     src/engine/runtime_host.cpp
