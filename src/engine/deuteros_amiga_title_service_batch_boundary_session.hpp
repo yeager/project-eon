@@ -1409,6 +1409,7 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
     std::uint32_t outer_fade_return=0;
     std::uint32_t d1_value=0;
     std::uint32_t bootstrap_stack_top=0;
+    std::uint32_t bootstrap_return_destination=0;
 };
 struct DeuterosAmigaObservedLoopRequestService {
     std::uint64_t trace_sequence=0;
@@ -1466,6 +1467,54 @@ template<class Read,class Write>
 DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
     DeuterosAmigaMainStageLoopGraphicsPlan plan,const DeuterosAmigaObservedLoopRequestService&o,
     Read read,Write write){
+    const auto load_call=plan.next_call_address;
+    if(load_call==0x12ad2||load_call==0x12aee||load_call==0x12afc||load_call==0x12b0a){
+        const auto read_site=load_call==0x12ad2?0x12aceU:load_call==0x12aee?0x12aeaU:
+            load_call==0x12afc?0x12af8U:0x12b06U;
+        const auto vector=load_call==0x12afc?-0x1c2:load_call==0x12b0a?-0x168:-0x1c8;
+        if(o.read_instruction!=read_site||o.source_address!=4||o.call_address!=load_call
+            ||o.return_address!=load_call+4||o.vector!=vector||read(4,4)!=o.exec_base
+            ||plan.next_return_address!=load_call+4||plan.next_vector!=vector
+            ||(plan.bootstrap_return_destination!=0x13000&&plan.bootstrap_return_destination!=0x20000))
+            throw std::runtime_error("Deuteros bootstrap load return does not match boundary");
+        if(load_call==0x12ad2){
+            // Only a successful complete native media read is admitted here.
+            // Failed/partial device effects require separate recovery.
+            const bool title=plan.bootstrap_return_destination==0x13000;
+            if(o.result_d0!=0||plan.a1_value!=read(0x12822,4)
+                ||read(plan.a1_value+28,2)!=0x8002
+                ||read(plan.a1_value+36,4)!=(title?0x6ca00U:0x4200U)
+                ||read(plan.a1_value+40,4)!=plan.bootstrap_return_destination
+                ||read(plan.a1_value+44,4)!=(title?0x6e000U:0x5800U)
+                ||read(plan.a1_value+30,1)!=0)
+                throw std::runtime_error("Deuteros bootstrap read request is incomplete or inconsistent");
+            plan.d0_value=read(plan.a1_value+36,4);
+            write(plan.a1_value+36,MemoryTransferElementWidth::longword,0);
+            write(plan.a1_value+28,MemoryTransferElementWidth::word,9);
+            write(plan.a1_value+30,MemoryTransferElementWidth::byte,0);
+            plan.next_call_address=0x12aee;plan.next_vector=-0x1c8;
+            plan.pending_read_instruction=0x12aea;
+        }else{
+            plan.d0_value=o.result_d0;
+            if(load_call==0x12aee){
+                plan.a1_value=read(0x12822,4);plan.next_call_address=0x12afc;
+                plan.next_vector=-0x1c2;plan.pending_read_instruction=0x12af8;
+            }else if(load_call==0x12afc){
+                plan.a1_value=0x1285e;plan.next_call_address=0x12b0a;
+                plan.next_vector=-0x168;plan.pending_read_instruction=0x12b06;
+            }else{
+                plan.a1_value=read(0x12822,4);
+                plan.d0_value=(o.result_d0&0xffff0000U)|read(0x12a34,2);
+                plan.next_instruction_address=plan.bootstrap_return_destination;
+                plan.bootstrap_return_destination=0;plan.next_call_address=0;
+                plan.next_vector=0;plan.pending_read_instruction=0;
+            }
+        }
+        plan.a6_value=o.exec_base;plan.local_call_target=0;
+        plan.next_return_address=plan.next_call_address?plan.next_call_address+4:0;
+        plan.pending_read_address=plan.pending_read_instruction?4:0;
+        return plan;
+    }
     const bool bootstrap_request=plan.next_call_address==0x12a7e
         &&plan.local_call_target==0x12932&&plan.next_return_address==0x12a82;
     const bool bootstrap_dispatch=plan.next_call_address==0x12a92
@@ -1507,6 +1556,7 @@ DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
                 const bool title=plan.a1_value==0x12b30;
                 plan.d0_value=title?0x6ca00:0x4200;
                 plan.d1_value=title?0x13000:0x20000;
+                plan.bootstrap_return_destination=plan.d1_value;
                 plan.a1_value=read(0x12822,4);
                 if((plan.a1_value&1U)||plan.a1_value>0x1000000U-48)
                     throw std::runtime_error("Deuteros bootstrap load request pointer is invalid");
@@ -1789,7 +1839,9 @@ public:
             ||to_hex(sha256(disk.bytes(0x2eaa,44)))
                 !="92fa4087e08faff81e01cd44c04defc783c5efbb3a343446d250f93ee7a2bd9a"
             ||to_hex(sha256(disk.bytes(0x2f1c,42)))
-                !="8770c93957436fe924ad9bd39a567b4c9e5ad16e8021031b9884e6475242f5ae")
+                !="8770c93957436fe924ad9bd39a567b4c9e5ad16e8021031b9884e6475242f5ae"
+            ||to_hex(sha256(disk.bytes(0x2ed6,70)))
+                !="e4826a60a00a9c9ed6797e5636ca0e99f038e10cea9d732ebe53452ca659a658")
             throw std::runtime_error("Unsupported Deuteros bootstrap re-entry route");
         const auto main_stage=disk.bytes(plan.main_stage.disk_offset,plan.main_stage.length);
         constexpr std::string_view main_stage_hash=
@@ -4421,6 +4473,18 @@ public:
         const DeuterosAmigaMainStageLoopGraphicsPlan&plan){
         if(!main_stage_loop_graphics_plan_)return std::nullopt;
         const auto& current=*main_stage_loop_graphics_plan_;
+        const auto load_call=current.next_call_address;
+        if(load_call==0x12ad2||load_call==0x12aee||load_call==0x12afc||load_call==0x12b0a){
+            const auto read_site=load_call==0x12ad2?0x12aceU:load_call==0x12aee?0x12aeaU:
+                load_call==0x12afc?0x12af8U:0x12b06U;
+            const auto vector=load_call==0x12afc?-0x1c2:load_call==0x12b0a?-0x168:-0x1c8;
+            if(o.trace_sequence<=last_command_sequence_||o.read_instruction!=read_site
+                ||o.source_address!=4||o.call_address!=load_call||o.return_address!=load_call+4
+                ||o.vector!=vector||plan.a6_value!=o.exec_base
+                ||(load_call==0x12ad2&&o.result_d0!=0))
+                throw std::runtime_error("Deuteros bootstrap load return is invalid or stale");
+            main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
+        }
         const bool bootstrap_request=current.next_call_address==0x12a7e
             &&current.local_call_target==0x12932&&current.next_return_address==0x12a82;
         const bool bootstrap_dispatch=current.next_call_address==0x12a92

@@ -4866,6 +4866,16 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_service(const DeuterosAm
             for(std::uint32_t byte=0;byte<count;++byte)
                 service_bytes[address+byte]=static_cast<std::uint8_t>(value>>((count-1-byte)*8U));
         };
+        if(current->next_call_address==0x12ad2){
+            const auto request=current->a1_value;
+            const auto destination=read(request+40,4);
+            const auto payload=deuteros_amiga_->bootstrap_profile_payload(
+                destination,read(request+36,4),read(request+44,4));
+            // Complete the native read in private memory before executing its
+            // caller continuation. Any rejected return discards all bytes.
+            for(std::size_t i=0;i<payload.size();++i)
+                write(destination+static_cast<std::uint32_t>(i),MemoryTransferElementWidth::byte,payload[i]);
+        }
         const auto plan=execute_deuteros_amiga_outer_service(*current,o,read,write);
         if(!pending.observe_main_stage_outer_service(o,plan)){
             result.error="Deuteros outer service continuation rejected";return result;

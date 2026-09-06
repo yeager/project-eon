@@ -6979,6 +6979,27 @@ int main() {
                                                     assert(command_read(selected.a1_value+36,4)==selected.d0_value);
                                                     assert(command_read(selected.a1_value+40,4)==selected.d1_value);
                                                     assert(command_read(selected.a1_value+44,4)==(title?0x6e000U:0x5800U));
+                                                    auto returned_load=eon::DeuterosAmigaObservedLoopRequestService{
+                                                        15,0x12ace,4,command_read(4,4),0x12ad2,0x12ad6,1,-0x1c8};
+                                                    bool failed_read=false;
+                                                    try{(void)eon::execute_deuteros_amiga_outer_service(selected,returned_load,command_read,command_write);}
+                                                    catch(const std::runtime_error&){failed_read=true;}
+                                                    assert(failed_read&&command_read(selected.a1_value+28,2)==0x8002);
+                                                    returned_load.result_d0=0;
+                                                    auto loaded=eon::execute_deuteros_amiga_outer_service(selected,returned_load,command_read,command_write);
+                                                    assert(loaded.next_call_address==0x12aee&&loaded.d0_value==selected.d0_value);
+                                                    assert(command_read(selected.a1_value+36,4)==0&&command_read(selected.a1_value+28,2)==9);
+                                                    loaded=eon::execute_deuteros_amiga_outer_service(loaded,
+                                                        {16,0x12aea,4,command_read(4,4),0x12aee,0x12af2,0x12345678,-0x1c8},command_read,command_write);
+                                                    assert(loaded.next_call_address==0x12afc);
+                                                    loaded=eon::execute_deuteros_amiga_outer_service(loaded,
+                                                        {17,0x12af8,4,command_read(4,4),0x12afc,0x12b00,0x34567890,-0x1c2},command_read,command_write);
+                                                    assert(loaded.next_call_address==0x12b0a&&loaded.a1_value==0x1285e);
+                                                    loaded=eon::execute_deuteros_amiga_outer_service(loaded,
+                                                        {18,0x12b06,4,command_read(4,4),0x12b0a,0x12b0e,0xdeadbeef,-0x168},command_read,command_write);
+                                                    assert(loaded.next_instruction_address==selected.d1_value);
+                                                    assert(loaded.bootstrap_return_destination==0&&loaded.next_call_address==0);
+                                                    assert(loaded.d0_value==(0xdead0000U|(profile&0xffffU)));
                                                 }
                                                 auto wrong=returned;wrong.vector=-0x1c2;
                                                 bool refused=false;
@@ -16544,6 +16565,15 @@ int main() {
     assert(first_bitmap_catalog.records[1].decoded_pixels_sha256
         == "fca175276cfe376b85e936f455aa9e89d1a0d4c89a61d2b6ce317fa6aa58a6a3");
     eon::DeuterosAmigaOpening live_opening(*amiga_disk1, *amiga_disk2);
+    for(const auto& stage:{load_plan.main_stage,load_plan.title_stage}){
+        const auto payload=live_opening.bootstrap_profile_payload(stage.destination,stage.length,stage.disk_offset);
+        assert(payload.size()==stage.length);
+        assert(eon::sha256(payload)==eon::sha256(system_disk.bytes(stage.disk_offset,stage.length)));
+        bool refused=false;
+        try{(void)live_opening.bootstrap_profile_payload(stage.destination,stage.length-1,stage.disk_offset);}
+        catch(const std::runtime_error&){refused=true;}
+        assert(refused);
+    }
     assert(live_opening.admitted_game_text().size() == 6);
     const auto localized_deuteros_prompts = eon::localize_admitted_game_text_table(
         eon::Game::deuteros, eon::Platform::amiga,

@@ -51,6 +51,13 @@ public:
     [[nodiscard]] std::span<const std::uint8_t> bootstrap_load_bytes() const {
         return disk_.bytes(load_plan_.bootstrap_loader.disk_offset,load_plan_.bootstrap_loader.length);
     }
+    [[nodiscard]] std::span<const std::uint8_t> bootstrap_profile_payload(
+        std::uint32_t destination,std::uint32_t length,std::uint32_t offset) const {
+        for(const auto& stage:{load_plan_.main_stage,load_plan_.title_stage})
+            if(stage.destination==destination&&stage.length==length&&stage.disk_offset==offset)
+                return disk_.bytes(offset,length);
+        throw std::runtime_error("Deuteros bootstrap read does not match a recovered load profile");
+    }
     [[nodiscard]] std::uint32_t vblank_counter() const { return random_.vblank_counter(); }
     // These are raw opening-VM observables used by the provenance overlay.
     // They are not title/gameplay labels or host controls.

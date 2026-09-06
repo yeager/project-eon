@@ -8003,3 +8003,36 @@ Additional source gates:
 
 The production-checkpoint profile matrix now checks these request fields,
 the two different disk offsets, and the unchanged profile-five boundary.
+
+### Deuteros native bootstrap payload read and return chain
+
+The `$12ad2` successful-read boundary now binds its owned request to one of
+the two exact parsed load stages. The native media reader returns a span
+over the admitted in-memory original ADF: no host extraction, media mutation,
+or generated payload occurs. A differing offset, length or destination is
+rejected. The coordinator stages the complete payload in unpublished memory
+before its caller continuation, and publishes it together with the request
+writes only after sequence and service validation succeed. A nonzero read
+result is rejected; partial reads and device-error effects are not implemented
+by assuming they left either a complete or empty destination.
+
+Native `$12ad6` reads the request length into D0, clears that longword,
+writes command 9 and zero status, then pauses at `$12aee/-$1c8`. Its return
+reloads A1 from `$12822` and reaches `$12afc/-$1c2`. The latter return sets
+A1 to `$1285e` and reaches `$12b0a/-$168`. Finally `$12b0e` reloads A1 and
+replaces D0's low word with the owned profile word. The RTS target is the
+destination retained from the original `$12abe` push, not a service result
+or the currently selected profile. This stack relationship is native control
+metadata; no fabricated captured stack or bus trace is implied. The final
+boundary is `$20000` or `$13000`, before executing the newly loaded program.
+The intervening operating-system cleanup effects remain externally supplied
+returns, not effects inferred from their result values.
+
+The continuation source at ADF `$2ed6`, 70 bytes (runtime `$12ad6..$12b1b`),
+is gated by SHA-256
+`e4826a60a00a9c9ed6797e5636ca0e99f038e10cea9d732ebe53452ca659a658`.
+Controlled profile tests cover both destinations, request cleanup, all four
+ordered returns, failed-read rejection and final MOVE.W upper-bit preservation.
+Separate genuine-media tests compare both payload spans against their exact
+ADF ranges and reject shortened requests. These tests do not constitute a
+full emulator capture or end-to-end playable-program validation.

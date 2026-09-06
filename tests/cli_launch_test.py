@@ -574,7 +574,9 @@ def main() -> int:
             exact_payload = json.loads(exact_launch.stdout)
         except json.JSONDecodeError as error:
             raise SystemExit(
-                f"{game}/{platform}/{language} exact launch check did not emit JSON: {error}"
+                f"{game}/{platform}/{language} exact launch check did not emit JSON: {error}\n"
+                f"returncode={exact_launch.returncode}\n"
+                f"stdout={exact_launch.stdout[-2000:]!r}\nstderr={exact_launch.stderr[-2000:]!r}"
             ) from error
         expected_payload = {
             "schema": "project-eon.launch-check/v1",
@@ -620,7 +622,9 @@ def main() -> int:
             modern_exact_payload = json.loads(modern_exact_launch.stdout)
         except json.JSONDecodeError as error:
             raise SystemExit(
-                f"{game}/{platform}/{language} Modern launch check did not emit JSON: {error}"
+                f"{game}/{platform}/{language} Modern launch check did not emit JSON: {error}\n"
+                f"returncode={modern_exact_launch.returncode}\n"
+                f"stdout={modern_exact_launch.stdout[-2000:]!r}\nstderr={modern_exact_launch.stderr[-2000:]!r}"
             ) from error
         modern_expected_payload = {**expected_payload, "presentation": "modern"}
         if modern_exact_launch.returncode != 0 or modern_exact_payload != modern_expected_payload:
