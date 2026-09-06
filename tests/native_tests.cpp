@@ -6602,6 +6602,8 @@ int main() {
             assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x21822);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
             const auto before_outer_input=opening_controller.native_runtime_memory_checkpoint();
+            assert(!opening_controller.advance_deuteros_amiga_fade_buffers().accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==before_outer_input->checksum);
             const eon::DeuterosAmigaObservedOuterInput primary_outer_input{
                 runtime_copy_sequence+118,0x21822,0xdff016,10,0};
             auto bad_outer_input=primary_outer_input;bad_outer_input.bit=2;
@@ -6751,8 +6753,21 @@ int main() {
                 assert(fade_plan.d0_value==0x12345678&&fade_plan.next_vector==0);
                 assert(fade_plan.outer_fade_return==0x218d8&&fade_plan.outer_transition_return==0x21854);
                 if(step<31)assert(fade_plan.pending_read_instruction==0x222ac&&fade_plan.pending_read_address==0xdff01f);
-                else assert(fade_plan.next_call_address==0x2231e&&fade_plan.local_call_target==0x21698
-                    &&fade_plan.next_return_address==0x22324&&fade_plan.pending_read_instruction==0);
+                else{
+                    assert(fade_plan.next_call_address==0x2231e&&fade_plan.local_call_target==0x21698
+                        &&fade_plan.next_return_address==0x22324&&fade_plan.pending_read_instruction==0);
+                    for(const unsigned return_address:{0x2189eU,0x218d8U}){
+                        fade_plan.outer_fade_return=return_address;
+                        const auto finished=eon::finish_deuteros_amiga_fade_buffers(fade_plan,0x97d00);
+                        assert(finished.next_call_address==return_address&&finished.next_return_address==return_address+4);
+                        assert(finished.local_call_target==0x224a2&&finished.outer_fade_return==0);
+                        assert(finished.outer_transition_return==0x21854&&finished.a0_value==0x97d00&&finished.d0_value==0);
+                        bool rejected_repeat=false;
+                        try{static_cast<void>(eon::finish_deuteros_amiga_fade_buffers(finished,0x97d00));}
+                        catch(const std::runtime_error&){rejected_repeat=true;}
+                        assert(rejected_repeat);
+                    }
+                }
             }
             for(unsigned base=0;base<4096;base+=16){
                 for(unsigned index=0;index<16;++index)
@@ -16110,6 +16125,55 @@ int main() {
         put(0x20c70,eon::MemoryTransferElementWidth::word,0);
         put(0x20c72,eon::MemoryTransferElementWidth::word,0);
         put(0x20c8a,eon::MemoryTransferElementWidth::word,0xffff);
+        // Final fade calls clear both selected buffers without drawing sprites
+        // or writing a hardware port. Counters retain original word wrapping.
+        for(const unsigned initial_counter:{0U,1U,0xfffeU,0xffffU}){
+            for(const bool aliased:{false,true}){
+                put(0x12ff4,eon::MemoryTransferElementWidth::longword,aliased?0x90000:0x80000);
+                put(0x12ff0,eon::MemoryTransferElementWidth::longword,0x90000);
+                put(0x21696,eon::MemoryTransferElementWidth::word,initial_counter);
+                std::fill(planes.begin(),planes.end(),0xff);
+                for(unsigned byte=0;byte<32000;byte+=4)
+                    put(0x80000+byte,eon::MemoryTransferElementWidth::longword,0xffffffff);
+                std::size_t stores=0;
+                std::map<std::uint32_t,std::uint8_t> cleared_bytes;
+                const auto clear_write=[&](std::uint32_t address,eon::MemoryTransferElementWidth width,std::uint32_t value){
+                    assert(address==0x21696||address==0x20128||(address>=0x80000&&address<0x87d00)
+                        ||(address>=0x90000&&address<0x97d00));
+                    ++stores;put(address,width,value);
+                    const auto count=static_cast<unsigned>(width);
+                    for(unsigned byte=0;byte<count;++byte)
+                        cleared_bytes[address+byte]=static_cast<std::uint8_t>(value>>((count-1-byte)*8));
+                };
+                static_cast<void>(eon::clear_deuteros_amiga_owned_frame(get,clear_write));
+                const auto final_a0=eon::clear_deuteros_amiga_owned_frame(get,clear_write);
+                const auto final_counter=(initial_counter+2)&0xffffU;
+                const auto final_buffer=(aliased||(final_counter&1U))?0x90000U:0x80000U;
+                assert(stores==16004&&get(0x21696,2)==final_counter);
+                assert(get(0x20128,4)==final_buffer&&final_a0==final_buffer+32000);
+                eon::NativeRuntimeEffectBatch clear_batch{"fade-clear-test",true,{}};
+                for(const auto&[address,value]:cleared_bytes)
+                    clear_batch.effects.push_back({clear_batch.effects.size()+1,
+                        {eon::NativeRuntimeAddressSpace::linear,std::nullopt,address},
+                        eon::MemoryTransferElementWidth::byte,eon::NativeRuntimeByteOrder::big_endian,value});
+                eon::NativeRuntimeMemory clear_memory;
+                assert(clear_memory.apply(clear_batch).accepted);
+                assert(clear_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x21697})
+                    ==static_cast<std::uint8_t>(final_counter));
+                for(unsigned byte=0;byte<32000;++byte){
+                    assert(planes[byte]==0);
+                    assert(get(0x80000+byte,1)==(aliased?0xffU:0U));
+                }
+            }
+        }
+        put(0x21696,eon::MemoryTransferElementWidth::word,0);
+        globals.erase(0x12ff4);
+        bool rejected_missing_even_pointer=false;
+        try{static_cast<void>(eon::clear_deuteros_amiga_owned_frame(get,put));}
+        catch(const std::runtime_error&){rejected_missing_even_pointer=true;}
+        assert(rejected_missing_even_pointer); // Odd selection still reads it.
+        put(0x12ff4,eon::MemoryTransferElementWidth::longword,0x80000);
+        put(0x20128,eon::MemoryTransferElementWidth::longword,0x90000);
         for(std::size_t index=0;index<first_bitmap_catalog.record_count;++index){
             std::fill(planes.begin(),planes.end(),0);
             put(0x210f8,eon::MemoryTransferElementWidth::word,static_cast<std::uint32_t>(index));

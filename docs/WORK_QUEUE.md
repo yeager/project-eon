@@ -479,8 +479,9 @@ with the original source-plane stride. Implement alternate-resource rendering
 next. The distinct `$218cc`, `$21892` and `$21982` cleanup/transition
 prefixes now execute native selector decisions and software sound reset;
 the nonzero-resource fade now performs its 16-color RGB4 steps, ordered
-dual palette calls and owned 32-step counter. Continue its two final buffer
-passes, cleanup return and asynchronous counter wait next.
+dual palette calls and owned 32-step counter. Its two final native buffer
+clears and exact fade return are implemented. Continue the `$224a2` cleanup
+and asynchronous counter wait next.
 Connect
 the separately staged sound descriptors to the `$22bea` consumer without
 claiming that a software descriptor write already started audio hardware.

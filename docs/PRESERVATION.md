@@ -3752,14 +3752,34 @@ word survives the palette loop. The native plan calls graphics vector
 owned `$12fec` for each call. Typed returns are ordered and fresh; only the
 second return permits the private transaction to subtract eight from the
 owned counter. Nonzero repeats the original raw-port wait; zero reaches
-the first `$2231e->$21698` final buffer pass. The second final pass and fade
-return remain separate work. No host timer or assumed vertical-blank cadence
+the first `$2231e->$21698` final buffer pass. Both final clears and the fade
+return now execute natively as described below. No host timer or assumed vertical-blank cadence
 substitutes for observations, and palette-service side effects remain an
 external contract rather than a claim of displayed graphics.
 Tests exhaust all 4,096 RGB4 words through 32 fade steps, retain colors on
 clear port samples, and exercise both palette-return continuations, missing
 counter rejection, incorrect return rejection and the final buffer boundary.
 These controlled test states and return packets are not capture evidence.
+
+The final fade calls at `$2231e` and `$22324` both invoke the already
+hash-gated `$21698..$216cf` routine (ADF `$6e98`, 56 bytes, SHA-256
+`e537c609f36408953a72013a90cb2f44b16769130dffce866ea15e189e8fcf9e`).
+Each increments word `$21696`, unconditionally reads `$12ff4`, replaces
+the selected buffer with `$12ff0` on odd counts, writes `$20128`, and clears
+exactly 32,000 bytes using 8,000 longword stores. These calls do not execute
+the distinct `$21448` sprite walk or `$216d0` view selection. Both calls run
+in one private native-memory transaction; read-through writes preserve
+sequential pointer/counter semantics and shared-buffer aliasing.
+The published batch contains unique final byte values, not a bus-write trace.
+Missing owned pointers or invalid geometry reject the transaction without publishing
+either clear. Final A0 is the second buffer's end and D0 is zero.
+The `$2232a` return restores the exact fade caller and stops before its
+`$224a2` cleanup call: `$2189e` returns to `$218a2`, or `$218d8` returns
+to `$218dc`. The enclosing `$21854` return remains separately retained.
+Tests cover both parities, `$ffff` word wrapping, aliased buffers, the
+unconditional even-pointer read, 16,004 ordered stores across both calls,
+both return routes and rejection outside the reached fade boundary. Hardware
+vector restoration and audio control writes in `$224a2` remain unexecuted.
 
 Sample bytes, latch writes, trace sequence and next boundary publish atomically.
 Wrong bit/address/order or replay leaves committed state unchanged. The test

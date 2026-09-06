@@ -1457,6 +1457,20 @@ inline DeuterosAmigaMainStageLoopGraphicsPlan resume_deuteros_amiga_fade_palette
     return plan;
 }
 
+inline DeuterosAmigaMainStageLoopGraphicsPlan finish_deuteros_amiga_fade_buffers(
+    DeuterosAmigaMainStageLoopGraphicsPlan plan,std::uint32_t final_a0){
+    if(plan.next_call_address!=0x2231e||plan.local_call_target!=0x21698
+        ||plan.next_return_address!=0x22324
+        ||(plan.outer_fade_return!=0x2189e&&plan.outer_fade_return!=0x218d8))
+        throw std::runtime_error("Deuteros fade buffer continuation does not match boundary");
+    plan.a0_value=final_a0;plan.d0_value=0;
+    plan.next_call_address=plan.outer_fade_return;plan.next_return_address=plan.outer_fade_return+4;
+    plan.local_call_target=0x224a2;plan.next_vector=0;
+    plan.pending_read_instruction=0;plan.pending_read_address=0;plan.next_instruction_address=0;
+    plan.outer_fade_return=0;
+    return plan;
+}
+
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>
@@ -4062,6 +4076,13 @@ public:
             plan.pending_read_address=0x2079e;
         }
         main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    advance_main_stage_fade_buffers(std::uint32_t final_a0){
+        if(!main_stage_loop_graphics_plan_||main_stage_loop_graphics_plan_->next_call_address!=0x2231e)
+            return std::nullopt;
+        const auto plan=finish_deuteros_amiga_fade_buffers(*main_stage_loop_graphics_plan_,final_a0);
+        main_stage_loop_graphics_plan_=plan;return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
     advance_main_stage_command_palette(std::uint32_t palette,std::uint32_t library){

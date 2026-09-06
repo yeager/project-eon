@@ -4782,6 +4782,62 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_input(const DeuterosAmig
     return result;
 }
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::advance_deuteros_amiga_fade_buffers(){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
+        result.error="Deuteros fade buffers require active owned memory";return result;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto current=pending.main_stage_loop_graphics_plan();
+        if(!current||current->next_call_address!=0x2231e){
+            result.error="Deuteros fade buffers did not match boundary";return result;
+        }
+        // Both clears and their return are one private transaction. The
+        // second call sees the first call's writes even if buffers alias.
+        auto memory=*native_runtime_memory_;
+        std::map<std::uint32_t,std::uint8_t> overlay;
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-fade-buffers-"+
+            std::to_string(memory.diagnostics().applied_batch_count),true,{}};
+        const auto read=[&](std::uint32_t address,std::uint32_t width){
+            if((width>1&&(address&1U))||address>0x1000000U-width)
+                throw std::runtime_error("Deuteros fade buffer source is outside aligned native memory");
+            std::uint32_t value=0;
+            for(std::uint32_t i=0;i<width;++i){
+                const auto found=overlay.find(address+i);
+                const auto byte=found!=overlay.end()?std::optional<std::uint8_t>(found->second)
+                    :memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
+                if(!byte)throw std::runtime_error("Deuteros fade buffer source is not owned");
+                value=(value<<8U)|*byte;
+            }
+            return value;
+        };
+        const auto write=[&](std::uint32_t address,MemoryTransferElementWidth width,std::uint32_t value){
+            const auto bytes=static_cast<std::uint32_t>(width);
+            for(std::uint32_t i=0;i<bytes;++i)
+                overlay[address+i]=static_cast<std::uint8_t>(value>>((bytes-1-i)*8U));
+        };
+        static_cast<void>(clear_deuteros_amiga_owned_frame(read,write));
+        const auto final_a0=clear_deuteros_amiga_owned_frame(read,write);
+        if(!pending.advance_main_stage_fade_buffers(final_a0)){
+            result.error="Deuteros fade buffer continuation rejected";return result;
+        }
+        // Admission represents final state, not a bus trace. Counters and
+        // aliased buffers may have been written repeatedly during execution.
+        batch.effects.reserve(overlay.size());
+        for(const auto&[address,value]:overlay)
+            batch.effects.push_back({batch.effects.size()+1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},
+                MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,value});
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted){result.error=applied.error;return result;}
+        if(!deuteros_amiga_->advance_main_stage_fade_buffers(final_a0)){
+            result.error="Deuteros fade buffers disappeared before commit";return result;
+        }
+        *native_runtime_memory_=std::move(memory);result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::advance_deuteros_amiga_command_palette(){
     DeuterosAmigaTitleDependencyObservationResult result;
     if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){

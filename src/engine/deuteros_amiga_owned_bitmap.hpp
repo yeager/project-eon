@@ -8,6 +8,23 @@
 
 namespace eon {
 
+// $21698..$216cf is only a buffer clear. Its fade callers do not run the
+// sprite walk or display selection performed by the separate frame caller.
+template<class Read,class Write>
+std::uint32_t clear_deuteros_amiga_owned_frame(Read read,Write write){
+    using Width=MemoryTransferElementWidth;
+    const auto counter=(read(0x21696,2)+1U)&0xffffU;
+    write(0x21696,Width::word,counter);
+    auto buffer=read(0x12ff4,4); // Read even when the odd branch replaces A0.
+    if(counter&1U)buffer=read(0x12ff0,4);
+    if((buffer&1U)!=0||buffer>0x1000000U-32000U)
+        throw std::runtime_error("Deuteros clear buffer is outside aligned native memory");
+    write(0x20128,Width::longword,buffer);
+    for(std::uint32_t offset=0;offset<32000;offset+=4)
+        write(buffer+offset,Width::longword,0);
+    return buffer+32000;
+}
+
 // Native opaque $20c8c->$20d8e decoder. The caller supplies a private
 // read-through write overlay so source/destination overlap stays sequential.
 // Masked sprites and the global saved-scanline path are separate routines.
