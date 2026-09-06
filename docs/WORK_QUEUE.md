@@ -489,7 +489,11 @@ typed return and native selector increment. Continue the reached `$21926`
 resource loader and `$219f8`/`$21a4c` special transitions. Recurring resource
 0/1 loads now verify the owned table, transfer original bytes in native
 memory and follow the retained primary return into fresh loop preparation;
-branch-entered unknown returns remain at `$21978`. The restart route
+branch-entered unknown returns remain at `$21978`.
+The state-two `$21a4c` transition now conditionally clears its fixed buffer,
+admits both ordered Exec returns and publishes handoff metadata before
+reaching `$12800`. Continue that program entry and the separate `$219f8`
+disk-check/message route. The restart route
 at `$217f6` now executes sound/flag reset and re-enters `$21276` using fresh
 per-loop continuation state and effect identifiers. Continue verifying its
 new ordered service returns without reusing previous observations.

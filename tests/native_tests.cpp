@@ -6873,6 +6873,35 @@ int main() {
                             assert(next.a1_value==command_read(0x20976,4));
                             assert(command_read(next.a1_value+28,2)==5&&command_read(next.a1_value+30,1)==0);
                             assert(command_read(0x21704,2)==selector); // Later selection store is a separate routine.
+                            if(next.next_instruction_address==0x21a4c){
+                                for(const unsigned clear:{0U,1U}){
+                                    command_write(0x21706,eon::MemoryTransferElementWidth::word,clear);
+                                    const auto buffer=command_read(0x12ff4,4);
+                                    const auto frame_counter=command_read(0x21696,2);
+                                    const auto display_buffer=command_read(0x20128,4);
+                                    for(unsigned offset=0;offset<32000;offset+=4)
+                                        command_write(buffer+offset,eon::MemoryTransferElementWidth::longword,0xffffffff);
+                                    const auto first=eon::execute_deuteros_amiga_outer_service(next,
+                                        {6,0x21a7c,4,command_read(4,4),0x21a80,0x21a84,0x12345678,-0x1c2},command_read,command_write);
+                                    assert(first.next_call_address==0x21a8e&&first.next_return_address==0x21a92
+                                        &&first.next_vector==-0x168&&first.a1_value==0x20954);
+                                    assert(command_read(0x219f4,4)==1&&command_read(0x21696,2)==frame_counter
+                                        &&command_read(0x20128,4)==display_buffer);
+                                    for(unsigned offset=0;offset<32000;offset+=4)
+                                        assert(command_read(buffer+offset,4)==(clear?0U:0xffffffffU));
+                                    if(clear)assert(first.a0_value==buffer+32000);
+                                    auto wrong=eon::DeuterosAmigaObservedLoopRequestService{
+                                        7,0x21a8a,4,command_read(4,4),0x21a8e,0x21a92,0,-0x1c2};
+                                    bool rejected_handoff_order=false;
+                                    try{static_cast<void>(eon::execute_deuteros_amiga_outer_service(first,wrong,command_read,command_write));}
+                                    catch(const std::runtime_error&){rejected_handoff_order=true;}
+                                    assert(rejected_handoff_order);
+                                    wrong.vector=-0x168;
+                                    const auto final=eon::execute_deuteros_amiga_outer_service(first,wrong,command_read,command_write);
+                                    assert(final.next_instruction_address==0x12800&&final.next_call_address==0&&final.d0_value==1);
+                                    assert(command_read(0x12ff8,4)==command_read(0x20976,4)&&command_read(0x12ffc,4)==1);
+                                }
+                            }
                             if(next.next_instruction_address==0x21926){
                                 const auto selected=static_cast<std::uint16_t>(next.d0_value);
                                 const eon::DeuterosAmigaObservedMainStageResourceLoad loaded{

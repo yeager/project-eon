@@ -1465,6 +1465,43 @@ template<class Read,class Write>
 DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
     DeuterosAmigaMainStageLoopGraphicsPlan plan,const DeuterosAmigaObservedLoopRequestService&o,
     Read read,Write write){
+    const bool handoff=plan.next_instruction_address==0x21a4c;
+    const bool handoff_return=plan.next_call_address==0x21a8e&&plan.next_return_address==0x21a92
+        &&plan.next_vector==-0x168;
+    if(handoff||handoff_return){
+        if(o.source_address!=4||o.read_instruction!=(handoff?0x21a7cU:0x21a8aU)
+            ||o.call_address!=(handoff?0x21a80U:0x21a8eU)
+            ||o.return_address!=(handoff?0x21a84U:0x21a92U)||o.vector!=(handoff?-0x1c2:-0x168))
+            throw std::runtime_error("Deuteros special transition service is inconsistent");
+        if(handoff){
+            write(0x219f4,MemoryTransferElementWidth::longword,1);
+            if(read(0x21706,2)!=0){
+                const auto buffer=read(0x12ff4,4);
+                if((buffer&1U)||buffer>0x1000000U-32000)
+                    throw std::runtime_error("Deuteros special transition buffer is invalid");
+                for(std::uint32_t offset=0;offset<32000;offset+=4)
+                    write(buffer+offset,MemoryTransferElementWidth::longword,0);
+                plan.a0_value=buffer+32000;
+            }
+        }
+        if(read(4,4)!=o.exec_base)
+            throw std::runtime_error("Deuteros special transition ExecBase contradicts owned memory");
+        plan.a6_value=o.exec_base;plan.d0_value=o.result_d0;
+        plan.next_instruction_address=0;plan.local_call_target=0;
+        if(handoff){
+            plan.a1_value=0x20954;plan.next_call_address=0x21a8e;plan.next_return_address=0x21a92;
+            plan.next_vector=-0x168;plan.pending_read_instruction=0x21a8a;plan.pending_read_address=4;
+        }else{
+            write(0x12ff8,MemoryTransferElementWidth::longword,read(0x20976,4));
+            plan.d0_value=read(0x219f4,4);
+            write(0x12ffc,MemoryTransferElementWidth::longword,plan.d0_value);
+            // $21a74 pushed the fixed $12800 destination. RTS consumes that
+            // value as its target, not the outer caller's return address.
+            plan.next_instruction_address=0x12800;plan.next_call_address=0;plan.next_return_address=0;
+            plan.next_vector=0;plan.pending_read_instruction=0;plan.pending_read_address=0;
+        }
+        return plan;
+    }
     const bool request=plan.next_call_address==0x218fe&&plan.local_call_target==0x20a74;
     const bool first=(plan.next_call_address==0x218b8||plan.next_call_address==0x218f8)
         &&plan.local_call_target==0x208ba;
@@ -1695,6 +1732,10 @@ public:
                 !="69391ead2846fc91a8f586be0b31ec56ad003bf55bb8b121880c6d32362deadc"
             ||to_hex(sha256(main_stage.subspan(0x1926,84)))
                 !="4a0160ddf682249e0e9528cf64b55d932aedb923830a1df5a2b950abdea0729b"
+            ||to_hex(sha256(main_stage.subspan(0x1a4c,96)))
+                !="b4131d411ffccdfb4e1885f51d9103a58b6f51da2cfa747c73d316fe9ca83b8d"
+            ||to_hex(sha256(main_stage.subspan(0x1aac,26)))
+                !="9385027511cf7607d75a92799940c7f72815d7077cfb1031e03024e752631636"
             ||to_hex(sha256(main_stage.subspan(0x18fe,40)))
                 !="3c7021b0eaad2abf2832f6ec87569933b1ac93d97a07e584179fc148f707a9fd"
             ||to_hex(sha256(main_stage.subspan(0xa74,28)))
@@ -4237,6 +4278,19 @@ public:
         const DeuterosAmigaMainStageLoopGraphicsPlan&plan){
         if(!main_stage_loop_graphics_plan_)return std::nullopt;
         const auto& current=*main_stage_loop_graphics_plan_;
+        const bool handoff=current.next_instruction_address==0x21a4c;
+        const bool handoff_return=current.next_call_address==0x21a8e&&current.next_return_address==0x21a92
+            &&current.next_vector==-0x168;
+        if(handoff||handoff_return){
+            if(o.trace_sequence<=last_command_sequence_||o.source_address!=4
+                ||o.read_instruction!=(handoff?0x21a7cU:0x21a8aU)
+                ||o.call_address!=(handoff?0x21a80U:0x21a8eU)
+                ||o.return_address!=(handoff?0x21a84U:0x21a92U)||o.vector!=(handoff?-0x1c2:-0x168)
+                ||plan.a6_value!=o.exec_base
+                ||(handoff?plan.next_call_address!=0x21a8e:plan.next_instruction_address!=0x12800))
+                throw std::runtime_error("Deuteros special transition return is invalid or stale");
+            main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
+        }
         const bool request=current.next_call_address==0x218fe&&current.local_call_target==0x20a74;
         const bool first=(current.next_call_address==0x218b8||current.next_call_address==0x218f8)
             &&current.local_call_target==0x208ba;

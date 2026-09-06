@@ -3882,6 +3882,27 @@ unproven resource indices. Existing genuine-media tests validate both
 resource payloads. Complete recurring presentation still requires fresh
 external service returns after the new loop preparation.
 
+The special state-two transition `$21a4c..$21aab` (ADF `$724c`, 96 bytes,
+SHA-256 `b4131d411ffccdfb4e1885f51d9103a58b6f51da2cfa747c73d316fe9ca83b8d`)
+now writes longword one at `$219f4` and conditionally invokes the separate
+`$21aac..$21ac5` buffer clear (ADF `$72ac`, 26 bytes, SHA-256
+`9385027511cf7607d75a92799940c7f72815d7077cfb1031e03024e752631636`).
+Nonzero owned word `$21706` clears exactly 32,000 bytes through `$12ff4`;
+zero skips it. Unlike `$21698`, this routine does not increment `$21696`
+or write `$20128`. It leaves A0 at the buffer end when called.
+The source establishes D1=`$12800`, D7=`$2c00`, D0=`$600` before the first
+service, and pushes D1 at `$21a74`. Ordered typed Exec returns must match
+`$21a80/-$1c2->$21a84` and `$21a8e/-$168->$21a92`, with their distinct
+ExecBase reads at `$21a7c` and `$21a8a`. The second caller uses A1=`$20954`.
+After the second return, owned `$20976` is copied to `$12ff8` and owned
+`$219f4` to `$12ffc`. The final RTS consumes the pushed `$12800`, so the
+native boundary is that handoff address, not the enclosing outer return.
+No service side effect or execution of the handed-off program is invented.
+Read-through private writes preserve aliasing; admission publishes unique
+final bytes rather than pretending to provide a bus trace. Tests cover both
+clear branches, both service continuations, incorrect vector rejection,
+metadata copies, unchanged display selection/counter and the handoff target.
+
 Sample bytes, latch writes, trace sequence and next boundary publish atomically.
 Wrong bit/address/order or replay leaves committed state unchanged. The test
 fixture's two clear samples with the genuine enabled gate re-enter the native

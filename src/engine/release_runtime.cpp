@@ -4827,27 +4827,39 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_service(const DeuterosAm
         const auto current=pending.main_stage_loop_graphics_plan();
         if(!current){result.error="Deuteros outer service did not match boundary";return result;}
         auto memory=*native_runtime_memory_;
+        std::map<std::uint32_t,std::uint8_t> service_bytes;
         const auto read=[&](std::uint32_t address,std::uint32_t width){
             if((width>1&&(address&1U))||address>0x1000000U-width)
                 throw std::runtime_error("Deuteros outer service source is outside aligned native memory");
             std::uint32_t value=0;
             for(std::uint32_t i=0;i<width;++i){
-                const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
+                const auto found=service_bytes.find(address+i);
+                const auto byte=found!=service_bytes.end()?std::optional<std::uint8_t>(found->second)
+                    :memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
                 if(!byte)throw std::runtime_error("Deuteros outer service source is not owned");
                 value=(value<<8U)|*byte;
             }
             return value;
         };
-        std::size_t stores=0;
         const auto write=[&](std::uint32_t address,MemoryTransferElementWidth width,std::uint32_t value){
-            const auto applied=memory.apply({"deuteros-amiga-outer-service-"+std::to_string(o.trace_sequence)+
-                "-"+std::to_string(stores++),true,{{1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},
-                width,NativeRuntimeByteOrder::big_endian,value}}});
-            if(!applied.accepted)throw std::runtime_error(applied.error);
+            const auto count=static_cast<std::uint32_t>(width);
+            if((count>1&&(address&1U))||address>0x1000000U-count)
+                throw std::runtime_error("Deuteros outer service destination is outside aligned native memory");
+            for(std::uint32_t byte=0;byte<count;++byte)
+                service_bytes[address+byte]=static_cast<std::uint8_t>(value>>((count-1-byte)*8U));
         };
         const auto plan=execute_deuteros_amiga_outer_service(*current,o,read,write);
         if(!pending.observe_main_stage_outer_service(o,plan)){
             result.error="Deuteros outer service continuation rejected";return result;
+        }
+        if(!service_bytes.empty()){
+            NativeRuntimeEffectBatch batch{"deuteros-amiga-outer-service-"+std::to_string(o.trace_sequence),true,{}};
+            batch.effects.reserve(service_bytes.size());
+            for(const auto&[address,value]:service_bytes)
+                batch.effects.push_back({batch.effects.size()+1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},
+                    MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,value});
+            const auto applied=memory.apply(batch);
+            if(!applied.accepted)throw std::runtime_error(applied.error);
         }
         if(!deuteros_amiga_->observe_main_stage_outer_service(o,plan)){
             result.error="Deuteros outer service disappeared before commit";return result;
