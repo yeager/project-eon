@@ -521,6 +521,12 @@ countdown, period changes, tail selection and ROM-dependent random modes.
 Continue the custom-register/pointer setup at `$2178e`, then connect native
 audio intents to the SDL mixer; raw register writes do not prove playback.
 Random audio modes require their original owned ROM byte at `$ff0000+index`.
+The `$2178e` native prefix now writes the four raw custom-register values,
+follows both owned graphics pointer chains and enters `$20994`. Three ordered
+Exec returns build the task/port/device request, then reach either the original
+error spin or `$217e4`'s CIA read/modify/write. Continue that CIA operation and
+the `$217f2 -> $21926` return to `$217f6`. Graphics roots must be produced by
+the earlier graphics setup; controlled unit fixtures are not a runtime fallback.
 The unconfigured `$13000` graphics initialization remains separate. Opening
 acquisition now retains the genuine 24-byte bootstrap profile table in owned
 memory from its boot-track source. Tests consume that production checkpoint,

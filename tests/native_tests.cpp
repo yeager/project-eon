@@ -7068,15 +7068,47 @@ int main() {
                                                         assert(main.pending_read_address==0x12fec&&main.next_call_address==0x200b2);
                                                         assert(command_read(0x20128,4)==command_read(0x12ff4,4));
                                                         assert(command_read(0x20124,4)==command_read(0x12ff0,4));
+                                                        command_write(0x22a31,eon::MemoryTransferElementWidth::byte,0x5a);
                                                         main=eon::execute_deuteros_amiga_outer_service(main,
                                                             {22,0x200ac,0x12fec,opened.result_d0,0x200b2,0x200b6,0x98765432,-0xde},command_read,command_write);
                                                         assert(command_read(0x2012c,2)==0&&command_read(0x20510,4)==command_read(0x20128,4));
                                                         assert(command_read(0x20c20,4)==command_read(0x20128,4));
                                                         assert(main.next_instruction_address==0x2178e&&main.next_call_address==0);
                                                         assert((main.main_stage_audio_dma_writes==std::array<std::uint16_t,4>{15,0x8000,0,0x800f}));
-                                                        assert(command_read(0x22a6c,2)==0&&command_read(0x22a30,2)==0);
+                                                        assert(command_read(0x22a6c,2)==0&&command_read(0x22a30,2)==0x5a);
                                                         for(unsigned audio_channel=0;audio_channel<4;++audio_channel)
                                                             assert(command_read(0xdff0a8+16*audio_channel,2)==0);
+                                                        // Controlled graphics pointer chains: only the
+                                                        // private arithmetic test map is changed.
+                                                        command_write(0x12e04,eon::MemoryTransferElementWidth::longword,1);
+                                                        const auto task_return=eon::DeuterosAmigaObservedLoopRequestService{
+                                                            23,0x2099a,4,command_read(4,4),0x2099e,0x209a2,0x12345678,-0x126};
+                                                        bool bad_root=false;
+                                                        try{(void)eon::execute_deuteros_amiga_outer_service(main,task_return,command_read,command_write);}
+                                                        catch(const std::runtime_error&){bad_root=true;}
+                                                        assert(bad_root);
+                                                        command_write(0x12e04,eon::MemoryTransferElementWidth::longword,0x90000);
+                                                        command_write(0x90004,eon::MemoryTransferElementWidth::longword,0x91000);
+                                                        command_write(0x12f04,eon::MemoryTransferElementWidth::longword,0x90010);
+                                                        command_write(0x90014,eon::MemoryTransferElementWidth::longword,0x92000);
+                                                        main=eon::execute_deuteros_amiga_outer_service(main,task_return,command_read,command_write);
+                                                        assert(main.next_call_address==0x209ca&&main.a1_value==0x20954);
+                                                        assert(command_read(0x2197a,4)==0x91004&&command_read(0x2197e,4)==0x92004);
+                                                        assert(command_read(0xdff040,2)==0x7fff&&command_read(0xdff042,2)==0x7fff);
+                                                        assert(command_read(0xdff09a,2)==0xc000&&command_read(0xdff096,2)==0x87ff);
+                                                        assert(command_read(0x2095e,4)==0x20982&&command_read(0x20964,4)==task_return.result_d0);
+                                                        main=eon::execute_deuteros_amiga_outer_service(main,
+                                                            {24,0x209c6,4,command_read(4,4),0x209ca,0x209ce,0,-0x162},command_read,command_write);
+                                                        assert(main.next_call_address==0x209f0&&main.d0_value==0&&main.d1_value==0);
+                                                        assert(command_read(0x20976,4)==0x2091c&&command_read(0x2092a,4)==0x20954);
+                                                        auto device_return=eon::DeuterosAmigaObservedLoopRequestService{
+                                                            25,0x209ec,4,command_read(4,4),0x209f0,0x209f4,1,-0x1bc};
+                                                        const auto device_failed=eon::execute_deuteros_amiga_outer_service(main,device_return,command_read,command_write);
+                                                        assert(device_failed.next_instruction_address==0x209fa);
+                                                        device_return.result_d0=0;
+                                                        main=eon::execute_deuteros_amiga_outer_service(main,device_return,command_read,command_write);
+                                                        assert(main.pending_read_instruction==0x217e4&&main.pending_read_address==0xbfe001&&main.d1_value==0x20000);
+                                                        assert(command_read(0x2094c,4)==0xffffffff&&command_read(0x2093a,1)==0);
                                                     }
                                                 }
                                                 auto wrong=returned;wrong.vector=-0x1c2;

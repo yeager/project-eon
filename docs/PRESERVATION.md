@@ -8125,3 +8125,39 @@ not capture evidence. Removing it verifies the missing-ROM rejection. The
 genuine-checkpoint re-entry tests cover both reset consumers and all four
 zero-volume outputs. DMA set/clear interpretation, sample ownership and SDL
 playback remain separate work.
+
+### Deuteros post-audio register and request initialization
+
+The native `$2178e` continuation writes raw words `$7fff`, `$7fff`, `$c000`
+and `$87ff` to `$dff040`, `$dff042`, `$dff09a` and `$dff096`. These are write
+values, not reconstructed hardware readback. For each root `$12e00/$12f00`,
+the code reads its longword at offset 4, follows that pointer's longword at
+offset 4, adds four, and stores the resulting pointer at `$2197a/$2197e`.
+Both pointer levels must exist in owned aligned 24-bit memory. The earlier
+graphics setup still has to establish those roots; observed final pointers
+from the legacy setup interface are not substituted for the missing chain.
+
+The reached `$20994` task/port/device initializer now has native prefixes and
+three separately ordered Exec returns: `$2099e/-$126`, `$209ca/-$162`, and
+`$209f0/-$1bc`. The first return creates the `$20954` structure, including
+its raw task-result pointer at `$20964`. The second selects request `$2091c`,
+stores it at `$20976`, links `$20954` at request offset `$e`, and clears D0/D1.
+A nonzero third return reaches the original `$209fa` spin. Success reloads
+the owned request, stores `$ffffffff` at offset `$30`, clears byte `$1e`,
+returns locally to `$217de`, and sets D1 to `$20000`. Execution stops before
+the CIA read/modify/write at `$217e4`, not after an invented hardware sample.
+The private runtime transaction still commits source reads, writes and phase
+changes together; invalid pointers or service observations discard the work.
+
+Source gates (ADF offset, bytes, SHA-256):
+
+- `$6f8e`, 80: `baa9d531e015bf1199340078fbb3ac620280e07969563a5c563ff38cf83bddc9`.
+- `$6194`, 126: `31683affd3d3eb8f78fe4cf76def0970e3485109151d798aa6bc07fee579f163`.
+- `$6fde`, 6: `fbc9c1ba21621c89768d83a85be9297e32cfae64590f91eb3e89ea2d60cb8d29`.
+
+Controlled native tests provide two explicit pointer chains in their private
+map, reject an odd root, verify each raw register and request field, and test
+both device-return branches. They do not seed production graphics structures
+or claim emulator evidence. A regression test also corrects the preceding
+`$22a5c` reset to **MOVE.B**, preserving the neighboring byte at `$22a31`;
+the earlier new re-entry implementation incorrectly cleared a word there.

@@ -1421,6 +1421,12 @@ struct DeuterosAmigaObservedLoopRequestService {
 };
 inline std::optional<DeuterosAmigaObservedLoopRequestService>
 deuteros_amiga_main_reentry_service_boundary(const DeuterosAmigaMainStageLoopGraphicsPlan&plan){
+    if(plan.next_instruction_address==0x2178e)
+        return DeuterosAmigaObservedLoopRequestService{0,0x2099a,4,0,0x2099e,0x209a2,0,-0x126};
+    if(plan.next_call_address==0x209ca&&plan.next_return_address==0x209ce&&plan.next_vector==-0x162)
+        return DeuterosAmigaObservedLoopRequestService{0,0x209c6,4,0,0x209ca,0x209ce,0,-0x162};
+    if(plan.next_call_address==0x209f0&&plan.next_return_address==0x209f4&&plan.next_vector==-0x1bc)
+        return DeuterosAmigaObservedLoopRequestService{0,0x209ec,4,0,0x209f0,0x209f4,0,-0x1bc};
     if(plan.next_instruction_address==0x20000)
         return DeuterosAmigaObservedLoopRequestService{0,0x21746,4,0,0x2174a,0x2174e,0,-0x96};
     if(plan.next_call_address==0x21758&&plan.next_return_address==0x2175c&&plan.next_vector==-0x9c)
@@ -1487,6 +1493,53 @@ DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
             ||o.vector!=boundary->vector||read(o.source_address,4)!=o.exec_base)
             throw std::runtime_error("Deuteros native main re-entry service does not match boundary");
         plan.a6_value=o.exec_base;plan.next_instruction_address=0;plan.local_call_target=0;
+        if(o.call_address==0x2099e||o.call_address==0x209ca||o.call_address==0x209f0){
+            plan.d0_value=o.result_d0;
+            if(o.call_address==0x2099e){
+                write(0xdff040,MemoryTransferElementWidth::word,0x7fff);
+                write(0xdff042,MemoryTransferElementWidth::word,0x7fff);
+                write(0xdff09a,MemoryTransferElementWidth::word,0xc000);
+                write(0xdff096,MemoryTransferElementWidth::word,0x87ff);
+                for(unsigned i=0;i<2;++i){
+                    const auto first=read(0x12e04+0x100*i,4);
+                    if((first&1U)||first>0x1000000U-8)
+                        throw std::runtime_error("Deuteros graphics root pointer is invalid");
+                    const auto second=read(first+4,4);
+                    if((second&1U)||second>0x1000000U-6)
+                        throw std::runtime_error("Deuteros graphics leaf pointer is invalid");
+                    write(0x2197a+4*i,MemoryTransferElementWidth::longword,second+4);
+                }
+                plan.a0_value=0x12f00;plan.a1_value=0x20954;
+                write(0x2095e,MemoryTransferElementWidth::longword,0x20982);
+                write(0x2095d,MemoryTransferElementWidth::byte,0x7f);
+                write(0x2095c,MemoryTransferElementWidth::byte,4);
+                write(0x20963,MemoryTransferElementWidth::byte,1);
+                write(0x20964,MemoryTransferElementWidth::longword,o.result_d0);
+                plan.next_call_address=0x209ca;plan.next_return_address=0x209ce;plan.next_vector=-0x162;
+                plan.pending_read_instruction=0x209c6;plan.pending_read_address=4;
+            }else if(o.call_address==0x209ca){
+                plan.a0_value=0x20982;plan.a1_value=0x2091c;
+                write(0x20976,MemoryTransferElementWidth::longword,plan.a1_value);
+                write(0x2092a,MemoryTransferElementWidth::longword,0x20954);
+                plan.d0_value=0;plan.d1_value=0;
+                plan.next_call_address=0x209f0;plan.next_return_address=0x209f4;plan.next_vector=-0x1bc;
+                plan.pending_read_instruction=0x209ec;plan.pending_read_address=4;
+            }else{
+                plan.next_call_address=0;plan.next_return_address=0;plan.next_vector=0;
+                plan.pending_read_instruction=0;plan.pending_read_address=0;
+                if(o.result_d0)plan.next_instruction_address=0x209fa;
+                else{
+                    plan.a1_value=read(0x20976,4);
+                    if((plan.a1_value&1U)||plan.a1_value>0x1000000U-52)
+                        throw std::runtime_error("Deuteros native device request pointer is invalid");
+                    write(plan.a1_value+48,MemoryTransferElementWidth::longword,0xffffffff);
+                    write(plan.a1_value+30,MemoryTransferElementWidth::byte,0);
+                    plan.d1_value=0x20000;
+                    plan.pending_read_instruction=0x217e4;plan.pending_read_address=0xbfe001;
+                }
+            }
+            return plan;
+        }
         if(o.call_address==0x2174a){
             if(read(0x20000,2)!=0x4ef9||read(0x20002,4)!=0x21734)
                 throw std::runtime_error("Deuteros native main entry jump changed");
@@ -1518,7 +1571,7 @@ DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
             const auto pointer=read(0x20128,4);
             write(0x20510,MemoryTransferElementWidth::longword,pointer);
             write(0x20c20,MemoryTransferElementWidth::longword,pointer);
-            write(0x22a30,MemoryTransferElementWidth::word,0);
+            write(0x22a30,MemoryTransferElementWidth::byte,0);
             std::uint32_t sound=0;std::uint16_t channels=15;
             stage_deuteros_amiga_owned_sound(sound,channels,read,write);
             const auto first_audio=consume_deuteros_amiga_owned_audio(read,write);
@@ -1908,6 +1961,10 @@ public:
                 !="e4826a60a00a9c9ed6797e5636ca0e99f038e10cea9d732ebe53452ca659a658")
             throw std::runtime_error("Unsupported Deuteros bootstrap re-entry route");
         const auto main_stage=disk.bytes(plan.main_stage.disk_offset,plan.main_stage.length);
+        if(to_hex(sha256(disk.bytes(0x6f8e,80)))!="baa9d531e015bf1199340078fbb3ac620280e07969563a5c563ff38cf83bddc9"
+            ||to_hex(sha256(disk.bytes(0x6194,126)))!="31683affd3d3eb8f78fe4cf76def0970e3485109151d798aa6bc07fee579f163"
+            ||to_hex(sha256(disk.bytes(0x6fde,6)))!="fbc9c1ba21621c89768d83a85be9297e32cfae64590f91eb3e89ea2d60cb8d29")
+            throw std::runtime_error("Unsupported Deuteros native request initialization");
         if(to_hex(sha256(disk.bytes(0x83ea,1082)))!="6f4ad399c05cf86ca968ca4dbfd8009c1219dc44eabd67bde05de17369ba19f7"
             ||to_hex(sha256(disk.bytes(0x8234,38)))!="3912a3943e0cf7654daabbcd611746d3df0dcda45be4361061a953fb2c8ca2b0"
             ||to_hex(sha256(disk.bytes(0x825a,16)))!="ec2f836b1613a0aaf24099396c38c467d04c937cafaaeb5d529494491700ecf9")
