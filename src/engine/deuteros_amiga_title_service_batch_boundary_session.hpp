@@ -1412,6 +1412,7 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
     std::uint32_t bootstrap_return_destination=0;
     std::uint32_t main_stage_stack_top=0;
     std::array<std::uint16_t,4> main_stage_audio_dma_writes{};
+    std::uint32_t d2_value=0;
 };
 struct DeuterosAmigaObservedLoopRequestService {
     std::uint64_t trace_sequence=0;
@@ -1422,6 +1423,13 @@ struct DeuterosAmigaObservedLoopRequestService {
 };
 inline std::optional<DeuterosAmigaObservedLoopRequestService>
 deuteros_amiga_bootstrap_graphics_boundary(const DeuterosAmigaMainStageLoopGraphicsPlan&plan){
+    constexpr std::array<std::uint32_t,11> calls{0x1309e,0x13154,0x13188,0x1319a,0x131a6,
+        0x131bc,0x131cc,0x13202,0x132c0,0x132f4,0x13306};
+    constexpr std::array<std::int16_t,11> vectors{-0x186,-0xc6,-0xd8,-0xd2,-0xde,
+        -0x168,-0xcc,-0x186,-0xc6,-0xd8,-0xd2};
+    for(std::size_t i=0;i<calls.size();++i)
+        if(plan.next_call_address==calls[i]&&plan.next_return_address==calls[i]+4&&plan.next_vector==vectors[i])
+            return DeuterosAmigaObservedLoopRequestService{0,calls[i]-6,0x12fec,0,calls[i],calls[i]+4,0,vectors[i]};
     if(plan.next_call_address==0x12a76&&plan.local_call_target==0x13000&&plan.next_return_address==0x12a7a)
         return DeuterosAmigaObservedLoopRequestService{0,0x13008,4,0,0x1300c,0x13010,0,-0x228};
     if(plan.next_call_address==0x13028&&plan.next_return_address==0x1302c&&plan.next_vector==-0xd8)
@@ -1510,6 +1518,59 @@ DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
             throw std::runtime_error("Deuteros bootstrap graphics return lacks matching boundary or flags");
         plan.d0_value=o.result_d0;plan.a6_value=o.exec_base;
         plan.next_instruction_address=0;plan.local_call_target=0;
+        const auto graphics_call=[&](std::uint32_t call,std::int16_t vector){
+            plan.next_call_address=call;plan.next_return_address=call+4;plan.next_vector=vector;
+            plan.pending_read_instruction=call-6;plan.pending_read_address=0x12fec;
+        };
+        if(o.call_address==0x13068||o.call_address>=0x1309e){
+            const bool second=o.call_address>=0x131cc;
+            const std::uint32_t base=second?0x12f00:0x12e00;
+            using W=MemoryTransferElementWidth;
+            if(o.call_address==0x13068||o.call_address==0x131cc){
+                write(base,W::longword,base+0x12);write(base+0x30,W::word,12);
+                plan.a0_value=base+0x3a;plan.a1_value=base+0x12;
+                plan.d0_value=4;plan.d1_value=320;plan.d2_value=200;
+                graphics_call(second?0x13202:0x1309e,-0x186);
+            }else if(o.call_address==0x1309e||o.call_address==0x13202){
+                write(base+0x3e,W::byte,15);
+                write(base+0x66,W::longword,base+0x3a);
+                write(base+0x6a,W::word,0);write(base+0x6c,W::word,0);write(base+0x62,W::longword,0);
+                write(base+0x2a,W::word,320);write(base+0x2c,W::word,200);
+                write(base+0x36,W::longword,base+0x62);
+                write(0x12ec6,W::word,20);write(0x12ec8,W::longword,0x12ecc);
+                for(unsigned i=0;i<20;++i)write(0x12ecc+2*i,W::word,0);
+                write(base+0x16,W::longword,0x12ec4);write(base+0x32,W::word,0x4000);
+                const auto buffer=second?0x14000U:read(0x12ff4,4);
+                if((buffer&1U)||buffer>0x1000000U-32000)
+                    throw std::runtime_error("Deuteros bootstrap bitplanes exceed native memory");
+                if(second)write(0x12ff0,W::longword,buffer);
+                for(unsigned i=0;i<4;++i)write(base+0x42+4*i,W::longword,buffer+i*8000);
+                plan.d0_value=buffer+24000;plan.d1_value=8000;plan.d2_value=(plan.d2_value&0xffff0000U)|0xffff;
+                plan.a0_value=base+0x12;plan.a1_value=base+0x6e;
+                graphics_call(second?0x132c0:0x13154,-0xc6);
+            }else if(o.call_address==0x13154||o.call_address==0x132c0){
+                write(base+0x72,W::longword,base+0x3a);write(0x12ec6,W::word,20);
+                plan.a0_value=base;plan.a1_value=base+0x12;
+                graphics_call(second?0x132f4:0x13188,-0xd8);
+            }else if(o.call_address==0x13188||o.call_address==0x132f4){
+                // Each caller pushed its View twice. Pop one for merge;
+                // do not confuse the overwritten viewport LEA with A1.
+                plan.a1_value=base;graphics_call(second?0x13306:0x1319a,-0xd2);
+            }else if(o.call_address==0x1319a){
+                plan.a1_value=0x12e00;graphics_call(0x131a6,-0xde);
+            }else if(o.call_address==0x131a6){
+                plan.a1_value=0x12f00;graphics_call(0x131bc,-0x168);
+            }else if(o.call_address==0x131bc){
+                plan.a0_value=0x12f12;graphics_call(0x131cc,-0xcc);
+            }else{
+                // The second View is merged but not loaded here. Its final
+                // local RTS returns to the bootstrap's $12a7a BSR.
+                plan.a1_value=0x12f00;plan.next_call_address=0x12a7a;
+                plan.local_call_target=0x1330e;plan.next_return_address=0x12a7e;
+                plan.next_vector=0;plan.pending_read_instruction=0;plan.pending_read_address=0;
+            }
+            return plan;
+        }
         if(o.call_address==0x1300c){
             write(0x12fec,MemoryTransferElementWidth::longword,o.result_d0);
             write(0x12ff4,MemoryTransferElementWidth::longword,0xab00);
@@ -2009,6 +2070,8 @@ public:
                 !="e4826a60a00a9c9ed6797e5636ca0e99f038e10cea9d732ebe53452ca659a658")
             throw std::runtime_error("Unsupported Deuteros bootstrap re-entry route");
         const auto main_stage=disk.bytes(plan.main_stage.disk_offset,plan.main_stage.length);
+        if(to_hex(sha256(disk.bytes(0x346c,674)))!="171b18ac0a6796d1edf2fd693113b706fcf809bccdc29db0aa99f14a5372a9b5")
+            throw std::runtime_error("Unsupported Deuteros bootstrap view structures");
         if(to_hex(sha256(disk.bytes(0x3400,108)))!="ca2490219557649ff335d47ccc9d15fcbaa34da2ab9c723feb6bcea147970c0f")
             throw std::runtime_error("Unsupported Deuteros bootstrap graphics initialization");
         if(to_hex(sha256(disk.bytes(0x6fe4,20)))!="4136558f36e9cd0c89cd1828353a95ac05fa79d58e11bd30b8063b7d15e96c50")

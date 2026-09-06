@@ -539,6 +539,12 @@ it is not inferred from D0. Continue native view/viewport structure setup
 from `$1306c`, followed by the remaining graphics allocation/assembly calls.
 Do not confuse this bootstrap routine with the separately loaded title whose
 destination is also `$13000`.
+Both native view/viewport layout paths now continue through their ordered
+bitmap, raster-port, viewport-build and merge returns. The first view alone
+has the original load call; the second returns to `$12a7a -> $1330e`.
+The caller's structures, shared 20-word palette and four plane pointers are
+owned writes. Library-generated list pointers are still not inferred from
+return values. Continue `$1330e` and its original auxiliary media read.
 The unconfigured `$13000` graphics initialization remains separate. Opening
 acquisition now retains the genuine 24-byte bootstrap profile table in owned
 memory from its boot-track source. Tests consume that production checkpoint,

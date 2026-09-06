@@ -7029,7 +7029,37 @@ int main() {
                                                     assert(initialized.next_call_address==0x13068&&initialized.a0_value==0x12e12);
                                                     initialized=eon::execute_deuteros_amiga_outer_service(initialized,
                                                         {17,0x13062,0x12fec,0x123400,0x13068,0x1306c,0,-0xcc},command_read,command_write);
-                                                    assert(initialized.next_instruction_address==0x1306c&&initialized.next_call_address==0);
+                                                    assert(initialized.next_call_address==0x1309e&&initialized.a0_value==0x12e3a);
+                                                    assert(initialized.d0_value==4&&initialized.d1_value==320&&initialized.d2_value==200);
+                                                    constexpr std::array<std::uint32_t,11> calls{0x1309e,0x13154,0x13188,0x1319a,0x131a6,
+                                                        0x131bc,0x131cc,0x13202,0x132c0,0x132f4,0x13306};
+                                                    constexpr std::array<std::int16_t,11> vectors{-0x186,-0xc6,-0xd8,-0xd2,-0xde,
+                                                        -0x168,-0xcc,-0x186,-0xc6,-0xd8,-0xd2};
+                                                    for(std::size_t step=0;step<calls.size();++step){
+                                                        assert(initialized.next_call_address==calls[step]);
+                                                        if(calls[step]==0x13188)assert(initialized.a0_value==0x12e00&&initialized.a1_value==0x12e12);
+                                                        if(calls[step]==0x1319a||calls[step]==0x131a6)assert(initialized.a1_value==0x12e00);
+                                                        if(calls[step]==0x132f4)assert(initialized.a0_value==0x12f00&&initialized.a1_value==0x12f12);
+                                                        if(calls[step]==0x13306)assert(initialized.a1_value==0x12f00);
+                                                        initialized=eon::execute_deuteros_amiga_outer_service(initialized,
+                                                            {18+step,calls[step]-6,0x12fec,0x123400,calls[step],calls[step]+4,0,vectors[step]},command_read,command_write);
+                                                    }
+                                                    assert(initialized.next_call_address==0x12a7a&&initialized.local_call_target==0x1330e);
+                                                    assert(initialized.next_return_address==0x12a7e&&initialized.next_vector==0);
+                                                    assert(command_read(0x12ff0,4)==0x14000);
+                                                    for(unsigned view=0;view<2;++view){
+                                                        const auto base=0x12e00+view*0x100;
+                                                        assert(command_read(base,4)==base+0x12&&command_read(base+0x30,2)==12);
+                                                        assert(command_read(base+0x2a,2)==320&&command_read(base+0x2c,2)==200);
+                                                        assert(command_read(base+0x3e,1)==15&&command_read(base+0x32,2)==0x4000);
+                                                        assert(command_read(base+0x36,4)==base+0x62&&command_read(base+0x66,4)==base+0x3a);
+                                                        assert(command_read(base+0x62,4)==0&&command_read(base+0x6a,2)==0&&command_read(base+0x6c,2)==0);
+                                                        assert(command_read(base+0x72,4)==base+0x3a&&command_read(base+0x16,4)==0x12ec4);
+                                                        for(unsigned plane=0;plane<4;++plane)
+                                                            assert(command_read(base+0x42+4*plane,4)==(view?0x14000U:command_read(0x12ff4,4))+8000*plane);
+                                                    }
+                                                    assert(command_read(0x12ec6,2)==20&&command_read(0x12ec8,4)==0x12ecc);
+                                                    for(unsigned color=0;color<20;++color)assert(command_read(0x12ecc+2*color,2)==0);
                                                 }
                                                 eon::DeuterosAmigaMainStageLoopGraphicsPlan title_entry;
                                                 title_entry.next_instruction_address=0x13000;

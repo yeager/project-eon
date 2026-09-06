@@ -8222,3 +8222,39 @@ Controlled tests distinguish returned flags from D0, reject missing flags,
 exercise six signed memory-size boundary values, follow both graphics returns,
 and reject conflation with the loaded title entry. No capture or full graphics
 initialization parity is claimed.
+
+### Deuteros paired bootstrap view and viewport layouts
+
+The `$1306c..$1330c` caller code now constructs both native layouts and follows
+all eleven ordered graphics returns to the bootstrap's `$12a7a -> $1330e`
+call. Each view (`$12e00`, `$12f00`) links its viewport at offset `$12`.
+The viewport gets word 12 at `$1e`, width 320 at `$18`, height 200 at `$1a`,
+mode `$4000` at `$20`, and its raster-info pointer at `$24`. The bitmap
+arguments are depth 4, width 320 and height 200. After that library return,
+the caller writes bitmap byte `$0f` at offset 4, links raster-info and
+raster-port to the bitmap, and clears only the explicitly written raster-info
+fields. This is not wholesale zero-initialization of unknown library state.
+
+The shared palette structure `$12ec4` has count 20 and pointer `$12ecc`;
+each layout clears exactly 20 words and links this structure into its viewport.
+The first bitmap's four plane pointers use owned `$12ff4` plus 0, 8000, 16000
+and 24000 bytes. The second uses fixed base `$14000`, also stored at `$12ff0`.
+Pointers are checked for alignment and a bounded 32000-byte plane interval.
+These stores describe buffers; they do not themselves fill or display pixels.
+
+The caller pushes its View pointer twice before each viewport-build call.
+The next merge's A1 is the popped View, not the immediately overwritten
+viewport LEA. The first merge is followed by the `$131a6/-$de` load call;
+the second merge at `$13306/-$d2` is followed by a local RTS and **no second
+load call**. Native continuation metadata preserves these exact arguments and
+returns without manufacturing a captured stack. It stops at `$1330e`'s local
+call boundary, before the auxiliary loading routine executes.
+
+Source gate: ADF `$346c`, 674 bytes (runtime `$1306c..$1330d`), SHA-256
+`171b18ac0a6796d1edf2fd693113b706fcf809bccdc29db0aa99f14a5372a9b5`.
+Controlled tests run the full return chain for all six prior memory-size cases,
+verify both layouts, all eight plane pointers, 20 palette clears and the
+View-versus-viewport arguments. Graphics-library-generated list pointers and
+other unobserved library writes are still not invented from result D0; the
+corresponding native service implementation remains separate work. This is
+not a full display capture or a claim that the game is already playable.
