@@ -45,6 +45,12 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaOpeningCheckpoint> checkpoint() const;
     [[nodiscard]] bool frame_composed_on_last_tick() const { return frame_composed_on_last_tick_; }
     [[nodiscard]] std::uint64_t ticks() const { return ticks_; }
+    [[nodiscard]] const AmigaLoadStage& bootstrap_load_stage() const {
+        return load_plan_.bootstrap_loader;
+    }
+    [[nodiscard]] std::span<const std::uint8_t> bootstrap_load_bytes() const {
+        return disk_.bytes(load_plan_.bootstrap_loader.disk_offset,load_plan_.bootstrap_loader.length);
+    }
     [[nodiscard]] std::uint32_t vblank_counter() const { return random_.vblank_counter(); }
     // These are raw opening-VM observables used by the provenance overlay.
     // They are not title/gameplay labels or host controls.

@@ -5267,13 +5267,13 @@ int main() {
             assert(opening_controller.observe_deuteros_amiga_title_open_library_return({12,0x1ed80,0x1ed02,4,0x1ed8c,-0x228,0x1ed90,0x00abcdef,0x2000}).accepted);
             assert(opening_controller.advance_deuteros_amiga_title_post_open_library_local_path().accepted);
             const auto graphics_base_memory=opening_controller.native_runtime_memory_checkpoint();
-            assert(graphics_base_memory&&graphics_base_memory->applied_batch_count==1);
+            assert(graphics_base_memory&&graphics_base_memory->applied_batch_count==2);
             assert(!opening_controller.observe_deuteros_amiga_title_display_base({13,0x1eda6,0x12ff4,0x00080001}).accepted);
             assert(!opening_controller.observe_deuteros_amiga_title_display_base({13,0x1eda6,0x12ff4,0x00fff000}).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==graphics_base_memory->checksum);
             assert(opening_controller.observe_deuteros_amiga_title_display_base({13,0x1eda6,0x12ff4,0x00080000}).accepted);
             const auto display_setup_memory=opening_controller.native_runtime_memory_checkpoint();
-            assert(display_setup_memory&&display_setup_memory->applied_batch_count==2);
+            assert(display_setup_memory&&display_setup_memory->applied_batch_count==3);
             const auto display_byte=[&](std::uint32_t address){
                 const auto it=std::find_if(display_setup_memory->initialized_bytes.begin(),display_setup_memory->initialized_bytes.end(),
                     [&](const auto& byte){return byte.location.address_space==eon::NativeRuntimeAddressSpace::linear&&byte.location.offset==address;});
@@ -5355,14 +5355,14 @@ int main() {
             assert(opening_controller.observe_deuteros_amiga_title_load_service_return({38,0x389f4,0x208c0,0x389fa,0x12345678,0x2040}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_load_selector({39,0x389fa,0x12fd8,3}).accepted);
             const auto before_copy_memory=opening_controller.native_runtime_memory_diagnostics();
-            assert(before_copy_memory && before_copy_memory->initialized_byte_count==display_setup_memory->initialized_bytes.size() && before_copy_memory->applied_batch_count==2);
+            assert(before_copy_memory && before_copy_memory->initialized_byte_count==display_setup_memory->initialized_bytes.size() && before_copy_memory->applied_batch_count==3);
             std::uint32_t runtime_copied=0;
             std::uint64_t runtime_copy_sequence=40;
             while(runtime_copied<0xa20){const auto count=std::min<std::uint32_t>(256,0xa20-runtime_copied);std::vector<std::uint32_t> values;values.reserve(count);for(std::uint32_t i=0;i<count;++i)values.push_back(0x80000000U+runtime_copied+i);assert(opening_controller.observe_deuteros_amiga_title_load_copy_chunk({runtime_copy_sequence++,0x38a28,0x29540+runtime_copied*4U,0x1c482+runtime_copied*4U,runtime_copied,values}).accepted);runtime_copied+=count;}
             const auto completed_copy_memory=opening_controller.native_runtime_memory_checkpoint();
-            assert(completed_copy_memory && completed_copy_memory->initialized_bytes.size()==0xa20*4+before_copy_memory->initialized_byte_count && completed_copy_memory->applied_batch_count==3);
+            assert(completed_copy_memory && completed_copy_memory->initialized_bytes.size()==0xa20*4+before_copy_memory->initialized_byte_count && completed_copy_memory->applied_batch_count==4);
             const auto completed_copy_diagnostics=opening_controller.native_runtime_memory_diagnostics();
-            assert(completed_copy_diagnostics && completed_copy_diagnostics->initialized_byte_count==completed_copy_memory->initialized_bytes.size() && completed_copy_diagnostics->applied_batch_count==3 && completed_copy_diagnostics->checksum!=0);
+            assert(completed_copy_diagnostics && completed_copy_diagnostics->initialized_byte_count==completed_copy_memory->initialized_bytes.size() && completed_copy_diagnostics->applied_batch_count==4 && completed_copy_diagnostics->checksum!=0);
             assert(!opening_controller.observe_deuteros_amiga_title_load_copy_chunk({runtime_copy_sequence,0x38a28,0x2bdc0,0x1ed02,0,{1}}).accepted);
             assert(opening_controller.native_runtime_memory_diagnostics()->checksum==completed_copy_diagnostics->checksum);
             assert(opening_controller.observe_deuteros_amiga_title_load_dispatch_table_base({runtime_copy_sequence,0x1fb9a,0x1f97c,0x30000}).accepted);
@@ -5380,7 +5380,7 @@ int main() {
             assert(opening_controller.observe_deuteros_amiga_title_command_eight_scale({runtime_copy_sequence+12,0x1fa80,0x1f994,0x12340003}).accepted);
             const auto command_memory=opening_controller.native_runtime_memory_diagnostics();
             // The command rewrites the already owned four-byte $1f974 cell.
-            assert(command_memory && command_memory->initialized_byte_count==completed_copy_diagnostics->initialized_byte_count+13 && command_memory->applied_batch_count==8 && command_memory->checksum!=completed_copy_diagnostics->checksum);
+            assert(command_memory && command_memory->initialized_byte_count==completed_copy_diagnostics->initialized_byte_count+13 && command_memory->applied_batch_count==9 && command_memory->checksum!=completed_copy_diagnostics->checksum);
             assert(!opening_controller.observe_deuteros_amiga_title_command_eight_scale({runtime_copy_sequence+13,0x1fa80,0x1f994,0}).accepted);
             assert(opening_controller.native_runtime_memory_diagnostics()->checksum==command_memory->checksum);
             assert(opening_controller.observe_deuteros_amiga_title_command_opcode(
@@ -5420,7 +5420,7 @@ int main() {
             const auto planar_memory=opening_controller.native_runtime_memory_checkpoint();
             assert(planar_memory
                 && planar_memory->initialized_bytes.size()==command_memory->initialized_byte_count+32
-                && planar_memory->applied_batch_count==9
+                && planar_memory->applied_batch_count==10
                 && planar_memory->checksum!=command_memory->checksum);
             const auto memory_byte_at=[&](const std::uint64_t address)->std::optional<std::uint8_t>{
                 const auto found=std::find_if(planar_memory->initialized_bytes.begin(),
@@ -5475,7 +5475,7 @@ int main() {
             const auto variant_memory=opening_controller.native_runtime_memory_checkpoint();
             assert(variant_memory
                 && variant_memory->initialized_bytes.size()==planar_memory->initialized_bytes.size()+32
-                && variant_memory->applied_batch_count==10
+                && variant_memory->applied_batch_count==11
                 && variant_memory->checksum!=planar_memory->checksum);
             assert(opening_controller.observe_deuteros_amiga_title_command_opcode(
                 {runtime_copy_sequence+17,0x1fa0a,0x2ff09,0x21}).accepted);
@@ -6904,13 +6904,12 @@ int main() {
                                     const auto final=eon::execute_deuteros_amiga_outer_service(first,wrong,command_read,command_write);
                                     assert(final.next_instruction_address==0x12800&&final.next_call_address==0&&final.d0_value==1);
                                     assert(command_read(0x12ff8,4)==command_read(0x20976,4)&&command_read(0x12ffc,4)==1);
-                                    // The controlled checkpoint does not materialize the bootstrap
-                                    // table. Supply its genuine bytes only to this private test map.
+                                    // The production checkpoint owns the table from boot admission.
                                     const auto bootstrap_media=eon::extract_asset_by_sha256(release.path,
                                         "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38");
                                     assert(bootstrap_media);
                                     for(std::uint32_t byte=0;byte<24;++byte)
-                                        owned_command_bytes[0x12a36+byte]=bootstrap_media->at(0x2e36+byte);
+                                        assert(owned_command_bytes.at(0x12a36+byte)==bootstrap_media->at(0x2e36+byte));
                                     for(const std::uint32_t profile:{0U,1U,2U,3U,4U,5U,0x12340001U}){
                                         command_write(0x12ffc,eon::MemoryTransferElementWidth::longword,profile);
                                         const auto entry=eon::execute_deuteros_amiga_outer_service(final,
@@ -6966,9 +6965,21 @@ int main() {
                                                 const auto selected=eon::execute_deuteros_amiga_outer_service(
                                                     dispatched,returned,command_read,command_write);
                                                 const auto index=(command_read(0x12a34,2)<<2)&0xffffU;
-                                                assert(selected.d0_value==(0xdead0000U|index));
-                                                assert(selected.next_call_address==0x12aa8&&selected.next_return_address==0x12aaa);
-                                                assert(selected.local_call_target==command_read(0x12a36+index,4));
+                                                if((profile&0xffffU)==5){
+                                                    assert(selected.d0_value==(0xdead0000U|index));
+                                                    assert(selected.next_call_address==0x12aa8&&selected.next_return_address==0x12aaa);
+                                                    assert(selected.local_call_target==command_read(0x12a36+index,4));
+                                                }else{
+                                                    const bool title=(profile&0xffffU)==1;
+                                                    assert(selected.next_call_address==0x12ad2&&selected.next_return_address==0x12ad6);
+                                                    assert(selected.pending_read_instruction==0x12ace&&selected.next_vector==-0x1c8);
+                                                    assert(selected.d0_value==(title?0x6ca00U:0x4200U));
+                                                    assert(selected.d1_value==(title?0x13000U:0x20000U));
+                                                    assert(command_read(selected.a1_value+28,2)==0x8002);
+                                                    assert(command_read(selected.a1_value+36,4)==selected.d0_value);
+                                                    assert(command_read(selected.a1_value+40,4)==selected.d1_value);
+                                                    assert(command_read(selected.a1_value+44,4)==(title?0x6e000U:0x5800U));
+                                                }
                                                 auto wrong=returned;wrong.vector=-0x1c2;
                                                 bool refused=false;
                                                 try{(void)eon::execute_deuteros_amiga_outer_service(dispatched,wrong,command_read,command_write);}

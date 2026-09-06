@@ -7963,9 +7963,43 @@ Source gates (bootstrap file offset = runtime address minus `$fc00`):
 
 Controlled native tests continue the existing re-entry profile matrix through
 both service boundaries, check request fields and table targets, preserve
-D0 upper bits, and reject a mismatched service vector. The controlled checkpoint
-does not contain `$12a36..$12a4d`; tests populate only that private map from
-the exact original ADF bytes at `$2e36`. Runtime still requires the table to
-have been materialized by its bootstrap transfer and rejects absent bytes;
-there is no synthetic table fallback. Connecting that materialization remains
-required for an end-to-end runtime dispatch claim. These are not captures.
+D0 upper bits, and reject a mismatched service vector. These are not captures.
+
+Opening acquisition now retains `$12a36..$12a4d` in native owned memory from
+the exact original ADF bytes at `$2e36`, SHA-256
+`eb2233fd43e521b4881eb69c3ae28e81bb1ca6e33cd011e5f16e188d03fdfd4f`.
+The clean-media hash and parsed boot-block track read bind these bytes to
+the original load destination. Acquisition is already downstream of that
+boot read; this is static resident data, not a replay of boot-device effects.
+The source interval is checked against the parsed loader bounds before the
+acquisition-local memory transaction is published. Only the six pointers are
+retained: mutable bootstrap cells must not be reset to on-disk initial values
+after the opening has executed. The table is not reloaded on later dispatch,
+so future native writes remain authoritative and absent bytes still reject.
+Tests now compare the table in the production checkpoint with original media
+and use those owned bytes for the existing request/profile matrix; the earlier
+private test-table injection has been removed. Full boot execution and selected
+profile bodies are not claims established by this static transfer alone.
+
+The subsequent native dispatch now executes source-gated targets `$12b1c`
+and `$12b30`, plus `$12b44`'s branch to `$12b1c`. Profiles 0, 2, 3 and 4
+select length `$4200`, destination `$20000`, and track 4; profile 1 selects
+length `$6ca00`, destination `$13000`, and track `$50`. Their local returns
+reach `$12aaa`: the owned `$12822` request receives word `$8002` at `$1c`,
+length at `$24`, destination at `$28`, track times `$1600` at `$2c`, and
+zero status at `$1e`. Execution stops before `$12ad2/-$1c8`, with the pending
+ExecBase read at `$12ace`. No payload transfer, device return, or final stack
+handoff is claimed. The selected destination is retained in native D1; a
+later implementation must preserve the caller's pushed destination through
+the remaining services before the final RTS. Other table targets, including
+profile 5, remain explicit indirect-call boundaries rather than substitutes.
+
+Additional source gates:
+
+- ADF `$2eaa`, 44 bytes, SHA-256
+  `92fa4087e08faff81e01cd44c04defc783c5efbb3a343446d250f93ee7a2bd9a`.
+- ADF `$2f1c`, 42 bytes, SHA-256
+  `8770c93957436fe924ad9bd39a567b4c9e5ad16e8021031b9884e6475242f5ae`.
+
+The production-checkpoint profile matrix now checks these request fields,
+the two different disk offsets, and the unchanged profile-five boundary.

@@ -211,6 +211,24 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
             "ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd";
         constexpr std::string_view defjam_adf=
             "8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c";
+        if(deuteros_amiga){
+            // Opening admission is already downstream of the boot-block track
+            // read. Retain its six static profile pointers in owned memory.
+            // Do not seed mutable bootstrap cells with stale on-disk values.
+            const auto& stage=deuteros_amiga->bootstrap_load_stage();
+            const auto bytes=deuteros_amiga->bootstrap_load_bytes();
+            constexpr std::uint32_t table=0x12a36,count=24;
+            if(stage.destination>table||table-stage.destination>bytes.size()
+                ||bytes.size()-(table-stage.destination)<count)
+                throw std::runtime_error("Deuteros bootstrap profile table is outside loaded track");
+            NativeRuntimeEffectBatch batch{"deuteros-amiga-bootstrap-profile-table",true,{}};
+            for(std::uint32_t i=0;i<count;++i)
+                batch.effects.push_back({i+1,{NativeRuntimeAddressSpace::linear,std::nullopt,table+i},
+                    MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,
+                    bytes[table-stage.destination+i]});
+            const auto applied=runtime_memory.apply(batch);
+            if(!applied.accepted)throw std::runtime_error(applied.error);
+        }
         if(millennium_amiga&&launch.release.sha256==direct_defjam_release){
             const auto disk=media->extract(defjam_adf);
             if(!disk)throw std::runtime_error("Direct Defjam relocator image is unavailable");

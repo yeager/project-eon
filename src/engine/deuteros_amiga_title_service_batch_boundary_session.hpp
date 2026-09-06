@@ -1501,6 +1501,24 @@ DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
             plan.next_call_address=0x12aa8;plan.next_return_address=0x12aaa;
             plan.local_call_target=plan.a1_value;plan.next_vector=0;
             plan.pending_read_instruction=0;plan.pending_read_address=0;
+            // The two fixed load profiles and profile two's branch have
+            // source-gated native bodies. Other table targets remain calls.
+            if(plan.a1_value==0x12b1c||plan.a1_value==0x12b30||plan.a1_value==0x12b44){
+                const bool title=plan.a1_value==0x12b30;
+                plan.d0_value=title?0x6ca00:0x4200;
+                plan.d1_value=title?0x13000:0x20000;
+                plan.a1_value=read(0x12822,4);
+                if((plan.a1_value&1U)||plan.a1_value>0x1000000U-48)
+                    throw std::runtime_error("Deuteros bootstrap load request pointer is invalid");
+                write(plan.a1_value+28,MemoryTransferElementWidth::word,0x8002);
+                write(plan.a1_value+36,MemoryTransferElementWidth::longword,plan.d0_value);
+                write(plan.a1_value+40,MemoryTransferElementWidth::longword,plan.d1_value);
+                write(plan.a1_value+44,MemoryTransferElementWidth::longword,(title?0x50U:4U)*0x1600U);
+                write(plan.a1_value+30,MemoryTransferElementWidth::byte,0);
+                plan.next_call_address=0x12ad2;plan.next_return_address=0x12ad6;
+                plan.local_call_target=0;plan.next_vector=-0x1c8;
+                plan.pending_read_instruction=0x12ace;plan.pending_read_address=4;
+            }
         }
         plan.next_instruction_address=0;
         return plan;
@@ -1767,7 +1785,11 @@ public:
             ||to_hex(sha256(disk.bytes(0x2d32,36)))
                 !="8e5d99959ad6c75d2bcb9d154d5cc3136b39d4809c726a15f3e3d88bfdc9fae7"
             ||to_hex(sha256(disk.bytes(0x2e7e,44)))
-                !="b9f2a9537c12e0dacfead2062aac59507a98ab58f0e243dd2e607f6ded92acce")
+                !="b9f2a9537c12e0dacfead2062aac59507a98ab58f0e243dd2e607f6ded92acce"
+            ||to_hex(sha256(disk.bytes(0x2eaa,44)))
+                !="92fa4087e08faff81e01cd44c04defc783c5efbb3a343446d250f93ee7a2bd9a"
+            ||to_hex(sha256(disk.bytes(0x2f1c,42)))
+                !="8770c93957436fe924ad9bd39a567b4c9e5ad16e8021031b9884e6475242f5ae")
             throw std::runtime_error("Unsupported Deuteros bootstrap re-entry route");
         const auto main_stage=disk.bytes(plan.main_stage.disk_offset,plan.main_stage.length);
         constexpr std::string_view main_stage_hash=
@@ -4409,7 +4431,8 @@ public:
                 ||o.call_address!=(bootstrap_request?0x12950U:0x12a92U)
                 ||o.return_address!=(bootstrap_request?0x12954U:0x12a96U)||o.vector!=-0x1c8
                 ||plan.a6_value!=o.exec_base
-                ||plan.next_call_address!=(bootstrap_request?0x12a92U:0x12aa8U))
+                ||(bootstrap_request?plan.next_call_address!=0x12a92U
+                    :(plan.next_call_address!=0x12aa8U&&plan.next_call_address!=0x12ad2U)))
                 throw std::runtime_error("Deuteros bootstrap dispatch return is invalid or stale");
             main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
         }
