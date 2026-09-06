@@ -3541,8 +3541,21 @@ The following 14-byte caller span at ADF `$6b34` hashes to
 `2b80d3a7163220dee854c81927ae70652eac4a0b9d39ac4582de7220ee9a23d4`.
 It overwrites the service result D0 with the owned longword at `$2126a`.
 Nonzero stops at `$2133c->$22330`; zero reaches local entry `$21342`.
-No behavior inside `$22330`, OS service effects, or subsequent record-loop
-execution is inferred. Diagnostics report the selected boundary.
+The nonzero branch now has an admitted native continuation. Its complete
+`$22330..$224a1` span maps to ADF `$7b30`, is 370 bytes, and has SHA-256
+`d1e2913dafc4221717f31032d4856643feb83b65546a9536db3365f1c43562ea`.
+A typed observation supplies only the byte read at `$bfe001`; native code
+applies the original bit-one set, state/custom-register clears, maximum-word
+scan, and exactly 15 `$22452` relocation records. Zero record pointers skip
+all other record reads. Nonzero records preserve the old end-minus-start
+delta, type two redirects the end to `$22a24`, and A1 advances by twice the
+unsigned word at offset four. The scan retains signed `CMP.W/BGE` and low-word
+DBRA behavior, including 65,536 iterations when `(count-1).w` starts at
+`$ffff`. Finally the old longword at `$006c` is saved to `$224e6` and `$224cc`
+is installed before returning to `$21342`. The interrupt body itself is not
+executed or assigned semantics. Every access and write remains in cloned
+owned memory until the full operation and state transition commit; invalid,
+missing, stale, repeated, odd, or out-of-range input publishes nothing.
 
 On the zero-pointer branch the full `$21342..$2137f` record-construction
 loop is native. Its 62 original bytes at ADF `$6b42` have SHA-256
@@ -3560,7 +3573,8 @@ atomic. Missing source bytes or an invalid access discard the entire attempt.
 The genuine resource-zero test constructs four records with 16 stores and
 checks their copied bytes and advanced pointers. Execution falls through to
 `$21380`; it does not fabricate a return from `$21276`. The nonzero optional
-branch at `$22330` remains separate and cannot enter this path prematurely.
+branch reaches this same construction only after its `$22330` transaction
+commits; the zero branch enters directly.
 
 The first processing pass at `$21380..$21439` is now native as well. The
 194-byte span through the following pending bit test (ADF `$6b80`) hashes to

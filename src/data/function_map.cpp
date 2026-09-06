@@ -15,7 +15,7 @@ namespace {
 // Keep this table in exact source order with docs/function-map.json.  Every
 // source hash names an existing, separately hash-checked original leaf or
 // stage.  The descriptions deliberately retain unknown ABI/state boundaries.
-constexpr std::array<FunctionMapEntry, 104> entries{{
+constexpr std::array<FunctionMapEntry, 105> entries{{
     {"millennium-atari-en-prg-entry", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
      "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
      "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686",
@@ -356,6 +356,13 @@ constexpr std::array<FunctionMapEntry, 104> entries{{
      "ADF+0x7a9c", "$2229c", "verified-static",
      "custom-register poll, ABI calls, state writes, and return-dependent paths remain unproven",
      "diagnostics only", "PRESERVATION.md#deuteros-amiga-execution-chain",
+     "a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6"},
+    {"deuteros-amiga-en-optional-resource-initializer", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+     "deuteros-amiga-clean-main-stage", Game::deuteros, Platform::amiga, "en", "m68000",
+     "d1e2913dafc4221717f31032d4856643feb83b65546a9536db3365f1c43562ea",
+     "ADF+0x7b30", "$22330", "verified-static",
+     "the CIA byte remains a typed external observation and the installed $224cc interrupt body is not executed",
+     "native optional-resource initialization and relocation through $21342 record-loop entry", "PRESERVATION.md#deuteros-amiga-execution-chain",
      "a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6"},
     {"deuteros-amiga-en-channel-request-second-callee", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
      "deuteros-amiga-clean-main-stage", Game::deuteros, Platform::amiga, "en", "m68000",

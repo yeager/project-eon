@@ -75,6 +75,7 @@ public:
     [[nodiscard]] auto advance_main_stage_scheduler_pass(std::optional<DeuterosAmigaOwnedCommandStop> stop=std::nullopt) { return service_batch_boundary_session_.advance_main_stage_scheduler_pass(stop); }
     [[nodiscard]] auto advance_main_stage_record_loop(std::uint32_t a0=0,std::uint32_t a1=0,std::uint32_t d0=0) { return service_batch_boundary_session_.advance_main_stage_record_loop(a0,a1,d0); }
     [[nodiscard]] auto advance_main_stage_loop_request_return(const DeuterosAmigaObservedLoopRequestService&o,std::uint32_t pointer) { return service_batch_boundary_session_.advance_main_stage_loop_request_return(o,pointer); }
+    [[nodiscard]] auto observe_main_stage_optional_resource_cia(const DeuterosAmigaObservedOptionalResourceCia&o,const DeuterosAmigaOptionalResourceInitResult&r) { return service_batch_boundary_session_.observe_main_stage_optional_resource_cia(o,r); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>
     main_stage_loop_prepare_body_plan() const { return service_batch_boundary_session_.main_stage_loop_prepare_body_plan(); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>

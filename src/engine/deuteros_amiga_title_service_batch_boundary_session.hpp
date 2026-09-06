@@ -7,6 +7,7 @@
 #include "engine/deuteros_amiga_owned_commands.hpp"
 #include "engine/deuteros_amiga_owned_outer_loop.hpp"
 #include "engine/deuteros_amiga_owned_bitmap.hpp"
+#include "engine/deuteros_amiga_owned_optional_resource.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -1424,6 +1425,25 @@ struct DeuterosAmigaObservedLoopRequestService {
     std::int16_t vector=0;
     std::optional<std::uint16_t> result_status_register=std::nullopt;
 };
+struct DeuterosAmigaObservedOptionalResourceCia {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t instruction_address=0,port_address=0;
+    std::uint8_t bit=0,prior_port_value=0;
+};
+
+inline DeuterosAmigaMainStageLoopGraphicsPlan
+finish_deuteros_amiga_optional_resource_init(
+    DeuterosAmigaMainStageLoopGraphicsPlan plan,
+    const DeuterosAmigaOptionalResourceInitResult& result){
+    if(plan.next_call_address!=0x2133c||plan.local_call_target!=0x22330
+        ||plan.next_return_address!=0x21342||plan.d0_value==0)
+        throw std::runtime_error("Deuteros optional resource initializer is not at its caller boundary");
+    plan.next_call_address=0;plan.local_call_target=0;plan.next_return_address=0;
+    plan.next_instruction_address=0x21342;
+    plan.a0_value=result.a0;plan.a1_value=result.a1;
+    plan.d0_value=result.d0;plan.d1_value=result.d1;plan.d2_value=result.d2;
+    return plan;
+}
 inline std::optional<DeuterosAmigaObservedLoopRequestService>
 deuteros_amiga_bootstrap_graphics_boundary(const DeuterosAmigaMainStageLoopGraphicsPlan&plan){
     constexpr std::array<std::uint32_t,11> calls{0x1309e,0x13154,0x13188,0x1319a,0x131a6,
@@ -2194,6 +2214,8 @@ enum class DeuterosAmigaMainStageState {
     awaiting_first_loop_graphics_return,
     awaiting_second_loop_graphics_return,
     awaiting_loop_request_service,
+    awaiting_optional_resource_cia,
+    awaiting_record_loop,
     loop_runtime_active,
 };
 
@@ -5190,12 +5212,14 @@ public:
     advance_main_stage_record_loop(const std::uint32_t a0=0,const std::uint32_t a1=0,
         const std::uint32_t d0=0){
         if(!main_stage_loop_request_returned_||!main_stage_loop_graphics_plan_
-            ||main_stage_loop_graphics_plan_->next_instruction_address!=0x21342)
+            ||main_stage_loop_graphics_plan_->next_instruction_address!=0x21342
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_record_loop)
             return std::nullopt;
         auto plan=*main_stage_loop_graphics_plan_;
         plan.next_instruction_address=0x21380;
         plan.a0_value=a0;plan.a1_value=a1;plan.d0_value=d0;
         main_stage_loop_graphics_plan_=plan;
+        main_stage_state_=DeuterosAmigaMainStageState::loop_runtime_active;
         return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
@@ -5219,7 +5243,24 @@ public:
         }else plan.next_instruction_address=0x21342;
         main_stage_loop_graphics_plan_=plan;
         main_stage_loop_request_returned_=true;last_command_sequence_=o.trace_sequence;
-        main_stage_state_=DeuterosAmigaMainStageState::loop_runtime_active;
+        main_stage_state_=optional_pointer?
+            DeuterosAmigaMainStageState::awaiting_optional_resource_cia:
+            DeuterosAmigaMainStageState::awaiting_record_loop;
+        return plan;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    observe_main_stage_optional_resource_cia(
+        const DeuterosAmigaObservedOptionalResourceCia&o,
+        const DeuterosAmigaOptionalResourceInitResult& initialized){
+        if(main_stage_state_!=DeuterosAmigaMainStageState::awaiting_optional_resource_cia
+            ||!main_stage_loop_graphics_plan_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=0x22330
+            ||o.port_address!=0xbfe001||o.bit!=1)
+            throw std::runtime_error("Deuteros optional resource CIA observation does not match boundary");
+        auto plan=finish_deuteros_amiga_optional_resource_init(
+            *main_stage_loop_graphics_plan_,initialized);
+        main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;
+        main_stage_state_=DeuterosAmigaMainStageState::awaiting_record_loop;
         return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareReturnPlan>

@@ -459,7 +459,10 @@ only through its exact post-return store, so `$21276` can consume both owned
 sources. Ordered typed returns at `$21310` and `$2132a` now continue to the
 local `$2132e->$20888` call and its four native stores. Continue from the
 typed `$208b0` ExecBase read and `-$a8` return, then the owned `$2126a`
-conditional: `$2133c->$22330` when nonzero or local `$21342` when zero.
+conditional: `$2133c->$22330` when nonzero or local `$21342` when zero. The
+nonzero branch now executes the complete native optional-resource initializer,
+bounded maximum scan and 15-record relocation transaction before joining the
+same `$21342` record loop.
 The zero branch now executes the complete native record construction and
 first processing pass, typed buffer selection, full buffer clear, and initial
 no-draw record walk and owned view selection through `$216ee/-$de`. Continue
@@ -585,7 +588,7 @@ new ordered service returns without reusing previous observations.
 Connect
 the separately staged sound descriptors to the `$22bea` consumer without
 claiming that a software descriptor write already started audio hardware.
-Recover the separate sprite and `$22330` paths. Do not reuse unrelated observed bases or assign graphics,
+Recover the separate sprite path. Do not reuse unrelated observed bases or assign graphics,
 audio, scheduler, input, or resource semantics.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,

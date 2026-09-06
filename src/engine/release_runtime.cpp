@@ -1,6 +1,7 @@
 #include "engine/release_runtime.hpp"
 #include "engine/release_runtime_capability.hpp"
 #include "engine/deuteros_amiga_owned_alternate_renderer.hpp"
+#include "engine/deuteros_amiga_owned_optional_resource.hpp"
 
 #include "platform/game_data.hpp"
 #include "data/reference_trace.hpp"
@@ -4604,6 +4605,57 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_loop_request_service(
         if(!applied.accepted){result.error=applied.error;return result;}
         if(!deuteros_amiga_->advance_main_stage_loop_request_return(o,pointer)){
             result.error="Deuteros loop request service disappeared before commit";return result;
+        }
+        *native_runtime_memory_=std::move(memory);result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_optional_resource_cia(
+    const DeuterosAmigaObservedOptionalResourceCia o){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
+        result.error="Deuteros optional resource initialization requires active owned memory";
+        return result;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto boundary=pending.main_stage_loop_graphics_plan();
+        if(!boundary||boundary->next_call_address!=0x2133c
+            ||boundary->local_call_target!=0x22330||boundary->next_return_address!=0x21342
+            ||boundary->d0_value==0){
+            result.error="Deuteros optional resource initializer did not match boundary";return result;
+        }
+        auto memory=*native_runtime_memory_;
+        const auto read=[&](std::uint32_t address,std::uint32_t width){
+            if((width>1&&(address&1U))||width==0||width>4||address>0x1000000U-width)
+                throw std::runtime_error("Deuteros optional resource read is outside aligned native memory");
+            std::uint32_t value=0;
+            for(std::uint32_t byte=0;byte<width;++byte){
+                const auto cell=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+byte});
+                if(!cell)throw std::runtime_error("Deuteros optional resource source is not owned");
+                value=(value<<8U)|*cell;
+            }
+            return value;
+        };
+        std::size_t stores=0;
+        const auto write=[&](std::uint32_t address,MemoryTransferElementWidth width,std::uint32_t value){
+            const auto size=static_cast<std::uint32_t>(width);
+            if((size>1&&(address&1U))||address>0x1000000U-size)
+                throw std::runtime_error("Deuteros optional resource write is outside aligned native memory");
+            const auto applied=memory.apply({"deuteros-amiga-optional-init-"+
+                std::to_string(o.trace_sequence)+"-"+std::to_string(stores++),true,{{
+                1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},width,
+                NativeRuntimeByteOrder::big_endian,value}}});
+            if(!applied.accepted)throw std::runtime_error(applied.error);
+        };
+        const auto initialized=initialize_deuteros_amiga_owned_optional_resource(
+            boundary->d0_value,o.prior_port_value,read,write);
+        if(!pending.observe_main_stage_optional_resource_cia(o,initialized)){
+            result.error="Deuteros optional resource observation did not match boundary";return result;
+        }
+        if(!deuteros_amiga_->observe_main_stage_optional_resource_cia(o,initialized)){
+            result.error="Deuteros optional resource boundary disappeared before commit";return result;
         }
         *native_runtime_memory_=std::move(memory);result.accepted=true;
     }catch(const std::exception&e){result.error=e.what();}

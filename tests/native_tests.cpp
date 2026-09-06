@@ -8,6 +8,7 @@
 #include "engine/deuteros_amiga_opening_runner.hpp"
 #include "engine/deuteros_amiga_bootstrap_frame.hpp"
 #include "engine/deuteros_amiga_owned_alternate_renderer.hpp"
+#include "engine/deuteros_amiga_owned_optional_resource.hpp"
 #include "engine/deuteros_amiga_title_program_entry_session.hpp"
 #include "engine/release_runtime.hpp"
 #include "engine/release_runtime_capability.hpp"
@@ -6394,7 +6395,7 @@ int main() {
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_loop_local_request->checksum);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_record_loop().accepted);
             assert(opening_controller.observe_deuteros_amiga_loop_request_service(loop_request_service).accepted);
-            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::loop_runtime_active);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_record_loop);
             const auto after_loop_request_service=opening_controller.native_runtime_memory_checkpoint();
             assert(after_loop_request_service&&after_loop_request_service->applied_batch_count
                 ==after_loop_local_request->applied_batch_count+1);
@@ -6412,7 +6413,54 @@ int main() {
             assert(!opening_controller.observe_deuteros_amiga_loop_request_service(loop_request_service).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_loop_request_service->checksum);
             assert(optional_loop_pointer==0);
+            {
+                using Width=eon::MemoryTransferElementWidth;
+                std::map<std::uint32_t,std::uint8_t> bytes;
+                const auto put=[&](std::uint32_t address,Width width,std::uint32_t value){
+                    const auto size=static_cast<std::uint32_t>(width);
+                    for(std::uint32_t byte=0;byte<size;++byte)
+                        bytes[address+byte]=static_cast<std::uint8_t>(value>>((size-1U-byte)*8U));
+                };
+                const auto get=[&](std::uint32_t address,std::uint32_t width){
+                    std::uint32_t value=0;
+                    for(std::uint32_t byte=0;byte<width;++byte)value=(value<<8U)|bytes.at(address+byte);
+                    return value;
+                };
+                constexpr std::uint32_t base=0x40000;
+                put(0x2126a,Width::longword,base);put(0x6c,Width::longword,0x12345678);
+                put(base+0xf0,Width::longword,3);
+                put(base+0xf4,Width::word,0xffff);put(base+0xf6,Width::word,5);
+                put(base+0xf8,Width::word,9);
+                for(std::uint32_t record=0;record<15;++record)
+                    put(base+record*16U,Width::longword,0);
+                put(base,Width::longword,0x1000);put(base+4,Width::word,3);
+                put(base+8,Width::longword,0x1010);put(base+12,Width::word,1);
+                put(base+16,Width::longword,0x2000);put(base+20,Width::word,2);
+                put(base+24,Width::longword,0x2030);put(base+28,Width::word,2);
+                const auto initialized=eon::initialize_deuteros_amiga_owned_optional_resource(
+                    base,0x40,get,put);
+                assert(get(0xbfe001,1)==0x42&&get(0x2229a,2)==0x100);
+                assert(get(0x22a2c,4)==base&&get(0x22a1c,4)==base+0xf2
+                    &&get(0x22a18,4)==base+0x1bc&&get(0x22a16,2)==0x40);
+                assert(get(base,4)==0x405c5&&get(base+8,4)==0x405d5);
+                assert(get(base+16,4)==0x405cb&&get(base+24,4)==0x22a24);
+                assert(get(0x224e6,4)==0x12345678&&get(0x6c,4)==0x224cc);
+                assert(initialized.a0==base+15*16U&&initialized.a1==0x405cf
+                    &&initialized.a2==base+0xfa&&initialized.d0==4
+                    &&initialized.d1==0x30&&initialized.d2==9&&initialized.d7==0xffff);
+                eon::DeuterosAmigaMainStageLoopGraphicsPlan optional_plan;
+                optional_plan.next_call_address=0x2133c;optional_plan.local_call_target=0x22330;
+                optional_plan.next_return_address=0x21342;optional_plan.d0_value=base;
+                const auto resumed=eon::finish_deuteros_amiga_optional_resource_init(
+                    optional_plan,initialized);
+                assert(resumed.next_instruction_address==0x21342&&resumed.next_call_address==0
+                    &&resumed.local_call_target==0&&resumed.next_return_address==0
+                    &&resumed.a0_value==initialized.a0&&resumed.a1_value==initialized.a1
+                    &&resumed.d0_value==initialized.d0&&resumed.d1_value==initialized.d1
+                    &&resumed.d2_value==initialized.d2);
+            }
             assert(opening_controller.advance_deuteros_amiga_main_stage_record_loop().accepted);
+            assert(main_stage_state()==eon::DeuterosAmigaMainStageState::loop_runtime_active);
             const auto after_record_loop=opening_controller.native_runtime_memory_checkpoint();
             assert(after_record_loop&&after_record_loop->applied_batch_count
                 ==after_loop_request_service->applied_batch_count+16);

@@ -661,6 +661,7 @@ EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_frame_buffer,(const DeuterosAmi
 EON_NATIVE_DEUTEROS_TITLE(advance_deuteros_amiga_main_stage_scheduler_pass,(),())
 EON_NATIVE_DEUTEROS_TITLE(advance_deuteros_amiga_main_stage_record_loop,(),())
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_loop_request_service,(const DeuterosAmigaObservedLoopRequestService o),(o))
+EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_optional_resource_cia,(const DeuterosAmigaObservedOptionalResourceCia o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_loop_graphics_return,(const DeuterosAmigaObservedMainStageExecReturn o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_loop_prepare_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_loop_scheduler_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
