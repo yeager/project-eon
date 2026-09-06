@@ -3806,7 +3806,39 @@ store and next boundary publish atomically, with stale sequence, wrong
 instruction and wrong source rejected. No host timer supplies these values.
 Tests cover vector/control writes and descriptor reset, both counter routes,
 equal waits, wrapping values, source rejection and completed-route replay.
-The `$208ba` service body and later input/resource transitions remain next.
+The `$208ba` service and following request/selector prefix now continue as
+described below; resource loading and the special transitions remain next.
+
+The caller-connected `$208ba..$208cf` service (ADF `$60ba`, 22 bytes,
+SHA-256 `39462818fb46b6471a5da64f7418aa41afb7ab4ca5638bf6f51e633cd91de13d`)
+uses request `$2086a`, constant D0=5 and ExecBase read at `$208c6/$0004`.
+Its typed vector `-$ae` return must match call `$208ca`, return `$208ce`
+and the already owned ExecBase. The restart caller then reaches the raw
+bit-6 wait at `$218be/$bfe001`: clear repeats, set branches to `$217f6`.
+That 14-byte tail at ADF `$70be` has SHA-256
+`d5c8e3beb0a3a7c46521529e2ea9e893475b8e8f1a4dc14cdba972671327d56e`.
+No host key/button meaning is assigned to the sample.
+
+The transition caller instead reaches `$218fe->$20a74`. The latter's
+28-byte body at ADF `$6274` has SHA-256
+`db700cbcff6287cd6b7cdf212734082006b4efb099a35620c4f6fd83a10b5447`.
+Native code reads the owned request pointer at `$20976`, writes word 5 at
+offset 28 and byte zero at offset 30, then validates the ExecBase read at
+`$20a86/$0004` and typed vector `-$1c8` return at `$20a8a->$20a8e`.
+These are caller request writes, not invented operating-system effects.
+The post-return `$21904` selector word increments with word wrapping while
+preserving D0's upper word. Two reaches `$21a4c`, three reaches `$219f8`,
+other values below five reach `$21926`, and values at least five execute
+MOVEQ zero (clearing all D0 bits) before `$21926`. The 40-byte caller at
+ADF `$70fe` has SHA-256
+`3c7021b0eaad2abf2832f6ec87569933b1ac93d97a07e584179fc148f707a9fd`.
+The later selector store and resource loader are not silently executed.
+Tests connect both counter exits to these services, reject incorrect bases
+and vectors, exercise both raw wait outcomes and cover selectors 0 through
+4, `$fffe` and `$ffff`. Typed service packets are controlled tests, not
+capture evidence. All request writes and accepted continuations publish
+atomically; missing owned bytes and stale/wrong observations leave the
+committed session unchanged.
 
 Sample bytes, latch writes, trace sequence and next boundary publish atomically.
 Wrong bit/address/order or replay leaves committed state unchanged. The test

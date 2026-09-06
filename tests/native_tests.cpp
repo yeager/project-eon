@@ -6605,6 +6605,8 @@ int main() {
             assert(!opening_controller.advance_deuteros_amiga_fade_buffers().accepted);
             assert(!opening_controller.observe_deuteros_amiga_outer_counter(
                 {runtime_copy_sequence+118,0x218a8,0x2079e,0}).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_outer_service(
+                {runtime_copy_sequence+118,0x208c6,4,0,0x208ca,0x208ce,0,-0xae}).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==before_outer_input->checksum);
             const eon::DeuterosAmigaObservedOuterInput primary_outer_input{
                 runtime_copy_sequence+118,0x21822,0xdff016,10,0};
@@ -6826,6 +6828,42 @@ int main() {
                     assert(counter_plan.next_call_address==(instruction==0x218a8?0x218b8U:0x218f8U));
                     assert(counter_plan.next_return_address==counter_plan.next_call_address+6);
                     assert(counter_plan.local_call_target==0x208ba&&counter_plan.outer_transition_return==0x21854);
+                    const eon::DeuterosAmigaObservedLoopRequestService service_return{
+                        4,0x208c6,4,command_read(4,4),0x208ca,0x208ce,0xdead1234,-0xae};
+                    auto bad_service=service_return;bad_service.exec_base^=2;
+                    bool rejected_service_base=false;
+                    try{static_cast<void>(eon::execute_deuteros_amiga_outer_service(counter_plan,bad_service,command_read,command_write));}
+                    catch(const std::runtime_error&){rejected_service_base=true;}
+                    assert(rejected_service_base);
+                    bad_service=service_return;bad_service.vector=-0xa8;
+                    bool rejected_service_vector=false;
+                    try{static_cast<void>(eon::execute_deuteros_amiga_outer_service(counter_plan,bad_service,command_read,command_write));}
+                    catch(const std::runtime_error&){rejected_service_vector=true;}
+                    assert(rejected_service_vector);
+                    const auto service_plan=eon::execute_deuteros_amiga_outer_service(counter_plan,service_return,command_read,command_write);
+                    assert(service_plan.a1_value==0x2086a&&service_plan.a6_value==command_read(4,4)
+                        &&service_plan.d0_value==0xdead1234&&service_plan.outer_transition_return==0x21854);
+                    if(instruction==0x218a8){
+                        assert(service_plan.pending_read_instruction==0x218be&&service_plan.pending_read_address==0xbfe001);
+                        const auto held=eon::execute_deuteros_amiga_owned_outer_input(0x218be,0,service_plan.d0_value,command_read,command_write);
+                        const auto released=eon::execute_deuteros_amiga_owned_outer_input(0x218be,0x40,service_plan.d0_value,command_read,command_write);
+                        assert(held.next_instruction==0x218be&&released.next_instruction==0x217f6);
+                        assert(held.d0==0xdead1234&&released.d0==0xdead1234);
+                    }else{
+                        assert(service_plan.next_call_address==0x218fe&&service_plan.local_call_target==0x20a74
+                            &&service_plan.next_return_address==0x21904);
+                        for(const unsigned selector:{0U,1U,2U,3U,4U,0xfffeU,0xffffU}){
+                            command_write(0x21704,eon::MemoryTransferElementWidth::word,selector);
+                            const auto next=eon::execute_deuteros_amiga_outer_service(service_plan,
+                                {5,0x20a86,4,command_read(4,4),0x20a8a,0x20a8e,0xbeef1234,-0x1c8},command_read,command_write);
+                            const auto incremented=(selector+1U)&0xffffU;
+                            assert(next.next_instruction_address==(incremented==2?0x21a4cU:incremented==3?0x219f8U:0x21926U));
+                            assert(next.d0_value==(incremented>=5?0U:(0xbeef0000U|incremented)));
+                            assert(next.a1_value==command_read(0x20976,4));
+                            assert(command_read(next.a1_value+28,2)==5&&command_read(next.a1_value+30,1)==0);
+                            assert(command_read(0x21704,2)==selector); // Later selection store is a separate routine.
+                        }
+                    }
                     bool rejected_counter_replay=false;
                     try{static_cast<void>(eon::resume_deuteros_amiga_outer_counter(counter_plan,{3,instruction+6,0x2079e,initial+1U}));}
                     catch(const std::runtime_error&){rejected_counter_replay=true;}

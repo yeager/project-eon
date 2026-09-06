@@ -1458,6 +1458,52 @@ inline DeuterosAmigaMainStageLoopGraphicsPlan resume_deuteros_amiga_outer_counte
     return plan;
 }
 
+// Caller-connected native prefixes with a typed external Exec return. Neither
+// service's operating-system side effects are inferred from its result value.
+template<class Read,class Write>
+DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
+    DeuterosAmigaMainStageLoopGraphicsPlan plan,const DeuterosAmigaObservedLoopRequestService&o,
+    Read read,Write write){
+    const bool request=plan.next_call_address==0x218fe&&plan.local_call_target==0x20a74;
+    const bool first=(plan.next_call_address==0x218b8||plan.next_call_address==0x218f8)
+        &&plan.local_call_target==0x208ba;
+    if((!first&&!request)||o.source_address!=4
+        ||o.read_instruction!=(request?0x20a86U:0x208c6U)
+        ||o.call_address!=(request?0x20a8aU:0x208caU)
+        ||o.return_address!=(request?0x20a8eU:0x208ceU)
+        ||o.vector!=(request?-0x1c8:-0xae)
+        ||plan.next_return_address!=plan.next_call_address+6)
+        throw std::runtime_error("Deuteros outer service does not match boundary");
+    if(request){
+        plan.a1_value=read(0x20976,4);
+        if((plan.a1_value&1U)||plan.a1_value>0x1000000U-31)
+            throw std::runtime_error("Deuteros outer request pointer is invalid");
+        write(plan.a1_value+28,MemoryTransferElementWidth::word,5);
+        write(plan.a1_value+30,MemoryTransferElementWidth::byte,0);
+    }else plan.a1_value=0x2086a;
+    if(read(4,4)!=o.exec_base)
+        throw std::runtime_error("Deuteros outer service ExecBase contradicts owned memory");
+    plan.a6_value=o.exec_base;plan.d0_value=o.result_d0;
+    const auto caller_return=plan.next_return_address;
+    plan.next_call_address=0;plan.next_return_address=0;plan.local_call_target=0;plan.next_vector=0;
+    plan.pending_read_instruction=0;plan.pending_read_address=0;plan.next_instruction_address=0;
+    if(request){
+        const auto selector=(read(0x21704,2)+1U)&0xffffU;
+        plan.d0_value=(plan.d0_value&0xffff0000U)|selector;
+        if(selector==2)plan.next_instruction_address=0x21a4c;
+        else if(selector==3)plan.next_instruction_address=0x219f8;
+        else{
+            if(selector>=5)plan.d0_value=0; // Original MOVEQ, not MOVE.W.
+            plan.next_instruction_address=0x21926;
+        }
+    }else if(caller_return==0x218be){
+        plan.pending_read_instruction=0x218be;plan.pending_read_address=0xbfe001;
+    }else{
+        plan.next_call_address=0x218fe;plan.local_call_target=0x20a74;plan.next_return_address=0x21904;
+    }
+    return plan;
+}
+
 // Pure continuation over an already admitted graphics return. Memory writes
 // (including the fade counter) belong to the coordinator's private transaction.
 inline DeuterosAmigaMainStageLoopGraphicsPlan resume_deuteros_amiga_fade_palette(
@@ -1620,6 +1666,14 @@ public:
                 !="7306f2b341dc8ff55c9462f50d18805388f7afb1fcdf57b94f8724355adaad65"
             ||to_hex(sha256(main_stage.subspan(0x18e2,28)))
                 !="5be290bea6b600957b902a1ae117cfac9bde4031eb049a9fc2e84e8fc4a0f752"
+            ||to_hex(sha256(main_stage.subspan(0x8ba,22)))
+                !="39462818fb46b6471a5da64f7418aa41afb7ab4ca5638bf6f51e633cd91de13d"
+            ||to_hex(sha256(main_stage.subspan(0x18be,14)))
+                !="d5c8e3beb0a3a7c46521529e2ea9e893475b8e8f1a4dc14cdba972671327d56e"
+            ||to_hex(sha256(main_stage.subspan(0x18fe,40)))
+                !="3c7021b0eaad2abf2832f6ec87569933b1ac93d97a07e584179fc148f707a9fd"
+            ||to_hex(sha256(main_stage.subspan(0xa74,28)))
+                !="db700cbcff6287cd6b7cdf212734082006b4efb099a35620c4f6fd83a10b5447"
             ||to_hex(sha256(main_stage.subspan(0xc8c,58)))
                 !="8ff4fab0b4a3e04504ee99a0deece00dc0c903f89ceec4dfe95f94a1916b7f62"
             ||to_hex(sha256(main_stage.subspan(0xcc6,200)))
@@ -4077,13 +4131,14 @@ public:
         if(!main_stage_loop_graphics_plan_)return std::nullopt;
         const auto& current=*main_stage_loop_graphics_plan_;
         const bool fade=current.pending_read_instruction==0x222ac&&current.outer_fade_return!=0;
+        const bool release=current.pending_read_instruction==0x218be;
         const bool first=current.next_instruction_address==0x21822;
-        if(!fade&&!first&&current.pending_read_instruction!=0x2185e)return std::nullopt;
-        if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=(fade?0x222acU:first?0x21822U:0x2185eU)
+        if(!release&&!fade&&!first&&current.pending_read_instruction!=0x2185e)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=(release?0x218beU:fade?0x222acU:first?0x21822U:0x2185eU)
             ||o.port_address!=(fade?0xdff01fU:first?0xdff016U:0xbfe001U)||o.bit!=(fade?5:first?10:6))
             throw std::runtime_error("Deuteros outer input does not match boundary");
         const auto next=route.next_instruction;
-        if(fade?(next!=0x222ac&&next!=0x222fc):first?
+        if(release?(next!=0x218be&&next!=0x217f6):fade?(next!=0x222ac&&next!=0x222fc):first?
                 (next!=0x222ac&&next!=0x218a8&&next!=0x218e2&&next!=0x2185e)
                 :(next!=0x21380&&next!=0x222ac&&next!=0x218e2))
             throw std::runtime_error("Deuteros outer input route is inconsistent");
@@ -4093,12 +4148,12 @@ public:
         if(!fade&&next==0x222ac&&route.fade_return!=0x2189e&&route.fade_return!=0x218d8)
             throw std::runtime_error("Deuteros fade return is inconsistent");
         auto plan=current;
-        if(!fade){plan.outer_transition_return=route.caller_return;plan.outer_fade_return=route.fade_return;}
+        if(!fade&&!release){plan.outer_transition_return=route.caller_return;plan.outer_fade_return=route.fade_return;}
         plan.next_instruction_address=route.next_instruction;plan.d0_value=route.d0;
         plan.pending_read_instruction=0;plan.pending_read_address=0;
         plan.next_call_address=0;plan.next_return_address=0;plan.next_vector=0;plan.local_call_target=0;
-        if(route.next_instruction==0x2185e){
-            plan.next_instruction_address=0;plan.pending_read_instruction=0x2185e;
+        if(next==0x2185e||next==0x218be){
+            plan.next_instruction_address=0;plan.pending_read_instruction=next;
             plan.pending_read_address=0xbfe001;
         }else if(next==0x222ac){
             plan.next_instruction_address=0;plan.pending_read_instruction=next;
@@ -4128,6 +4183,27 @@ public:
         if(o.trace_sequence<=last_command_sequence_)
             throw std::runtime_error("Deuteros outer counter sequence is stale");
         const auto plan=resume_deuteros_amiga_outer_counter(*main_stage_loop_graphics_plan_,o);
+        main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    observe_main_stage_outer_service(const DeuterosAmigaObservedLoopRequestService&o,
+        const DeuterosAmigaMainStageLoopGraphicsPlan&plan){
+        if(!main_stage_loop_graphics_plan_)return std::nullopt;
+        const auto& current=*main_stage_loop_graphics_plan_;
+        const bool request=current.next_call_address==0x218fe&&current.local_call_target==0x20a74;
+        const bool first=(current.next_call_address==0x218b8||current.next_call_address==0x218f8)
+            &&current.local_call_target==0x208ba;
+        if(!first&&!request)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.source_address!=4
+            ||o.read_instruction!=(request?0x20a86U:0x208c6U)
+            ||o.call_address!=(request?0x20a8aU:0x208caU)
+            ||o.return_address!=(request?0x20a8eU:0x208ceU)||o.vector!=(request?-0x1c8:-0xae))
+            throw std::runtime_error("Deuteros outer service return is invalid or stale");
+        if(plan.outer_transition_return!=current.outer_transition_return||plan.a6_value!=o.exec_base
+            ||(first&&(plan.a1_value!=0x2086a||plan.d0_value!=o.result_d0))
+            ||(request&&plan.next_instruction_address!=0x21926&&plan.next_instruction_address!=0x219f8
+                &&plan.next_instruction_address!=0x21a4c))
+            throw std::runtime_error("Deuteros outer service continuation is inconsistent");
         main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>

@@ -71,6 +71,10 @@ template<class Read,class Write>
 DeuterosAmigaOuterInputRoute execute_deuteros_amiga_owned_outer_input(
     std::uint32_t instruction,std::uint8_t value,std::uint32_t d0,Read read,Write write){
     using Width=MemoryTransferElementWidth;
+    if(instruction==0x218be){
+        write(0xbfe001,Width::byte,value);
+        return {(value&0x40U)?0x217f6U:0x218beU,d0};
+    }
     if(instruction==0x222ac){
         write(0xdff01f,Width::byte,value);
         if((value&0x20U)==0)return {0x222ac,d0};

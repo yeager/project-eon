@@ -483,7 +483,11 @@ dual palette calls and owned 32-step counter. Its two final native buffer
 clears, exact fade return, `$224a2` cleanup writes and software sound reset
 are implemented. Ordered asynchronous counter observations now continue both
 wait routes to `$208ba`, retaining the original snapshot at `$12fe4` where
-required. Continue the `$208ba` service and following input/resource routes.
+required. The `$208ba` service now continues through its typed Exec return,
+then either the raw restart wait to `$217f6` or the `$20a74` request writes,
+typed return and native selector increment. Continue the reached `$21926`
+resource loader and `$219f8`/`$21a4c` special transitions, and reconnect the
+restart route at `$217f6` without reusing one-shot bootstrap state.
 Connect
 the separately staged sound descriptors to the `$22bea` consumer without
 claiming that a software descriptor write already started audio hardware.
