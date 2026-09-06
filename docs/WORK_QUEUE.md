@@ -464,9 +464,12 @@ The zero branch now executes the complete native record construction and
 first processing pass, typed buffer selection, full buffer clear, and initial
 no-draw record walk and owned view selection through `$216ee/-$de`. Continue
 with the now-typed view return and resumable hardware wait into the next
-processing pass. Its owned `$214aa` local interpreter now reaches the first
-sound stack-save boundary `$215c0`; connect the retained command position to
-the sound/palette/random continuations and then resume the same record.
+processing pass. Its owned `$214aa` local interpreter now executes sound
+descriptor staging and the original random routine; the real initial pass
+reaches the second record's palette boundary `$214ee`. Connect that retained
+position to the palette continuation and then resume the same record. Connect
+the separately staged sound descriptors to the `$22bea` consumer without
+claiming that a software descriptor write already started audio hardware.
 Recover the separate sprite and `$22330` paths. Do not reuse unrelated observed bases or assign graphics,
 audio, scheduler, input, or resource semantics.
 

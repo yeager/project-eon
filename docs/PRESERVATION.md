@@ -3622,18 +3622,43 @@ command branches and zero-duration scheduler revisits; exhaustion rejects the
 entire private pass. Store batch identifiers include the starting committed
 batch count so later successful passes cannot collide with the first pass.
 
-Sound, palette and random operations are explicit resumable-position boundaries,
-not implemented service effects: `$215c0` before the sound stack saves,
-`$214ee` before palette MOVEM, and `$2159c`/`$2163a` before random calls.
-The checkpoint retains record address, cursor, D0, the sound D1 low word,
-and scheduler index. It does not claim a recovered stack pointer or D1 high
-word, and admission/resumption of these services remains to be connected.
+Palette operations retain an explicit resumable-position boundary at `$214ee`
+before palette MOVEM. The checkpoint retains record address, cursor, D0,
+D1 low word and scheduler index. It does not claim a recovered stack pointer
+or D1 high word; palette service admission/resumption remains to be connected.
 The genuine first record at resource offset `$382` executes opcode `$13`,
-setting `$2171e` to one, then decodes sound arguments `(1,1)` and stops at
-`$215c0` with cursor `$32db8`. The second record's real palette operand and
+setting `$2171e` to one, then executes sound arguments `(1,1)` and `(2,2)`
+through the native descriptor routine below. It yields timer one, which the
+same scheduler pass decrements to zero, then reaches the second record's
+palette boundary with cursor `$32a6e`. The second record's real palette operand and
 the third record's real selector/coordinate/wait commands are also tested
 directly from the transferred bytes. These tests are source-data execution,
 not emulator capture or proof of rendered/audio parity.
+
+The sound staging routine `$22ab8..$22b89` (ADF `$82b8`, length `$d2`, SHA-256
+`592bc54b35e0075154b66abcc615e3bab580626898d3801e2142cdf8bd658614`)
+now executes as a native local function. It tests D0's low byte, selects
+the real internal `$22aaa` descriptor for zero, or applies `MULU.W #14`
+and signed `ADDA.W` to the owned `$22aa6` table pointer. Four `LSR.B`
+steps select channels. Each selected channel ORs its bit into `$22a6c`
+and copies three longs and one word into `$22a6e + channel*14`, adding
+`$32a24` to the first long only. Reads and writes remain sequential even
+under overlap, and all stores remain in the scheduler's private transaction.
+Tests compare both initial channel descriptors against the real table bytes.
+These are software staging records, not AUDx writes. The separate `$22bea`
+consumer and hardware cadence must be connected before claiming audio output.
+
+The random routine `$2016a..$20193` (ADF `$596a`, length `$2a`, SHA-256
+`6abfc259f7293f1d5155b0f352c03dd6ccfb7dd2757d35ca91e33716bb27230d`)
+also executes natively. It combines the owned seed at `$20168` and the
+owned long counter at `$2079e`, masks the low-word index with `$3ffe`, reads
+the original resource word at `$32a24 + index`, adds 14 with word wrapping,
+and updates the seed. Full D0 arithmetic is retained; neither a host clock
+nor a host PRNG supplies input. Opcodes `$0a` and `$11` use that result for
+their original masked timer and byte-threshold/word-displacement branches.
+The native call uses local preservation of the caller's resource/record
+references, not fabricated guest-stack observations. Tests derive the expected
+random timer and new seed from the genuine owned bytes.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,

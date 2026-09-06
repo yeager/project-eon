@@ -11,8 +11,9 @@
 namespace eon {
 
 // The narrow, evidence-backed part of the Deuteros $22ab8/$22bea Paula
-// path.  An opcode-$0b event copies the raw DMA address, length, period and
-// volume to every selected AUDx register.  This mixer reproduces that first
+// path. An opcode-$0b event stages software descriptors at $22a6e; the later
+// $22bea consumer transfers them to AUDx registers. This candidate mixer
+// starts directly from the decoded event and reproduces that first
 // DMA pass exactly from the original signed 8-bit bytes.  The following
 // control-word program is deliberately not guessed: $22bea advances it on a
 // hardware-service cadence that has not yet been recovered.

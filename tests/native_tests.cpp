@@ -6419,11 +6419,11 @@ int main() {
             const auto after_view_release=opening_controller.native_runtime_memory_checkpoint();
             assert(opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
             const auto command_checkpoint=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
-            assert(command_checkpoint&&command_checkpoint->stop_before_address==0x215c0);
+            assert(command_checkpoint&&command_checkpoint->stop_before_address==0x214ee);
             assert(command_checkpoint->main_stage_loop_graphics->command_stop);
             const auto command_stop=*command_checkpoint->main_stage_loop_graphics->command_stop;
-            assert(command_stop.record==0x210f8&&command_stop.cursor==0x32db8);
-            assert(command_stop.scheduler_index==0&&command_stop.d0==0x30001&&command_stop.d1_word==1);
+            assert(command_stop.record==0x21110&&command_stop.cursor==0x32a24+0x3c+14);
+            assert(command_stop.scheduler_index==1&&command_stop.d0==0x30001);
             const auto after_owned_commands=opening_controller.native_runtime_memory_checkpoint();
             assert(after_owned_commands->checksum!=after_view_release->checksum);
             const auto input_gate=std::find_if(after_owned_commands->initialized_bytes.begin(),
@@ -6438,7 +6438,7 @@ int main() {
             // Exercise other real resource streams without replacing their bytes.
             // Writes are private presentation-independent scratch state, not captures.
             std::map<std::uint32_t,std::uint8_t> owned_command_bytes;
-            for(const auto& cell:after_view_release->initialized_bytes)
+            for(const auto& cell:after_owned_commands->initialized_bytes)
                 if(cell.location.address_space==eon::NativeRuntimeAddressSpace::linear)
                     owned_command_bytes.emplace(static_cast<std::uint32_t>(cell.location.offset),cell.value);
             const auto command_read=[&](std::uint32_t address,std::uint32_t width){
@@ -6453,6 +6453,18 @@ int main() {
                 for(std::uint32_t j=0;j<bytes;++j)
                     owned_command_bytes[address+j]=static_cast<std::uint8_t>(value>>((bytes-1-j)*8U));
             };
+            assert(command_read(0x22a6c,2)==3);
+            const auto sound_table=command_read(0x22aa6,4);
+            for(std::uint32_t channel=0;channel<2;++channel){
+                const auto source=sound_table+(channel+1)*14;
+                const auto destination=0x22a6e + channel*14;
+                assert(command_read(destination,4)==command_read(source,4)+0x32a24);
+                assert(command_read(destination+4,4)==command_read(source+4,4));
+                assert(command_read(destination+8,4)==command_read(source+8,4));
+                assert(command_read(destination+12,2)==command_read(source+12,2));
+            }
+            assert(command_read(0x210f8+8,2)==0);
+            assert(command_read(0x210f8+16,4)==0x32a24+0x382+10+18);
             std::size_t commands_left=4096;
             const auto palette_stop=eon::execute_deuteros_amiga_owned_commands(
                 0x21110,0x32a24+0x3c+10,0x30000,command_read,command_write,commands_left);
@@ -6469,9 +6481,37 @@ int main() {
                 0x21128,wait_stop.cursor,0x30000,command_read,command_write,commands_left);
             assert(next_wait.instruction==0&&command_read(0x21128,2)==0x807c);
             assert(command_read(0x21128+2,4)==0x000f0075&&command_read(0x21128+8,2)==1000);
+            const auto seed_before_random=command_read(0x20168,2);
+            const auto random_index=(seed_before_random+command_read(0x2079e,4))&0x3ffeU;
+            const auto expected_random=(command_read(0x32a24+random_index,2)+14U)&0xffffU;
             const auto random_stop=eon::execute_deuteros_amiga_owned_commands(
                 0x21128,next_wait.cursor,0,command_read,command_write,commands_left);
-            assert(random_stop.instruction==0x2159c&&random_stop.cursor==next_wait.cursor+2);
+            assert(random_stop.instruction==0&&random_stop.cursor==next_wait.cursor+4);
+            assert(command_read(0x21128+8,2)==(expected_random&0x7fU));
+            assert(command_read(0x20168,2)==((seed_before_random+expected_random)&0xffffU));
+            // Boundary channel masks still use real original descriptors.
+            std::uint32_t staged_sound=1;
+            std::uint16_t staged_channels=0xab0f;
+            eon::stage_deuteros_amiga_owned_sound(staged_sound,staged_channels,command_read,command_write);
+            assert(staged_channels==0xab00&&command_read(0x22a6c,2)==15);
+            for(std::uint32_t channel=0;channel<4;++channel){
+                const auto destination=0x22a6e + channel*14;
+                assert(command_read(destination,4)==command_read(sound_table+14,4)+0x32a24);
+                assert(command_read(destination+4,4)==command_read(sound_table+18,4));
+                assert(command_read(destination+8,4)==command_read(sound_table+22,4));
+                assert(command_read(destination+12,2)==command_read(sound_table+26,2));
+            }
+            // TST.B treats $0100 like zero and selects the real code-local descriptor.
+            staged_sound=0x100;staged_channels=8;
+            eon::stage_deuteros_amiga_owned_sound(staged_sound,staged_channels,command_read,command_write);
+            assert(command_read(0x22a98,4)==command_read(0x22aaa,4)+0x32a24);
+            assert(command_read(0x22a9c,4)==command_read(0x22aae,4));
+            assert(command_read(0x22aa0,4)==command_read(0x22ab2,4));
+            assert(command_read(0x22aa4,2)==command_read(0x22ab6,2));
+            std::size_t unselected_stores=0;staged_sound=1;staged_channels=0x1200;
+            eon::stage_deuteros_amiga_owned_sound(staged_sound,staged_channels,command_read,
+                [&](std::uint32_t,eon::MemoryTransferElementWidth,std::uint32_t){++unselected_stores;});
+            assert(unselected_stores==0&&staged_sound==14&&staged_channels==0x1200);
             auto fourth_stop=eon::execute_deuteros_amiga_owned_commands(
                 0x21140,0x32a24+0xa78+10,0,command_read,command_write,commands_left);
             assert(fourth_stop.instruction==0&&command_read(0x21140+8,2)==0x50);

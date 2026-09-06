@@ -18,7 +18,7 @@ bool DeuterosAmigaPaulaMixer::submit(const DeuterosAmigaSoundEvent& event) {
     const auto channel_mask = static_cast<std::uint16_t>(event.channels & 0x000fU);
     for (std::size_t channel = 0; channel < channels_.size(); ++channel) {
         if ((channel_mask & (static_cast<std::uint16_t>(1U) << channel)) == 0) continue;
-        // The original copies the descriptor anew to each selected AUDx.
+        // The original stages the descriptor anew for each selected channel.
         channels_[channel] = {&sound, 0, 0};
     }
     return channel_mask != 0;
@@ -40,7 +40,7 @@ std::vector<float> DeuterosAmigaPaulaMixer::render(std::size_t frames) {
                 * static_cast<float>(state.sound->volume) / 64.0F;
             // Amiga's conventional hardware stereo wiring: AUD0/AUD3 left,
             // AUD1/AUD2 right. The original channel mask maps directly to
-            // DMAEN bits 0..3 in $22ab8.
+            // software request bits 0..3 staged by $22ab8.
             result[frame * 2U + ((channel == 0 || channel == 3) ? 0U : 1U)] += value;
 
             // Keep an integer clock accumulator so the host rate cannot

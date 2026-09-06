@@ -1517,7 +1517,11 @@ public:
             ||to_hex(sha256(main_stage.subspan(0x16f2,12)))
                 !="3ee8aeaeb214bfb7cf210c7575043595d87340370ea8f85eda94eb51d53961a7"
             ||to_hex(sha256(main_stage.subspan(0x14aa,0x1ec)))
-                !="2f007bcc643fd3ac70ddbf8f38fdb256c4a81253e11b28862cf596b235ab357a")
+                !="2f007bcc643fd3ac70ddbf8f38fdb256c4a81253e11b28862cf596b235ab357a"
+            ||to_hex(sha256(main_stage.subspan(0x2ab8,0xd2)))
+                !="592bc54b35e0075154b66abcc615e3bab580626898d3801e2142cdf8bd658614"
+            ||to_hex(sha256(main_stage.subspan(0x16a,0x2a)))
+                !="6abfc259f7293f1d5155b0f352c03dd6ccfb7dd2757d35ca91e33716bb27230d")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
