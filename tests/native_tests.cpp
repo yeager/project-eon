@@ -6687,28 +6687,54 @@ int main() {
                     owned_command_bytes.emplace(static_cast<std::uint32_t>(cell.location.offset),cell.value);
             command_write(0x2171e,eon::MemoryTransferElementWidth::byte,0);
             command_write(0x21721,eon::MemoryTransferElementWidth::byte,0);
+            command_write(0x2126a,eon::MemoryTransferElementWidth::longword,1);
             auto outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,4,0xabcd0000,command_read,command_write);
             assert(outer_route.next_instruction==0x2185e&&command_read(0x21721,1)==0);
             outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,0,0xabcd0000,command_read,command_write);
-            assert(outer_route.next_instruction==0x21850&&outer_route.d0==0xabcd0002);
+            assert(outer_route.next_instruction==0x218d4&&outer_route.d0==1&&outer_route.caller_return==0x21854);
             // A released sample does not clear an already latched flag.
             outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,4,0,command_read,command_write);
-            assert(outer_route.next_instruction==0x21850&&command_read(0x21721,1)==1);
+            assert(outer_route.next_instruction==0x218d4&&command_read(0x21721,1)==1);
             command_write(0x21696,eon::MemoryTransferElementWidth::word,3);
             outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,4,0xabcd0000,command_read,command_write);
             assert(outer_route.next_instruction==0x2185e&&outer_route.d0==0xabcd0003);
             command_write(0x210f4,eon::MemoryTransferElementWidth::byte,1);
             outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,4,0,command_read,command_write);
-            assert(outer_route.next_instruction==0x21892);
+            assert(outer_route.next_instruction==0x2189a&&outer_route.caller_return==0);
             command_write(0x21720,eon::MemoryTransferElementWidth::byte,0);
             outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0x40,0xabcd0000,command_read,command_write);
             assert(outer_route.next_instruction==0x21380&&outer_route.d0==0xabcd0000);
             outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0,0xabcd0000,command_read,command_write);
             assert(outer_route.next_instruction==0x21380&&outer_route.d0==0xabcd0003);
             command_write(0x21696,eon::MemoryTransferElementWidth::word,2);
+            command_write(0x21704,eon::MemoryTransferElementWidth::word,0);
             outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0x40,0xabcd0000,command_read,command_write);
-            assert(outer_route.next_instruction==0x21982&&outer_route.d0==0xabcd0002);
+            assert(outer_route.next_instruction==0x218d4&&outer_route.d0==1&&outer_route.caller_return==0);
+            assert(command_read(0x21704,2)==1);
             assert(command_read(0x21720,1)==1);
+            for(const unsigned selector:{0U,1U,2U,3U,0x102U,0x103U,0xffffU}){
+                command_write(0x21704,eon::MemoryTransferElementWidth::word,selector);
+                outer_route=eon::execute_deuteros_amiga_owned_outer_transition(
+                    0x21982,0xabcd0000,command_read,command_write);
+                assert(outer_route.next_instruction==((selector&0xffU)>2?0x21380U:0x218d4U));
+                assert(command_read(0x21704,2)==((selector&0xffU)<2?1:selector));
+                if((selector&0xffU)>2)assert(outer_route.d0==(0xabcd0000|selector));
+            }
+            command_write(0x2126a,eon::MemoryTransferElementWidth::longword,0);
+            for(const unsigned entry:{0x21850U,0x21892U,0x21982U}){
+                command_write(0x21704,eon::MemoryTransferElementWidth::word,0);
+                command_write(0x22a30,eon::MemoryTransferElementWidth::byte,0xff);
+                outer_route=eon::execute_deuteros_amiga_owned_outer_transition(entry,0,command_read,command_write);
+                assert(outer_route.next_instruction==(entry==0x21892?0x218a8U:0x218e2U));
+                assert(outer_route.caller_return==(entry==0x21850?0x21854U:0));
+                assert(command_read(0x22a30,1)==0&&(command_read(0x22a6c,2)&15)==15);
+                for(unsigned channel=0;channel<4;++channel){
+                    const auto destination=0x22a6e + channel*14;
+                    assert(command_read(destination,4)==command_read(0x22aaa,4)+0x32a24);
+                    for(unsigned byte=4;byte<14;++byte)
+                        assert(command_read(destination+byte,1)==command_read(0x22aaa+byte,1));
+                }
+            }
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

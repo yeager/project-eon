@@ -476,8 +476,10 @@ The masked `$20cc6/$20fb2` cache/merge path now renders the following real
 buffer and is cross-checked on all 142 original bitmaps. Native saved-scanline
 save/restore now covers those same bitmaps, including bottom-clipped restores
 with the original source-plane stride. Implement alternate-resource rendering
-next and the distinct `$218cc`, `$21892` and `$21982`
-cleanup/transition routes. Connect
+next. The distinct `$218cc`, `$21892` and `$21982` cleanup/transition
+prefixes now execute native selector decisions and software sound reset;
+continue the nonzero-resource fade call and asynchronous counter wait next.
+Connect
 the separately staged sound descriptors to the `$22bea` consumer without
 claiming that a software descriptor write already started audio hardware.
 Recover the separate sprite and `$22330` paths. Do not reuse unrelated observed bases or assign graphics,

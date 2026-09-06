@@ -1404,6 +1404,7 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
     std::uint32_t next_instruction_address=0;
     std::optional<DeuterosAmigaOwnedCommandStop> command_stop=std::nullopt;
     std::uint32_t command_palette_address=0;
+    std::uint32_t outer_transition_return=0;
 };
 struct DeuterosAmigaObservedLoopRequestService {
     std::uint64_t trace_sequence=0;
@@ -1532,6 +1533,14 @@ public:
                 !="6abfc259f7293f1d5155b0f352c03dd6ccfb7dd2757d35ca91e33716bb27230d"
             ||to_hex(sha256(main_stage.subspan(0x1822,0x76)))
                 !="55047c31e4eb79f3c68741aa644f8686203f7f948be1475855e3d79df14c8a27"
+            ||to_hex(sha256(main_stage.subspan(0x1892,22)))
+                !="ad500a8045f2fd575caca0cd20a759ebd75fa2ece38dec837b0a091008d6079a"
+            ||to_hex(sha256(main_stage.subspan(0x18cc,22)))
+                !="55ced0c423fcf313bbfae51804be04bd5cdd7c72464122d179e7e0abf2e54fc8"
+            ||to_hex(sha256(main_stage.subspan(0x1982,32)))
+                !="1bb5e5d88bc798b71c2be31317a318b306fe3f9a33d826a371c43146ec668e85"
+            ||to_hex(sha256(main_stage.subspan(0x2a5a,16)))
+                !="ec2f836b1613a0aaf24099396c38c467d04c937cafaaeb5d529494491700ecf9"
             ||to_hex(sha256(main_stage.subspan(0xc8c,58)))
                 !="8ff4fab0b4a3e04504ee99a0deece00dc0c903f89ceec4dfe95f94a1916b7f62"
             ||to_hex(sha256(main_stage.subspan(0xcc6,200)))
@@ -3993,19 +4002,27 @@ public:
         if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=(first?0x21822U:0x2185eU)
             ||o.port_address!=(first?0xdff016U:0xbfe001U)||o.bit!=(first?10:6))
             throw std::runtime_error("Deuteros outer input does not match boundary");
-        if(first?(route.next_instruction!=0x21850&&route.next_instruction!=0x21892&&route.next_instruction!=0x2185e)
-                :(route.next_instruction!=0x21380&&route.next_instruction!=0x21982))
+        const auto next=route.next_instruction;
+        if(first?(next!=0x2189a&&next!=0x218d4&&next!=0x218a8&&next!=0x218e2&&next!=0x2185e)
+                :(next!=0x21380&&next!=0x218d4&&next!=0x218e2))
             throw std::runtime_error("Deuteros outer input route is inconsistent");
+        if(route.caller_return!=0&&(!first||route.caller_return!=0x21854
+            ||(next!=0x218d4&&next!=0x218e2)))
+            throw std::runtime_error("Deuteros outer transition return is inconsistent");
         auto plan=current;
+        plan.outer_transition_return=route.caller_return;
         plan.next_instruction_address=route.next_instruction;plan.d0_value=route.d0;
         plan.pending_read_instruction=0;plan.pending_read_address=0;
         plan.next_call_address=0;plan.next_return_address=0;plan.next_vector=0;plan.local_call_target=0;
         if(route.next_instruction==0x2185e){
             plan.next_instruction_address=0;plan.pending_read_instruction=0x2185e;
             plan.pending_read_address=0xbfe001;
-        }else if(route.next_instruction==0x21850){
-            plan.next_instruction_address=0;plan.next_call_address=0x21850;
-            plan.local_call_target=0x218cc;plan.next_return_address=0x21854;
+        }else if(next==0x2189a||next==0x218d4){
+            plan.next_instruction_address=0;plan.next_call_address=next;
+            plan.local_call_target=0x2229c;plan.next_return_address=next+4;
+        }else if(next==0x218a8||next==0x218e2){
+            plan.next_instruction_address=0;plan.pending_read_instruction=next;
+            plan.pending_read_address=0x2079e;
         }
         main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
     }

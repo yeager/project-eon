@@ -3711,7 +3711,34 @@ select the original paths. Counter reads preserve D0's upper word.
 The primary route can stop before `$21850->$218cc`, enter `$21892`, or
 require the secondary observation. The secondary route either returns through
 `$2181c` to the native scheduler or stops at `$21982`. Cleanup and transition
-effects beyond those entry boundaries are not invented.
+effects beyond those entry boundaries are not invented. The local transition
+prefixes below now continue those entries without inventing hardware timing.
+
+The outer transition route now executes `$21982..$219a1` (ADF `$7182`,
+32 bytes, SHA-256
+`1bb5e5d88bc798b71c2be31317a318b306fe3f9a33d826a371c43146ec668e85`).
+Its selector comparison is byte-sized: low bytes above two return to the
+scheduler, values below two write word one to `$21704`, and low byte two
+enters cleanup without changing the selector. The loaded word preserves
+D0's upper word until the cleanup prefix replaces D0 with `$2126a`.
+
+Both cleanup prefixes are gated independently: `$21892..$218a7` (ADF
+`$7092`, 22 bytes, SHA-256
+`ad500a8045f2fd575caca0cd20a759ebd75fa2ece38dec837b0a091008d6079a`)
+and `$218cc..$218e1` (ADF `$70cc`, 22 bytes, SHA-256
+`55ced0c423fcf313bbfae51804be04bd5cdd7c72464122d179e7e0abf2e54fc8`).
+Nonzero `$2126a` stops before the exact `$2229c` fade call, preserving its
+call/return addresses. Zero invokes native `$22a5a..$22a69` (ADF `$825a`,
+16 bytes, SHA-256
+`ec2f836b1613a0aaf24099396c38c467d04c937cafaaeb5d529494491700ecf9`):
+clear byte `$22a30`, select all four channels and tail-call the existing
+`$22ab8` descriptor staging routine with sound zero. This is a software
+descriptor reset, not proof that hardware sound stopped. Execution then
+stops before the asynchronous counter read at `$218a8` or `$218e2`.
+The primary `$21850` BSR retains its enclosing `$21854` return separately
+from inner call boundaries; branch-entered cleanup has no such return.
+Tests cover byte-versus-word selector distinctions, D0 word preservation,
+all four original reset descriptors, and both fade and counter boundaries.
 
 Sample bytes, latch writes, trace sequence and next boundary publish atomically.
 Wrong bit/address/order or replay leaves committed state unchanged. The test
