@@ -3494,6 +3494,15 @@ or service result is fabricated. Out-of-order, mismatched, and replayed returns
 do not advance the session or repeat the stores. The first graphics-return
 continuation remains register-only, and library-internal effects are not
 synthesized.
+
+The owned dependency-chain checkpoint now includes value copies of the loop
+preparation and graphics-continuation plans. After preparation its stop is
+`$21310`; after the first graphics return it is `$2132a`; after local request
+setup it is the actual pending read at `$208b0`, not the later `$208b4` call.
+These newest reached states take precedence over older service-setup stops in
+the existing developer-panel summary. Copy mutation cannot change runtime
+ownership. Tests also check the retained D0 high word (`$12340010` for an
+observed `$12345678`) and the exact owned A6 value.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,

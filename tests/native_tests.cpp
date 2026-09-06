@@ -6231,6 +6231,11 @@ int main() {
             assert(runtime_byte(*after_loop_prepare_body,0x12fed)==0xab);
             assert(runtime_byte(*after_loop_prepare_body,0x12fee)==0xcd);
             assert(runtime_byte(*after_loop_prepare_body,0x12fef)==0xef);
+            const auto loop_prepare_checkpoint=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+            assert(loop_prepare_checkpoint&&loop_prepare_checkpoint->stop_before_address==0x21310
+                &&loop_prepare_checkpoint->main_stage_loop_prepare
+                &&!loop_prepare_checkpoint->main_stage_loop_graphics
+                &&loop_prepare_checkpoint->main_stage_loop_prepare->a6_value==0x00abcdef);
             eon::DeuterosAmigaObservedMainStageExecReturn loop_graphics_return{
                 runtime_copy_sequence+105,0x21310,-0xc0,0x21314,0x12345678};
             auto wrong_graphics_return=loop_graphics_return;
@@ -6240,6 +6245,12 @@ int main() {
                 wrong_graphics_return).accepted);
             assert(opening_controller.observe_deuteros_amiga_main_stage_loop_graphics_return(
                 loop_graphics_return).accepted);
+            const auto first_loop_graphics_checkpoint=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+            assert(first_loop_graphics_checkpoint&&first_loop_graphics_checkpoint->stop_before_address==0x2132a
+                &&first_loop_graphics_checkpoint->main_stage_loop_graphics
+                &&first_loop_graphics_checkpoint->main_stage_loop_graphics->d0_value==0x12340010
+                &&first_loop_graphics_checkpoint->main_stage_loop_graphics->a0_value==0x12f12
+                &&first_loop_graphics_checkpoint->main_stage_loop_graphics->a6_value==0x00abcdef);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_loop_graphics_return(
                 loop_graphics_return).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum
@@ -6262,6 +6273,15 @@ int main() {
             assert(runtime_byte(*after_loop_local_request,0x2087d)==2);
             assert(runtime_byte(*after_loop_local_request,0x2087e)==7);
             assert(runtime_byte(*after_loop_local_request,0x2087f)==0xec);
+            auto local_request_checkpoint=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+            assert(local_request_checkpoint&&local_request_checkpoint->stop_before_address==0x208b0
+                &&local_request_checkpoint->main_stage_loop_graphics
+                &&local_request_checkpoint->main_stage_loop_graphics->pending_read_address==4
+                &&local_request_checkpoint->main_stage_loop_graphics->next_call_address==0x208b4
+                &&local_request_checkpoint->main_stage_loop_graphics->d0_value==5);
+            local_request_checkpoint->main_stage_loop_graphics->write_values[0]=99;
+            assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()
+                ->main_stage_loop_graphics->write_values[0]==2);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

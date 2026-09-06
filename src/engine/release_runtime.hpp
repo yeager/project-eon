@@ -116,6 +116,8 @@ struct DeuterosAmigaTitleDependencyChainCheckpoint {
     std::optional<DeuterosAmigaTitleThirdServiceLocalPlan> third_service_local_plan;
     std::optional<DeuterosAmigaTitleFourthServiceLocalPlan> fourth_service_local_plan;
     std::optional<DeuterosAmigaTitleFifthServiceLocalPlan> fifth_service_local_plan;
+    std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan> main_stage_loop_prepare;
+    std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> main_stage_loop_graphics;
     std::uint32_t stop_before_address = 0;
 };
 struct DeuterosAmigaTitleDependencyObservationResult { bool accepted=false; std::string error; };

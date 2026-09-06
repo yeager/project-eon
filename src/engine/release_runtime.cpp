@@ -2829,6 +2829,15 @@ ReleaseRuntimeCoordinator::deuteros_amiga_title_dependency_chain_checkpoint() co
     } else if (result.service_setup_boundary_armed) {
         result.stop_before_address = 0x206d4;
     }
+    result.main_stage_loop_prepare=title.main_stage_loop_prepare_body_plan();
+    result.main_stage_loop_graphics=title.main_stage_loop_graphics_plan();
+    if(result.main_stage_loop_graphics){
+        const auto& plan=*result.main_stage_loop_graphics;
+        result.stop_before_address=plan.pending_read_instruction!=0
+            ?plan.pending_read_instruction:plan.next_call_address;
+    }else if(result.main_stage_loop_prepare){
+        result.stop_before_address=result.main_stage_loop_prepare->next_call_address;
+    }
     return result;
 }
 

@@ -1402,6 +1402,11 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>
+    main_stage_loop_prepare_body_plan() const { return main_stage_loop_prepare_body_plan_; }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    main_stage_loop_graphics_plan() const { return main_stage_loop_graphics_plan_; }
+
     DeuterosAmigaTitleServiceBatchBoundarySession(
         const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
         const auto at = [&](std::uint32_t address, std::size_t length) {

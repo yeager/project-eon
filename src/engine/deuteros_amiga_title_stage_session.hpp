@@ -62,6 +62,10 @@ public:
     // setup routine. They are source-data evidence only, never a screen.
     [[nodiscard]] std::array<RgbColor, 20> graphics_setup_palette_evidence() const;
     [[nodiscard]] const std::string& original_sha256() const noexcept { return original_sha256_; }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>
+    main_stage_loop_prepare_body_plan() const { return service_batch_boundary_session_.main_stage_loop_prepare_body_plan(); }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    main_stage_loop_graphics_plan() const { return service_batch_boundary_session_.main_stage_loop_graphics_plan(); }
 
     // Executes the complete caller-proven local prefix once: its two sparse
     // writes followed by the A7 literal. It deliberately stops before the
