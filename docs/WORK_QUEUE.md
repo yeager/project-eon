@@ -527,6 +527,11 @@ Exec returns build the task/port/device request, then reach either the original
 error spin or `$217e4`'s CIA read/modify/write. Continue that CIA operation and
 the `$217f2 -> $21926` return to `$217f6`. Graphics roots must be produced by
 the earlier graphics setup; controlled unit fixtures are not a runtime fallback.
+The typed `$217e4` CIA sample now drives native byte BSET and the owned
+`$21704` selector read. Its retained `$217f6` return is recognized by the
+existing resource-0/1 transfer transaction, which resets loop-local receipts
+and reaches fresh `$21276` preparation. Unproven selectors and unknown return
+addresses remain separate boundaries; no alternate media is substituted.
 The unconfigured `$13000` graphics initialization remains separate. Opening
 acquisition now retains the genuine 24-byte bootstrap profile table in owned
 memory from its boot-track source. Tests consume that production checkpoint,

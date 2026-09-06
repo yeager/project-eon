@@ -4800,7 +4800,8 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_input(const DeuterosAmig
         auto pending=*deuteros_amiga_->title_stage_session();
         const auto current=pending.main_stage_loop_graphics_plan();
         if(!current||(current->next_instruction_address!=0x21822&&current->pending_read_instruction!=0x2185e
-            &&current->pending_read_instruction!=0x222ac&&current->pending_read_instruction!=0x218be)){
+            &&current->pending_read_instruction!=0x222ac&&current->pending_read_instruction!=0x218be
+            &&current->pending_read_instruction!=0x217e4)){
             result.error="Deuteros outer input did not match boundary";return result;
         }
         auto memory=*native_runtime_memory_;

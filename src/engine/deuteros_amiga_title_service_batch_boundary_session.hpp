@@ -1884,7 +1884,7 @@ inline DeuterosAmigaMainStageLoopGraphicsPlan resume_deuteros_amiga_recurring_re
         ||o.retry_instruction_address!=0x2196e||o.retry_port_address!=0xdff016
         ||o.retry_bit!=10||(o.retry_port_value&4U)==0)
         throw std::runtime_error("Deuteros recurring resource load does not match selection");
-    const bool restart=current.outer_transition_return==0x21854;
+    const bool restart=current.outer_transition_return==0x21854||current.outer_transition_return==0x217f6;
     current.next_instruction_address=restart?0:0x21978;
     current.next_call_address=restart?0x21816:0;current.local_call_target=restart?0x21276:0;
     current.next_return_address=restart?0x2181c:0;
@@ -1961,6 +1961,8 @@ public:
                 !="e4826a60a00a9c9ed6797e5636ca0e99f038e10cea9d732ebe53452ca659a658")
             throw std::runtime_error("Unsupported Deuteros bootstrap re-entry route");
         const auto main_stage=disk.bytes(plan.main_stage.disk_offset,plan.main_stage.length);
+        if(to_hex(sha256(disk.bytes(0x6fe4,20)))!="4136558f36e9cd0c89cd1828353a95ac05fa79d58e11bd30b8063b7d15e96c50")
+            throw std::runtime_error("Unsupported Deuteros re-entry CIA resource route");
         if(to_hex(sha256(disk.bytes(0x6f8e,80)))!="baa9d531e015bf1199340078fbb3ac620280e07969563a5c563ff38cf83bddc9"
             ||to_hex(sha256(disk.bytes(0x6194,126)))!="31683affd3d3eb8f78fe4cf76def0970e3485109151d798aa6bc07fee579f163"
             ||to_hex(sha256(disk.bytes(0x6fde,6)))!="fbc9c1ba21621c89768d83a85be9297e32cfae64590f91eb3e89ea2d60cb8d29")
@@ -4536,6 +4538,18 @@ public:
         DeuterosAmigaOuterInputRoute route){
         if(!main_stage_loop_graphics_plan_)return std::nullopt;
         const auto& current=*main_stage_loop_graphics_plan_;
+        if(current.pending_read_instruction==0x217e4){
+            if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=0x217e4
+                ||o.port_address!=0xbfe001||o.bit!=1||current.pending_read_address!=0xbfe001
+                ||route.next_instruction!=0x21926||route.caller_return!=0x217f6)
+                throw std::runtime_error("Deuteros re-entry CIA operation is invalid or stale");
+            auto plan=current;
+            plan.d0_value=route.d0;plan.next_instruction_address=0x21926;
+            plan.outer_transition_return=0x217f6;plan.outer_fade_return=0;
+            plan.pending_read_instruction=0;plan.pending_read_address=0;
+            plan.next_call_address=0;plan.next_return_address=0;plan.local_call_target=0;plan.next_vector=0;
+            main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
+        }
         const bool fade=current.pending_read_instruction==0x222ac&&current.outer_fade_return!=0;
         const bool release=current.pending_read_instruction==0x218be;
         const bool first=current.next_instruction_address==0x21822;

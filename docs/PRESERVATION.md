@@ -8161,3 +8161,31 @@ both device-return branches. They do not seed production graphics structures
 or claim emulator evidence. A regression test also corrects the preceding
 `$22a5c` reset to **MOVE.B**, preserving the neighboring byte at `$22a31`;
 the earlier new re-entry implementation incorrectly cleared a word there.
+
+### Deuteros re-entry CIA operation and resource caller return
+
+The typed outer-input interface now accepts the reached `$217e4` operation
+only with source `$bfe001`, bit 1, and a fresh sequence. Its byte is the raw
+pre-operation sample; native BSET writes `sample | 2` and preserves every
+other bit. `$217ec` then loads the owned word at `$21704` into D0's low word,
+preserving D0's upper word. The local BSR at `$217f2` reaches `$21926` with
+the exact return `$217f6`; no physical sample is synthesized from a prior
+memory value or from host mouse/keyboard state.
+
+The existing bounded resource-0/1 transfer now recognizes `$217f6` as well
+as the already supported `$21854` caller. On a successful transfer it follows
+the original NOP and sound/flag reset into `$21816 -> $21276`. The same
+private runtime transaction performs original-byte transfer and reset; the
+owner clears loop-local preparation, scheduler and graphics-return receipts
+while retaining the global sequence and media identity. A caller other than
+these two does not gain this return path and still stops at `$21978`.
+Selectors beyond the two proven resource formats remain rejected rather than
+being replaced with resource zero.
+
+Source: ADF `$6fe4`, 20 bytes (runtime `$217e4..$217f7`), SHA-256
+`4136558f36e9cd0c89cd1828353a95ac05fa79d58e11bd30b8063b7d15e96c50`.
+Controlled tests cover every raw input byte, preservation of D0's upper word,
+both supported resource selections, rejection of selectors 2 and `$ffff`,
+and the distinction between proven `$217f6` and unproven `$217f4` returns.
+These component tests supplement the existing genuine-media transfer tests;
+they are not a full hardware-driven restart capture or gameplay-parity claim.

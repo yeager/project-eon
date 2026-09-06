@@ -7109,6 +7109,35 @@ int main() {
                                                         main=eon::execute_deuteros_amiga_outer_service(main,device_return,command_read,command_write);
                                                         assert(main.pending_read_instruction==0x217e4&&main.pending_read_address==0xbfe001&&main.d1_value==0x20000);
                                                         assert(command_read(0x2094c,4)==0xffffffff&&command_read(0x2093a,1)==0);
+                                                        for(unsigned raw=0;raw<256;++raw){
+                                                            const auto route=eon::execute_deuteros_amiga_owned_outer_input(
+                                                                0x217e4,static_cast<std::uint8_t>(raw),0xbeef0000,command_read,command_write);
+                                                            assert(command_read(0xbfe001,1)==(raw|2U));
+                                                            assert(route.next_instruction==0x21926&&route.caller_return==0x217f6);
+                                                            assert(route.d0==(0xbeef0000U|command_read(0x21704,2)));
+                                                        }
+                                                        for(unsigned resource:{0U,1U,2U,0xffffU}){
+                                                            auto resource_entry=main;
+                                                            resource_entry.next_instruction_address=0x21926;
+                                                            resource_entry.pending_read_instruction=0;resource_entry.pending_read_address=0;
+                                                            resource_entry.d0_value=0xbeef0000U|resource;
+                                                            resource_entry.outer_transition_return=0x217f6;
+                                                            const eon::DeuterosAmigaObservedMainStageResourceLoad receipt{
+                                                                27,static_cast<std::uint16_t>(resource),0x21932,0x2196e,0xdff016,10,4};
+                                                            if(resource<=1){
+                                                                const auto restarted=eon::resume_deuteros_amiga_recurring_resource(resource_entry,receipt,0x5548e);
+                                                                assert(restarted.next_call_address==0x21816&&restarted.local_call_target==0x21276);
+                                                                assert(restarted.next_return_address==0x2181c&&restarted.outer_transition_return==0);
+                                                                assert(restarted.d0_value==0x5548e&&!restarted.command_stop);
+                                                                auto unproven=resource_entry;unproven.outer_transition_return=0x217f4;
+                                                                assert(eon::resume_deuteros_amiga_recurring_resource(unproven,receipt,0).next_instruction_address==0x21978);
+                                                            }else{
+                                                                bool rejected=false;
+                                                                try{(void)eon::resume_deuteros_amiga_recurring_resource(resource_entry,receipt,0);}
+                                                                catch(const std::runtime_error&){rejected=true;}
+                                                                assert(rejected);
+                                                            }
+                                                        }
                                                     }
                                                 }
                                                 auto wrong=returned;wrong.vector=-0x1c2;
