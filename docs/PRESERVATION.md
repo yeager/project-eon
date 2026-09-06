@@ -3903,6 +3903,35 @@ final bytes rather than pretending to provide a bus trace. Tests cover both
 clear branches, both service continuations, incorrect vector rejection,
 metadata copies, unchanged display selection/counter and the handoff target.
 
+Re-entry at `$12800` now continues through five separately ordered typed
+Exec returns. The fixed stack initialization target `$12dca` is retained
+as native metadata, not presented as a captured CPU stack. Calls
+`$1280a/-$96->$1280e` and `$12818/-$9c->$1281c` require the matching
+owned ExecBase; the second caller's D0 is the literal `$7ff00`. The
+dispatcher copies the low word of owned `$12ffc` to `$12a34`, retaining
+the complete long in D0, and copies `$12ff8` to `$12822` before entering
+`$128b4`. Three further returns at `$128be/-$126`, `$128ea/-$162` and
+`$12910/-$1bc` execute the original local structure writes in order. The
+first raw result is stored at `$1286e`; the second local prefix selects
+`$12826/$1285e` and clears D0/D1. Nonzero final D0 reaches the original
+`$1291a` spin boundary. Zero writes the request sentinel and flag, then
+compares only the low word of `$12ff4` with `$ab00`: equal reaches
+`$12a7e->$12932`, otherwise `$12a76->$13000`. No successful OS side effect
+is inferred from a zero return alone.
+Additional source gates are: ADF `$2c00`, 34 bytes, SHA-256
+`738a37158f9c902fe59296a26e7b10c37f6c1a5d32fc31fb4993b0dac83945a4`;
+ADF `$2e4e`, 28 bytes,
+`0d987c03f02053576c609c61d047314734a51df9177ca4839d63d358197afeef`;
+ADF `$2cb4`, 14 bytes,
+`a5c916b3959fe074f18e12a12d0488a38b2c8b638079fb05d1ad3a0739848001`;
+ADF `$2cc2`, 112 bytes,
+`406f40d565e692115dda63337cc69f092c761e6e99c89277c3ec358aa0686530`;
+and ADF `$2e6a`, 20 bytes,
+`bedb8bc8fe1f8e906c074b54fa78bcf9fb5ecfba6a8708099258ea392f30e2b5`.
+Tests cover profiles 0–5 and a long with nonzero upper bits, raw result
+storage, both final result branches and the low-word comparison. These
+are controlled native tests, not new emulator capture evidence.
+
 Sample bytes, latch writes, trace sequence and next boundary publish atomically.
 Wrong bit/address/order or replay leaves committed state unchanged. The test
 fixture's two clear samples with the genuine enabled gate re-enter the native

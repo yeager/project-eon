@@ -1408,6 +1408,7 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
     std::uint32_t outer_transition_return=0;
     std::uint32_t outer_fade_return=0;
     std::uint32_t d1_value=0;
+    std::uint32_t bootstrap_stack_top=0;
 };
 struct DeuterosAmigaObservedLoopRequestService {
     std::uint64_t trace_sequence=0;
@@ -1465,7 +1466,73 @@ template<class Read,class Write>
 DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
     DeuterosAmigaMainStageLoopGraphicsPlan plan,const DeuterosAmigaObservedLoopRequestService&o,
     Read read,Write write){
+    const bool bootstrap=plan.next_instruction_address==0x12800;
+    const bool bootstrap_second=plan.next_call_address==0x12818&&plan.next_return_address==0x1281c
+        &&plan.next_vector==-0x9c;
+    if(bootstrap||bootstrap_second){
+        if(o.source_address!=4||o.read_instruction!=(bootstrap?0x12806U:0x12814U)
+            ||o.call_address!=(bootstrap?0x1280aU:0x12818U)
+            ||o.return_address!=(bootstrap?0x1280eU:0x1281cU)||o.vector!=(bootstrap?-0x96:-0x9c)
+            ||read(4,4)!=o.exec_base)
+            throw std::runtime_error("Deuteros bootstrap re-entry service does not match boundary");
+        plan.bootstrap_stack_top=0x12dca;plan.a6_value=o.exec_base;
+        plan.next_instruction_address=0;plan.local_call_target=0;
+        if(bootstrap){
+            plan.d0_value=0x7ff00;
+            plan.next_call_address=0x12818;plan.next_return_address=0x1281c;plan.next_vector=-0x9c;
+            plan.pending_read_instruction=0x12814;plan.pending_read_address=4;
+        }else{
+            plan.d0_value=read(0x12ffc,4);
+            write(0x12a34,MemoryTransferElementWidth::word,plan.d0_value&0xffffU);
+            write(0x12822,MemoryTransferElementWidth::longword,read(0x12ff8,4));
+            // Enter $128b4's local prefix; its Exec call is not executed yet.
+            plan.a1_value=0;plan.next_call_address=0x128be;plan.next_return_address=0x128c2;
+            plan.next_vector=-0x126;plan.pending_read_instruction=0x128ba;plan.pending_read_address=4;
+        }
+        return plan;
+    }
     const bool handoff=plan.next_instruction_address==0x21a4c;
+    const auto bootstrap_call=plan.next_call_address;
+    if(bootstrap_call==0x128be||bootstrap_call==0x128ea||bootstrap_call==0x12910){
+        const auto read_site=bootstrap_call==0x128be?0x128baU:bootstrap_call==0x128ea?0x128e6U:0x1290cU;
+        const auto vector=bootstrap_call==0x128be?-0x126:bootstrap_call==0x128ea?-0x162:-0x1bc;
+        if(o.source_address!=4||o.read_instruction!=read_site||o.call_address!=bootstrap_call
+            ||o.return_address!=bootstrap_call+4||o.vector!=vector||read(4,4)!=o.exec_base)
+            throw std::runtime_error("Deuteros bootstrap request service is inconsistent");
+        plan.a6_value=o.exec_base;plan.d0_value=o.result_d0;
+        if(bootstrap_call==0x128be){
+            write(0x12868,MemoryTransferElementWidth::longword,0x128a2);
+            write(0x12867,MemoryTransferElementWidth::byte,0x7f);
+            write(0x12866,MemoryTransferElementWidth::byte,4);
+            write(0x1286d,MemoryTransferElementWidth::byte,1);
+            write(0x1286e,MemoryTransferElementWidth::longword,o.result_d0);
+            plan.a1_value=0x1285e;plan.next_call_address=0x128ea;plan.next_return_address=0x128ee;
+            plan.next_vector=-0x162;plan.pending_read_instruction=0x128e6;
+        }else if(bootstrap_call==0x128ea){
+            write(0x12822,MemoryTransferElementWidth::longword,0x12826);
+            write(0x12834,MemoryTransferElementWidth::longword,0x1285e);
+            plan.a0_value=0x128a2;plan.a1_value=0x12826;plan.d0_value=0;plan.d1_value=0;
+            plan.next_call_address=0x12910;plan.next_return_address=0x12914;
+            plan.next_vector=-0x1bc;plan.pending_read_instruction=0x1290c;
+        }else{
+            plan.pending_read_instruction=0;plan.pending_read_address=0;plan.next_vector=0;
+            plan.next_call_address=0;plan.next_return_address=0;
+            if(o.result_d0!=0)plan.next_instruction_address=0x1291a;
+            else{
+                plan.a1_value=read(0x12822,4);
+                if((plan.a1_value&1U)||plan.a1_value>0x1000000U-52)
+                    throw std::runtime_error("Deuteros bootstrap request pointer is invalid");
+                write(plan.a1_value+48,MemoryTransferElementWidth::longword,0xffffffff);
+                write(plan.a1_value+30,MemoryTransferElementWidth::byte,0);
+                plan.d0_value=read(0x12ff4,4);
+                const bool configured=(plan.d0_value&0xffffU)==0xab00;
+                plan.next_call_address=configured?0x12a7e:0x12a76;
+                plan.next_return_address=configured?0x12a82:0x12a7a;
+                plan.local_call_target=configured?0x12932:0x13000;
+            }
+        }
+        return plan;
+    }
     const bool handoff_return=plan.next_call_address==0x21a8e&&plan.next_return_address==0x21a92
         &&plan.next_vector==-0x168;
     if(handoff||handoff_return){
@@ -1648,6 +1715,17 @@ public:
         first_title_exit_subroutine_ =
             parse_deuteros_amiga_first_title_exit_subroutine_profile(disk, plan);
         const auto title_profile=parse_deuteros_amiga_title_stage(disk,plan);
+        if(to_hex(sha256(disk.bytes(0x2c00,34)))
+                !="738a37158f9c902fe59296a26e7b10c37f6c1a5d32fc31fb4993b0dac83945a4"
+            ||to_hex(sha256(disk.bytes(0x2e4e,28)))
+                !="0d987c03f02053576c609c61d047314734a51df9177ca4839d63d358197afeef"
+            ||to_hex(sha256(disk.bytes(0x2cb4,14)))
+                !="a5c916b3959fe074f18e12a12d0488a38b2c8b638079fb05d1ad3a0739848001"
+            ||to_hex(sha256(disk.bytes(0x2cc2,112)))
+                !="406f40d565e692115dda63337cc69f092c761e6e99c89277c3ec358aa0686530"
+            ||to_hex(sha256(disk.bytes(0x2e6a,20)))
+                !="bedb8bc8fe1f8e906c074b54fa78bcf9fb5ecfba6a8708099258ea392f30e2b5")
+            throw std::runtime_error("Unsupported Deuteros bootstrap re-entry route");
         const auto main_stage=disk.bytes(plan.main_stage.disk_offset,plan.main_stage.length);
         constexpr std::string_view main_stage_hash=
             "a82c0d6a12e156e0832d632a6c40dd58713a00b611dbcba7289aa16b0969a0a6";
@@ -4278,7 +4356,30 @@ public:
         const DeuterosAmigaMainStageLoopGraphicsPlan&plan){
         if(!main_stage_loop_graphics_plan_)return std::nullopt;
         const auto& current=*main_stage_loop_graphics_plan_;
+        const bool bootstrap=current.next_instruction_address==0x12800;
+        const bool bootstrap_second=current.next_call_address==0x12818&&current.next_return_address==0x1281c
+            &&current.next_vector==-0x9c;
+        if(bootstrap||bootstrap_second){
+            if(o.trace_sequence<=last_command_sequence_||o.source_address!=4
+                ||o.read_instruction!=(bootstrap?0x12806U:0x12814U)
+                ||o.call_address!=(bootstrap?0x1280aU:0x12818U)
+                ||o.return_address!=(bootstrap?0x1280eU:0x1281cU)||o.vector!=(bootstrap?-0x96:-0x9c)
+                ||plan.a6_value!=o.exec_base||plan.bootstrap_stack_top!=0x12dca
+                ||plan.next_call_address!=(bootstrap?0x12818U:0x128beU))
+                throw std::runtime_error("Deuteros bootstrap re-entry return is invalid or stale");
+            main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
+        }
         const bool handoff=current.next_instruction_address==0x21a4c;
+        const auto bootstrap_call=current.next_call_address;
+        if(bootstrap_call==0x128be||bootstrap_call==0x128ea||bootstrap_call==0x12910){
+            const auto read_site=bootstrap_call==0x128be?0x128baU:bootstrap_call==0x128ea?0x128e6U:0x1290cU;
+            const auto vector=bootstrap_call==0x128be?-0x126:bootstrap_call==0x128ea?-0x162:-0x1bc;
+            if(o.trace_sequence<=last_command_sequence_||o.source_address!=4||o.read_instruction!=read_site
+                ||o.call_address!=bootstrap_call||o.return_address!=bootstrap_call+4||o.vector!=vector
+                ||plan.a6_value!=o.exec_base)
+                throw std::runtime_error("Deuteros bootstrap request return is invalid or stale");
+            main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
+        }
         const bool handoff_return=current.next_call_address==0x21a8e&&current.next_return_address==0x21a92
             &&current.next_vector==-0x168;
         if(handoff||handoff_return){

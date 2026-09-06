@@ -6900,6 +6900,51 @@ int main() {
                                     const auto final=eon::execute_deuteros_amiga_outer_service(first,wrong,command_read,command_write);
                                     assert(final.next_instruction_address==0x12800&&final.next_call_address==0&&final.d0_value==1);
                                     assert(command_read(0x12ff8,4)==command_read(0x20976,4)&&command_read(0x12ffc,4)==1);
+                                    for(const std::uint32_t profile:{0U,1U,2U,3U,4U,5U,0x12340001U}){
+                                        command_write(0x12ffc,eon::MemoryTransferElementWidth::longword,profile);
+                                        const auto entry=eon::execute_deuteros_amiga_outer_service(final,
+                                            {8,0x12806,4,command_read(4,4),0x1280a,0x1280e,0xdeadbeef,-0x96},command_read,command_write);
+                                        assert(entry.bootstrap_stack_top==0x12dca&&entry.d0_value==0x7ff00);
+                                        assert(entry.next_call_address==0x12818&&entry.next_return_address==0x1281c
+                                            &&entry.next_vector==-0x9c&&entry.pending_read_instruction==0x12814);
+                                        auto wrong_entry=eon::DeuterosAmigaObservedLoopRequestService{
+                                            9,0x12814,4,command_read(4,4),0x12818,0x1281c,0,-0x96};
+                                        bool rejected_bootstrap_order=false;
+                                        try{static_cast<void>(eon::execute_deuteros_amiga_outer_service(entry,wrong_entry,command_read,command_write));}
+                                        catch(const std::runtime_error&){rejected_bootstrap_order=true;}
+                                        assert(rejected_bootstrap_order);
+                                        wrong_entry.vector=-0x9c;
+                                        const auto dispatch=eon::execute_deuteros_amiga_outer_service(entry,wrong_entry,command_read,command_write);
+                                        assert(dispatch.d0_value==profile&&dispatch.a1_value==0);
+                                        assert(dispatch.next_call_address==0x128be&&dispatch.next_return_address==0x128c2
+                                            &&dispatch.next_vector==-0x126&&dispatch.pending_read_instruction==0x128ba);
+                                        assert(command_read(0x12a34,2)==(profile&0xffffU));
+                                        assert(command_read(0x12822,4)==command_read(0x12ff8,4));
+                                        const auto allocated=eon::execute_deuteros_amiga_outer_service(dispatch,
+                                            {10,0x128ba,4,command_read(4,4),0x128be,0x128c2,0x3456789a,-0x126},command_read,command_write);
+                                        assert(allocated.next_call_address==0x128ea&&allocated.next_vector==-0x162);
+                                        assert(command_read(0x12868,4)==0x128a2&&command_read(0x1286e,4)==0x3456789a);
+                                        assert(command_read(0x12867,1)==0x7f&&command_read(0x12866,1)==4&&command_read(0x1286d,1)==1);
+                                        const auto prepared=eon::execute_deuteros_amiga_outer_service(allocated,
+                                            {11,0x128e6,4,command_read(4,4),0x128ea,0x128ee,0,-0x162},command_read,command_write);
+                                        assert(prepared.next_call_address==0x12910&&prepared.a0_value==0x128a2
+                                            &&prepared.a1_value==0x12826&&prepared.d0_value==0&&prepared.d1_value==0);
+                                        assert(command_read(0x12822,4)==0x12826&&command_read(0x12834,4)==0x1285e);
+                                        auto device=eon::DeuterosAmigaObservedLoopRequestService{
+                                            12,0x1290c,4,command_read(4,4),0x12910,0x12914,1,-0x1bc};
+                                        const auto spin=eon::execute_deuteros_amiga_outer_service(prepared,device,command_read,command_write);
+                                        assert(spin.next_instruction_address==0x1291a&&spin.next_call_address==0);
+                                        device.result_d0=0;
+                                        for(const auto pointer:{0x80000U,0x1ab00U}){
+                                            const auto configured_read=[&](std::uint32_t address,std::uint32_t width){
+                                                return address==0x12ff4&&width==4?pointer:command_read(address,width);
+                                            };
+                                            const auto connected=eon::execute_deuteros_amiga_outer_service(prepared,device,configured_read,command_write);
+                                            assert(connected.next_call_address==(pointer==0x1ab00?0x12a7eU:0x12a76U));
+                                            assert(connected.local_call_target==(pointer==0x1ab00?0x12932U:0x13000U));
+                                            assert(command_read(0x12856,4)==0xffffffff&&command_read(0x12844,1)==0);
+                                        }
+                                    }
                                 }
                             }
                             if(next.next_instruction_address==0x21926){

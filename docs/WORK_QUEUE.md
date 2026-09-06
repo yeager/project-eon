@@ -493,7 +493,10 @@ branch-entered unknown returns remain at `$21978`.
 The state-two `$21a4c` transition now conditionally clears its fixed buffer,
 admits both ordered Exec returns and publishes handoff metadata before
 reaching `$12800`. Continue that program entry and the separate `$219f8`
-disk-check/message route. The restart route
+disk-check/message route. The `$12800` re-entry now passes five typed Exec
+returns and native request setup, reaching the original error spin or the
+`$13000`/`$12932` caller boundary. Continue those routines and profile dispatch.
+The restart route
 at `$217f6` now executes sound/flag reset and re-enters `$21276` using fresh
 per-loop continuation state and effect identifiers. Continue verifying its
 new ordered service returns without reusing previous observations.
