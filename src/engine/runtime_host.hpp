@@ -186,6 +186,8 @@ public:
     [[nodiscard]] std::optional<MillenniumDosOwnedFunctionDiagnostics> millennium_dos_owned_function_diagnostics() const;
     [[nodiscard]] std::optional<std::vector<float>>
     render_deuteros_amiga_opening_audio(std::size_t frames);
+    [[nodiscard]] std::optional<DeuterosAmigaNativeAudioCheckpoint> deuteros_amiga_native_audio_checkpoint() const;
+    [[nodiscard]] std::optional<std::vector<float>> render_deuteros_amiga_native_audio(std::size_t frames);
     [[nodiscard]] std::optional<DeuterosAmigaOpeningPresentationSnapshot>
     deuteros_amiga_opening_presentation() const;
     [[nodiscard]] std::optional<DeuterosAmigaTitleStageBoundarySnapshot>

@@ -4488,6 +4488,7 @@ int main(int argc, char** argv) {
     // pixels. It remains a renderer-only menu resource in every profile.
     SDL_Texture* project_eon_logo_texture = load_branding_texture(renderer, "project-eon-logo-v1.png");
     SDL_AudioStream* deuteros_audio_stream = nullptr;
+    std::optional<std::uint64_t> deuteros_native_audio_generation;
     SDL_Texture* preview_texture = nullptr;
     // These transient textures are derived from decoded original pixels only.
     // They have no on-disk representation and are selected exclusively by
@@ -5899,6 +5900,30 @@ int main(int argc, char** argv) {
                         break;
                     }
                     queued = SDL_GetAudioStreamQueued(deuteros_audio_stream);
+                }
+            }
+            // Main-stage PCM is eligible only after a committed native
+            // $22bea receipt. The currently recovered sound-zero pair is a
+            // silent reset, so this normally clears provenance and queues
+            // nothing; no scheduler cadence is manufactured here.
+            const auto native_audio=runtime.deuteros_amiga_native_audio_checkpoint();
+            if(native_audio&&deuteros_native_audio_generation!=native_audio->generation){
+                if(deuteros_audio_stream)static_cast<void>(SDL_ClearAudioStream(deuteros_audio_stream));
+                deuteros_native_audio_generation=native_audio->generation;
+            }else if(!native_audio&&deuteros_native_audio_generation){
+                if(deuteros_audio_stream)static_cast<void>(SDL_ClearAudioStream(deuteros_audio_stream));
+                deuteros_native_audio_generation.reset();
+            }
+            if(native_audio&&deuteros_audio_stream){
+                constexpr int native_target_bytes=960*2*static_cast<int>(sizeof(float));
+                const auto queued=SDL_GetAudioStreamQueued(deuteros_audio_stream);
+                if(queued>=0&&queued<native_target_bytes){
+                    const auto frames=static_cast<std::size_t>((native_target_bytes-queued)
+                        /(2*static_cast<int>(sizeof(float))));
+                    const auto samples=runtime.render_deuteros_amiga_native_audio(frames);
+                    if(samples&&!samples->empty())static_cast<void>(SDL_PutAudioStreamData(
+                        deuteros_audio_stream,samples->data(),
+                        static_cast<int>(samples->size()*sizeof(float))));
                 }
             }
         }

@@ -1,5 +1,7 @@
 #include "engine/deuteros_amiga_paula.hpp"
 
+#include "data/sha256.hpp"
+
 #include <stdexcept>
 
 namespace eon {
@@ -71,6 +73,74 @@ bool DeuterosAmigaPaulaMixer::has_active_channels() const {
         if (state.sound && state.sample_index < state.sound->pcm.size()) return true;
     }
     return false;
+}
+
+DeuterosAmigaNativeAudioMixer::DeuterosAmigaNativeAudioMixer(
+    const std::uint32_t output_sample_rate):output_sample_rate_(output_sample_rate){
+    if(output_sample_rate_==0)throw std::runtime_error("Invalid native audio output sample rate");
+}
+bool DeuterosAmigaNativeAudioMixer::install(std::vector<Voice> voices){
+    voices_=std::move(voices);return audible();
+}
+bool DeuterosAmigaNativeAudioMixer::audible()const{
+    for(const auto& voice:voices_)if(voice.index<voice.pcm.size())return true;
+    return false;
+}
+std::vector<float> DeuterosAmigaNativeAudioMixer::render(const std::size_t frames){
+    if(!audible())return {};
+    std::vector<float> output(frames*2U,0.0F);
+    for(std::size_t frame=0;frame<frames;++frame){
+        for(auto& voice:voices_){
+            if(voice.index>=voice.pcm.size())continue;
+            const auto encoded=voice.pcm[voice.index];
+            const auto signed_sample=encoded<0x80U?static_cast<std::int16_t>(encoded)
+                :static_cast<std::int16_t>(encoded)-256;
+            output[frame*2U+((voice.channel==0||voice.channel==3)?0U:1U)]+=
+                static_cast<float>(signed_sample)/128.0F*static_cast<float>(voice.volume)/64.0F;
+            voice.phase+=DeuterosAmigaPaulaMixer::pal_sample_clock_hz;
+            const auto threshold=static_cast<std::uint64_t>(voice.period)*output_sample_rate_;
+            while(voice.phase>=threshold&&voice.index<voice.pcm.size()){
+                voice.phase-=threshold;++voice.index;
+            }
+        }
+        if(!audible()){output.resize((frame+1U)*2U);break;}
+    }
+    return output;
+}
+
+DeuterosAmigaNativeAudioPreparation prepare_deuteros_amiga_native_audio(
+    const std::array<DeuterosAmigaOwnedAudioResult,2>& results,
+    const NativeRuntimeMemory& memory,const std::uint64_t generation,
+    const std::uint64_t trace_sequence){
+    DeuterosAmigaNativeAudioPreparation prepared;
+    prepared.checkpoint.generation=generation;
+    prepared.checkpoint.trace_sequence=trace_sequence;
+    prepared.checkpoint.runtime_memory_checksum=memory.checkpoint().checksum;
+    for(std::size_t invocation=0;invocation<results.size();++invocation){
+        const auto& source=results[invocation];auto& target=prepared.checkpoint.invocations[invocation];
+        target.dma_writes=source.dma_writes;
+        for(std::size_t channel=0;channel<source.channel_registers.size();++channel){
+            const auto& registers=source.channel_registers[channel];auto& receipt=target.channels[channel];
+            receipt.channel=registers.channel;receipt.pointer=registers.pointer;
+            receipt.length_words=registers.length_words;receipt.period=registers.period;
+            receipt.volume=registers.volume;receipt.pointer_written=registers.pointer_written;
+            receipt.length_written=registers.length_written;receipt.period_written=registers.period_written;
+            receipt.volume_written=registers.volume_written;
+            receipt.enabled_by_final_dma_intent=(source.dma_writes[1]&0x8000U)!=0
+                &&(source.dma_writes[1]&(1U<<channel))!=0;
+            if(!receipt.pointer_written||!receipt.length_written||receipt.length_words==0)continue;
+            const auto byte_count=static_cast<std::size_t>(receipt.length_words)*2U;
+            const auto pcm=memory.read_linear_range(receipt.pointer,byte_count);
+            if(!pcm){prepared.error="Deuteros native audio range is not owned";return prepared;}
+            receipt.pcm_sha256=to_hex(sha256(*pcm));
+            if(!receipt.enabled_by_final_dma_intent||!receipt.period_written
+                ||!receipt.volume_written||receipt.period==0||receipt.volume==0)continue;
+            if(receipt.volume>64){prepared.error="Deuteros native audio volume is invalid";return prepared;}
+            prepared.voices.push_back({receipt.channel,receipt.period,receipt.volume,*pcm,0,0});
+        }
+    }
+    prepared.checkpoint.audible_voice_count=prepared.voices.size();prepared.accepted=true;
+    return prepared;
 }
 
 } // namespace eon

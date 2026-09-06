@@ -762,6 +762,10 @@ public:
     // float buffer; it never borrows the opening sound bank or its PCM bytes.
     [[nodiscard]] std::optional<std::vector<float>>
     render_deuteros_amiga_opening_audio(std::size_t frames);
+    [[nodiscard]] std::optional<DeuterosAmigaNativeAudioCheckpoint>
+    deuteros_amiga_native_audio_checkpoint() const;
+    [[nodiscard]] std::optional<std::vector<float>>
+    render_deuteros_amiga_native_audio(std::size_t frames);
     // Query only: checkpoints never tick or retain a frame outside the active
     // recovered opening session.
     [[nodiscard]] std::optional<DeuterosAmigaOpeningCheckpoint>
@@ -1252,6 +1256,9 @@ private:
     std::uint64_t deuteros_amiga_title_planar_generation_ = 0;
     std::optional<DeuterosAmigaTitlePlanarSurface> deuteros_amiga_title_planar_surface_;
     std::unique_ptr<DeuterosAmigaPaulaMixer> deuteros_amiga_paula_;
+    std::optional<DeuterosAmigaNativeAudioCheckpoint> deuteros_amiga_native_audio_checkpoint_;
+    std::unique_ptr<DeuterosAmigaNativeAudioMixer> deuteros_amiga_native_audio_mixer_;
+    std::uint64_t deuteros_amiga_native_audio_generation_=0;
     std::optional<DeuterosAmigaTitleDisplayTraceSession>
         deuteros_amiga_title_display_trace_;
     bool deuteros_amiga_opening_input_held_ = false;

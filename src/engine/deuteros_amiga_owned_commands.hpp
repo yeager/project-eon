@@ -50,6 +50,13 @@ void stage_deuteros_amiga_owned_sound(std::uint32_t& d0, std::uint16_t& d1_word,
 // value is not a model of Amiga set/clear semantics or proof of host playback.
 struct DeuterosAmigaOwnedAudioResult {
     std::array<std::uint16_t,2> dma_writes{};
+    struct ChannelRegisters {
+        std::uint8_t channel=0;
+        std::uint32_t pointer=0;
+        std::uint16_t length_words=0,period=0,volume=0;
+        bool pointer_written=false,length_written=false,period_written=false,volume_written=false;
+    };
+    std::array<ChannelRegisters,4> channel_registers{};
 };
 
 // Native $22bea consumer. Read/write must use an unpublished transaction;
@@ -72,16 +79,27 @@ DeuterosAmigaOwnedAudioResult consume_deuteros_amiga_owned_audio(Read read,Write
         const auto hardware=0xdff0a0+16*channel;
         auto control=read(descriptor+10,2);
         auto count=control&0xffU;
+        auto& registers=result.channel_registers[channel];
+        registers.channel=static_cast<std::uint8_t>(channel);
         if((control&0x400U)&&count){
             --count;
             write(descriptor+10,Width::word,count?((control&0xff00U)|count):0);
             write(hardware,Width::longword,0x22a6a);
             write(hardware+4,Width::word,1);write(hardware+8,Width::word,0);
+            registers.pointer=0x22a6a;registers.length_words=1;registers.volume=0;
+            registers.pointer_written=true;registers.length_written=true;registers.volume_written=true;
             continue;
         }
-        write(hardware,Width::longword,read(descriptor,4));
-        write(hardware+4,Width::longword,read(descriptor+4,4));
-        write(hardware+8,Width::word,read(descriptor+8,2));
+        registers.pointer=read(descriptor,4);
+        registers.length_words=static_cast<std::uint16_t>(read(descriptor+4,2));
+        registers.period=static_cast<std::uint16_t>(read(descriptor+6,2));
+        registers.volume=static_cast<std::uint16_t>(read(descriptor+8,2));
+        registers.pointer_written=registers.length_written=registers.period_written=
+            registers.volume_written=true;
+        write(hardware,Width::longword,registers.pointer);
+        write(hardware+4,Width::longword,
+            (static_cast<std::uint32_t>(registers.length_words)<<16U)|registers.period);
+        write(hardware+8,Width::word,registers.volume);
         if(control==0)continue;
         if(control&0x100U){
             const auto delta=count<128?count:count+0xff00U;

@@ -171,6 +171,8 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
     [[nodiscard]] std::optional<std::vector<float>>
     render_deuteros_amiga_opening_audio(std::size_t frames);
+    [[nodiscard]] std::optional<DeuterosAmigaNativeAudioCheckpoint> deuteros_amiga_native_audio_checkpoint() const;
+    [[nodiscard]] std::optional<std::vector<float>> render_deuteros_amiga_native_audio(std::size_t frames);
     [[nodiscard]] std::optional<DeuterosAmigaOpeningCheckpoint>
     deuteros_amiga_opening_checkpoint() const;
     [[nodiscard]] std::optional<DeuterosAmigaOpeningPresentationSnapshot>

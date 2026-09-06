@@ -305,6 +305,9 @@ void ReleaseRuntimeCoordinator::reset() {
     deuteros_amiga_main_stage_frame_.reset();
     deuteros_amiga_main_stage_frame_generation_ = 0;
     deuteros_amiga_title_program_entry_.reset();
+    deuteros_amiga_native_audio_checkpoint_.reset();
+    deuteros_amiga_native_audio_mixer_.reset();
+    deuteros_amiga_native_audio_generation_=0;
     deuteros_amiga_disk_transition_.reset();
     native_runtime_memory_.reset();
     millennium_atari_config_consumer_.reset();
@@ -2812,6 +2815,25 @@ ReleaseRuntimeCoordinator::render_deuteros_amiga_opening_audio(const std::size_t
     return deuteros_amiga_paula_->render(frames);
 }
 
+std::optional<DeuterosAmigaNativeAudioCheckpoint>
+ReleaseRuntimeCoordinator::deuteros_amiga_native_audio_checkpoint() const {
+    if(!active_||!session_snapshot_
+        ||session_snapshot_->kind!=RuntimeSessionKind::deuteros_amiga_title_stage)
+        return std::nullopt;
+    return deuteros_amiga_native_audio_checkpoint_;
+}
+
+std::optional<std::vector<float>>
+ReleaseRuntimeCoordinator::render_deuteros_amiga_native_audio(const std::size_t frames){
+    if(!active_||!session_snapshot_
+        ||session_snapshot_->kind!=RuntimeSessionKind::deuteros_amiga_title_stage
+        ||!deuteros_amiga_native_audio_checkpoint_||!deuteros_amiga_native_audio_mixer_
+        ||!deuteros_amiga_native_audio_mixer_->audible())return std::nullopt;
+    auto rendered=deuteros_amiga_native_audio_mixer_->render(frames);
+    if(rendered.empty())return std::nullopt;
+    return rendered;
+}
+
 std::optional<DeuterosAmigaOpeningCheckpoint>
 ReleaseRuntimeCoordinator::deuteros_amiga_opening_checkpoint() const {
     if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_opening
@@ -5146,6 +5168,12 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_service(const DeuterosAm
         }
         std::optional<DeuterosAmigaBootstrapFrameSnapshot> bootstrap_frame;
         std::optional<DeuterosAmigaTitleProgramEntrySnapshot> program_entry;
+        std::optional<DeuterosAmigaNativeAudioPreparation> native_audio;
+        if(current->next_call_address==0x200b2&&plan.next_instruction_address==0x2178e){
+            native_audio=prepare_deuteros_amiga_native_audio(plan.main_stage_audio_results,
+                memory,deuteros_amiga_native_audio_generation_+1,o.trace_sequence);
+            if(!native_audio->accepted){result.error=native_audio->error;return result;}
+        }
         // Publish only after the observed graphics.library LoadRGB4 call has
         // returned. Reaching its call boundary after decrunch/deinterleave is
         // necessary, but is not evidence that the original accepted it.
@@ -5190,6 +5218,13 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_service(const DeuterosAm
             deuteros_amiga_title_program_entry_=std::move(program_entry);
             session_snapshot_=make_runtime_session_snapshot(
                 *active_,RuntimeSessionKind::deuteros_amiga_title_program_entry);
+        }
+        if(native_audio){
+            auto mixer=std::make_unique<DeuterosAmigaNativeAudioMixer>();
+            static_cast<void>(mixer->install(std::move(native_audio->voices)));
+            deuteros_amiga_native_audio_checkpoint_=std::move(native_audio->checkpoint);
+            deuteros_amiga_native_audio_mixer_=std::move(mixer);
+            ++deuteros_amiga_native_audio_generation_;
         }
         result.accepted=true;
     }catch(const std::exception&e){result.error=e.what();}

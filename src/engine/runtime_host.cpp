@@ -310,6 +310,16 @@ std::optional<std::vector<float>> RuntimeHost::render_deuteros_amiga_opening_aud
     if (revoking()) return std::nullopt;
     return NativeSessionController::render_deuteros_amiga_opening_audio(frames);
 }
+std::optional<DeuterosAmigaNativeAudioCheckpoint>
+RuntimeHost::deuteros_amiga_native_audio_checkpoint()const{
+    if(revoking())return std::nullopt;
+    return NativeSessionController::deuteros_amiga_native_audio_checkpoint();
+}
+std::optional<std::vector<float>> RuntimeHost::render_deuteros_amiga_native_audio(
+    const std::size_t frames){
+    if(revoking())return std::nullopt;
+    return NativeSessionController::render_deuteros_amiga_native_audio(frames);
+}
 
 std::optional<DeuterosAmigaOpeningPresentationSnapshot>
 RuntimeHost::deuteros_amiga_opening_presentation() const {

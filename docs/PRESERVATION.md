@@ -8214,7 +8214,12 @@ the raw `$dff096` writes in order: owned `$22a6c`, then that word XOR `$800f`.
 Both intents are returned separately from the final memory value. Native
 initialization at `$2177c` now runs `$22a5a` and both following consumers,
 retains `{15, $8000, 0, $800f}` for that reset path, and reaches `$2178e`.
-This is not yet a hardware DMA model or audible SDL mixer integration.
+The two results also retain every ordered AUD0–AUD3 pointer, length, period
+and volume write. The coordinator publishes a metadata-only generation after
+the whole native transaction commits, including owned-range hashes and the
+originating observation sequence. The recovered sound-zero pair has zero
+volume, publishes no PCM and renders no host samples. This is not a hardware
+DMA model.
 
 Each 14-byte descriptor at `$22a6e + 14*channel` supplies pointer, word length,
 period, volume, control and parameter to AUD0–AUD3. The original ordering is
@@ -8232,6 +8237,17 @@ tests the pre-decrement low byte and restores the raw silent descriptor
 pointer/length when it is zero. Tail selection performs word-sized shifts
 and subtraction before adding the unsigned 16-bit displacement to the sample
 pointer. The random-period shifts are **5, 5, 4, 3**, not one shared constant.
+
+The native audio sink accepts only an explicitly returned consumer receipt.
+For a future audible receipt it requires the final ordered DMA intent to name
+the channel, a nonzero period and volume no greater than 64, and a complete
+owned `length_words * 2` memory range. It privately copies that exact bounded
+range for one-shot signed-byte rendering and exposes only its SHA-256 and
+register metadata. It does not schedule `$224cc`, replay `$22bea`, interpret
+control words as looping, synthesize completion interrupts, pad a terminal
+buffer, or treat the private sound-zero descriptor as game PCM. Reset and
+source revocation discard the receipt, generation and private voice together;
+SDL clears a queued generation before accepting another one.
 
 The `$22a34` random helper reads the owned word seed at `$22a32`, masks its
 index to `$7fff`, reads one byte from original ROM at `$ff0000+index`, adds

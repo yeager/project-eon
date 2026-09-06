@@ -1417,6 +1417,7 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
     std::uint8_t bootstrap_profile_five_phase=0;
     std::uint32_t main_stage_stack_top=0;
     std::array<std::uint16_t,4> main_stage_audio_dma_writes{};
+    std::array<DeuterosAmigaOwnedAudioResult,2> main_stage_audio_results{};
     std::uint32_t d2_value=0;
 };
 struct DeuterosAmigaObservedLoopRequestService {
@@ -1800,6 +1801,7 @@ DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
             const auto second_audio=consume_deuteros_amiga_owned_audio(read,write);
             plan.main_stage_audio_dma_writes={first_audio.dma_writes[0],first_audio.dma_writes[1],
                 second_audio.dma_writes[0],second_audio.dma_writes[1]};
+            plan.main_stage_audio_results={first_audio,second_audio};
             plan.next_call_address=0;plan.local_call_target=0;plan.next_return_address=0;
             plan.next_instruction_address=0x2178e;
             plan.next_vector=0;plan.pending_read_instruction=0;plan.pending_read_address=0;

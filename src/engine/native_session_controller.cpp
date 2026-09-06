@@ -496,6 +496,16 @@ NativeSessionController::render_deuteros_amiga_opening_audio(const std::size_t f
     if (state_ != NativeSessionState::deuteros_amiga_opening) return std::nullopt;
     return runtime_.render_deuteros_amiga_opening_audio(frames);
 }
+std::optional<DeuterosAmigaNativeAudioCheckpoint>
+NativeSessionController::deuteros_amiga_native_audio_checkpoint()const{
+    if(state_!=NativeSessionState::deuteros_amiga_title_stage_boundary)return std::nullopt;
+    return runtime_.deuteros_amiga_native_audio_checkpoint();
+}
+std::optional<std::vector<float>> NativeSessionController::render_deuteros_amiga_native_audio(
+    const std::size_t frames){
+    if(state_!=NativeSessionState::deuteros_amiga_title_stage_boundary)return std::nullopt;
+    return runtime_.render_deuteros_amiga_native_audio(frames);
+}
 
 std::optional<DeuterosAmigaOpeningCheckpoint>
 NativeSessionController::deuteros_amiga_opening_checkpoint() const {

@@ -3043,6 +3043,34 @@ int main() {
         assert(!rejected.accepted
             &&rejected.error=="Deuteros title program-entry ownership changed");
     }
+    {
+        eon::NativeRuntimeMemory memory;
+        eon::NativeRuntimeEffectBatch pcm{"native-audio-owned-range",true,{}};
+        for(std::uint32_t index=0;index<4;++index)pcm.effects.push_back({index+1,
+            {eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x500+index},
+            eon::MemoryTransferElementWidth::byte,eon::NativeRuntimeByteOrder::big_endian,
+            static_cast<std::uint32_t>(index*32U)});
+        assert(memory.apply(pcm).accepted);
+        std::array<eon::DeuterosAmigaOwnedAudioResult,2> receipts{};
+        receipts[1].dma_writes={0,0x8001};
+        receipts[1].channel_registers[0]={0,0x500,2,100,64,true,true,true,true};
+        const auto prepared=eon::prepare_deuteros_amiga_native_audio(
+            receipts,memory,7,99);
+        assert(prepared.accepted&&prepared.error.empty()
+            &&prepared.checkpoint.generation==7
+            &&prepared.checkpoint.trace_sequence==99
+            &&prepared.checkpoint.audible_voice_count==1
+            &&prepared.checkpoint.invocations[1].channels[0].enabled_by_final_dma_intent
+            &&prepared.checkpoint.invocations[1].channels[0].pcm_sha256
+                =="67abcb5793d679b6c43b443f36cddbfff43b3b6cb8a83e39ae81c47af84bd48c");
+        eon::DeuterosAmigaNativeAudioMixer mixer;
+        assert(mixer.install(prepared.voices));
+        const auto rendered=mixer.render(1);
+        assert(rendered.size()==2&&rendered[0]==0.0F&&rendered[1]==0.0F);
+        receipts[1].channel_registers[0].pointer=0x600;
+        const auto missing=eon::prepare_deuteros_amiga_native_audio(receipts,memory,8,100);
+        assert(!missing.accepted&&missing.error=="Deuteros native audio range is not owned");
+    }
     const std::filesystem::path data_directory = EON_REAL_DATA_DIR;
     if (data_directory.empty() || !std::filesystem::is_directory(data_directory)) {
         std::cout << "SKIP: configure -DEON_REAL_DATA_DIR=<original archive directory>\n";
@@ -6682,6 +6710,23 @@ int main() {
                     const auto d=0x22a6e + 14*tested_channel,h=0xdff0a0+16*tested_channel;
                     const auto result=eon::consume_deuteros_amiga_owned_audio(get,put);
                     assert((result.dma_writes==std::array<std::uint16_t,2>{0,0x800f}));
+                    const auto& register_receipt=result.channel_registers[tested_channel];
+                    assert(register_receipt.channel==tested_channel
+                        &&register_receipt.pointer_written
+                        &&register_receipt.length_written
+                        &&register_receipt.volume_written);
+                    if(mode==0x401||mode==0x402){
+                        assert(register_receipt.pointer==0x22a6a
+                            &&register_receipt.length_words==1
+                            &&register_receipt.volume==0
+                            &&!register_receipt.period_written);
+                    }else{
+                        assert(register_receipt.pointer==0x80000
+                            &&register_receipt.length_words==10
+                            &&register_receipt.period==100
+                            &&register_receipt.volume==20
+                            &&register_receipt.period_written);
+                    }
                     assert(get(0x22a6c,2)==0);
                     if(mode==0x401||mode==0x402){
                         assert(get(h,4)==0x22a6a&&get(h+4,2)==1&&get(h+8,2)==0);
@@ -7571,6 +7616,17 @@ int main() {
                                                         assert(command_read(0x20c20,4)==command_read(0x20128,4));
                                                         assert(main.next_instruction_address==0x2178e&&main.next_call_address==0);
                                                         assert((main.main_stage_audio_dma_writes==std::array<std::uint16_t,4>{15,0x8000,0,0x800f}));
+                                                        for(std::size_t invocation=0;invocation<2;++invocation){
+                                                            const auto& audio=main.main_stage_audio_results[invocation];
+                                                            assert(audio.dma_writes[0]==main.main_stage_audio_dma_writes[invocation*2]
+                                                                &&audio.dma_writes[1]==main.main_stage_audio_dma_writes[invocation*2+1]);
+                                                            for(std::size_t channel=0;channel<4;++channel){
+                                                                const auto& registers=audio.channel_registers[channel];
+                                                                assert(registers.channel==channel&&registers.pointer_written
+                                                                    &&registers.length_written&&registers.period_written
+                                                                    &&registers.volume_written&&registers.volume==0);
+                                                            }
+                                                        }
                                                         assert(command_read(0x22a6c,2)==0&&command_read(0x22a30,2)==0x5a);
                                                         for(unsigned audio_channel=0;audio_channel<4;++audio_channel)
                                                             assert(command_read(0xdff0a8+16*audio_channel,2)==0);

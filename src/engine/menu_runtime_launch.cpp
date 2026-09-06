@@ -278,6 +278,12 @@ std::optional<std::vector<float>>
 LauncherRuntimeController::render_deuteros_amiga_opening_audio(const std::size_t frames) {
     return coordinator_.render_deuteros_amiga_opening_audio(frames);
 }
+std::optional<DeuterosAmigaNativeAudioCheckpoint>
+LauncherRuntimeController::deuteros_amiga_native_audio_checkpoint()const{
+    return coordinator_.deuteros_amiga_native_audio_checkpoint();
+}
+std::optional<std::vector<float>> LauncherRuntimeController::render_deuteros_amiga_native_audio(
+    const std::size_t frames){return coordinator_.render_deuteros_amiga_native_audio(frames);}
 
 std::optional<DeuterosAmigaOpeningCheckpoint>
 LauncherRuntimeController::deuteros_amiga_opening_checkpoint() const {
