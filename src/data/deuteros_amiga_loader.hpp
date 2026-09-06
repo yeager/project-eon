@@ -18,6 +18,37 @@ struct AmigaLoadStage {
     std::uint32_t entry_address = 0;
 };
 
+struct DeuterosAmigaBootDiskTransitionProfile {
+    std::uint32_t entry_address = 0;
+    std::uint32_t source_length = 0;
+    std::string source_sha256;
+    std::uint32_t probe_service_address = 0;
+    std::uint32_t probe_service_length = 0;
+    std::string probe_service_sha256;
+    std::uint32_t request_pointer_cell = 0;
+    std::uint32_t scratch_pointer_cell = 0;
+    std::uint32_t marker_destination_cell = 0;
+    std::uint32_t transfer_length = 0;
+    std::uint32_t marker_offset = 0;
+    std::uint32_t expected_marker = 0;
+    std::uint32_t matched_return_address = 0;
+    std::uint32_t mismatch_clear_address = 0;
+    std::uint32_t mismatch_palette_pointer_cell = 0;
+    std::uint16_t mismatch_palette_offset = 0;
+    std::uint32_t mismatch_palette_source = 0;
+    std::uint16_t mismatch_palette_word_count = 0;
+    std::uint32_t graphics_library_cell = 0;
+    std::int16_t graphics_vector = 0;
+    std::uint32_t message_address = 0;
+    std::uint32_t message_length = 0;
+    std::string message_sha256;
+    std::uint32_t message_renderer_address = 0;
+    std::uint32_t input_wait_instruction = 0;
+    std::uint32_t input_port_address = 0;
+    std::uint8_t input_bit = 0;
+    std::uint32_t retry_address = 0;
+};
+
 // One of the bootstrap routines selected through the six-entry table at
 // $12a36.  These routines only provide read constants; unlike profile zero,
 // a later profile is not assumed to begin with an absolute JMP.
@@ -112,6 +143,7 @@ struct DeuterosAmigaMainStageEntry {
     std::uint32_t second_exit_service_address = 0;
     std::uint32_t second_exit_service_match_value = 0;
     std::uint32_t second_exit_matched_return_address = 0;
+    DeuterosAmigaBootDiskTransitionProfile boot_disk_transition;
     // The raw resource loader at $21932 takes a D0 table index, scales it by
     // four, and obtains a disk offset from $21708. It first transfers four
     // bytes at that offset to resource_probe_address. If the recovered

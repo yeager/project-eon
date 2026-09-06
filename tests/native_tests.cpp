@@ -8,6 +8,7 @@
 #include "engine/deuteros_amiga_opening_runner.hpp"
 #include "engine/deuteros_amiga_bootstrap_frame.hpp"
 #include "engine/deuteros_amiga_owned_alternate_renderer.hpp"
+#include "engine/deuteros_amiga_owned_disk_transition.hpp"
 #include "engine/deuteros_amiga_owned_optional_resource.hpp"
 #include "engine/deuteros_amiga_title_program_entry_session.hpp"
 #include "engine/release_runtime.hpp"
@@ -7081,6 +7082,98 @@ int main() {
                             assert(next.a1_value==command_read(0x20976,4));
                             assert(command_read(next.a1_value+28,2)==5&&command_read(next.a1_value+30,1)==0);
                             assert(command_read(0x21704,2)==selector); // Later selection store is a separate routine.
+                            if(next.next_instruction_address==0x219f8){
+                                const auto system_media=eon::extract_asset_by_sha256(release.path,
+                                    "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38");
+                                const auto data_media=eon::extract_asset_by_sha256(release.path,
+                                    "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a");
+                                assert(system_media&&data_media);
+                                const eon::AmigaAdf system_media_disk{
+                                    std::span<const std::uint8_t>(*system_media)};
+                                const eon::AmigaAdf data_media_disk{
+                                    std::span<const std::uint8_t>(*data_media)};
+                                const auto media_read=[](const eon::AmigaAdf& disk,
+                                    std::uint32_t offset,std::uint32_t width){
+                                    const auto bytes=disk.bytes(offset,width);
+                                    std::uint32_t value=0;
+                                    for(const auto byte:bytes)value=(value<<8U)|byte;
+                                    return value;
+                                };
+                                // Unlike the shared success tail, the mismatch
+                                // route invokes its 32,000-byte clear regardless
+                                // of the owned $21706 word.
+                                command_write(0x21706,eon::MemoryTransferElementWidth::word,0);
+                                const auto disk_message_display=command_read(0x12ff4,4);
+                                command_write(disk_message_display,eon::MemoryTransferElementWidth::longword,0xffffffff);
+                                command_write(disk_message_display+31996,eon::MemoryTransferElementWidth::longword,0xffffffff);
+                                const auto data_plan=eon::begin_deuteros_amiga_owned_disk_transition(
+                                    data_media->size(),command_read,command_write,
+                                    [&](std::uint32_t offset,std::uint32_t width){
+                                        return media_read(data_media_disk,offset,width);
+                                    });
+                                assert(data_plan.state==eon::DeuterosAmigaOwnedDiskTransitionState::awaiting_palette_return);
+                                assert(data_plan.signature==0x8b632804&&command_read(0x2097e,4)==0x8b632804);
+                                assert(command_read(0x219f4,4)==5&&data_plan.buffer_address==command_read(0x2097a,4));
+                                assert(command_read(disk_message_display,4)==0
+                                    &&command_read(disk_message_display+31996,4)==0);
+                                for(std::uint32_t offset=0;offset<1024;++offset)
+                                    assert(command_read(data_plan.buffer_address+offset,1)==data_media_disk.bytes(offset,1)[0]);
+                                assert(data_plan.a0_value==0x12e12&&data_plan.a1_value==command_read(0x21266,4)+0x200);
+                                assert(data_plan.a6_value==command_read(0x12fec,4)&&data_plan.d0_value==16);
+                                assert(data_plan.next_call_address==0x21a30&&data_plan.next_return_address==0x21a34
+                                    &&data_plan.next_vector==-0xc0);
+                                auto bad_palette=eon::DeuterosAmigaObservedDiskTransitionPaletteReturn{
+                                    0x21a30,-0xde,0x21a34,0x12345678,data_plan.a6_value};
+                                const auto before_bad_palette=owned_command_bytes;
+                                bool rejected_bad_palette=false;
+                                try{(void)eon::resume_deuteros_amiga_owned_disk_transition_palette(
+                                    data_plan,bad_palette,command_read,command_write);}
+                                catch(const std::runtime_error&){rejected_bad_palette=true;}
+                                assert(rejected_bad_palette&&owned_command_bytes==before_bad_palette);
+                                bad_palette.vector=-0xc0;
+                                const auto message_plan=eon::resume_deuteros_amiga_owned_disk_transition_palette(
+                                    data_plan,bad_palette,command_read,command_write);
+                                assert(message_plan.state==eon::DeuterosAmigaOwnedDiskTransitionState::awaiting_left_button);
+                                assert(message_plan.a4_value==0x219a2&&message_plan.d0_value==0x12345678);
+                                assert(message_plan.pending_read_instruction==0x21a40
+                                    &&message_plan.pending_read_address==0xbfe001&&message_plan.pending_read_bit==6);
+                                bool rejected_bad_input=false;
+                                try{(void)eon::resume_deuteros_amiga_owned_disk_transition_input(message_plan,
+                                    {0x21a40,0xdff016,6,0});}
+                                catch(const std::runtime_error&){rejected_bad_input=true;}
+                                assert(rejected_bad_input);
+                                const auto held=eon::resume_deuteros_amiga_owned_disk_transition_input(
+                                    message_plan,{0x21a40,0xbfe001,6,0x40});
+                                assert(held.state==eon::DeuterosAmigaOwnedDiskTransitionState::awaiting_left_button
+                                    &&held.pending_read_instruction==0x21a40);
+                                const auto retry=eon::resume_deuteros_amiga_owned_disk_transition_input(
+                                    held,{0x21a40,0xbfe001,6,0});
+                                assert(retry.state==eon::DeuterosAmigaOwnedDiskTransitionState::retry_disk_check
+                                    &&retry.next_instruction_address==0x21a02&&retry.pending_read_instruction==0);
+                                const auto success_read=[&](std::uint32_t address,std::uint32_t width){
+                                    if(address==0x21706||address==0x12ff4)
+                                        throw std::runtime_error("Success route inspected mismatch-only state");
+                                    return command_read(address,width);
+                                };
+                                const auto system_plan=eon::begin_deuteros_amiga_owned_disk_transition(
+                                    system_media->size(),success_read,command_write,
+                                    [&](std::uint32_t offset,std::uint32_t width){
+                                        return media_read(system_media_disk,offset,width);
+                                    });
+                                assert(system_plan.state==eon::DeuterosAmigaOwnedDiskTransitionState::matched_boot_disk);
+                                assert(system_plan.signature==0x4452f018&&system_plan.d0_value==0x4452f018);
+                                assert(system_plan.next_instruction_address==0x21a56&&system_plan.next_call_address==0);
+                                assert(command_read(0x219f4,4)==5&&command_read(0x2097e,4)==0x4452f018);
+                                bool rejected_short_media=false;
+                                const auto before_short_media=owned_command_bytes;
+                                try{(void)eon::begin_deuteros_amiga_owned_disk_transition(
+                                    1023,command_read,command_write,
+                                    [&](std::uint32_t offset,std::uint32_t width){
+                                        return media_read(system_media_disk,offset,width);
+                                    });}
+                                catch(const std::runtime_error&){rejected_short_media=true;}
+                                assert(rejected_short_media&&owned_command_bytes==before_short_media);
+                            }
                             if(next.next_instruction_address==0x21a4c){
                                 for(const unsigned clear:{0U,1U}){
                                     command_write(0x21706,eon::MemoryTransferElementWidth::word,clear);
@@ -13640,6 +13733,34 @@ int main() {
     assert(main_entry.second_exit_service_address == 0x20b42);
     assert(main_entry.second_exit_service_match_value == 0x4452f018);
     assert(main_entry.second_exit_matched_return_address == 0x21a56);
+    const auto& boot_disk = main_entry.boot_disk_transition;
+    assert(boot_disk.entry_address == 0x219f8 && boot_disk.source_length == 84);
+    assert(boot_disk.source_sha256
+        == "6abeabdf2cdef119f5497a0ea8825ff303cf2e973b6884802b8d2113113b047f");
+    assert(boot_disk.probe_service_address == 0x20b42
+        && boot_disk.probe_service_length == 52);
+    assert(boot_disk.probe_service_sha256
+        == "27d12e97f218e7dc0823d8c7fb5ffb49626729e51d8ba1eb6b1feedad32486bc");
+    assert(boot_disk.request_pointer_cell == 0x20976
+        && boot_disk.scratch_pointer_cell == 0x2097a
+        && boot_disk.marker_destination_cell == 0x2097e);
+    assert(boot_disk.transfer_length == 0x400 && boot_disk.marker_offset == 0x3fc
+        && boot_disk.expected_marker == 0x4452f018
+        && boot_disk.matched_return_address == 0x21a56);
+    assert(boot_disk.mismatch_clear_address == 0x21aac
+        && boot_disk.mismatch_palette_pointer_cell == 0x21266
+        && boot_disk.mismatch_palette_offset == 0x200
+        && boot_disk.mismatch_palette_source == 0x12e12
+        && boot_disk.mismatch_palette_word_count == 16);
+    assert(boot_disk.graphics_library_cell == 0x12fec
+        && boot_disk.graphics_vector == -0xc0);
+    assert(boot_disk.message_address == 0x219a2 && boot_disk.message_length == 80);
+    assert(boot_disk.message_sha256
+        == "31d7d5d5e78bc9da63a9e7b4e19d5f0fbc382e6f18da1f41073750c65bf2d9e7");
+    assert(boot_disk.message_renderer_address == 0x20580
+        && boot_disk.input_wait_instruction == 0x21a40
+        && boot_disk.input_port_address == 0xbfe001 && boot_disk.input_bit == 6
+        && boot_disk.retry_address == 0x21a02);
     // $21982 writes profile one before returning to the bootstrap. Its table
     // routine supplies these exact raw-track load constants.
     assert(load_plan.title_handoff_profile.disk_offset == 0x6e000);

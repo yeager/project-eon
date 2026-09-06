@@ -491,15 +491,17 @@ are implemented. Ordered asynchronous counter observations now continue both
 wait routes to `$208ba`, retaining the original snapshot at `$12fe4` where
 required. The `$208ba` service now continues through its typed Exec return,
 then either the raw restart wait to `$217f6` or the `$20a74` request writes,
-typed return and native selector increment. Continue the reached `$21926`
-resource loader and `$219f8`/`$21a4c` special transitions. Recurring resource
+typed return and native selector increment. The reached `$21926` resource
+loader and `$21a4c` special transition are implemented. The complete
+`$219f8` boot-disk check is hash-gated and has a bounded native
+success/mismatch/message/input state machine; connect its selected-media and
+ordered trackdisk phases to the production coordinator. Recurring resource
 0/1 loads now verify the owned table, transfer original bytes in native
 memory and follow the retained primary return into fresh loop preparation;
 branch-entered unknown returns remain at `$21978`.
 The state-two `$21a4c` transition now conditionally clears its fixed buffer,
 admits both ordered Exec returns and publishes handoff metadata before
-reaching `$12800`. Continue that program entry and the separate `$219f8`
-disk-check/message route. The `$12800` re-entry now passes five typed Exec
+reaching `$12800`. The `$12800` re-entry now passes five typed Exec
 returns and native request setup, reaching the original error spin or the
 `$13000`/`$12932` caller boundary. Continue those routines and profile dispatch.
 The configured bootstrap route now executes `$12932` request initialization,
@@ -585,11 +587,15 @@ The restart route
 at `$217f6` now executes sound/flag reset and re-enters `$21276` using fresh
 per-loop continuation state and effect identifiers. Continue verifying its
 new ordered service returns without reusing previous observations.
-Connect
-the separately staged sound descriptors to the `$22bea` consumer without
+Publish the owned recurring main-stage framebuffer and palette through the
+coordinator and SDL renderer. Connect the separately staged sound descriptors
+to the `$22bea` consumer without
 claiming that a software descriptor write already started audio hardware.
-Recover the separate sprite path. Do not reuse unrelated observed bases or assign graphics,
-audio, scheduler, input, or resource semantics.
+The caller-connected ordinary, masked, saved-scanline, restored and `$fe`
+sprite routes are implemented; do not invent another renderer for the
+remaining asynchronous `$224cc` audio/control interrupt path. Do not reuse
+unrelated observed bases or assign graphics, audio, scheduler, input, or
+resource semantics.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

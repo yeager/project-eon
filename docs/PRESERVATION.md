@@ -4083,6 +4083,28 @@ polling loop. Values above two bypass `$218cc` entirely and resume `$2181c`
 reports these original branch facts only; it does not synthesize a main screen,
 interpret the sentinel, or mutate supplied media.
 
+The complete native `$219f8` transition is now separately hash-gated and its
+bounded local execution is implemented. The 84-byte caller span at ADF
+`$71f8` has SHA-256
+`6abeabdf2cdef119f5497a0ea8825ff303cf2e973b6884802b8d2113113b047f`;
+the 52-byte `$20b42` probe service at ADF `$6342` has SHA-256
+`27d12e97f218e7dc0823d8c7fb5ffb49626729e51d8ba1eb6b1feedad32486bc`.
+The native helper stages the selected original disk's complete 1,024-byte
+boot block in owned memory at `[$2097a]`, stores its big-endian longword at
+offset `$3fc` into `$2097e`, and compares it with `$4452f018`. A match reaches
+the shared `$21a56` profile-five tail. A mismatch unconditionally executes the
+already recovered 32,000-byte clear, prepares the exact `-$c0` palette call,
+and, only after that typed return, renders the original command stream at
+`$219a2` through the native `$20580` renderer. That 80-byte stream has SHA-256
+`31d7d5d5e78bc9da63a9e7b4e19d5f0fbc382e6f18da1f41073750c65bf2d9e7`.
+The resulting state waits on bit 6 of `$bfe001`; a held sample remains at
+`$21a40`, while a pressed sample retries at `$21a02`. Tests use both genuine
+system and data disks, proving the expected markers `$4452f018` and
+`$8b632804` without altering either source. Public coordinator wiring for
+runtime disk-slot selection and the three ordered trackdisk returns remains
+the next integration step; the helper never treats a media read as an
+observed operating-system return.
+
 The re-entered stage's raw resource loader at `$21932` is independently
 validated. It shifts its incoming D0 index by two, reads the selected longword
 from `$21708`, and uses that as a physical ADF offset. It clears `$2ad24`,

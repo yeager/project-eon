@@ -386,6 +386,29 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
         throw std::runtime_error("Unexpected Deuteros input-service second exit match value");
     }
     require_word(second_exit, 0x16, 0x6746); // beq.b $21a56
+    constexpr std::uint32_t boot_disk_transition_length = 84;
+    constexpr std::uint32_t boot_disk_probe_service_address = 0x20b42;
+    constexpr std::uint32_t boot_disk_probe_service_length = 52;
+    const auto boot_disk_transition = stage_bytes.subspan(
+        main_offset(second_exit_address), boot_disk_transition_length);
+    if (to_hex(sha256(boot_disk_transition))
+            != "6abeabdf2cdef119f5497a0ea8825ff303cf2e973b6884802b8d2113113b047f") {
+        throw std::runtime_error("Unsupported Deuteros boot-disk transition body");
+    }
+    const auto boot_disk_probe_service = stage_bytes.subspan(
+        main_offset(boot_disk_probe_service_address), boot_disk_probe_service_length);
+    if (to_hex(sha256(boot_disk_probe_service))
+            != "27d12e97f218e7dc0823d8c7fb5ffb49626729e51d8ba1eb6b1feedad32486bc") {
+        throw std::runtime_error("Unsupported Deuteros boot-disk probe service");
+    }
+    constexpr std::uint32_t boot_disk_message_address = 0x219a2;
+    constexpr std::uint32_t boot_disk_message_length = 80;
+    const auto boot_disk_message = stage_bytes.subspan(
+        main_offset(boot_disk_message_address), boot_disk_message_length);
+    if (to_hex(sha256(boot_disk_message))
+            != "31d7d5d5e78bc9da63a9e7b4e19d5f0fbc382e6f18da1f41073750c65bf2d9e7") {
+        throw std::runtime_error("Unsupported Deuteros boot-disk message stream");
+    }
     // The resource path is a real data-flow boundary after re-entering the
     // main stage. It uses D0 as a four-byte table index, makes a 4-byte probe
     // at the selected original disk offset, then uses that recovered
@@ -542,6 +565,15 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
         0x10, 0x06, 0x08, {3, 5, 6, 0x14}, 0xdff01f, 5, 0x21698, input_dispatch_address,
         0x21704, 2, 1, 0x218cc, 0x2181c, 0x21704, 2, 0x21a4c, 3, 0x219f8,
         0x219f4, 1, 0x12ff8, 0x12ffc, 0x219f4, 5, 0x20b42, 0x4452f018, 0x21a56,
+        {second_exit_address, boot_disk_transition_length,
+            "6abeabdf2cdef119f5497a0ea8825ff303cf2e973b6884802b8d2113113b047f",
+            boot_disk_probe_service_address, boot_disk_probe_service_length,
+            "27d12e97f218e7dc0823d8c7fb5ffb49626729e51d8ba1eb6b1feedad32486bc",
+            0x20976, 0x2097a, 0x2097e, 0x400, 0x3fc, 0x4452f018, 0x21a56,
+            0x21aac, 0x21266, 0x200, 0x12e12, 16, 0x12fec, -0xc0,
+            boot_disk_message_address, boot_disk_message_length,
+            "31d7d5d5e78bc9da63a9e7b4e19d5f0fbc382e6f18da1f41073750c65bf2d9e7",
+            0x20580, 0x21a40, 0xbfe001, 6, 0x21a02},
         resource_loader_address, resource_table_address, 2, resource_probe_address,
         resource_payload_address, resource_transfer_address, 0x1600, 0xdff016, 10,
         resource_retry_address, resource_consumer_address, resource_payload_address,
