@@ -458,7 +458,9 @@ probe/body transfer, and observed released `$2196e` hardware retry into owned
 only through its exact post-return store, so `$21276` can consume both owned
 sources. Ordered typed returns at `$21310` and `$2132a` now continue to the
 local `$2132e->$20888` call and its four native stores. Continue from the
-`$208b0` ExecBase read, before vector `-$a8`; do not reuse unrelated observed bases or assign graphics,
+typed `$208b0` ExecBase read and `-$a8` return, then the owned `$2126a`
+conditional: `$2133c->$22330` when nonzero or local `$21342` when zero.
+Recover those continuations; do not reuse unrelated observed bases or assign graphics,
 audio, scheduler, input, or resource semantics.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,

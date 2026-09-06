@@ -6282,6 +6282,32 @@ int main() {
             local_request_checkpoint->main_stage_loop_graphics->write_values[0]=99;
             assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()
                 ->main_stage_loop_graphics->write_values[0]==2);
+            eon::DeuterosAmigaObservedLoopRequestService loop_request_service{
+                runtime_copy_sequence+107,0x208b0,4,0x680000,0x208b4,0x208b8,0xdeadbeef,-0xa8};
+            auto bad_loop_request_service=loop_request_service;
+            bad_loop_request_service.exec_base=0x680001;
+            assert(!opening_controller.observe_deuteros_amiga_loop_request_service(bad_loop_request_service).accepted);
+            bad_loop_request_service=loop_request_service;
+            bad_loop_request_service.return_address=0x208ba;
+            assert(!opening_controller.observe_deuteros_amiga_loop_request_service(bad_loop_request_service).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_loop_local_request->checksum);
+            assert(opening_controller.observe_deuteros_amiga_loop_request_service(loop_request_service).accepted);
+            const auto after_loop_request_service=opening_controller.native_runtime_memory_checkpoint();
+            assert(after_loop_request_service&&after_loop_request_service->applied_batch_count
+                ==after_loop_local_request->applied_batch_count+1);
+            assert(runtime_byte(*after_loop_request_service,4)==0);
+            assert(runtime_byte(*after_loop_request_service,5)==0x68);
+            assert(runtime_byte(*after_loop_request_service,6)==0);
+            assert(runtime_byte(*after_loop_request_service,7)==0);
+            std::uint32_t optional_loop_pointer=0;
+            for(std::uint32_t i=0;i<4;++i)
+                optional_loop_pointer=(optional_loop_pointer<<8U)|*runtime_byte(*after_loop_request_service,0x2126a+i);
+            const auto loop_request_checkpoint=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+            assert(loop_request_checkpoint&&loop_request_checkpoint->main_stage_loop_graphics
+                &&loop_request_checkpoint->main_stage_loop_graphics->d0_value==optional_loop_pointer
+                &&loop_request_checkpoint->stop_before_address==(optional_loop_pointer?0x2133c:0x21342));
+            assert(!opening_controller.observe_deuteros_amiga_loop_request_service(loop_request_service).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_loop_request_service->checksum);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

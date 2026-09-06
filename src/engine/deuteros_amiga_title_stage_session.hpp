@@ -62,6 +62,7 @@ public:
     // setup routine. They are source-data evidence only, never a screen.
     [[nodiscard]] std::array<RgbColor, 20> graphics_setup_palette_evidence() const;
     [[nodiscard]] const std::string& original_sha256() const noexcept { return original_sha256_; }
+    [[nodiscard]] auto advance_main_stage_loop_request_return(const DeuterosAmigaObservedLoopRequestService&o,std::uint32_t pointer) { return service_batch_boundary_session_.advance_main_stage_loop_request_return(o,pointer); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>
     main_stage_loop_prepare_body_plan() const { return service_batch_boundary_session_.main_stage_loop_prepare_body_plan(); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>

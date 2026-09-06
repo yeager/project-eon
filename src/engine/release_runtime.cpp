@@ -2834,7 +2834,8 @@ ReleaseRuntimeCoordinator::deuteros_amiga_title_dependency_chain_checkpoint() co
     if(result.main_stage_loop_graphics){
         const auto& plan=*result.main_stage_loop_graphics;
         result.stop_before_address=plan.pending_read_instruction!=0
-            ?plan.pending_read_instruction:plan.next_call_address;
+            ?plan.pending_read_instruction:(plan.next_instruction_address!=0
+                ?plan.next_instruction_address:plan.next_call_address);
     }else if(result.main_stage_loop_prepare){
         result.stop_before_address=result.main_stage_loop_prepare->next_call_address;
     }
@@ -4369,6 +4370,39 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_graphics_retur
         }
         *native_runtime_memory_=std::move(memory);
         result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_loop_request_service(
+    const DeuterosAmigaObservedLoopRequestService o){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
+        result.error="Deuteros loop request service requires active owned memory";return result;
+    }
+    try{
+        auto memory=*native_runtime_memory_;
+        std::uint32_t pointer=0;
+        for(std::uint32_t i=0;i<4;++i){
+            const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,0x2126a+i});
+            if(!byte)throw std::runtime_error("Deuteros optional pointer is not owned");
+            pointer=(pointer<<8U)|*byte;
+            const auto base_byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,4+i});
+            if(base_byte&&*base_byte!=((o.exec_base>>(24U-i*8U))&0xffU))
+                throw std::runtime_error("Deuteros ExecBase observation contradicts owned memory");
+        }
+        auto pending=*deuteros_amiga_->title_stage_session();
+        if(!pending.advance_main_stage_loop_request_return(o,pointer)){
+            result.error="Deuteros loop request service did not match boundary";return result;
+        }
+        const auto applied=memory.apply({"deuteros-amiga-loop-exec-base",true,{{
+            1,{NativeRuntimeAddressSpace::linear,std::nullopt,4},
+            MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,o.exec_base}}});
+        if(!applied.accepted){result.error=applied.error;return result;}
+        if(!deuteros_amiga_->advance_main_stage_loop_request_return(o,pointer)){
+            result.error="Deuteros loop request service disappeared before commit";return result;
+        }
+        *native_runtime_memory_=std::move(memory);result.accepted=true;
     }catch(const std::exception&e){result.error=e.what();}
     return result;
 }

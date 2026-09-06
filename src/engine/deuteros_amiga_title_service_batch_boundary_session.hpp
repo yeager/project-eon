@@ -1398,6 +1398,13 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
     std::array<std::uint32_t,4> write_values{};
     std::array<MemoryTransferElementWidth,4> write_widths{};
     std::size_t write_count=0;
+    std::uint32_t next_instruction_address=0;
+};
+struct DeuterosAmigaObservedLoopRequestService {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t read_instruction=0,source_address=0,exec_base=0;
+    std::uint32_t call_address=0,return_address=0,result_d0=0;
+    std::int16_t vector=0;
 };
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
@@ -1478,7 +1485,11 @@ public:
             ||to_hex(sha256(main_stage.subspan(0x1314,32)))
                 !="3c03bd624f997572d76c303a2e14e9f1838f8473d8efa30be4484e9ad61e047f"
             ||to_hex(sha256(main_stage.subspan(0x888,44)))
-                !="4b31f3ba22021d8fdd1bbf5909614083d96c973fcfa9d5dd5eccb4fb90898a18")
+                !="4b31f3ba22021d8fdd1bbf5909614083d96c973fcfa9d5dd5eccb4fb90898a18"
+            ||to_hex(sha256(main_stage.subspan(0x8b4,6)))
+                !="1bc5d4252f7ba616e4c3fc2f7da46952324958dffc5850067b577a29db3fef31"
+            ||to_hex(sha256(main_stage.subspan(0x1334,14)))
+                !="2b80d3a7163220dee854c81927ae70652eac4a0b9d39ac4582de7220ee9a23d4")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
@@ -3857,6 +3868,26 @@ public:
         main_stage_loop_graphics_plan_=plan;
         return plan;
     }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    advance_main_stage_loop_request_return(const DeuterosAmigaObservedLoopRequestService&o,
+        const std::uint32_t optional_pointer){
+        if(!main_stage_loop_graphics_plan_||main_stage_loop_graphics_returns_!=2
+            ||main_stage_loop_request_returned_)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.read_instruction!=0x208b0
+            ||o.source_address!=4||o.exec_base<=0xa8||o.exec_base>0xffffff
+            ||(o.exec_base&1U)!=0||o.call_address!=0x208b4
+            ||o.return_address!=0x208b8||o.vector!=-0xa8)
+            throw std::runtime_error("Deuteros loop request service does not match boundary");
+        DeuterosAmigaMainStageLoopGraphicsPlan plan;
+        plan.d0_value=optional_pointer;plan.a6_value=o.exec_base;
+        if(optional_pointer){
+            plan.next_call_address=0x2133c;plan.next_return_address=0x21342;
+            plan.local_call_target=0x22330;
+        }else plan.next_instruction_address=0x21342;
+        main_stage_loop_graphics_plan_=plan;
+        main_stage_loop_request_returned_=true;last_command_sequence_=o.trace_sequence;
+        return plan;
+    }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareReturnPlan>
     observe_main_stage_loop_prepare_return(const DeuterosAmigaObservedLocalCallReturn&o){
         if(!main_stage_loop_service_return_||main_stage_loop_prepare_body_plan_
@@ -4131,6 +4162,7 @@ private:
         main_stage_cia_a_bit_set_;
     std::optional<DeuterosAmigaObservedMainStageResourceLoad> main_stage_resource_load_;
     unsigned main_stage_loop_graphics_returns_=0;
+    bool main_stage_loop_request_returned_=false;
     std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> main_stage_loop_graphics_plan_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> main_stage_loop_service_return_;
     std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>

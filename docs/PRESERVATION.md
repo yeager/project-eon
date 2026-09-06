@@ -3503,6 +3503,20 @@ These newest reached states take precedence over older service-setup stops in
 the existing developer-panel summary. Copy mutation cannot change runtime
 ownership. Tests also check the retained D0 high word (`$12340010` for an
 observed `$12345678`) and the exact owned A6 value.
+
+The `$208b0` ExecBase read and `$208b4/-$a8` return now have one typed
+service observation. It requires the exact read address 4, even nonzero
+24-bit base, call, vector, return `$208b8`, and increasing sequence. Existing
+owned base bytes must agree. The observed base is committed atomically with
+the session advance; it is not a guessed OS address. The six-byte call/RTS
+span at ADF `$60b4` has SHA-256
+`1bc5d4252f7ba616e4c3fc2f7da46952324958dffc5850067b577a29db3fef31`.
+The following 14-byte caller span at ADF `$6b34` hashes to
+`2b80d3a7163220dee854c81927ae70652eac4a0b9d39ac4582de7220ee9a23d4`.
+It overwrites the service result D0 with the owned longword at `$2126a`.
+Nonzero stops at `$2133c->$22330`; zero reaches local entry `$21342`.
+No behavior inside `$22330`, OS service effects, or subsequent record-loop
+execution is inferred. Diagnostics report the selected boundary.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,
