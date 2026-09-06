@@ -4522,6 +4522,9 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_scheduler_pass(){
     }
     try{
         auto pending=*deuteros_amiga_->title_stage_session();
+        const auto prior=pending.main_stage_loop_graphics_plan();
+        const auto resumed=prior&&prior->next_instruction_address==0x214aa
+            ?prior->command_stop:std::nullopt;
         if(!pending.advance_main_stage_scheduler_pass()){
             result.error="Deuteros scheduler did not match boundary";return result;
         }
@@ -4545,10 +4548,24 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_scheduler_pass(){
             if(!applied.accepted)throw std::runtime_error(applied.error);
         };
         std::optional<DeuterosAmigaOwnedCommandStop> command_stop;
-        std::size_t command_budget=4096;
-        const auto count=read(0x21248,2);
-        for(std::uint32_t i=0;i<(count?count:0x10000U);++i){
+        std::size_t command_budget=resumed?resumed->scheduler_commands_remaining:4096;
+        const auto count=resumed?resumed->scheduler_iterations:read(0x21248,2);
+        const auto iterations=count?count:0x10000U;
+        const auto start_index=resumed?resumed->scheduler_index:0U;
+        if(resumed&&(count==0||count>0x10000U||start_index>=count
+            ||resumed->record!=0x210f8+start_index*24U))
+            throw std::runtime_error("Deuteros scheduler resume state is inconsistent");
+        const auto retain_stop=[&](DeuterosAmigaOwnedCommandStop stop,std::uint32_t index){
+            stop.scheduler_index=index;stop.scheduler_iterations=iterations;
+            stop.scheduler_commands_remaining=command_budget;command_stop=stop;
+        };
+        for(std::uint32_t i=start_index;i<iterations;++i){
             const auto record=0x210f8+i*24U;
+            if(resumed&&i==start_index){
+                auto stop=execute_deuteros_amiga_owned_commands(record,resumed->cursor,
+                    resumed->d0,read,write,command_budget);
+                if(stop.instruction){retain_stop(stop,i);break;}
+            }
             // Each local RTS branches back to $2138e for this same record.
             // The shared budget also bounds zero-duration yielding loops.
             for(;;){
@@ -4558,7 +4575,7 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_scheduler_pass(){
             bool revisit=false;
             const auto command=[&](std::uint32_t d0){
                 auto stop=execute_deuteros_amiga_owned_commands(record,cursor,d0,read,write,command_budget);
-                if(stop.instruction){stop.scheduler_index=i;command_stop=stop;}
+                if(stop.instruction)retain_stop(stop,i);
                 else revisit=true;
             };
             const auto timer=[&](std::uint32_t d0_high){
@@ -4629,7 +4646,8 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_frame_buffer(const DeuterosAmi
             if(existing&&*existing!=((o.buffer_address>>(24U-i*8U))&0xffU))
                 throw std::runtime_error("Deuteros frame pointer contradicts owned memory");
         }
-        NativeRuntimeEffectBatch batch{"deuteros-amiga-first-frame-clear",true,{}};
+        const auto frame_id=std::to_string(o.trace_sequence);
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-frame-clear-"+frame_id,true,{}};
         batch.effects.reserve(8004);
         const auto add=[&](std::uint32_t address,MemoryTransferElementWidth width,std::uint32_t value){
             batch.effects.push_back({batch.effects.size()+1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},
@@ -4652,7 +4670,7 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_frame_buffer(const DeuterosAmi
             if(read(record,2)!=0xff)
                 throw std::runtime_error("Deuteros frame requires its original sprite renderer continuation");
         }
-        const auto counted=memory.apply({"deuteros-amiga-first-frame-active-count",true,{{
+        const auto counted=memory.apply({"deuteros-amiga-frame-active-count-"+frame_id,true,{{
             1,{NativeRuntimeAddressSpace::linear,std::nullopt,0x210f2},MemoryTransferElementWidth::word,
             NativeRuntimeByteOrder::big_endian,active_count}}});
         if(!counted.accepted){result.error=counted.error;return result;}
@@ -4687,6 +4705,74 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_view_selection(){
         }
         if(!deuteros_amiga_->advance_main_stage_view_selection(counter,base)){
             result.error="Deuteros view selection disappeared before commit";return result;
+        }
+        result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::advance_deuteros_amiga_command_palette(){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
+        result.error="Deuteros command palette requires active owned memory";return result;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto current=pending.main_stage_loop_graphics_plan();
+        if(!current||!current->command_stop||current->next_instruction_address!=0x214ee){
+            result.error="Deuteros command palette did not match boundary";return result;
+        }
+        const auto read_long=[&](std::uint32_t address){
+            std::uint32_t value=0;
+            for(std::uint32_t i=0;i<4;++i){
+                const auto byte=native_runtime_memory_->read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
+                if(!byte)throw std::runtime_error("Deuteros command palette source is not owned");
+                value=(value<<8U)|*byte;
+            }
+            return value;
+        };
+        const auto index=current->command_stop->d0&0xffffU;
+        const auto displacement=(index<<5U)&0xffffU;
+        const auto palette=read_long(0x21266)+(displacement<0x8000U?displacement:displacement-0x10000U);
+        const auto library=read_long(0x12fec);
+        if(!pending.advance_main_stage_command_palette(palette,library)){
+            result.error="Deuteros command palette prefix rejected";return result;
+        }
+        auto memory=*native_runtime_memory_;
+        const auto applied=memory.apply({"deuteros-amiga-command-palette-"+
+            std::to_string(memory.diagnostics().applied_batch_count),true,{{
+            1,{NativeRuntimeAddressSpace::linear,std::nullopt,0x210f6},MemoryTransferElementWidth::word,
+            NativeRuntimeByteOrder::big_endian,index}}});
+        if(!applied.accepted){result.error=applied.error;return result;}
+        if(!deuteros_amiga_->advance_main_stage_command_palette(palette,library)){
+            result.error="Deuteros command palette disappeared before commit";return result;
+        }
+        *native_runtime_memory_=std::move(memory);result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_command_palette_return(const DeuterosAmigaObservedMainStageExecReturn o){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
+        result.error="Deuteros command palette return requires active owned memory";return result;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto current=pending.main_stage_loop_graphics_plan();
+        std::uint32_t library=0;
+        if(current&&current->next_call_address==0x21514){
+            for(std::uint32_t i=0;i<4;++i){
+                const auto byte=native_runtime_memory_->read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,0x12fec+i});
+                if(!byte)throw std::runtime_error("Deuteros command palette library is not owned");
+                library=(library<<8U)|*byte;
+            }
+        }
+        if(!pending.observe_main_stage_command_palette_return(o,library)){
+            result.error="Deuteros command palette return did not match boundary";return result;
+        }
+        if(!deuteros_amiga_->observe_main_stage_command_palette_return(o,library)){
+            result.error="Deuteros command palette return disappeared before commit";return result;
         }
         result.accepted=true;
     }catch(const std::exception&e){result.error=e.what();}

@@ -3601,7 +3601,8 @@ sample sequence. The 12-byte wait/RTS span at ADF `$6ef2` has SHA-256
 Each sample is the exact bit-5 read at `$216f2/$dff01f`. A clear bit retains
 the wait and requires a fresh sample, without accepting another library
 return; a set bit follows `$216fc`, the caller RTS at `$214a8`, and the
-initial `$2181c->$21380` continuation. Samples commit the observed byte and
+initial `$2181c->$21380` continuation; the following view call instead
+returns to the outer caller at `$21822`. Samples commit the observed byte and
 session state atomically. Replay and changed call metadata commit nothing.
 Tests cover two clear-bit samples followed by release. The next processing
 pass now executes the owned `$214aa` command route described below. No synthetic wait result,
@@ -3622,10 +3623,31 @@ command branches and zero-duration scheduler revisits; exhaustion rejects the
 entire private pass. Store batch identifiers include the starting committed
 batch count so later successful passes cannot collide with the first pass.
 
-Palette operations retain an explicit resumable-position boundary at `$214ee`
-before palette MOVEM. The checkpoint retains record address, cursor, D0,
-D1 low word and scheduler index. It does not claim a recovered stack pointer
-or D1 high word; palette service admission/resumption remains to be connected.
+Palette operations retain an explicit resumable-position checkpoint at `$214ee`
+before palette MOVEM. The native caller continuation preserves record address,
+cursor, scheduler index, the original iteration count and remaining command
+budget in local state rather than fabricating guest-stack observations.
+It computes the palette address from owned `$21266` plus the signed word
+result of `index << 5`, writes the index to `$210f6`, loads owned `$12fec`,
+and stops before `$21514/-$c0` with A0 `$12e12` and D0 low word 16.
+Ordered typed returns must match `$21514->$21518` and `$2152a->$2152e`.
+The first restores the palette source, selects A0 `$12f12`, reloads the
+owned library base and preserves the returned D0 high word when setting
+the count to 16. The second restores the original record/cursor and resumes
+`$214aa` using returned D0. No palette-library memory side effects or rendered
+colour change are implied by a return packet.
+
+Native scheduler resumption starts at the saved command cursor in the saved
+record, not at record zero or its earlier stored program pointer. Budget and
+iteration count survive the service boundary. The genuine path finishes the
+second record's one-tick wait and gives records three/four their `$50` waits,
+then decrements those to `$4f` before reaching `$2143a`. Tests verify call
+order, replay rejection, register restoration and these exact timer values.
+Frame-clear/count batch identifiers now include the admitted sequence, allowing
+the following even-counter buffer at `$80000` to be cleared and selected
+without colliding with the first frame's batch identifiers. The complete
+second no-draw walk, even view at `$12e00`, and return to `$21822` are tested.
+The next outer input gate and sprite-bearing frames remain separate work.
 The genuine first record at resource offset `$382` executes opcode `$13`,
 setting `$2171e` to one, then executes sound arguments `(1,1)` and `(2,2)`
 through the native descriptor routine below. It yields timer one, which the

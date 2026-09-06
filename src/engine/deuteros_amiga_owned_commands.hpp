@@ -15,6 +15,8 @@ struct DeuterosAmigaOwnedCommandStop {
     std::uint32_t record = 0, cursor = 0, d0 = 0;
     std::uint16_t d1_word = 0;
     std::uint32_t scheduler_index = 0;
+    std::uint32_t scheduler_iterations = 0;
+    std::size_t scheduler_commands_remaining = 0;
 };
 
 // $22ab8 stages four 14-byte software descriptors. It does not write AUDx

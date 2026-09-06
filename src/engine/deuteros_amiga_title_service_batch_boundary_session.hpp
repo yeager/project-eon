@@ -1401,6 +1401,7 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
     std::size_t write_count=0;
     std::uint32_t next_instruction_address=0;
     std::optional<DeuterosAmigaOwnedCommandStop> command_stop=std::nullopt;
+    std::uint32_t command_palette_address=0;
 };
 struct DeuterosAmigaObservedLoopRequestService {
     std::uint64_t trace_sequence=0;
@@ -3963,9 +3964,50 @@ public:
         return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
-    advance_main_stage_scheduler_pass(std::optional<DeuterosAmigaOwnedCommandStop> stop=std::nullopt){
-        if(!main_stage_loop_graphics_plan_||main_stage_loop_graphics_plan_->next_instruction_address!=0x21380)
+    advance_main_stage_command_palette(std::uint32_t palette,std::uint32_t library){
+        if(!main_stage_loop_graphics_plan_||!main_stage_loop_graphics_plan_->command_stop
+            ||main_stage_loop_graphics_plan_->next_instruction_address!=0x214ee)
             return std::nullopt;
+        auto plan=*main_stage_loop_graphics_plan_;
+        plan.command_palette_address=palette;
+        plan.a0_value=0x12e12;plan.a1_value=palette;plan.a6_value=library;
+        plan.d0_value=(plan.command_stop->d0&0xffff0000U)|0x10U;
+        plan.next_instruction_address=0;plan.next_call_address=0x21514;
+        plan.next_return_address=0x21518;plan.next_vector=-0xc0;
+        main_stage_loop_graphics_plan_=plan;return plan;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    observe_main_stage_command_palette_return(const DeuterosAmigaObservedMainStageExecReturn&o,
+        std::uint32_t library){
+        if(!main_stage_loop_graphics_plan_||!main_stage_loop_graphics_plan_->command_stop)
+            return std::nullopt;
+        const auto& current=*main_stage_loop_graphics_plan_;
+        const bool first=current.next_call_address==0x21514;
+        if(!first&&current.next_call_address!=0x2152a)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=current.next_call_address
+            ||o.return_address!=current.next_return_address||o.vector!=-0xc0)
+            throw std::runtime_error("Deuteros command palette return does not match boundary");
+        auto plan=current;
+        if(first){
+            plan.a0_value=0x12f12;plan.a1_value=plan.command_palette_address;plan.a6_value=library;
+            plan.d0_value=(o.result_d0&0xffff0000U)|0x10U;
+            plan.next_call_address=0x2152a;plan.next_return_address=0x2152e;
+        }else{
+            plan.next_call_address=0;plan.next_return_address=0;plan.next_vector=0;
+            plan.next_instruction_address=0x214aa;
+            plan.a0_value=plan.command_stop->record;plan.a1_value=plan.command_stop->cursor;
+            plan.d0_value=o.result_d0;plan.command_stop->d0=o.result_d0;
+            plan.command_stop->instruction=0x214aa;
+        }
+        main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    advance_main_stage_scheduler_pass(std::optional<DeuterosAmigaOwnedCommandStop> stop=std::nullopt){
+        if(!main_stage_loop_graphics_plan_)return std::nullopt;
+        const auto& current=*main_stage_loop_graphics_plan_;
+        if(current.next_instruction_address!=0x21380
+            &&!(current.next_instruction_address==0x214aa&&current.command_stop
+                &&current.command_stop->instruction==0x214aa))return std::nullopt;
         auto plan=*main_stage_loop_graphics_plan_;
         plan.next_instruction_address=0;
         plan.pending_read_instruction=0x2143a;plan.pending_read_address=0xdff01f;

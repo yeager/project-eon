@@ -466,8 +466,10 @@ no-draw record walk and owned view selection through `$216ee/-$de`. Continue
 with the now-typed view return and resumable hardware wait into the next
 processing pass. Its owned `$214aa` local interpreter now executes sound
 descriptor staging and the original random routine; the real initial pass
-reaches the second record's palette boundary `$214ee`. Connect that retained
-position to the palette continuation and then resume the same record. Connect
+reaches the second record's palette boundary `$214ee`. The native prefix,
+ordered library-return admission and saved-position scheduler resumption now
+continue through the second buffer/view pass to the outer `$21822` gate.
+Implement that outer input/control continuation and the sprite-bearing path. Connect
 the separately staged sound descriptors to the `$22bea` consumer without
 claiming that a software descriptor write already started audio hardware.
 Recover the separate sprite and `$22330` paths. Do not reuse unrelated observed bases or assign graphics,

@@ -6537,6 +6537,70 @@ int main() {
                 0x21128,next_wait.cursor,0,command_read,command_write,commands_left));}
             catch(const std::runtime_error&){command_budget_rejected=true;}
             assert(command_budget_rejected);
+            assert(command_stop.scheduler_iterations==4&&command_stop.scheduler_commands_remaining==4091);
+            assert(opening_controller.advance_deuteros_amiga_command_palette().accepted);
+            const auto palette_prefix=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+            assert(palette_prefix&&palette_prefix->stop_before_address==0x21514);
+            assert(palette_prefix->main_stage_loop_graphics->a0_value==0x12e12);
+            assert(palette_prefix->main_stage_loop_graphics->a1_value==command_read(0x21266,4)+32);
+            assert(palette_prefix->main_stage_loop_graphics->a6_value==0xabcdef);
+            assert(palette_prefix->main_stage_loop_graphics->d0_value==0x30010);
+            const auto palette_memory=opening_controller.native_runtime_memory_checkpoint();
+            assert(runtime_byte(*palette_memory,0x210f6)==0&&runtime_byte(*palette_memory,0x210f7)==1);
+            assert(!opening_controller.advance_deuteros_amiga_command_palette().accepted);
+            const eon::DeuterosAmigaObservedMainStageExecReturn palette_first{
+                runtime_copy_sequence+113,0x21514,-0xc0,0x21518,0x12345678};
+            const eon::DeuterosAmigaObservedMainStageExecReturn palette_second{
+                runtime_copy_sequence+114,0x2152a,-0xc0,0x2152e,0x56789abc};
+            assert(!opening_controller.observe_deuteros_amiga_command_palette_return(palette_second).accepted);
+            auto bad_palette_return=palette_first;bad_palette_return.vector=-0xde;
+            assert(!opening_controller.observe_deuteros_amiga_command_palette_return(bad_palette_return).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==palette_memory->checksum);
+            assert(opening_controller.observe_deuteros_amiga_command_palette_return(palette_first).accepted);
+            const auto palette_other_view=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+            assert(palette_other_view&&palette_other_view->stop_before_address==0x2152a);
+            assert(palette_other_view->main_stage_loop_graphics->a0_value==0x12f12);
+            assert(palette_other_view->main_stage_loop_graphics->a1_value==palette_prefix->main_stage_loop_graphics->a1_value);
+            assert(palette_other_view->main_stage_loop_graphics->d0_value==0x12340010);
+            assert(!opening_controller.observe_deuteros_amiga_command_palette_return(palette_first).accepted);
+            assert(opening_controller.observe_deuteros_amiga_command_palette_return(palette_second).accepted);
+            const auto resumed_palette=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+            assert(resumed_palette&&resumed_palette->stop_before_address==0x214aa);
+            assert(resumed_palette->main_stage_loop_graphics->a0_value==command_stop.record);
+            assert(resumed_palette->main_stage_loop_graphics->a1_value==command_stop.cursor);
+            assert(resumed_palette->main_stage_loop_graphics->d0_value==0x56789abc);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==palette_memory->checksum);
+            assert(!opening_controller.observe_deuteros_amiga_command_palette_return(palette_second).accepted);
+            assert(opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
+            const auto second_pass=opening_controller.native_runtime_memory_checkpoint();
+            assert(runtime_byte(*second_pass,0x21101)==0&&runtime_byte(*second_pass,0x21119)==0);
+            assert(runtime_byte(*second_pass,0x21131)==0x4f&&runtime_byte(*second_pass,0x21149)==0x4f);
+            assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x2143a);
+            assert(!opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==second_pass->checksum);
+            eon::DeuterosAmigaObservedFrameBuffer second_frame_buffer{
+                runtime_copy_sequence+115,0x2143a,0xdff01f,5,0x20,0x216a4,0x12ff4,0x80000};
+            auto wrong_second_buffer=second_frame_buffer;wrong_second_buffer.pointer_instruction=0x216b0;
+            assert(!opening_controller.observe_deuteros_amiga_frame_buffer(wrong_second_buffer).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==second_pass->checksum);
+            assert(opening_controller.observe_deuteros_amiga_frame_buffer(second_frame_buffer).accepted);
+            const auto second_frame_memory=opening_controller.native_runtime_memory_checkpoint();
+            assert(second_frame_memory->applied_batch_count==second_pass->applied_batch_count+2);
+            assert(runtime_byte(*second_frame_memory,0x21697)==2&&runtime_byte(*second_frame_memory,0x20129)==8);
+            assert(std::count_if(second_frame_memory->initialized_bytes.begin(),second_frame_memory->initialized_bytes.end(),
+                [](const auto& cell){return cell.location.offset>=0x80000&&cell.location.offset<0x87d00&&cell.value==0;})==0x7d00);
+            assert(!opening_controller.observe_deuteros_amiga_frame_buffer(second_frame_buffer).accepted);
+            assert(opening_controller.advance_deuteros_amiga_view_selection().accepted);
+            const auto even_view=opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+            assert(even_view&&even_view->main_stage_loop_graphics->a1_value==0x12e00);
+            assert(even_view->main_stage_loop_graphics->d0_value==2);
+            const eon::DeuterosAmigaObservedViewWait second_view_wait{
+                runtime_copy_sequence+117,
+                eon::DeuterosAmigaObservedMainStageExecReturn{runtime_copy_sequence+116,0x216ee,-0xde,0x216f2,0},
+                0x216f2,0xdff01f,5,0x20};
+            assert(opening_controller.observe_deuteros_amiga_view_wait(second_view_wait).accepted);
+            assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x21822);
+            assert(!opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory
