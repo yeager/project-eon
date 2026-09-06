@@ -15,7 +15,7 @@ namespace {
 // Keep this table in exact source order with docs/function-map.json.  Every
 // source hash names an existing, separately hash-checked original leaf or
 // stage.  The descriptions deliberately retain unknown ABI/state boundaries.
-constexpr std::array<FunctionMapEntry, 103> entries{{
+constexpr std::array<FunctionMapEntry, 104> entries{{
     {"millennium-atari-en-prg-entry", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
      "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
      "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686",
@@ -322,6 +322,13 @@ constexpr std::array<FunctionMapEntry, 103> entries{{
      "private-driver results, DOS character semantics, child status, frames, and game state remain unproven",
      "diagnostics only", "PRESERVATION.md#millennium-spanish-dos-floppy-evidence",
      "1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d"},
+    {"deuteros-amiga-en-bootstrap-bytekiller", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+     "deuteros-amiga-clean-bootstrap-auxiliary", Game::deuteros, Platform::amiga, "en", "m68000",
+     "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+     "ADF+0x0b000", "$1fe00", "verified-static",
+     "graphics.library LoadRGB4 side effects and the final 0x6e0 decoded bytes remain unproven",
+     "native bounded ByteKiller decode, four-plane transfer and typed palette return", "PRESERVATION.md#deuteros-bootstrap-auxiliary-media-request",
+     "fd522e929a0ff377db0bcf42ea5ba3204fd52091b1f58b00731c4399751fd0d1"},
     {"deuteros-amiga-en-main-entry", "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
      "deuteros-amiga-clean-main-stage", Game::deuteros, Platform::amiga, "en", "m68000",
      "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",

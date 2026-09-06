@@ -8270,23 +8270,47 @@ returns, native code replaces the request with command `$8002`, length
 `$1e`. The `$13354/-$1c8` return must report D0 zero and the request must
 still contain every one of those values.
 
-The runtime reads the exact `$b000..$c7ff` span directly from the admitted
-system ADF and stages it in the same private transaction as the validated
-service return. It neither extracts nor modifies the source medium. The
-source payload SHA-256 is
+`$8005` is the extended trackdisk `ETD_CLEAR` command and `$8002` is
+`ETD_READ`; the latter returns decoded sector bytes and is not an MFM/raw-read
+or a device-side codec. The runtime reads the exact `$b000..$c7ff` span
+directly from the admitted system ADF and stages it in the same private
+transaction as the validated service return. It neither extracts nor modifies
+the source medium. The source payload SHA-256 is
 `fd522e929a0ff377db0bcf42ea5ba3204fd52091b1f58b00731c4399751fd0d1`.
 The transaction is discarded if the return, request, source hash, bounds, or
 session sequence differs. Tests also reject a nonzero read result and an
 off-by-one requested length.
 
-Execution deliberately stops at the following local call `$13358 -> $1fe00`
-with return `$1335e`. A linear disassembly of the raw disk span is not proof
-that these are the bytes or semantics seen by the original CPU after the
-device operation. No decompression, relocation, decryption, or other loader
-transformation is inferred. Recovering that contract is the next boundary
-before the payload or the following four-plane copy can be admitted.
+The transferred bytes are directly executable. `$1fe00` saves D0-D7/A0-A2,
+calls `$1fe24`, restores those registers, and returns to `$1335e`. `$1fe24`
+is a bounded backwards ByteKiller decruncher. Its header at payload `+$10c`
+contains packed length `$1600`, output length `$8400`, and XOR seed
+`$35b9f7dd`. It consumes all 1,408 big-endian packed longwords backwards from
+payload `+$1718` to `+$118`, XORs each into D5, produces exactly
+`$20000..$283ff`, and accepts only a final D5 of zero. Native translation has
+explicit source, destination, literal-run, and back-reference bounds and is
+locked to output SHA-256
+`656ec2f7599a143b5bb6c9a935a9868fe1ebdfaa8d8d5a0e52b3a4391aa7d57d`.
+The first 32 output bytes are the 16 RGB4 words
+`000, aa8, 886, 664, 442, a60, 840, 620, 080, ee0, 004, 008, 02e, 0ce, eee,
+c00`.
+
+After the local return, `$1336a..$13394` deinterleaves exactly 4,000 groups
+of four big-endian words from `$20020`: one word per plane per group. The four
+destinations are owned `$12ff4` plus `$0000`, `$1f40`, `$3e80`, and `$5dc0`,
+forming four 8,000-byte 320x200 bitplanes. The plane base is the owned value
+selected by the preceding graphics path; it must be aligned and the complete
+32,000-byte interval must be bounded. `$13396..$133ae` then
+prepares A1 `$20000`, A0 `$12e12`, D0 16 and A6 from `$12fec` for
+graphics.library `LoadRGB4` at vector `-$c0`. Its typed return follows the
+original RTS to `$12a7e -> $12932`, reconnecting the existing bootstrap
+dispatch. The remaining decompressed `$27d20..$283ff` bytes are retained but
+not assigned a meaning because this caller does not consume them.
 
 Caller source gate: ADF `$370e`, 160 bytes, SHA-256
 `c2b321aa5d287fb5328c36556d9bfdd9b730bdb1e0e3afc54889d5cbe1f8cef2`.
-This component-level continuation and genuine-media hash check are not an
-emulator capture, full graphics initialization, or gameplay-parity claim.
+Independent decoding with Ancient 2.3.0 identifies the same ByteKiller stream
+and produces the same length and output hash. Component tests verify every
+decoded byte and every destination plane word, reject changed source data and
+an invalid plane base, and cross the typed palette return. This is still not a
+full graphics-library side-effect implementation or gameplay-parity claim.

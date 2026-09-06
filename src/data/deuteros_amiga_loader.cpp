@@ -32,6 +32,123 @@ void require_long(std::span<const std::uint8_t> bytes, std::size_t offset, std::
 
 } // namespace
 
+DeuterosAmigaBootstrapAuxiliaryImage
+decode_deuteros_amiga_bootstrap_auxiliary(const std::span<const std::uint8_t> payload) {
+    constexpr std::size_t header_offset = 0x10c;
+    constexpr std::size_t header_size = 12;
+    if (payload.size() != 0x1800
+        || to_hex(sha256(payload))
+            != "fd522e929a0ff377db0bcf42ea5ba3204fd52091b1f58b00731c4399751fd0d1") {
+        throw std::runtime_error("Unsupported Deuteros bootstrap auxiliary payload");
+    }
+    // MOVEM.L D0-D7/A0-A2,-(A7); BSR $1fe24; MOVEM.L (A7)+,...; RTS.
+    constexpr std::array<std::uint8_t, 12> wrapper{{
+        0x48,0xe7,0xff,0xe0,0x61,0x1e,0x4c,0xdf,0x07,0xff,0x4e,0x75}};
+    if (!std::equal(wrapper.begin(), wrapper.end(), payload.begin()))
+        throw std::runtime_error("Unexpected Deuteros auxiliary entry wrapper");
+
+    const auto compressed_length = big32(payload, header_offset);
+    const auto output_length = big32(payload, header_offset + 4);
+    const auto checksum_seed = big32(payload, header_offset + 8);
+    if (compressed_length != 0x1600 || output_length != 0x8400
+        || checksum_seed != 0x35b9f7dd
+        || compressed_length > payload.size() - header_offset - header_size) {
+        throw std::runtime_error("Unexpected Deuteros auxiliary decrunch header");
+    }
+
+    auto source = header_offset + header_size + compressed_length;
+    auto checksum = checksum_seed;
+    auto load_long = [&]() {
+        if (source < header_offset + header_size + 4)
+            throw std::runtime_error("Deuteros auxiliary bitstream underflow");
+        source -= 4;
+        const auto value = big32(payload, source);
+        checksum ^= value;
+        return value;
+    };
+
+    auto bit_buffer = load_long();
+    bool carry = (bit_buffer & 1U) != 0;
+    bit_buffer >>= 1U;
+    const auto refill = [&]() {
+        const auto value = load_long();
+        bit_buffer = 0x80000000U | (value >> 1U);
+        return (value & 1U) != 0;
+    };
+    if (bit_buffer == 0) carry = refill();
+    const auto next_bit = [&]() {
+        auto result = (bit_buffer & 1U) != 0;
+        bit_buffer >>= 1U;
+        if (bit_buffer == 0) result = refill();
+        return result;
+    };
+    const auto read_bits = [&](const unsigned count) {
+        if (count == 0 || count > 16)
+            throw std::runtime_error("Invalid Deuteros auxiliary bit width");
+        std::uint16_t value = 0;
+        for (unsigned bit = 0; bit < count; ++bit)
+            value = static_cast<std::uint16_t>(
+                (static_cast<std::uint32_t>(value) << 1U) | (next_bit() ? 1U : 0U));
+        return value;
+    };
+
+    std::vector<std::uint8_t> output(output_length);
+    auto output_cursor = output.size();
+    const auto emit_literal = [&](const std::uint8_t value) {
+        if (output_cursor == 0)
+            throw std::runtime_error("Deuteros auxiliary output overflow");
+        output[--output_cursor] = value;
+    };
+    const auto emit_match = [&](const std::uint16_t displacement,
+                                const std::size_t length) {
+        if (displacement == 0)
+            throw std::runtime_error("Deuteros auxiliary match has no prior source");
+        if (length > output_cursor)
+            throw std::runtime_error("Deuteros auxiliary match exceeds output");
+        for (std::size_t byte = 0; byte < length; ++byte) {
+            --output_cursor;
+            const auto match = output_cursor + displacement;
+            if (match >= output.size())
+                throw std::runtime_error("Deuteros auxiliary match source is outside output");
+            output[output_cursor] = output[match];
+        }
+    };
+
+    while (output_cursor != 0) {
+        if (carry) {
+            const auto selector = read_bits(2);
+            if (selector < 2) {
+                emit_match(read_bits(9U + selector), selector + 3U);
+            } else if (selector == 2) {
+                const auto length = static_cast<std::size_t>(read_bits(8)) + 1U;
+                emit_match(read_bits(12), length);
+            } else {
+                const auto length = static_cast<std::size_t>(read_bits(8)) + 9U;
+                if (length > output_cursor)
+                    throw std::runtime_error("Deuteros auxiliary literal run exceeds output");
+                for (std::size_t byte = 0; byte < length; ++byte)
+                    emit_literal(static_cast<std::uint8_t>(read_bits(8)));
+            }
+        } else if (next_bit()) {
+            emit_match(read_bits(8), 2);
+        } else {
+            const auto length = static_cast<std::size_t>(read_bits(3)) + 1U;
+            if (length > output_cursor)
+                throw std::runtime_error("Deuteros auxiliary literal run exceeds output");
+            for (std::size_t byte = 0; byte < length; ++byte)
+                emit_literal(static_cast<std::uint8_t>(read_bits(8)));
+        }
+        if (output_cursor != 0) carry = next_bit();
+    }
+    if (source != header_offset + header_size || checksum != 0)
+        throw std::runtime_error("Deuteros auxiliary compressed range or checksum is invalid");
+    const auto output_hash = to_hex(sha256(output));
+    if (output_hash != "656ec2f7599a143b5bb6c9a935a9868fe1ebdfaa8d8d5a0e52b3a4391aa7d57d")
+        throw std::runtime_error("Deuteros auxiliary decoded output changed");
+    return {compressed_length,0x20000,output_length,checksum_seed,source,
+        std::move(output),output_hash};
+}
+
 DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
     if (disk.kind() != AmigaDiskKind::dos || !disk.boot_checksum_valid()) {
         throw std::runtime_error("Not a verified Deuteros Amiga system disk");

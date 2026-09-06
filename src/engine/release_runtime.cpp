@@ -4885,9 +4885,18 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_service(const DeuterosAm
             for(std::size_t i=0;i<payload.size();++i)
                 write(destination+static_cast<std::uint32_t>(i),MemoryTransferElementWidth::byte,payload[i]);
         }
-        const auto plan=execute_deuteros_amiga_outer_service(*current,o,read,write);
-        if(!pending.observe_main_stage_outer_service(o,plan)){
+        const auto service_plan=execute_deuteros_amiga_outer_service(*current,o,read,write);
+        auto plan=service_plan;
+        if(!pending.observe_main_stage_outer_service(o,service_plan)){
             result.error="Deuteros outer service continuation rejected";return result;
+        }
+        if(plan.next_call_address==0x13358&&plan.local_call_target==0x1fe00){
+            const auto decoded=decode_deuteros_amiga_bootstrap_auxiliary(
+                deuteros_amiga_->bootstrap_auxiliary_payload(0x1fe00,0x1800,0xb000));
+            plan=execute_deuteros_amiga_auxiliary_local_path(plan,decoded,read,write);
+            if(!pending.advance_main_stage_auxiliary_local_path(plan)){
+                result.error="Deuteros auxiliary local continuation rejected";return result;
+            }
         }
         if(!service_bytes.empty()){
             NativeRuntimeEffectBatch batch{"deuteros-amiga-outer-service-"+std::to_string(o.trace_sequence),true,{}};
@@ -4898,8 +4907,12 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_service(const DeuterosAm
             const auto applied=memory.apply(batch);
             if(!applied.accepted)throw std::runtime_error(applied.error);
         }
-        if(!deuteros_amiga_->observe_main_stage_outer_service(o,plan)){
+        if(!deuteros_amiga_->observe_main_stage_outer_service(o,service_plan)){
             result.error="Deuteros outer service disappeared before commit";return result;
+        }
+        if(plan.next_call_address==0x133aa
+            &&!deuteros_amiga_->advance_main_stage_auxiliary_local_path(plan)){
+            result.error="Deuteros auxiliary local continuation disappeared before commit";return result;
         }
         *native_runtime_memory_=std::move(memory);result.accepted=true;
     }catch(const std::exception&e){result.error=e.what();}

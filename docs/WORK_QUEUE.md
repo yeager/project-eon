@@ -545,10 +545,14 @@ has the original load call; the second returns to `$12a7a -> $1330e`.
 The caller's structures, shared 20-word palette and four plane pointers are
 owned writes. The `$1330e` routine now performs both request-service calls
 and transactionally transfers the hash-locked `$b000/$1800` original-media
-span to `$1fe00`. Continue by proving any device transformation and the
-`$1fe00` payload contract before its local call; then recover the following
-four-plane copy and graphics call. Library-generated list pointers are still
-not inferred from return values.
+span to `$1fe00`. Its ByteKiller routine is now translated natively with exact
+input/output/checksum bounds; the resulting palette and 320x200x4 image are
+written to owned memory, deinterleaved into the four original planes, and
+continued through the typed `LoadRGB4` return to `$12a7e`. Continue the now
+reached configured bootstrap/profile dispatch and connect this original frame
+to the runtime presentation path. Library-generated list pointers are still
+not inferred from return values, and the final `$6e0` decoded bytes remain
+unlabelled until a consumer proves their role.
 The unconfigured `$13000` graphics initialization remains separate. Opening
 acquisition now retains the genuine 24-byte bootstrap profile table in owned
 memory from its boot-track source. Tests consume that production checkpoint,

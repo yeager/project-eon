@@ -27,6 +27,22 @@ struct DeuterosAmigaBootstrapProfile {
     std::uint32_t destination = 0;
 };
 
+// Exact result of the bounded backwards decruncher loaded at $1fe00 by the
+// clean Amiga bootstrap. This is a native translation of that one routine,
+// not a general 68000 interpreter or a reusable guessed codec.
+struct DeuterosAmigaBootstrapAuxiliaryImage {
+    std::uint32_t compressed_length = 0;
+    std::uint32_t output_address = 0;
+    std::uint32_t output_length = 0;
+    std::uint32_t checksum_seed = 0;
+    std::size_t consumed_source_offset = 0;
+    std::vector<std::uint8_t> bytes;
+    std::string sha256;
+};
+
+[[nodiscard]] DeuterosAmigaBootstrapAuxiliaryImage
+decode_deuteros_amiga_bootstrap_auxiliary(std::span<const std::uint8_t> payload);
+
 // Facts recovered from the first straight-line and loop setup portion of the
 // raw main stage.  These are addresses and literal values only: they do not
 // assign gameplay meaning to the state cells or service calls.

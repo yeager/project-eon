@@ -1507,9 +1507,55 @@ inline DeuterosAmigaMainStageLoopGraphicsPlan resume_deuteros_amiga_outer_counte
 // Caller-connected native prefixes with a typed external Exec return. Neither
 // service's operating-system side effects are inferred from its result value.
 template<class Read,class Write>
+DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_auxiliary_local_path(
+    DeuterosAmigaMainStageLoopGraphicsPlan plan,
+    const DeuterosAmigaBootstrapAuxiliaryImage&image,Read read,Write write){
+    if(plan.next_call_address!=0x13358||plan.next_return_address!=0x1335e
+        ||plan.local_call_target!=0x1fe00||plan.next_vector!=0
+        ||image.output_address!=0x20000||image.output_length!=0x8400
+        ||image.bytes.size()!=image.output_length
+        ||image.sha256!="656ec2f7599a143b5bb6c9a935a9868fe1ebdfaa8d8d5a0e52b3a4391aa7d57d")
+        throw std::runtime_error("Deuteros auxiliary local decrunch contract is invalid");
+    const auto plane_base=read(0x12ff4,4);
+    constexpr std::uint32_t plane_length=0x1f40;
+    constexpr std::uint32_t plane_count=4;
+    if((plane_base&1U)||plane_base>0x1000000U-plane_length*plane_count)
+        throw std::runtime_error("Deuteros auxiliary plane destination is invalid");
+    for(std::size_t byte=0;byte<image.bytes.size();++byte)
+        write(image.output_address+static_cast<std::uint32_t>(byte),
+            MemoryTransferElementWidth::byte,image.bytes[byte]);
+    constexpr std::size_t image_offset=0x20;
+    for(std::uint32_t word=0;word<0xfa0;++word)
+        for(std::uint32_t plane=0;plane<plane_count;++plane){
+            const auto source=image_offset+(word*plane_count+plane)*2U;
+            const auto value=static_cast<std::uint16_t>(
+                (static_cast<std::uint16_t>(image.bytes[source])<<8U)|image.bytes[source+1]);
+            write(plane_base+plane*plane_length+word*2U,MemoryTransferElementWidth::word,value);
+        }
+    plan.a1_value=0x20000;plan.a0_value=0x12e12;plan.d0_value=0x10;
+    plan.a6_value=read(0x12fec,4);
+    plan.next_call_address=0x133aa;plan.next_return_address=0x133ae;
+    plan.next_vector=-0xc0;plan.local_call_target=0;
+    plan.pending_read_instruction=0x133a4;plan.pending_read_address=0x12fec;
+    return plan;
+}
+
+template<class Read,class Write>
 DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
     DeuterosAmigaMainStageLoopGraphicsPlan plan,const DeuterosAmigaObservedLoopRequestService&o,
     Read read,Write write){
+    if(plan.next_call_address==0x133aa&&plan.next_return_address==0x133ae
+        &&plan.next_vector==-0xc0){
+        if(o.read_instruction!=0x133a4||o.source_address!=0x12fec
+            ||o.call_address!=0x133aa||o.return_address!=0x133ae||o.vector!=-0xc0
+            ||read(0x12fec,4)!=o.exec_base||plan.a6_value!=o.exec_base)
+            throw std::runtime_error("Deuteros auxiliary palette service does not match boundary");
+        plan.a6_value=o.exec_base;plan.d0_value=o.result_d0;
+        plan.next_call_address=0x12a7e;plan.next_return_address=0x12a82;
+        plan.local_call_target=0x12932;plan.next_vector=0;
+        plan.pending_read_instruction=0x1294c;plan.pending_read_address=4;
+        return plan;
+    }
     const bool auxiliary_open=plan.next_call_address==0x12a7a&&plan.local_call_target==0x1330e
         &&plan.next_return_address==0x12a7e;
     const bool auxiliary_prepare=plan.next_call_address==0x13322&&plan.next_return_address==0x13326
@@ -4773,10 +4819,30 @@ public:
         main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    advance_main_stage_auxiliary_local_path(const DeuterosAmigaMainStageLoopGraphicsPlan&plan){
+        if(!main_stage_loop_graphics_plan_)return std::nullopt;
+        const auto&current=*main_stage_loop_graphics_plan_;
+        if(current.next_call_address!=0x13358||current.next_return_address!=0x1335e
+            ||current.local_call_target!=0x1fe00||plan.next_call_address!=0x133aa
+            ||plan.next_return_address!=0x133ae||plan.next_vector!=-0xc0
+            ||plan.a0_value!=0x12e12||plan.a1_value!=0x20000||plan.d0_value!=0x10)
+            throw std::runtime_error("Deuteros auxiliary local continuation is invalid");
+        main_stage_loop_graphics_plan_=plan;return plan;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
     observe_main_stage_outer_service(const DeuterosAmigaObservedLoopRequestService&o,
         const DeuterosAmigaMainStageLoopGraphicsPlan&plan){
         if(!main_stage_loop_graphics_plan_)return std::nullopt;
         const auto& current=*main_stage_loop_graphics_plan_;
+        if(current.next_call_address==0x133aa&&current.next_return_address==0x133ae
+            &&current.next_vector==-0xc0){
+            if(o.trace_sequence<=last_command_sequence_||o.read_instruction!=0x133a4
+                ||o.source_address!=0x12fec||o.call_address!=0x133aa||o.return_address!=0x133ae
+                ||o.vector!=-0xc0||o.exec_base!=current.a6_value||plan.next_call_address!=0x12a7e
+                ||plan.local_call_target!=0x12932||plan.next_return_address!=0x12a82)
+                throw std::runtime_error("Deuteros auxiliary palette return is invalid or stale");
+            main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
+        }
         const bool auxiliary_open=current.next_call_address==0x12a7a&&current.local_call_target==0x1330e
             &&current.next_return_address==0x12a7e;
         const bool auxiliary_prepare=current.next_call_address==0x13322&&current.next_return_address==0x13326

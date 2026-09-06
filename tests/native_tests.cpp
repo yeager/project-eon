@@ -3150,7 +3150,7 @@ int main() {
         "millennium-dos-title-flow"));
     const auto amiga_map = eon::recovery_map_for_release(
         "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04");
-    assert(amiga_map.size() == 3);
+    assert(amiga_map.size() == 4);
     for (const auto& entry : amiga_map) assert(entry.game == eon::Game::deuteros);
     // Function-map rows are kept in preservation-document order. In
     // particular, Deuteros Amiga's title handoff comes after an Atari row;
@@ -3175,6 +3175,10 @@ int main() {
     }));
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-channel-request-continuation";
+    }));
+    assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
+        return entry.id == "deuteros-amiga-en-bootstrap-bytekiller"
+            && entry.runtime_status == "native bounded ByteKiller decode, four-plane transfer and typed palette return";
     }));
     assert(std::any_of(deuteros_amiga_functions.begin(), deuteros_amiga_functions.end(), [](const auto& entry) {
         return entry.id == "deuteros-amiga-en-opening-title-command";
@@ -16815,6 +16819,79 @@ int main() {
     try{(void)live_opening.bootstrap_auxiliary_payload(0x1fe00,0x17ff,0xb000);}
     catch(const std::runtime_error&){refused_auxiliary=true;}
     assert(refused_auxiliary);
+    const auto decoded_auxiliary=eon::decode_deuteros_amiga_bootstrap_auxiliary(auxiliary_payload);
+    assert(decoded_auxiliary.compressed_length==0x1600);
+    assert(decoded_auxiliary.output_address==0x20000);
+    assert(decoded_auxiliary.output_length==0x8400);
+    assert(decoded_auxiliary.checksum_seed==0x35b9f7dd);
+    assert(decoded_auxiliary.consumed_source_offset==0x118);
+    assert(decoded_auxiliary.bytes.size()==0x8400);
+    assert(decoded_auxiliary.sha256
+        =="656ec2f7599a143b5bb6c9a935a9868fe1ebdfaa8d8d5a0e52b3a4391aa7d57d");
+    constexpr std::array<std::uint16_t,16> auxiliary_palette{{
+        0x000,0xaa8,0x886,0x664,0x442,0xa60,0x840,0x620,
+        0x080,0xee0,0x004,0x008,0x02e,0x0ce,0xeee,0xc00}};
+    for(std::size_t color=0;color<auxiliary_palette.size();++color)
+        assert(((static_cast<std::uint16_t>(decoded_auxiliary.bytes[color*2])<<8U)
+            |decoded_auxiliary.bytes[color*2+1])==auxiliary_palette[color]);
+    auto changed_auxiliary=std::vector<std::uint8_t>(auxiliary_payload.begin(),auxiliary_payload.end());
+    changed_auxiliary[0x117]^=1;
+    bool refused_changed_auxiliary=false;
+    try{(void)eon::decode_deuteros_amiga_bootstrap_auxiliary(changed_auxiliary);}
+    catch(const std::runtime_error&){refused_changed_auxiliary=true;}
+    assert(refused_changed_auxiliary);
+    {
+        std::map<std::uint32_t,std::uint8_t> auxiliary_memory;
+        const auto put=[&](std::uint32_t address,eon::MemoryTransferElementWidth width,std::uint32_t value){
+            const auto count=static_cast<std::uint32_t>(width);
+            for(std::uint32_t byte=0;byte<count;++byte)
+                auxiliary_memory[address+byte]=static_cast<std::uint8_t>(value>>((count-1-byte)*8U));
+        };
+        const auto get=[&](std::uint32_t address,std::uint32_t width){
+            std::uint32_t value=0;
+            for(std::uint32_t byte=0;byte<width;++byte){
+                if(!auxiliary_memory.contains(address+byte))
+                    throw std::runtime_error("Missing auxiliary native test byte at "+
+                        std::to_string(address+byte));
+                value=(value<<8U)|auxiliary_memory.at(address+byte);
+            }
+            return value;
+        };
+        put(0x12ff4,eon::MemoryTransferElementWidth::longword,0x8ab00);
+        put(0x12fec,eon::MemoryTransferElementWidth::longword,0x123400);
+        eon::DeuterosAmigaMainStageLoopGraphicsPlan auxiliary_plan;
+        auxiliary_plan.next_call_address=0x13358;auxiliary_plan.next_return_address=0x1335e;
+        auxiliary_plan.local_call_target=0x1fe00;
+        auxiliary_plan=eon::execute_deuteros_amiga_auxiliary_local_path(
+            auxiliary_plan,decoded_auxiliary,get,put);
+        assert(auxiliary_plan.next_call_address==0x133aa);
+        assert(auxiliary_plan.next_return_address==0x133ae&&auxiliary_plan.next_vector==-0xc0);
+        assert(auxiliary_plan.a0_value==0x12e12&&auxiliary_plan.a1_value==0x20000);
+        assert(auxiliary_plan.a6_value==0x123400&&auxiliary_plan.d0_value==16);
+        for(std::size_t byte=0;byte<decoded_auxiliary.bytes.size();++byte)
+            assert(get(0x20000+static_cast<std::uint32_t>(byte),1)==decoded_auxiliary.bytes[byte]);
+        for(std::uint32_t word=0;word<0xfa0;++word)
+            for(std::uint32_t plane=0;plane<4;++plane){
+                const auto source=0x20+(word*4+plane)*2;
+                const auto expected=(static_cast<std::uint16_t>(decoded_auxiliary.bytes[source])<<8U)
+                    |decoded_auxiliary.bytes[source+1];
+                assert(get(0x8ab00+plane*0x1f40+word*2,2)==expected);
+            }
+        auxiliary_plan=eon::execute_deuteros_amiga_outer_service(auxiliary_plan,
+            {1,0x133a4,0x12fec,0x123400,0x133aa,0x133ae,0x12345678,-0xc0},get,put);
+        assert(auxiliary_plan.next_call_address==0x12a7e);
+        assert(auxiliary_plan.local_call_target==0x12932);
+        assert(auxiliary_plan.next_return_address==0x12a82);
+        auto invalid_plane_plan=auxiliary_plan;
+        invalid_plane_plan.next_call_address=0x13358;invalid_plane_plan.next_return_address=0x1335e;
+        invalid_plane_plan.local_call_target=0x1fe00;invalid_plane_plan.next_vector=0;
+        put(0x12ff4,eon::MemoryTransferElementWidth::longword,0x80001);
+        bool refused_invalid_planes=false;
+        try{(void)eon::execute_deuteros_amiga_auxiliary_local_path(
+            invalid_plane_plan,decoded_auxiliary,get,put);}
+        catch(const std::runtime_error&){refused_invalid_planes=true;}
+        assert(refused_invalid_planes);
+    }
     assert(live_opening.admitted_game_text().size() == 6);
     const auto localized_deuteros_prompts = eon::localize_admitted_game_text_table(
         eon::Game::deuteros, eon::Platform::amiga,
