@@ -58,6 +58,15 @@ public:
                 return disk_.bytes(offset,length);
         throw std::runtime_error("Deuteros bootstrap read does not match a recovered load profile");
     }
+    [[nodiscard]] std::span<const std::uint8_t> bootstrap_auxiliary_payload(
+        std::uint32_t destination,std::uint32_t length,std::uint32_t offset) const {
+        if(destination!=0x1fe00||length!=0x1800||offset!=0xb000)
+            throw std::runtime_error("Deuteros auxiliary read does not match recovered media range");
+        const auto payload=disk_.bytes(offset,length);
+        if(to_hex(sha256(payload))!="fd522e929a0ff377db0bcf42ea5ba3204fd52091b1f58b00731c4399751fd0d1")
+            throw std::runtime_error("Deuteros auxiliary read source hash changed");
+        return payload;
+    }
     [[nodiscard]] std::uint32_t vblank_counter() const { return random_.vblank_counter(); }
     // These are raw opening-VM observables used by the provenance overlay.
     // They are not title/gameplay labels or host controls.

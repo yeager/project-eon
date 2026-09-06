@@ -7060,6 +7060,37 @@ int main() {
                                                     }
                                                     assert(command_read(0x12ec6,2)==20&&command_read(0x12ec8,4)==0x12ecc);
                                                     for(unsigned color=0;color<20;++color)assert(command_read(0x12ecc+2*color,2)==0);
+                                                    auto auxiliary=eon::execute_deuteros_amiga_outer_service(initialized,
+                                                        {29,0x1294c,4,command_read(4,4),0x12950,0x12954,0xdeadbeef,-0x1c8},
+                                                        command_read,command_write);
+                                                    const auto auxiliary_request=command_read(0x12822,4);
+                                                    assert(auxiliary.next_call_address==0x13322&&auxiliary.a1_value==auxiliary_request);
+                                                    assert(command_read(auxiliary_request+28,2)==0x8005);
+                                                    assert(command_read(auxiliary_request+30,1)==0);
+                                                    assert(command_read(auxiliary_request+36,4)==1);
+                                                    auxiliary=eon::execute_deuteros_amiga_outer_service(auxiliary,
+                                                        {30,0x1331e,4,command_read(4,4),0x13322,0x13326,0,-0x1c8},
+                                                        command_read,command_write);
+                                                    assert(auxiliary.next_call_address==0x13354);
+                                                    assert(command_read(auxiliary_request+28,2)==0x8002);
+                                                    assert(command_read(auxiliary_request+30,1)==0);
+                                                    assert(command_read(auxiliary_request+36,4)==0x1800);
+                                                    assert(command_read(auxiliary_request+40,4)==0x1fe00);
+                                                    assert(command_read(auxiliary_request+44,4)==0xb000);
+                                                    auto failed_auxiliary=eon::DeuterosAmigaObservedLoopRequestService{
+                                                        31,0x13350,4,command_read(4,4),0x13354,0x13358,1,-0x1c8};
+                                                    bool auxiliary_read_failed=false;
+                                                    try{(void)eon::execute_deuteros_amiga_outer_service(
+                                                        auxiliary,failed_auxiliary,command_read,command_write);}
+                                                    catch(const std::runtime_error&){auxiliary_read_failed=true;}
+                                                    assert(auxiliary_read_failed);
+                                                    failed_auxiliary.result_d0=0;
+                                                    auxiliary=eon::execute_deuteros_amiga_outer_service(
+                                                        auxiliary,failed_auxiliary,command_read,command_write);
+                                                    assert(auxiliary.next_call_address==0x13358);
+                                                    assert(auxiliary.next_return_address==0x1335e);
+                                                    assert(auxiliary.local_call_target==0x1fe00);
+                                                    assert(auxiliary.next_vector==0);
                                                 }
                                                 eon::DeuterosAmigaMainStageLoopGraphicsPlan title_entry;
                                                 title_entry.next_instruction_address=0x13000;
@@ -16777,6 +16808,13 @@ int main() {
         catch(const std::runtime_error&){refused=true;}
         assert(refused);
     }
+    const auto auxiliary_payload=live_opening.bootstrap_auxiliary_payload(0x1fe00,0x1800,0xb000);
+    assert(auxiliary_payload.size()==0x1800);
+    assert(eon::sha256(auxiliary_payload)==eon::sha256(system_disk.bytes(0xb000,0x1800)));
+    bool refused_auxiliary=false;
+    try{(void)live_opening.bootstrap_auxiliary_payload(0x1fe00,0x17ff,0xb000);}
+    catch(const std::runtime_error&){refused_auxiliary=true;}
+    assert(refused_auxiliary);
     assert(live_opening.admitted_game_text().size() == 6);
     const auto localized_deuteros_prompts = eon::localize_admitted_game_text_table(
         eon::Game::deuteros, eon::Platform::amiga,

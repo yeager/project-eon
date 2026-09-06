@@ -8258,3 +8258,35 @@ View-versus-viewport arguments. Graphics-library-generated list pointers and
 other unobserved library writes are still not invented from result D0; the
 corresponding native service implementation remains separate work. This is
 not a full display capture or a claim that the game is already playable.
+
+### Deuteros bootstrap auxiliary-media request
+
+The reached `$1330e` routine now continues through both ordered AmigaDOS
+service returns and the exact auxiliary read request. Its first call reuses
+the owned request pointer at `$12822`, writes length 1 at offset `$24`,
+command `$8005` at `$1c`, and clears byte `$1e`. After `$13322/-$1c8`
+returns, native code replaces the request with command `$8002`, length
+`$1800`, destination `$1fe00`, disk offset `$b000`, and a cleared byte
+`$1e`. The `$13354/-$1c8` return must report D0 zero and the request must
+still contain every one of those values.
+
+The runtime reads the exact `$b000..$c7ff` span directly from the admitted
+system ADF and stages it in the same private transaction as the validated
+service return. It neither extracts nor modifies the source medium. The
+source payload SHA-256 is
+`fd522e929a0ff377db0bcf42ea5ba3204fd52091b1f58b00731c4399751fd0d1`.
+The transaction is discarded if the return, request, source hash, bounds, or
+session sequence differs. Tests also reject a nonzero read result and an
+off-by-one requested length.
+
+Execution deliberately stops at the following local call `$13358 -> $1fe00`
+with return `$1335e`. A linear disassembly of the raw disk span is not proof
+that these are the bytes or semantics seen by the original CPU after the
+device operation. No decompression, relocation, decryption, or other loader
+transformation is inferred. Recovering that contract is the next boundary
+before the payload or the following four-plane copy can be admitted.
+
+Caller source gate: ADF `$370e`, 160 bytes, SHA-256
+`c2b321aa5d287fb5328c36556d9bfdd9b730bdb1e0e3afc54889d5cbe1f8cef2`.
+This component-level continuation and genuine-media hash check are not an
+emulator capture, full graphics initialization, or gameplay-parity claim.

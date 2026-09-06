@@ -1510,6 +1510,49 @@ template<class Read,class Write>
 DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
     DeuterosAmigaMainStageLoopGraphicsPlan plan,const DeuterosAmigaObservedLoopRequestService&o,
     Read read,Write write){
+    const bool auxiliary_open=plan.next_call_address==0x12a7a&&plan.local_call_target==0x1330e
+        &&plan.next_return_address==0x12a7e;
+    const bool auxiliary_prepare=plan.next_call_address==0x13322&&plan.next_return_address==0x13326
+        &&plan.next_vector==-0x1c8;
+    const bool auxiliary_read=plan.next_call_address==0x13354&&plan.next_return_address==0x13358
+        &&plan.next_vector==-0x1c8;
+    if(auxiliary_open||auxiliary_prepare||auxiliary_read){
+        const auto expected_read=auxiliary_open?0x1294cU:auxiliary_prepare?0x1331eU:0x13350U;
+        const auto expected_call=auxiliary_open?0x12950U:auxiliary_prepare?0x13322U:0x13354U;
+        if(o.read_instruction!=expected_read||o.source_address!=4||o.call_address!=expected_call
+            ||o.return_address!=expected_call+4||o.vector!=-0x1c8||read(4,4)!=o.exec_base)
+            throw std::runtime_error("Deuteros auxiliary loader service does not match boundary");
+        plan.a6_value=o.exec_base;plan.d0_value=o.result_d0;plan.local_call_target=0;
+        plan.next_instruction_address=0;plan.pending_read_address=4;
+        if(auxiliary_open){
+            plan.a1_value=read(0x12822,4);
+            if((plan.a1_value&1U)||plan.a1_value>0x1000000U-40)
+                throw std::runtime_error("Deuteros auxiliary request pointer is invalid");
+            write(plan.a1_value+36,MemoryTransferElementWidth::longword,1);
+            write(plan.a1_value+28,MemoryTransferElementWidth::word,0x8005);
+            write(plan.a1_value+30,MemoryTransferElementWidth::byte,0);
+            plan.next_call_address=0x13322;plan.next_return_address=0x13326;
+            plan.next_vector=-0x1c8;plan.pending_read_instruction=0x1331e;
+        }else if(auxiliary_prepare){
+            plan.a1_value=read(0x12822,4);
+            write(plan.a1_value+28,MemoryTransferElementWidth::word,0x8002);
+            write(plan.a1_value+36,MemoryTransferElementWidth::longword,0x1800);
+            write(plan.a1_value+40,MemoryTransferElementWidth::longword,0x1fe00);
+            write(plan.a1_value+44,MemoryTransferElementWidth::longword,0xb000);
+            write(plan.a1_value+30,MemoryTransferElementWidth::byte,0);
+            plan.next_call_address=0x13354;plan.next_return_address=0x13358;
+            plan.next_vector=-0x1c8;plan.pending_read_instruction=0x13350;
+        }else{
+            if(o.result_d0!=0||read(plan.a1_value+28,2)!=0x8002
+                ||read(plan.a1_value+36,4)!=0x1800||read(plan.a1_value+40,4)!=0x1fe00
+                ||read(plan.a1_value+44,4)!=0xb000||read(plan.a1_value+30,1)!=0)
+                throw std::runtime_error("Deuteros auxiliary media read is incomplete or inconsistent");
+            plan.next_call_address=0x13358;plan.next_return_address=0x1335e;
+            plan.local_call_target=0x1fe00;plan.next_vector=0;
+            plan.pending_read_instruction=0;plan.pending_read_address=0;
+        }
+        return plan;
+    }
     if(const auto boundary=deuteros_amiga_bootstrap_graphics_boundary(plan)){
         if(o.read_instruction!=boundary->read_instruction||o.source_address!=boundary->source_address
             ||o.call_address!=boundary->call_address||o.return_address!=boundary->return_address
@@ -2072,6 +2115,8 @@ public:
         const auto main_stage=disk.bytes(plan.main_stage.disk_offset,plan.main_stage.length);
         if(to_hex(sha256(disk.bytes(0x346c,674)))!="171b18ac0a6796d1edf2fd693113b706fcf809bccdc29db0aa99f14a5372a9b5")
             throw std::runtime_error("Unsupported Deuteros bootstrap view structures");
+        if(to_hex(sha256(disk.bytes(0x370e,160)))!="c2b321aa5d287fb5328c36556d9bfdd9b730bdb1e0e3afc54889d5cbe1f8cef2")
+            throw std::runtime_error("Unsupported Deuteros auxiliary loader caller");
         if(to_hex(sha256(disk.bytes(0x3400,108)))!="ca2490219557649ff335d47ccc9d15fcbaa34da2ab9c723feb6bcea147970c0f")
             throw std::runtime_error("Unsupported Deuteros bootstrap graphics initialization");
         if(to_hex(sha256(disk.bytes(0x6fe4,20)))!="4136558f36e9cd0c89cd1828353a95ac05fa79d58e11bd30b8063b7d15e96c50")
@@ -4732,6 +4777,22 @@ public:
         const DeuterosAmigaMainStageLoopGraphicsPlan&plan){
         if(!main_stage_loop_graphics_plan_)return std::nullopt;
         const auto& current=*main_stage_loop_graphics_plan_;
+        const bool auxiliary_open=current.next_call_address==0x12a7a&&current.local_call_target==0x1330e
+            &&current.next_return_address==0x12a7e;
+        const bool auxiliary_prepare=current.next_call_address==0x13322&&current.next_return_address==0x13326
+            &&current.next_vector==-0x1c8;
+        const bool auxiliary_read=current.next_call_address==0x13354&&current.next_return_address==0x13358
+            &&current.next_vector==-0x1c8;
+        if(auxiliary_open||auxiliary_prepare||auxiliary_read){
+            const auto expected_read=auxiliary_open?0x1294cU:auxiliary_prepare?0x1331eU:0x13350U;
+            const auto expected_call=auxiliary_open?0x12950U:auxiliary_prepare?0x13322U:0x13354U;
+            if(o.trace_sequence<=last_command_sequence_||o.read_instruction!=expected_read
+                ||o.source_address!=4||o.call_address!=expected_call||o.return_address!=expected_call+4
+                ||o.vector!=-0x1c8||plan.a6_value!=o.exec_base
+                ||(auxiliary_read&&(o.result_d0!=0||plan.next_call_address!=0x13358)))
+                throw std::runtime_error("Deuteros auxiliary loader return is invalid or stale");
+            main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
+        }
         if(const auto boundary=deuteros_amiga_bootstrap_graphics_boundary(current)){
             if(o.trace_sequence<=last_command_sequence_||o.read_instruction!=boundary->read_instruction
                 ||o.source_address!=boundary->source_address||o.call_address!=boundary->call_address
