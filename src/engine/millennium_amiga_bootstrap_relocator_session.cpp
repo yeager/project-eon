@@ -90,8 +90,46 @@ MillenniumAmigaBootstrapRelocatorSession::boundary() const {
         return {0x4164a,4,open_graphics_execution_->pending_vector_address};
     case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_graphics_init:
         return {0x41666,0x41844,allocation_consumer_execution_->pending_vector_address};
+    case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_view_init:
+        return {0x41780,0x41844,graphics_initialization_execution_->pending_vector_address};
     }
     throw std::runtime_error("Invalid Millennium Amiga bootstrap relocator state");
+}
+
+MillenniumAmigaGraphicsInitializationExecution
+MillenniumAmigaBootstrapRelocatorSession::execute_graphics_initialization(
+    const MillenniumAmigaGraphicsInitializationObservation& o) {
+    constexpr std::array<std::uint32_t,3> calls{0x41666,0x41676,0x416b0};
+    constexpr std::array<std::int16_t,3> vectors{-360,-204,-390};
+    constexpr std::array<std::uint32_t,3> returns{0x4166a,0x4167a,0x416b4};
+    const auto graphics_base=open_graphics_execution_?open_graphics_execution_->graphics_base_value:0;
+    if(state_!=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_graphics_init
+        ||!allocation_consumer_execution_||o.graphics_base_address!=0x41844
+        ||o.graphics_base_value!=graphics_base||graphics_base<=390)
+        throw std::runtime_error("Detached Millennium Amiga graphics initialization observation");
+    for(std::size_t i=0;i<o.returns.size();++i)
+        if(o.returns[i].call_address!=calls[i]||o.returns[i].vector!=vectors[i]
+            ||o.returns[i].return_address!=returns[i]||o.returns[i].result_a7<4
+            ||o.returns[i].result_a7>0xfffffc||(o.returns[i].result_a7&1U)!=0)
+            throw std::runtime_error("Detached Millennium Amiga graphics service return");
+    MillenniumAmigaGraphicsInitializationExecution r;r.observed=o;
+    r.allocation_begin=allocation_consumer_execution_->allocation_begin;
+    r.allocation_end_exclusive=allocation_consumer_execution_->allocation_end_exclusive;
+    const auto add=[&](std::uint32_t a,std::uint8_t w,std::uint32_t v){r.effects.push_back({a,v,w});};
+    add(0x41892,4,0x418a4);add(0x418c2,2,0x000c);
+    add(0x418f8,4,0x418cc);add(0x418fc,2,0);add(0x418fe,2,0);add(0x418f4,4,0);
+    add(0x418bc,2,0x0140);add(0x418be,2,0x00c8);add(0x418c8,4,0x418f4);
+    add(0x41958,2,0x000a);add(0x4195a,4,0x4195e);
+    for(std::size_t i=0;i<20;++i){const auto p=0x86aU+i*2;add(0x4195eU+static_cast<std::uint32_t>(i*2),2,(std::uint32_t(first_stage_bytes_[p])<<8U)|first_stage_bytes_[p+1]);}
+    add(0x418a8,4,0x41956);add(0x418c4,2,0x4000);
+    constexpr std::uint32_t stride=0x1f40;
+    for(std::size_t i=0;i<4;++i){const auto p=r.allocation_begin+static_cast<std::uint32_t>(i)*stride;r.plane_addresses[i]=p;add(0x418d4+static_cast<std::uint32_t>(i)*4,4,p);add(0x41866-static_cast<std::uint32_t>(i)*4,4,p);}
+    add(0x41ae0,4,r.allocation_end_exclusive);
+    r.pending_request_address=0x41900;r.pending_call_address=0x41780;
+    r.pending_graphics_vector=-198;r.pending_vector_address=graphics_base-198;
+    graphics_initialization_execution_=r;
+    state_=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_view_init;
+    return r;
 }
 
 MillenniumAmigaAllocationConsumerExecution

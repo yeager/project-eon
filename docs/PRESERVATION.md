@@ -1878,6 +1878,18 @@ base to `$41ad2` and `$41ace` in one atomic batch; invalid size, clearing,
 bounds, vector or return data commits none of it. The local consumer loads the
 hash-bound request at `$41892` and stops before graphics.library vector `-$168`
 at `$41666`. No graphics service result or display effect is inferred.
+
+A single typed graphics-initialization observation can admit the exact returns
+from `$41666/-$168`, `$41676/-$cc`, and `$416b0/-$186`, including each D0, SR
+and A7. Their internal library writes remain external and are not synthesized.
+After all three contracts validate, the local `$4167a..$4177f` continuation
+atomically initializes the proven RastPort/BitMap/View records, copies the 40
+original bytes at `$4186a..$41891` to `$4195e..$41985`, and derives four plane
+bases at allocation offsets `$0000`, `$1f40`, `$3e80`, and `$5dc0`. The end
+cell `$41ae0` is exactly `allocation_base+$7d00`; every derived plane remains
+within the owned allocation. Invalid call order or return metadata commits no
+record or pointer writes. The chain stops before graphics.library vector
+`-$c6` at `$41780`, with A1 request `$41900`; no view/display effect is claimed.
 Frame materialization and
 the A1 save are one atomic batch; the later D0/ExecBase materialization is a
 second atomic batch, and an invalid hardware or ExecBase observation commits
@@ -3437,13 +3449,21 @@ The resulting pointers are retained as raw values and are not dereferenced.
 The exact A0, derived A1, D0, and owned A6 values for the pending first
 `-$c0(A6)` call at `$21310` (return `$21314`) remain in the owned plan so a
 later typed return can resume without reconstructing inputs. No graphics or
-resource meaning is inferred for that call. The currently connected opening
-path does not own `$32a24`: although the separately parsed `$21932` loader can
-target that address, its required caller source selection has not been proved
-here. Consequently the body candidate is rejected without a write or session
-advance, and the existing typed `$21276` return remains the admitted path to
-`$2181c->$21380`. Eon does not materialize the parsed resource bytes merely to
-make this candidate succeed.
+resource meaning is inferred for that call. The caller relationship is now
+explicit: `$217ec` reads the typed re-entry D0 low word preserved at `$21704`,
+`$217f2` enters `$21926`, and its fall-through reaches `$21932`; there is no
+intervening RTS. Only selector zero or one is accepted against the two bounded
+`$21708` table entries. A typed `$2196e` retry-port observation must show raw
+bit 10 set before return. The matching genuine ADF probe and body are then
+copied atomically to `$2ad24` and `$32a24`; wrong selector, retry state, media
+identity, or batch failure writes nothing. The test path explicitly supplies
+selector zero through re-entry D0, rather than choosing a resource in the
+host. The transfer makes `$32a24` owned, but the same live path still lacks an
+owned longword at `$12fec`. The `$21276` body candidate therefore rejects
+atomically before its first write; the test asserts both the present payload
+and exact absent cell, then retains the typed `$21276` return path. Supplying a
+previously observed graphics-base value would not establish ownership and is
+not used as a substitute.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,
@@ -4049,11 +4069,18 @@ paragraph arena allocates the exact rounded-up leaf size without overlap and
 labels the resulting segment as compatibility provenance; the segment is an
 Eon address-space key, never a claimed DOS capture. One tick performs open,
 exact-length discovery, arena allocation, rewind, complete read, atomic byte
-commit, and close, then stops at the INT 95h vector boundary. Arena exhaustion,
+commit, close, and process-local INT 95h vector installation, then stops at
+the parent-stack read. Arena exhaustion,
 zero/overflowing requests, and detached sequences fail without partial state.
-Vector state, parent stack data, EXEC outcome, and child entry remain
-observations because they depend on process or DOS state that the immutable
-leaf cannot prove. Reset destroys the generation-owned arena, and revocation
+The vector installation is a native compatibility operation: hash-verified
+`MILL.COM:$02fe` leaves DS at the driver allocation, `$0234` zeros DX, and
+`$0236..$023a` selects `AX=$2595; INT $21`. The tick requires the destination
+segment to belong to its arena and atomically installs offset zero and that
+segment at Eon's segmented `0000:$0254..$0257`. This is not an observed DOS
+vector or a call to the driver. Repeated ticks at the stack boundary leave
+both sequence and memory unchanged. Parent stack data, EXEC outcome, and child
+entry still require their respective observation or compatibility contracts.
+Reset destroys the generation-owned arena, and revocation
 prevents its state or allocator from being reached.
 
 Only after the exact read result does the session expose byte effects for the
@@ -7241,6 +7268,16 @@ original F6 handler, then advances across `$0b0c`, `$7b47` (`AX=$002e`), and
 `$6baa`, plus the literal `$cb9a` clear. Ownership stops at `$ce42 -> $cf57`:
 that local routine immediately follows runtime-derived pointers and words.
 Wrong returns commit none of the restoration effects.
+
+The first `$cf57` iteration is locally owned through `$cf79`: its 35 bytes at
+file `+$ce57` hash to
+`c5383923d88251142281469eb99b59e074b7020d7ff1392e256e1d3ef6c0064d`.
+The genuine 18-byte pointer table at file `+$5e9a` hashes to
+`041c6a544bd1fcdd5823cb6aac8dac8010a43b344d8997d21c3385287ba44e7d`
+and supplies first pointer `$5dd2`. Runtime words `$5dd2` and `$cb88`, then byte
+`$5dd4`, are explicit typed inputs. The exact compare, optional `+2`/`$cb9a`
+write, `$03fe` mask, and `$5dd2` write are reproduced before stopping at
+`$cf77 -> $7908`. Detached input is atomic; later iterations are not inferred.
 ### Millennium DOS `$0c6d` / `$0c8b` far-memory copy continuations
 
 The hash-bound `$0bdf` service now owns both mode-1 copy branches through their

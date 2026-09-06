@@ -67,10 +67,25 @@ MillenniumDosSixthFunctionBoundary MillenniumDosSixthFunctionSession::boundary()
         result.instruction_address = 0xcc73;
         result.runtime_address = 0x0114;
         break;
+    case MillenniumDosSixthFunctionState::caller_helper_dynamic_source_word:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_word;
+        result.instruction_address = 0xcf5e;
+        result.runtime_address = 0x5dd2;
+        break;
+    case MillenniumDosSixthFunctionState::caller_helper_dynamic_comparison_word:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_word;
+        result.instruction_address = 0xcf60;
+        result.runtime_address = 0xcb88;
+        break;
     case MillenniumDosSixthFunctionState::caller_helper_saved_byte:
         result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_byte;
         result.instruction_address = 0xcc80;
         result.runtime_address = 0xda05;
+        break;
+    case MillenniumDosSixthFunctionState::caller_helper_dynamic_source_byte:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_byte;
+        result.instruction_address = 0xcf74;
+        result.runtime_address = 0x5dd4;
         break;
     case MillenniumDosSixthFunctionState::caller_helper_first_random_al:
         result.kind = MillenniumDosSixthFunctionBoundaryKind::register_al;
@@ -195,6 +210,26 @@ void MillenniumDosSixthFunctionSession::observe_runtime_word(
         state_ = MillenniumDosSixthFunctionState::caller_helper_saved_byte;
         return;
     }
+    if (state_ == MillenniumDosSixthFunctionState::caller_helper_dynamic_source_word) {
+        caller_helper_dynamic_source_word_ = value;
+        state_ = MillenniumDosSixthFunctionState::caller_helper_dynamic_comparison_word;
+        return;
+    }
+    if (state_ == MillenniumDosSixthFunctionState::caller_helper_dynamic_comparison_word) {
+        if (!caller_helper_dynamic_source_word_) {
+            throw std::runtime_error("Millennium DOS F6 dynamic source word is detached");
+        }
+        caller_helper_dynamic_comparison_word_ = value;
+        auto transformed = *caller_helper_dynamic_source_word_;
+        if (value != transformed) {
+            transformed = static_cast<std::uint16_t>(transformed + 2U);
+            record_effect(0xcb9a, 1, 0, 1);
+        }
+        transformed = static_cast<std::uint16_t>(transformed & 0x03feU);
+        record_effect(0x5dd2, 2, *caller_helper_dynamic_source_word_, transformed);
+        state_ = MillenniumDosSixthFunctionState::caller_helper_dynamic_source_byte;
+        return;
+    }
     if (state_ == MillenniumDosSixthFunctionState::awaiting_word) {
         record_effect(trace_.saved_word_address, 2, std::nullopt, value);
         record_effect(trace_.first_byte_address, 1, *first_byte_, trace_.first_byte_value);
@@ -235,6 +270,16 @@ void MillenniumDosSixthFunctionSession::observe_runtime_byte(
         record_effect(0xdb12, 1, std::nullopt, 9);
         enter_call(MillenniumDosSixthFunctionState::caller_helper_external_continuation,
             0xccba, 0x942c);
+        return;
+    }
+    if (state_ == MillenniumDosSixthFunctionState::caller_helper_dynamic_source_byte) {
+        if (!caller_helper_dynamic_comparison_word_) {
+            throw std::runtime_error("Millennium DOS F6 dynamic comparison word is detached");
+        }
+        const auto ax = static_cast<std::uint16_t>(
+            (*caller_helper_dynamic_comparison_word_ & 0xff00U) | value);
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_dynamic_first_call_return,
+            0xcf77, 0x7908, ax);
         return;
     }
     if (state_ == MillenniumDosSixthFunctionState::awaiting_first_byte) {
@@ -415,6 +460,9 @@ void MillenniumDosSixthFunctionSession::observe_call_return(
     case MillenniumDosSixthFunctionState::caller_helper_restore_loop_call_return:
         enter_call(MillenniumDosSixthFunctionState::caller_helper_dynamic_table_call_return,
             0xce42, 0xcf57);
+        return;
+    case MillenniumDosSixthFunctionState::caller_helper_dynamic_table_call_return:
+        state_ = MillenniumDosSixthFunctionState::caller_helper_dynamic_source_word;
         return;
     case MillenniumDosSixthFunctionState::restoration_first_call_return:
         enter_call(MillenniumDosSixthFunctionState::restoration_second_call_return,

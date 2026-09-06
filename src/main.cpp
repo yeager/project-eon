@@ -5821,8 +5821,8 @@ int main(int argc, char** argv) {
 
         // The DOS compatibility service is a bounded native tick. It can
         // consume only deterministic operations against the already admitted
-        // immutable driver leaf and becomes a no-op at allocation, vector,
-        // stack, and EXEC evidence boundaries.
+        // immutable driver leaf, its owned paragraph arena and local vector
+        // table. It becomes a no-op when external parent-stack state is needed.
         if (screen == Screen::launching) {
             static_cast<void>(runtime.tick_millennium_dos_compatibility_runner());
         }

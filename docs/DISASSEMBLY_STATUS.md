@@ -329,8 +329,9 @@ loader's `io_Length` and `io_Offset` registers were found to have been
 inverted. The authoritative first-stage entry is ADF `+0x6e000`, length
 `0x151e`, at `$41000`; typed vector-9 and bus-error passes reach the exact
 custom-chip/ExecBase prefix, admit typed `-$96`/`-$9c` and `OpenLibrary`
-returns, admit a typed cleared `$7d00` allocation, and stop before
-graphics.library vector `-$168` at `$41666`.
+returns, admit a typed cleared `$7d00` allocation and the deterministic
+graphics-record initialization, and stop before graphics.library vector
+`-$c6` at `$41780`.
 
 ## Reproduced byte-complete candidate reports
 

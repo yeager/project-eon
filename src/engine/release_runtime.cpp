@@ -300,6 +300,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_amiga_exec_transition_sequence_.reset();
     millennium_amiga_open_graphics_sequence_.reset();
     millennium_amiga_allocation_sequence_.reset();
+    millennium_amiga_graphics_initialization_sequence_.reset();
     deuteros_amiga_title_load_copy_.reset();
     deuteros_amiga_title_load_copy_generation_ = 0;
     deuteros_amiga_title_command_generation_ = 0;
@@ -460,6 +461,29 @@ ReleaseRuntimeCoordinator::observe_millennium_amiga_allocation(
         *millennium_amiga_relocator_=std::move(next);*native_runtime_memory_=std::move(memory);
         millennium_amiga_allocation_sequence_=o.sequence;result.accepted=true;
     } catch(const std::exception& error){result.error=error.what();}
+    return result;
+}
+
+MillenniumAmigaBootstrapRelocatorObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_amiga_graphics_initialization(
+    const MillenniumAmigaGraphicsInitializationRuntimeObservation o) {
+    MillenniumAmigaBootstrapRelocatorObservationResult result;
+    if(!millennium_amiga_relocator_||!native_runtime_memory_||!millennium_amiga_allocation_sequence_
+        ||millennium_amiga_graphics_initialization_sequence_||o.sequence<=*millennium_amiga_allocation_sequence_){
+        result.error="Graphics initialization requires the owned allocation";return result;}
+    try{
+        auto next=*millennium_amiga_relocator_;const auto execution=next.execute_graphics_initialization(o.services);
+        NativeRuntimeEffectBatch batch{"millennium-amiga-graphics-initialization-"+std::to_string(millennium_amiga_relocator_generation_),true,{}};
+        batch.effects.reserve(execution.effects.size());
+        for(const auto& effect:execution.effects){
+            const auto width=effect.width==4?MemoryTransferElementWidth::longword:MemoryTransferElementWidth::word;
+            batch.effects.push_back({batch.effects.size()+1,{NativeRuntimeAddressSpace::linear,std::nullopt,effect.address},width,NativeRuntimeByteOrder::big_endian,effect.value});
+        }
+        auto memory=*native_runtime_memory_;const auto applied=memory.apply(batch);
+        if(!applied.accepted){result.error=applied.error;return result;}
+        *millennium_amiga_relocator_=std::move(next);*native_runtime_memory_=std::move(memory);
+        millennium_amiga_graphics_initialization_sequence_=o.sequence;result.accepted=true;
+    }catch(const std::exception& error){result.error=error.what();}
     return result;
 }
 
@@ -950,6 +974,31 @@ ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner(){
                     runner.compatibility_file_handle());
                 runner.record_automatic_operation();
                 continue;
+            case MillenniumDosSoundDriverLoadState::awaiting_vector_install: {
+                // The exact loader leaves DS at its owned allocation segment.
+                // $0234 clears DX; $0236 selects DOS SetVect for INT $95.
+                // This is Eon's process-local vector table, not captured DOS
+                // state, and installing the pointer does not invoke the driver.
+                const auto allocation = runner.checkpoint(next.state(), next.boundary())
+                    .paragraph_arena.allocations;
+                const auto owned = std::find_if(allocation.begin(), allocation.end(),
+                    [&](const auto& entry) { return entry.segment == next.load_segment(); });
+                if (owned == allocation.end())
+                    throw std::runtime_error("Driver vector requires an owned allocation");
+                NativeRuntimeEffectBatch batch{
+                    "millennium-dos-sound-vector-"
+                        + std::to_string(millennium_dos_sound_driver_load_generation_), true, {
+                    {1, {NativeRuntimeAddressSpace::dos_segmented, std::uint16_t{0}, 0x254},
+                        MemoryTransferElementWidth::word, NativeRuntimeByteOrder::little_endian, 0},
+                    {2, {NativeRuntimeAddressSpace::dos_segmented, std::uint16_t{0}, 0x256},
+                        MemoryTransferElementWidth::word, NativeRuntimeByteOrder::little_endian,
+                        next.load_segment()}}};
+                const auto applied = memory.apply(batch);
+                if (!applied.accepted) throw std::runtime_error(applied.error);
+                next.observe_vector_install(0x0239, 0x2595, 0);
+                runner.record_automatic_operation();
+                continue;
+            }
             default:
                 if(next.state()==MillenniumDosSoundDriverLoadState::title_exec_requested
                     &&millennium_dos_title_exec_entry_
@@ -4061,6 +4110,42 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_cia_a_bit_set(
     return r;
 }
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_resource_load(
+    const DeuterosAmigaObservedMainStageResourceLoad o){
+    DeuterosAmigaTitleDependencyObservationResult r;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()
+        ||!native_runtime_memory_){r.error="Deuteros main-stage resource load requires active title session";return r;}
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto plan=pending.observe_main_stage_resource_load(o);
+        if(!plan){r.error="Deuteros main-stage resource load did not match caller";return r;}
+        const auto transfer=deuteros_amiga_->main_resource_transfer(o.resource_index);
+        if(!transfer||transfer->resource_index!=o.resource_index||transfer->payload.size()<4
+            ||transfer->payload_destination_address!=plan->payload_destination
+            ||transfer->probe_destination_address!=plan->probe_destination){
+            r.error="Deuteros main-stage resource media transfer is unavailable";return r;
+        }
+        auto memory=*native_runtime_memory_;
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-main-stage-resource-"
+            +std::to_string(o.resource_index),true,{}};
+        batch.effects.reserve(4U+transfer->payload.size());
+        for(std::size_t i=0;i<4;++i)batch.effects.push_back({i+1,
+            {NativeRuntimeAddressSpace::linear,std::nullopt,plan->probe_destination+i},
+            MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,
+            transfer->payload[i]});
+        for(std::size_t i=0;i<transfer->payload.size();++i)batch.effects.push_back({i+5,
+            {NativeRuntimeAddressSpace::linear,std::nullopt,plan->payload_destination+i},
+            MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,
+            transfer->payload[i]});
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted){r.error=applied.error;return r;}
+        if(!deuteros_amiga_->observe_main_stage_resource_load(o)){
+            r.error="Deuteros main-stage resource load disappeared before commit";return r;}
+        *native_runtime_memory_=std::move(memory);r.accepted=true;
+    }catch(const std::exception&e){r.error=e.what();}
+    return r;
+}
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_service_return(
     const DeuterosAmigaObservedLocalCallReturn o){
     DeuterosAmigaTitleDependencyObservationResult r;
@@ -4393,7 +4478,7 @@ ReleaseRuntimeCoordinator::millennium_amiga_bootstrap_relocator_checkpoint()cons
         session.first_stage_sha256(),session.first_stage_entry_execution(),
         session.first_stage_illegal_execution(),session.second_illegal_execution(),
         session.first_trace_execution(),session.trace_branch_chain_execution(),session.trace_register_prefix_execution(),
-        session.bus_error_prefix_execution(),session.custom_chip_exec_prefix_execution(),session.exec_transition_execution(),session.open_graphics_execution(),session.allocation_consumer_execution()};
+        session.bus_error_prefix_execution(),session.custom_chip_exec_prefix_execution(),session.exec_transition_execution(),session.open_graphics_execution(),session.allocation_consumer_execution(),session.graphics_initialization_execution()};
 }
 
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>

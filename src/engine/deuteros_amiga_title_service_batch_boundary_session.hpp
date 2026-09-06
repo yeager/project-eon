@@ -1342,6 +1342,17 @@ struct DeuterosAmigaMainStageCiaABitSetPlan {
     std::uint32_t local_call_address=0,local_call_target=0,local_return_address=0;
     std::string source_sha256;
 };
+struct DeuterosAmigaObservedMainStageResourceLoad {
+    std::uint64_t trace_sequence=0;
+    std::uint16_t resource_index=0;
+    std::uint32_t loader_address=0,retry_instruction_address=0,retry_port_address=0;
+    std::uint8_t retry_bit=0,retry_port_value=0;
+};
+struct DeuterosAmigaMainStageResourceLoadPlan {
+    DeuterosAmigaObservedMainStageResourceLoad observation;
+    std::uint32_t probe_destination=0,payload_destination=0;
+    std::uint32_t return_address=0,next_call_address=0,next_call_target=0,next_return_address=0;
+};
 struct DeuterosAmigaMainStageLoopServiceReturnPlan {
     DeuterosAmigaObservedLocalCallReturn observation;
     std::array<std::uint32_t,3> destination_addresses{};
@@ -3749,9 +3760,23 @@ public:
             0x217f8,0x22a5a,0x217fe,
             "cb9046ad20fffc0a52f43431949927b4d159ecc795fe5f62dbbd01accd0684c7"};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageResourceLoadPlan>
+    observe_main_stage_resource_load(const DeuterosAmigaObservedMainStageResourceLoad&o){
+        if(!main_stage_cia_a_bit_set_||main_stage_resource_load_)return std::nullopt;
+        if(main_stage_cia_a_bit_set_->source_word>1
+            ||o.trace_sequence<=last_command_sequence_
+            ||o.resource_index!=main_stage_cia_a_bit_set_->source_word
+            ||o.loader_address!=0x21932||o.retry_instruction_address!=0x2196e
+            ||o.retry_port_address!=0xdff016||o.retry_bit!=10
+            ||(o.retry_port_value&0x04U)==0)
+            throw std::runtime_error("Deuteros main-stage resource load does not match caller");
+        main_stage_resource_load_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaMainStageResourceLoadPlan{o,0x2ad24,0x32a24,
+            0x21978,0x217f8,0x22a5a,0x217fe};
+    }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopServiceReturnPlan>
     observe_main_stage_loop_service_return(const DeuterosAmigaObservedLocalCallReturn&o){
-        if(!main_stage_cia_a_bit_set_||main_stage_loop_service_return_)return std::nullopt;
+        if(!main_stage_resource_load_||main_stage_loop_service_return_)return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x217f8
             ||o.call_target!=0x22a5a||o.return_address!=0x217fe)
             throw std::runtime_error("Deuteros main-stage first loop service return does not match boundary");
@@ -4052,6 +4077,7 @@ private:
         main_stage_209f0_exec_return_;
     std::optional<DeuterosAmigaObservedMainStageCiaABitSet>
         main_stage_cia_a_bit_set_;
+    std::optional<DeuterosAmigaObservedMainStageResourceLoad> main_stage_resource_load_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> main_stage_loop_service_return_;
     std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>
         main_stage_loop_prepare_body_plan_;

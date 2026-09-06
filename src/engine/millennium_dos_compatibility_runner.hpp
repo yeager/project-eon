@@ -26,8 +26,9 @@ struct MillenniumDosCompatibilityRunnerCheckpoint {
 // Native, leaf-backed implementation of the deterministic DOS file service
 // used by the recovered selected-driver chain. The private handle identifies
 // the already admitted immutable leaf; it is not claimed as an observed DOS
-// handle. Allocation, interrupt-vector state, parent stack state and EXEC
-// remain explicit evidence boundaries.
+// handle. Its allocation and INT $95 vector installation belong to Eon's
+// process-local compatibility state. Parent stack state remains an external
+// boundary; child EXEC admission uses the separate bounded child service.
 class MillenniumDosCompatibilityRunner {
 public:
     MillenniumDosCompatibilityRunner(std::uint64_t generation,

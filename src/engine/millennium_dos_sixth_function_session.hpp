@@ -48,6 +48,10 @@ enum class MillenniumDosSixthFunctionState {
     caller_helper_restore_adjust_call_return,
     caller_helper_restore_loop_call_return,
     caller_helper_dynamic_table_call_return,
+    caller_helper_dynamic_source_word,
+    caller_helper_dynamic_comparison_word,
+    caller_helper_dynamic_source_byte,
+    caller_helper_dynamic_first_call_return,
     restoration_first_call_return,
     restoration_second_call_return,
     restoration_third_call_return,
@@ -197,6 +201,8 @@ private:
     std::array<std::uint8_t, 0x27> caller_helper_random_table_{};
     std::size_t caller_helper_random_table_entries_ = 0;
     std::uint8_t caller_helper_layout_remaining_ = 0;
+    std::optional<std::uint16_t> caller_helper_dynamic_source_word_;
+    std::optional<std::uint16_t> caller_helper_dynamic_comparison_word_;
 };
 
 } // namespace eon
