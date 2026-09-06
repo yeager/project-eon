@@ -384,6 +384,38 @@ void MillenniumDosSixthFunctionSession::observe_call_return(
     case MillenniumDosSixthFunctionState::caller_helper_layout_refresh_call_return:
         advance_caller_helper_layout();
         return;
+    case MillenniumDosSixthFunctionState::caller_helper_layout_final_call_return: {
+        std::optional<std::uint16_t> saved_word;
+        for (auto it = effects_.rbegin(); it != effects_.rend(); ++it) {
+            if (it->address == trace_.saved_word_address && it->width == 2) {
+                saved_word = it->value;
+                break;
+            }
+        }
+        if (!first_byte_ || !second_byte_ || !saved_word) {
+            throw std::runtime_error(
+                "Millennium DOS F6 helper restoration lacks saved state");
+        }
+        record_effect(trace_.second_byte_address, 1, std::nullopt, *second_byte_);
+        record_effect(trace_.word_address, 2, std::nullopt, *saved_word);
+        record_effect(trace_.first_byte_address, 1, std::nullopt, *first_byte_);
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_restore_service_call_return,
+            0xce20, 0x0b0c);
+        return;
+    }
+    case MillenniumDosSixthFunctionState::caller_helper_restore_service_call_return:
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_restore_adjust_call_return,
+            0xce27, 0x7b47, 0x002e);
+        return;
+    case MillenniumDosSixthFunctionState::caller_helper_restore_adjust_call_return:
+        record_effect(0xcb9a, 1, std::nullopt, 0);
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_restore_loop_call_return,
+            0xce2f, 0x6baa);
+        return;
+    case MillenniumDosSixthFunctionState::caller_helper_restore_loop_call_return:
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_dynamic_table_call_return,
+            0xce42, 0xcf57);
+        return;
     case MillenniumDosSixthFunctionState::restoration_first_call_return:
         enter_call(MillenniumDosSixthFunctionState::restoration_second_call_return,
             0x746e, 0x7b47);

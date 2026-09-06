@@ -139,7 +139,7 @@ class RecoveryMapTests(unittest.TestCase):
                 if entry["parser_profile_id"] == "millennium-dos-gx-overlay"
                 else "native profile-two re-entry through the first scheduler return"
                 if entry["parser_profile_id"] == "deuteros-amiga-clean-main-stage"
-                else "native typed graphics-library open through $4164a"
+                else "native typed cleared allocation through $41666"
                 if entry["parser_profile_id"] in {
                     "millennium-amiga-defjam-first-stage-entry",
                     "millennium-amiga-defjam-direct-first-stage-entry",

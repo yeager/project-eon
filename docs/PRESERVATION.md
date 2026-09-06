@@ -1861,11 +1861,23 @@ returned D0, SR and A7. Only a nonzero even 24-bit library base is admitted.
 The exact stage bytes identify `graphics.library`, requested version zero,
 the original zero word at `$4198a`, and `ADDQ.W #1`; consequently the graphics
 base write at `$41844` and resulting open count one commit as one atomic batch.
+The runtime also requires both resident count bytes to remain initialized and
+zero before the increment. A changed or missing count rejects the entire
+transition, including the graphics-base write; replay cannot increment twice.
 The returned ABI value is not synthesized or interpreted. The successful
 local return then enters `$41ae4` / `$4163a`, proves allocation flags `$10002`
-and size `$7d00`, and stops before Exec vector `-$c6` at `$4164a`. ExecBase is
-validated above every reached negative vector offset, so vector-address
-subtraction cannot underflow.
+and size `$7d00`, and initially stops before Exec vector `-$c6` at `$4164a`.
+ExecBase is validated above every reached negative vector offset, so
+vector-address subtraction cannot underflow. A typed allocator result can now
+admit the exact `$4164e` return, D0/SR/A7, allocation size `$7d00`, and the
+allocator's cleared-memory guarantee. The nonzero even 24-bit base plus size
+must remain wholly inside the 24-bit address space and may not overlap any
+byte already owned by native runtime memory. Eon then materializes
+exactly `[base,base+$7d00)` as zero-filled owned memory and writes that same
+base to `$41ad2` and `$41ace` in one atomic batch; invalid size, clearing,
+bounds, vector or return data commits none of it. The local consumer loads the
+hash-bound request at `$41892` and stops before graphics.library vector `-$168`
+at `$41666`. No graphics service result or display effect is inferred.
 Frame materialization and
 the A1 save are one atomic batch; the later D0/ExecBase materialization is a
 second atomic batch, and an invalid hardware or ExecBase observation commits
@@ -3412,15 +3424,26 @@ or gameplay meaning is assigned. The ordered typed `$217f8->$22a5a` return
 then admits the exact 30-byte span at `$217fe`, SHA-256
 `382932f57f5d3d181f93727198a6f5b7d6fff91522eed0438778a43e8ca417d5`.
 It atomically clears words `$21720` and `$2171e`, writes word one at `$210f2`,
-and stops at `$21816->$21276` (return `$2181c`). That service's typed return
-emits no effect and advances through the exact six-byte call span, SHA-256
-`91c2210c9aae535291275c95f4f39367c59bb37924438e9fa86f461e5dfe3d3a`,
-to `$2181c->$21380` (return `$21822`). The scheduler return is likewise typed
-without an inferred effect and stops before the `$21822` bit-10 test at raw
-address `$dff016`; that eight-byte opcode is independently hash-bound by
-SHA-256 `72c3eb4341f9202ad6480cc45f030df358e2babffbfd8396b80715a86700557a`.
-Across `$217fe..$21829`, the combined source SHA-256 is
-`5f6f98a368159e3d6415d3be5f1cdf38d38495f55b5ca6b5b212d36dcb9dc732`.
+and reaches `$21816->$21276`. A bounded native-body candidate describes the
+deterministic first `$9a` bytes of that callee, SHA-256
+`f86946a0b1323b9f85c0ab5259395fa11962961c72ca17bc02ab230bc008dbed`.
+It requires every source byte through `$32a24+$3b` and the longword at
+`$12fec` to exist in owned native memory before committing anything. It
+copies the raw count, rebases seven nullable longwords and the later required
+and nullable pointer fields by `$32a24`, records the raw presence flag and low
+byte, clears `$210f4/$210f6`, and commits the complete destination set as one
+batch. M68000 long addition is represented by unsigned 32-bit wraparound.
+The resulting pointers are retained as raw values and are not dereferenced.
+The exact A0, derived A1, D0, and owned A6 values for the pending first
+`-$c0(A6)` call at `$21310` (return `$21314`) remain in the owned plan so a
+later typed return can resume without reconstructing inputs. No graphics or
+resource meaning is inferred for that call. The currently connected opening
+path does not own `$32a24`: although the separately parsed `$21932` loader can
+target that address, its required caller source selection has not been proved
+here. Consequently the body candidate is rejected without a write or session
+advance, and the existing typed `$21276` return remains the admitted path to
+`$2181c->$21380`. Eon does not materialize the parsed resource bytes merely to
+make this candidate succeed.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,
@@ -7195,9 +7218,9 @@ revocation destroys the span-backed session before its admitted media owner and
 rejects subsequent observations. See `MILLENNIUM_DOS_SIXTH_FUNCTION.md` for the
 instruction-level evidence and excluded `$7455` restoration routine.
 
-The caller-connected F6 helper is hash-owned through `$ce0d` (file
-`+$cb4e`, 448 bytes, SHA-256
-`8928e3ce8385e3d766c753905a357bd17c627c861006e492b5b702866fce4592`).
+The caller-connected F6 helper is hash-owned through `$ce44` (file
+`+$cb4e`, 503 bytes, SHA-256
+`210807455be0bf5e1309da289444c19a1146d287b5ac4fe4803875f3a71fb9d1`).
 After the observed `$cd60 -> $cbc0` return it records the literal 39-byte clear
 at `$cb1e`, then consumes explicit AL results from repeated `$cd72 -> $cc23`
 calls. Only the encoded mask/fold, excluded `$03..$08` range, duplicate check,
@@ -7212,6 +7235,12 @@ positions require `$cde9 -> $cbc0`. The terminal caller block records nine and
 28 one-byte zero stores at stride 12, rooted at `$5dda` and `$6047`, and stops
 at `$ce0b -> $4f08`. Detached returns are rejected before loop state or effects
 advance.
+
+The exact `$ce0b -> $4f08` return restores the three values observed by the
+original F6 handler, then advances across `$0b0c`, `$7b47` (`AX=$002e`), and
+`$6baa`, plus the literal `$cb9a` clear. Ownership stops at `$ce42 -> $cf57`:
+that local routine immediately follows runtime-derived pointers and words.
+Wrong returns commit none of the restoration effects.
 ### Millennium DOS `$0c6d` / `$0c8b` far-memory copy continuations
 
 The hash-bound `$0bdf` service now owns both mode-1 copy branches through their

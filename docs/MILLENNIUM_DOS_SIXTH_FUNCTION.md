@@ -43,9 +43,9 @@ It calls `$cc4e`, discards one stack word after the typed return at `$74c4`,
 and tail-jumps to `$7455`. The runtime therefore admits restoration through
 this caller boundary; it does not bypass the opaque call.
 
-The caller helper is now opened through its exact `$cc4e..$ce0d` span
-(448-byte SHA-256
-`8928e3ce8385e3d766c753905a357bd17c627c861006e492b5b702866fce4592`).
+The caller helper is now opened through its exact `$cc4e..$ce44` span
+(503-byte SHA-256
+`210807455be0bf5e1309da289444c19a1146d287b5ac4fe4803875f3a71fb9d1`).
 The typed path follows calls to `$408a`, `$4d36` with `AX=$0028`, `$0666` with
 `AX=$00c1`, and `$05f1`; records the literal word writes `$cbbe := $080f` and
 `$cbe1 := 0`; then observes the far pointer loaded from `$0112:$0114`. The
@@ -84,6 +84,14 @@ opaque. Seven statically selected iterations additionally require the exact
 fills cover nine cells from `$5dda` and 28 cells from `$6047`, both at stride
 12. Execution stops at `$ce0b -> $4f08`; no callee behavior or layout meaning
 is inferred.
+
+After the exact `$4f08` return, the helper restores the already observed F6
+bytes and word to `$75ae`, `$75ac`, and `$75a8`. It then requires returns from
+`$ce20 -> $0b0c`, `$ce27 -> $7b47` with encoded `AX=$002e`, and `$ce2f ->
+$6baa`, recording only the literal `$cb9a := 0` between them. The next call
+`$ce42 -> $cf57` is the boundary: that local callee begins with word reads via
+runtime-derived table pointers, so neither those values nor its effects are
+invented.
 
 The typed session exposes only addresses, call targets, proved register values,
 and memory effects. In particular, the byte read at `$613a` is not assigned a

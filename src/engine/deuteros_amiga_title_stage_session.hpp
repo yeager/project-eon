@@ -420,6 +420,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaMainStage209f0ExecReturnPlan> observe_main_stage_209f0_exec_return(const DeuterosAmigaObservedMainStageExecReturn&o) { return service_batch_boundary_session_.observe_main_stage_209f0_exec_return(o); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageCiaABitSetPlan> observe_main_stage_cia_a_bit_set(const DeuterosAmigaObservedMainStageCiaABitSet&o) { return service_batch_boundary_session_.observe_main_stage_cia_a_bit_set(o); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopServiceReturnPlan> observe_main_stage_loop_service_return(const DeuterosAmigaObservedLocalCallReturn&o) { return service_batch_boundary_session_.observe_main_stage_loop_service_return(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan> advance_main_stage_loop_prepare_body(const std::uint32_t a1=0,const std::uint32_t a6=0) { return service_batch_boundary_session_.advance_main_stage_loop_prepare_body(a1,a6); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareReturnPlan> observe_main_stage_loop_prepare_return(const DeuterosAmigaObservedLocalCallReturn&o) { return service_batch_boundary_session_.observe_main_stage_loop_prepare_return(o); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopSchedulerReturnPlan> observe_main_stage_loop_scheduler_return(const DeuterosAmigaObservedLocalCallReturn&o) { return service_batch_boundary_session_.observe_main_stage_loop_scheduler_return(o); }
 

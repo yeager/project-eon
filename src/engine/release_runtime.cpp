@@ -299,6 +299,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_amiga_custom_chip_exec_prefix_sequence_.reset();
     millennium_amiga_exec_transition_sequence_.reset();
     millennium_amiga_open_graphics_sequence_.reset();
+    millennium_amiga_allocation_sequence_.reset();
     deuteros_amiga_title_load_copy_.reset();
     deuteros_amiga_title_load_copy_generation_ = 0;
     deuteros_amiga_title_command_generation_ = 0;
@@ -417,6 +418,48 @@ ReleaseRuntimeCoordinator::observe_millennium_amiga_first_stage_entry(
     } catch (const std::exception& error) {
         result.error=std::string("First-stage entry rejected: ")+error.what();
     }
+    return result;
+}
+
+MillenniumAmigaBootstrapRelocatorObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_amiga_allocation(
+    const MillenniumAmigaAllocationRuntimeObservation o) {
+    MillenniumAmigaBootstrapRelocatorObservationResult result;
+    if (!millennium_amiga_relocator_ || !native_runtime_memory_
+        || !millennium_amiga_open_graphics_sequence_
+        || millennium_amiga_allocation_sequence_
+        || o.sequence <= *millennium_amiga_open_graphics_sequence_) {
+        result.error = "Allocation requires the opened graphics library";
+        return result;
+    }
+    try {
+        auto next = *millennium_amiga_relocator_;
+        const auto execution = next.execute_allocation_consumer(o.allocation);
+        for(std::uint32_t i=0;i<o.allocation.allocated_size;++i) {
+            if(native_runtime_memory_->read_byte({NativeRuntimeAddressSpace::linear,
+                    std::nullopt,execution.allocation_begin+i})) {
+                result.error="Allocation overlaps owned runtime memory";
+                return result;
+            }
+        }
+        NativeRuntimeEffectBatch batch{"millennium-amiga-cleared-allocation-"
+            +std::to_string(millennium_amiga_relocator_generation_),true,{}};
+        batch.effects.reserve(o.allocation.allocated_size+2U);
+        for(std::uint32_t i=0;i<o.allocation.allocated_size;++i)
+            batch.effects.push_back({batch.effects.size()+1,
+                {NativeRuntimeAddressSpace::linear,std::nullopt,execution.allocation_begin+i},
+                MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,0});
+        batch.effects.push_back({batch.effects.size()+1,
+            {NativeRuntimeAddressSpace::linear,std::nullopt,execution.primary_pointer_address},
+            MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,execution.allocation_begin});
+        batch.effects.push_back({batch.effects.size()+1,
+            {NativeRuntimeAddressSpace::linear,std::nullopt,execution.secondary_pointer_address},
+            MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,execution.allocation_begin});
+        auto memory=*native_runtime_memory_;const auto applied=memory.apply(batch);
+        if(!applied.accepted){result.error=applied.error;return result;}
+        *millennium_amiga_relocator_=std::move(next);*native_runtime_memory_=std::move(memory);
+        millennium_amiga_allocation_sequence_=o.sequence;result.accepted=true;
+    } catch(const std::exception& error){result.error=error.what();}
     return result;
 }
 
@@ -607,7 +650,54 @@ MillenniumAmigaBootstrapRelocatorObservationResult ReleaseRuntimeCoordinator::ob
 
 MillenniumAmigaBootstrapRelocatorObservationResult ReleaseRuntimeCoordinator::observe_millennium_amiga_exec_transition(const MillenniumAmigaExecTransitionRuntimeObservation o){MillenniumAmigaBootstrapRelocatorObservationResult r;if(!millennium_amiga_relocator_||!native_runtime_memory_||!millennium_amiga_custom_chip_exec_prefix_sequence_||millennium_amiga_exec_transition_sequence_||o.sequence<=*millennium_amiga_custom_chip_exec_prefix_sequence_){r.error="Exec transition requires the custom-chip/ExecBase prefix";return r;}try{auto next=*millennium_amiga_relocator_;const auto x=next.execute_exec_transition(o.returns);NativeRuntimeEffectBatch b{"millennium-amiga-exec-transition-"+std::to_string(millennium_amiga_relocator_generation_),true,{{1,{NativeRuntimeAddressSpace::linear,std::nullopt,x.saved_a1_address},MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,x.saved_a1_value}}};auto m=*native_runtime_memory_;const auto a=m.apply(b);if(!a.accepted){r.error=a.error;return r;}*millennium_amiga_relocator_=std::move(next);*native_runtime_memory_=std::move(m);millennium_amiga_exec_transition_sequence_=o.sequence;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
 
-MillenniumAmigaBootstrapRelocatorObservationResult ReleaseRuntimeCoordinator::observe_millennium_amiga_open_graphics(const MillenniumAmigaOpenGraphicsRuntimeObservation o){MillenniumAmigaBootstrapRelocatorObservationResult r;if(!millennium_amiga_relocator_||!native_runtime_memory_||!millennium_amiga_exec_transition_sequence_||millennium_amiga_open_graphics_sequence_||o.sequence<=*millennium_amiga_exec_transition_sequence_){r.error="Open-graphics service requires the Exec transition";return r;}try{auto next=*millennium_amiga_relocator_;const auto x=next.execute_open_graphics(o.service);NativeRuntimeEffectBatch b{"millennium-amiga-open-graphics-"+std::to_string(millennium_amiga_relocator_generation_),true,{{1,{NativeRuntimeAddressSpace::linear,std::nullopt,x.graphics_base_address},MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,x.graphics_base_value},{2,{NativeRuntimeAddressSpace::linear,std::nullopt,x.open_count_address},MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,x.open_count_value}}};auto m=*native_runtime_memory_;const auto a=m.apply(b);if(!a.accepted){r.error=a.error;return r;}*millennium_amiga_relocator_=std::move(next);*native_runtime_memory_=std::move(m);millennium_amiga_open_graphics_sequence_=o.sequence;r.accepted=true;}catch(const std::exception&e){r.error=e.what();}return r;}
+MillenniumAmigaBootstrapRelocatorObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_amiga_open_graphics(
+    const MillenniumAmigaOpenGraphicsRuntimeObservation o) {
+    MillenniumAmigaBootstrapRelocatorObservationResult result;
+    if (!millennium_amiga_relocator_ || !native_runtime_memory_
+        || !millennium_amiga_exec_transition_sequence_
+        || millennium_amiga_open_graphics_sequence_
+        || o.sequence <= *millennium_amiga_exec_transition_sequence_) {
+        result.error = "Open-graphics service requires the Exec transition";
+        return result;
+    }
+    try {
+        auto next = *millennium_amiga_relocator_;
+        const auto execution = next.execute_open_graphics(o.service);
+        auto memory = *native_runtime_memory_;
+        // ADDQ consumes resident state. The original zero in the source image
+        // alone cannot prove that a preceding observed service preserved it.
+        const auto high = memory.read_byte({NativeRuntimeAddressSpace::linear,
+            std::nullopt, execution.open_count_address});
+        const auto low = memory.read_byte({NativeRuntimeAddressSpace::linear,
+            std::nullopt, execution.open_count_address + 1U});
+        if (!high || !low || *high != 0 || *low != 0) {
+            result.error = "Open-graphics count contradicts owned runtime memory";
+            return result;
+        }
+        NativeRuntimeEffectBatch batch{
+            "millennium-amiga-open-graphics-"
+                + std::to_string(millennium_amiga_relocator_generation_), true, {
+            {1, {NativeRuntimeAddressSpace::linear, std::nullopt,
+                execution.graphics_base_address}, MemoryTransferElementWidth::longword,
+                NativeRuntimeByteOrder::big_endian, execution.graphics_base_value},
+            {2, {NativeRuntimeAddressSpace::linear, std::nullopt,
+                execution.open_count_address}, MemoryTransferElementWidth::word,
+                NativeRuntimeByteOrder::big_endian, execution.open_count_value}}};
+        const auto applied = memory.apply(batch);
+        if (!applied.accepted) {
+            result.error = applied.error;
+            return result;
+        }
+        *millennium_amiga_relocator_ = std::move(next);
+        *native_runtime_memory_ = std::move(memory);
+        millennium_amiga_open_graphics_sequence_ = o.sequence;
+        result.accepted = true;
+    } catch (const std::exception& error) {
+        result.error = error.what();
+    }
+    return result;
+}
 
 MillenniumDosPostOverlayObservationResult ReleaseRuntimeCoordinator::complete_millennium_dos_handler(
     const MillenniumDosHandlerCompletionObservation observation) {
@@ -3996,6 +4086,77 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_service_return
     return r;
 }
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_loop_prepare_body(){
+    DeuterosAmigaTitleDependencyObservationResult r;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()
+        ||!native_runtime_memory_){r.error="Deuteros main-stage loop prepare body requires active title session";return r;}
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto plan=pending.advance_main_stage_loop_prepare_body();
+        if(!plan){r.error="Deuteros main-stage loop prepare body did not match boundary";return r;}
+        auto memory=*native_runtime_memory_;
+        const auto read16=[&](const std::uint32_t address)->std::optional<std::uint16_t>{
+            const auto high=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address});
+            const auto low=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+1U});
+            if(!high||!low)return std::nullopt;
+            return static_cast<std::uint16_t>((std::uint16_t(*high)<<8U)|*low);
+        };
+        const auto read32=[&](const std::uint32_t address)->std::optional<std::uint32_t>{
+            std::uint32_t value=0;
+            for(std::uint32_t i=0;i<4;++i){
+                const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
+                if(!byte)return std::nullopt;
+                value=(value<<8U)|*byte;
+            }
+            return value;
+        };
+        const auto count=read16(plan->count_source_address);
+        const auto final_word=read16(plan->final_word_source_address);
+        const auto a6=read32(plan->a6_source_address);
+        if(!count||!final_word||!a6){r.error="Deuteros loop prepare body source is absent from owned memory";return r;}
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-main-stage-loop-prepare-body",true,{
+            {1,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->cleared_word_address},
+                MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,0},
+            {2,{NativeRuntimeAddressSpace::linear,std::nullopt,plan->count_destination},
+                MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,*count}}};
+        std::size_t sequence=3;
+        for(std::uint32_t i=0;i<plan->pointer_count;++i){
+            const auto source=read32(plan->pointer_source_address+i*4U);
+            if(!source){r.error="Deuteros loop prepare pointer table is absent from owned memory";return r;}
+            const auto value=*source==0?0U:*source+plan->source_base;
+            batch.effects.push_back({sequence++,
+                {NativeRuntimeAddressSpace::linear,std::nullopt,plan->pointer_destination+i*4U},
+                MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,value});
+        }
+        std::uint32_t next_a1=0;
+        for(std::size_t i=0;i<plan->trailing_source_addresses.size();++i){
+            const auto source=read32(plan->trailing_source_addresses[i]);
+            if(!source){r.error="Deuteros loop prepare trailing source is absent from owned memory";return r;}
+            std::uint32_t value=0;
+            if(plan->trailing_destination_addresses[i]==0x207eb)value=*source==0?0U:1U;
+            else value=(*source==0&&plan->nullable[i])?0U:*source+plan->source_base;
+            if(plan->trailing_destination_addresses[i]==plan->a1_source_address)
+                next_a1=value;
+            batch.effects.push_back({sequence++,
+                {NativeRuntimeAddressSpace::linear,std::nullopt,plan->trailing_destination_addresses[i]},
+                plan->destination_widths[i],NativeRuntimeByteOrder::big_endian,value});
+        }
+        batch.effects.push_back({sequence++,
+            {NativeRuntimeAddressSpace::linear,std::nullopt,plan->final_byte_destination},
+            MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,
+            static_cast<std::uint8_t>(*final_word)});
+        batch.effects.push_back({sequence,
+            {NativeRuntimeAddressSpace::linear,std::nullopt,plan->second_cleared_word_address},
+            MemoryTransferElementWidth::word,NativeRuntimeByteOrder::big_endian,0});
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted){r.error=applied.error;return r;}
+        if(!deuteros_amiga_->advance_main_stage_loop_prepare_body(next_a1,*a6)){
+            r.error="Deuteros main-stage loop prepare body disappeared before commit";return r;}
+        *native_runtime_memory_=std::move(memory);r.accepted=true;
+    }catch(const std::exception&e){r.error=e.what();}
+    return r;
+}
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_prepare_return(
     const DeuterosAmigaObservedLocalCallReturn o){
     DeuterosAmigaTitleDependencyObservationResult r;
@@ -4232,7 +4393,7 @@ ReleaseRuntimeCoordinator::millennium_amiga_bootstrap_relocator_checkpoint()cons
         session.first_stage_sha256(),session.first_stage_entry_execution(),
         session.first_stage_illegal_execution(),session.second_illegal_execution(),
         session.first_trace_execution(),session.trace_branch_chain_execution(),session.trace_register_prefix_execution(),
-        session.bus_error_prefix_execution(),session.custom_chip_exec_prefix_execution(),session.exec_transition_execution(),session.open_graphics_execution()};
+        session.bus_error_prefix_execution(),session.custom_chip_exec_prefix_execution(),session.exec_transition_execution(),session.open_graphics_execution(),session.allocation_consumer_execution()};
 }
 
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>

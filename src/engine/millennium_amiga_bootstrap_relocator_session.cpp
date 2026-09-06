@@ -88,8 +88,35 @@ MillenniumAmigaBootstrapRelocatorSession::boundary() const {
         return {0x4252e,0,0x415ea};
     case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_graphics_allocation:
         return {0x4164a,4,open_graphics_execution_->pending_vector_address};
+    case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_graphics_init:
+        return {0x41666,0x41844,allocation_consumer_execution_->pending_vector_address};
     }
     throw std::runtime_error("Invalid Millennium Amiga bootstrap relocator state");
+}
+
+MillenniumAmigaAllocationConsumerExecution
+MillenniumAmigaBootstrapRelocatorSession::execute_allocation_consumer(
+    const MillenniumAmigaAllocationObservation& o) {
+    constexpr std::uint32_t size=0x7d00;
+    const auto graphics_base=open_graphics_execution_?open_graphics_execution_->graphics_base_value:0;
+    if(state_!=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_graphics_allocation
+        ||!open_graphics_execution_||o.exec_base_source_address!=4
+        ||o.exec_base_value!=open_graphics_execution_->observed.exec_base_value
+        ||o.call_address!=0x4164a||o.vector!=-198||o.return_address!=0x4164e
+        ||o.result_d0==0||(o.result_d0&1U)!=0||o.result_d0>0xffffff
+        ||o.allocated_size!=size||!o.cleared||o.result_d0>0x1000000U-size
+        ||o.result_a7<4||o.result_a7>0xfffffc||(o.result_a7&1U)!=0
+        ||graphics_base<=360)
+        throw std::runtime_error("Detached Millennium Amiga AllocMem observation");
+    MillenniumAmigaAllocationConsumerExecution r;
+    r.observed=o;r.allocation_begin=o.result_d0;
+    r.allocation_end_exclusive=o.result_d0+size;
+    r.primary_pointer_address=0x41ad2;r.secondary_pointer_address=0x41ace;
+    r.graphics_request_address=0x41892;r.pending_call_address=0x41666;
+    r.pending_graphics_vector=-360;r.pending_vector_address=graphics_base-360;
+    allocation_consumer_execution_=r;
+    state_=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_graphics_init;
+    return r;
 }
 
 MillenniumAmigaOpenGraphicsExecution

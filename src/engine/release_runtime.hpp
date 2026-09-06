@@ -166,6 +166,7 @@ struct MillenniumAmigaBusErrorRuntimeObservation {std::uint64_t sequence=0;Mille
 struct MillenniumAmigaCustomChipExecRuntimeObservation {std::uint64_t sequence=0;MillenniumAmigaCustomChipExecBaseObservation hardware_and_exec_base;};
 struct MillenniumAmigaExecTransitionRuntimeObservation {std::uint64_t sequence=0;MillenniumAmigaExecTransitionObservation returns;};
 struct MillenniumAmigaOpenGraphicsRuntimeObservation {std::uint64_t sequence=0;MillenniumAmigaOpenGraphicsObservation service;};
+struct MillenniumAmigaAllocationRuntimeObservation {std::uint64_t sequence=0;MillenniumAmigaAllocationObservation allocation;};
 struct MillenniumAmigaBootstrapRelocatorCheckpoint {
     std::uint64_t generation=0;
     MillenniumAmigaBootstrapRelocatorState state=MillenniumAmigaBootstrapRelocatorState::awaiting_overread_byte;
@@ -185,6 +186,7 @@ struct MillenniumAmigaBootstrapRelocatorCheckpoint {
     std::optional<MillenniumAmigaCustomChipExecPrefixExecution> custom_chip_exec_prefix_execution;
     std::optional<MillenniumAmigaExecTransitionExecution> exec_transition_execution;
     std::optional<MillenniumAmigaOpenGraphicsExecution> open_graphics_execution;
+    std::optional<MillenniumAmigaAllocationConsumerExecution> allocation_consumer_execution;
 };
 
 // Immutable Millennium Atari ST bootstrap provenance.  It reports only the
@@ -870,6 +872,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_209f0_exec_return(DeuterosAmigaObservedMainStageExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_cia_a_bit_set(DeuterosAmigaObservedMainStageCiaABitSet);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_loop_service_return(DeuterosAmigaObservedLocalCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_main_stage_loop_prepare_body();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_loop_prepare_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_loop_scheduler_return(DeuterosAmigaObservedLocalCallReturn);
 
@@ -906,6 +909,7 @@ public:
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_custom_chip_exec_prefix(MillenniumAmigaCustomChipExecRuntimeObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_exec_transition(MillenniumAmigaExecTransitionRuntimeObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_open_graphics(MillenniumAmigaOpenGraphicsRuntimeObservation);
+    [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_allocation(MillenniumAmigaAllocationRuntimeObservation);
     [[nodiscard]] std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint> millennium_amiga_bootstrap_relocator_checkpoint() const;
 
     [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>
@@ -1183,6 +1187,7 @@ private:
     std::optional<std::uint64_t> millennium_amiga_custom_chip_exec_prefix_sequence_;
     std::optional<std::uint64_t> millennium_amiga_exec_transition_sequence_;
     std::optional<std::uint64_t> millennium_amiga_open_graphics_sequence_;
+    std::optional<std::uint64_t> millennium_amiga_allocation_sequence_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::optional<MillenniumAtariConfigConsumerSession> millennium_atari_config_consumer_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;

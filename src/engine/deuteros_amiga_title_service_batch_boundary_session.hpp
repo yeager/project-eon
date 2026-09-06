@@ -1354,6 +1354,23 @@ struct DeuterosAmigaMainStageLoopPrepareReturnPlan {
     std::uint32_t next_call_address=0,next_call_target=0,next_return_address=0;
     std::string source_sha256;
 };
+struct DeuterosAmigaMainStageLoopPrepareBodyPlan {
+    std::uint32_t entry_address=0,source_base=0;
+    std::uint32_t cleared_word_address=0,count_source_address=0,count_destination=0;
+    std::uint32_t pointer_source_address=0,pointer_destination=0;
+    std::uint16_t pointer_count=0;
+    std::array<std::uint32_t,6> trailing_source_addresses{};
+    std::array<std::uint32_t,6> trailing_destination_addresses{};
+    std::array<bool,6> nullable{};
+    std::array<MemoryTransferElementWidth,6> destination_widths{};
+    std::uint32_t final_word_source_address=0,final_byte_destination=0;
+    std::uint32_t second_cleared_word_address=0;
+    std::uint32_t next_call_address=0,a0_value=0,a1_source_address=0,a1_value=0;
+    std::uint32_t a6_source_address=0,a6_value=0,next_return_address=0;
+    std::uint16_t d0_value=0;
+    std::int16_t next_vector=0;
+    std::string source_sha256;
+};
 struct DeuterosAmigaMainStageLoopSchedulerReturnPlan {
     DeuterosAmigaObservedLocalCallReturn observation;
     std::uint32_t next_instruction_address=0,next_address=0;
@@ -1428,7 +1445,9 @@ public:
             ||to_hex(sha256(main_stage.subspan(0x181c,6)))
                 !="91c2210c9aae535291275c95f4f39367c59bb37924438e9fa86f461e5dfe3d3a"
             ||to_hex(sha256(main_stage.subspan(0x1822,8)))
-                !="72c3eb4341f9202ad6480cc45f030df358e2babffbfd8396b80715a86700557a")
+                !="72c3eb4341f9202ad6480cc45f030df358e2babffbfd8396b80715a86700557a"
+            ||to_hex(sha256(main_stage.subspan(0x1276,0x9a)))
+                !="f86946a0b1323b9f85c0ab5259395fa11962961c72ca17bc02ab230bc008dbed")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
@@ -3741,9 +3760,30 @@ public:
             {0x21720,0x2171e,0x210f2},{0,0,1},0x21816,0x21276,0x2181c,
             "382932f57f5d3d181f93727198a6f5b7d6fff91522eed0438778a43e8ca417d5"};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>
+    advance_main_stage_loop_prepare_body(const std::uint32_t a1_value=0,
+        const std::uint32_t a6_value=0){
+        if(!main_stage_loop_service_return_||main_stage_loop_prepare_body_plan_
+            ||main_stage_loop_prepare_return_)return std::nullopt;
+        DeuterosAmigaMainStageLoopPrepareBodyPlan result{
+            0x21276,0x32a24,0x210f4,0x32a28,0x21248,
+            0x32a2a,0x2124a,7,
+            {0x32a46,0x32a4a,0x32a4e,0x32a52,0x32a56,0x32a5a},
+            {0x21266,0x2126a,0x207eb,0x22aa6,0x2126e,0x21272},
+            {false,true,false,true,false,false},
+            {MemoryTransferElementWidth::longword,MemoryTransferElementWidth::longword,
+             MemoryTransferElementWidth::byte,MemoryTransferElementWidth::longword,
+             MemoryTransferElementWidth::longword,MemoryTransferElementWidth::longword},
+            0x32a5e,0x207ea,0x210f6,0x21310,0x12e12,0x21266,a1_value,
+            0x12fec,a6_value,0x21314,0x10,-0xc0,
+            "f86946a0b1323b9f85c0ab5259395fa11962961c72ca17bc02ab230bc008dbed"};
+        main_stage_loop_prepare_body_plan_=result;
+        return result;
+    }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareReturnPlan>
     observe_main_stage_loop_prepare_return(const DeuterosAmigaObservedLocalCallReturn&o){
-        if(!main_stage_loop_service_return_||main_stage_loop_prepare_return_)return std::nullopt;
+        if(!main_stage_loop_service_return_||main_stage_loop_prepare_body_plan_
+            ||main_stage_loop_prepare_return_)return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x21816
             ||o.call_target!=0x21276||o.return_address!=0x2181c)
             throw std::runtime_error("Deuteros main-stage loop prepare return does not match boundary");
@@ -4013,6 +4053,8 @@ private:
     std::optional<DeuterosAmigaObservedMainStageCiaABitSet>
         main_stage_cia_a_bit_set_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> main_stage_loop_service_return_;
+    std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>
+        main_stage_loop_prepare_body_plan_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> main_stage_loop_prepare_return_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> main_stage_loop_scheduler_return_;
     std::vector<std::uint8_t> first_title_exit_source_bytes_;
