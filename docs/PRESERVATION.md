@@ -4191,6 +4191,16 @@ bits. The verified `$1e0f` display offset is byte 15 of scanline 192, so the ele
 those writes to its existing in-memory four-plane-equivalent frame; it does
 not create a font, artwork, or source-media output. Any other command class,
 global layout, or out-of-plane write is rejected as a preservation boundary.
+The production native main-loop frame transaction now uses the same recovered
+operation for selector `$fe`. It reads the stream and the `$20128`, `$20508`,
+`$2050c`, `$20510`, `$20538`, and `$2053c` globals, selector masks, and glyph
+rows only from owned native memory. Pointer updates and bitplane bytes remain
+in the frame's private
+write overlay until the entire scheduler walk succeeds, so a missing byte,
+unsupported opcode, exhausted command budget, or invalid display extent
+publishes neither partial pixels nor partial global state. This closes the
+previous selector-`$fe` exception in the production path without reopening the
+ADF or adding an emulator to the runtime.
 At the caller-connected tick-82 title handoff, the resulting original-derived
 320×200 RGBA compositor surface hashes to
 `61eed88676355d0a136c943ffaa37396ba5220b7ea751b8cab6d0b125b3dd4c9`.

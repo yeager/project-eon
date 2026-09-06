@@ -475,8 +475,11 @@ its exact bitplanes and covers all 142 original resource bitmaps in tests.
 The masked `$20cc6/$20fb2` cache/merge path now renders the following real
 buffer and is cross-checked on all 142 original bitmaps. Native saved-scanline
 save/restore now covers those same bitmaps, including bottom-clipped restores
-with the original source-plane stride. Implement alternate-resource rendering
-next. The distinct `$218cc`, `$21892` and `$21982` cleanup/transition
+with the original source-plane stride. Alternate-resource selector `$fe` now
+executes the bounded `$20580` command classes directly against owned native
+memory inside the atomic frame transaction, including its original global
+video cursors, selector tables, embedded glyph rows, and four bitplane writes.
+The distinct `$218cc`, `$21892` and `$21982` cleanup/transition
 prefixes now execute native selector decisions and software sound reset;
 the nonzero-resource fade now performs its 16-color RGB4 steps, ordered
 dual palette calls and owned 32-step counter. Its two final native buffer

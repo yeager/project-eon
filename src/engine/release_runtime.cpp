@@ -1,5 +1,6 @@
 #include "engine/release_runtime.hpp"
 #include "engine/release_runtime_capability.hpp"
+#include "engine/deuteros_amiga_owned_alternate_renderer.hpp"
 
 #include "platform/game_data.hpp"
 #include "data/reference_trace.hpp"
@@ -4833,8 +4834,10 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_frame_buffer(const DeuterosAmi
             active_count=static_cast<std::uint8_t>(active_count+1U);
             const auto selector=read(record,2);
             if(selector==0xff)continue;
-            if(selector==0xfe)
-                throw std::runtime_error("Deuteros frame requires its alternate-resource continuation");
+            if(selector==0xfe){
+                apply_deuteros_amiga_owned_alternate_renderer(read(record+12,4),read,sprite_write);
+                continue;
+            }
             draw_deuteros_amiga_owned_sprite(record,read,sprite_write);
         }
         if(!sprite_bytes.empty()){

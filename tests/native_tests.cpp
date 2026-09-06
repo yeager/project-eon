@@ -7,6 +7,7 @@
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_amiga_opening_runner.hpp"
 #include "engine/deuteros_amiga_bootstrap_frame.hpp"
+#include "engine/deuteros_amiga_owned_alternate_renderer.hpp"
 #include "engine/deuteros_amiga_title_program_entry_session.hpp"
 #include "engine/release_runtime.hpp"
 #include "engine/release_runtime_capability.hpp"
@@ -6653,6 +6654,35 @@ int main() {
             assert(fourth_stop.instruction==0&&command_read(0x21140,2)==0xfe);
             assert(command_read(0x21140+12,4)==0x32a24+0xb38);
             assert(command_read(0x21140+6,2)==5&&command_read(0x21140+8,4)==0x00080044);
+            {
+                // Run the exact original `$20580` stream against an isolated
+                // copy of production-owned memory. The native frame path uses
+                // these same callbacks inside its atomic transaction.
+                auto alternate_bytes=owned_command_bytes;
+                const auto alternate_read=[&](std::uint32_t address,std::uint32_t width){
+                    std::uint32_t value=0;
+                    for(std::uint32_t byte=0;byte<width;++byte)
+                        value=(value<<8U)|alternate_bytes.at(address+byte);
+                    return value;
+                };
+                const auto alternate_write=[&](std::uint32_t address,
+                    eon::MemoryTransferElementWidth width,std::uint32_t value){
+                    const auto size=static_cast<std::uint32_t>(width);
+                    for(std::uint32_t byte=0;byte<size;++byte)
+                        alternate_bytes[address+byte]=static_cast<std::uint8_t>(
+                            value>>((size-1U-byte)*8U));
+                };
+                const auto video_base=alternate_read(0x20128,4);
+                eon::apply_deuteros_amiga_owned_alternate_renderer(
+                    command_read(0x21140+12,4),alternate_read,alternate_write);
+                assert(alternate_read(0x20508,4)==0x20490);
+                assert(alternate_read(0x2050c,4)==0x20488);
+                assert(alternate_read(0x20510,4)==video_base+0x1e0f+11);
+                assert(alternate_read(video_base+0x1e0f+2*40,1)==0x7c);
+                for(std::uint32_t plane=1;plane<4;++plane)
+                    assert(alternate_read(video_base+0x1e0f+plane*8000+2*40,1)==0);
+                assert(command_read(0x20510,4)!=video_base+0x1e0f+11);
+            }
             auto second_cursor=palette_stop.cursor;
             for(unsigned command_group=0;command_group<4;++command_group){
                 const auto second_stop=eon::execute_deuteros_amiga_owned_commands(
