@@ -7934,3 +7934,38 @@ count, observes and ANDs the far word at `$0d1e`, then observes, rotates, and
 ORs the pattern word from `CS:$0962+2*row` at `$0d21/$0d24`. Far offsets use
 the exact `$28` row stride and reset per group; `$03c5/$03cf` effects are
 retained. No memory or port semantics are inferred.
+
+### Deuteros configured bootstrap request and profile dispatch
+
+The clean Amiga bootstrap's `$12a7e -> $12932` continuation now executes
+native request writes using owned `$12822`: longword one at offset `$24`,
+word nine at `$1c`, and byte zero at `$1e`. Its typed `$12950/-$1c8` return
+continues through local RTS `$12954` to `$12a82`, replacing the command word
+with `$8005` and clearing the status byte before the next service boundary.
+The private transaction records final bytes, not a bus trace; the intermediate
+command-nine write is not evidence that a device performed the operation.
+
+After the distinct `$12a92/-$1c8` return, native code loads the profile word
+from `$12a34`, shifts it left two with 16-bit truncation, sign-extends that
+word for the indexed longword read at `$12a36`, and stops at indirect call
+`$12aa8` (return `$12aaa`). D0's upper word retains the service return's upper
+word. Neither a profile body nor an operating-system side effect is inferred.
+Request pointers and indirect targets must be aligned and within owned
+24-bit memory; absent reads reject the transaction. Ordered session sequence
+validation remains in force.
+
+Source gates (bootstrap file offset = runtime address minus `$fc00`):
+
+- ADF `$2d32`, 36 bytes, SHA-256
+  `8e5d99959ad6c75d2bcb9d154d5cc3136b39d4809c726a15f3e3d88bfdc9fae7`.
+- ADF `$2e7e`, 44 bytes, SHA-256
+  `b9f2a9537c12e0dacfead2062aac59507a98ab58f0e243dd2e607f6ded92acce`.
+
+Controlled native tests continue the existing re-entry profile matrix through
+both service boundaries, check request fields and table targets, preserve
+D0 upper bits, and reject a mismatched service vector. The controlled checkpoint
+does not contain `$12a36..$12a4d`; tests populate only that private map from
+the exact original ADF bytes at `$2e36`. Runtime still requires the table to
+have been materialized by its bootstrap transfer and rejects absent bytes;
+there is no synthetic table fallback. Connecting that materialization remains
+required for an end-to-end runtime dispatch claim. These are not captures.

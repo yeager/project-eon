@@ -496,6 +496,13 @@ reaching `$12800`. Continue that program entry and the separate `$219f8`
 disk-check/message route. The `$12800` re-entry now passes five typed Exec
 returns and native request setup, reaching the original error spin or the
 `$13000`/`$12932` caller boundary. Continue those routines and profile dispatch.
+The configured bootstrap route now executes `$12932` request initialization,
+its ordered Exec return and the caller's `$12a92` return, then dispatches via
+the owned profile table at `$12a36`. Continue the selected `$12aa8` target;
+the unconfigured `$13000` graphics initialization remains separate. Materialize
+the genuine bootstrap table through its owned transfer before claiming an
+end-to-end runtime dispatch; the controlled tests load its original bytes
+into their private map, and runtime rejects missing table bytes.
 The restart route
 at `$217f6` now executes sound/flag reset and re-enters `$21276` using fresh
 per-loop continuation state and effect identifiers. Continue verifying its

@@ -6445,7 +6445,11 @@ int main() {
                 if((width>1&&(address&1U))||address>0x1000000U-width)
                     throw std::runtime_error("Invalid owned command test read");
                 std::uint32_t value=0;
-                for(std::uint32_t j=0;j<width;++j)value=(value<<8U)|owned_command_bytes.at(address+j);
+                for(std::uint32_t j=0;j<width;++j){
+                    if(!owned_command_bytes.contains(address+j))
+                        throw std::runtime_error("Missing owned command test byte: "+std::to_string(address+j));
+                    value=(value<<8U)|owned_command_bytes.at(address+j);
+                }
                 return value;
             };
             const auto command_write=[&](std::uint32_t address,eon::MemoryTransferElementWidth width,std::uint32_t value){
@@ -6900,6 +6904,13 @@ int main() {
                                     const auto final=eon::execute_deuteros_amiga_outer_service(first,wrong,command_read,command_write);
                                     assert(final.next_instruction_address==0x12800&&final.next_call_address==0&&final.d0_value==1);
                                     assert(command_read(0x12ff8,4)==command_read(0x20976,4)&&command_read(0x12ffc,4)==1);
+                                    // The controlled checkpoint does not materialize the bootstrap
+                                    // table. Supply its genuine bytes only to this private test map.
+                                    const auto bootstrap_media=eon::extract_asset_by_sha256(release.path,
+                                        "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38");
+                                    assert(bootstrap_media);
+                                    for(std::uint32_t byte=0;byte<24;++byte)
+                                        owned_command_bytes[0x12a36+byte]=bootstrap_media->at(0x2e36+byte);
                                     for(const std::uint32_t profile:{0U,1U,2U,3U,4U,5U,0x12340001U}){
                                         command_write(0x12ffc,eon::MemoryTransferElementWidth::longword,profile);
                                         const auto entry=eon::execute_deuteros_amiga_outer_service(final,
@@ -6943,6 +6954,27 @@ int main() {
                                             assert(connected.next_call_address==(pointer==0x1ab00?0x12a7eU:0x12a76U));
                                             assert(connected.local_call_target==(pointer==0x1ab00?0x12932U:0x13000U));
                                             assert(command_read(0x12856,4)==0xffffffff&&command_read(0x12844,1)==0);
+                                            if(pointer==0x1ab00){
+                                                const eon::DeuterosAmigaObservedLoopRequestService request{
+                                                    13,0x1294c,4,command_read(4,4),0x12950,0x12954,0xdeadbeef,-0x1c8};
+                                                const auto dispatched=eon::execute_deuteros_amiga_outer_service(
+                                                    connected,request,command_read,command_write);
+                                                assert(dispatched.next_call_address==0x12a92);
+                                                assert(command_read(0x1284a,4)==1&&command_read(0x12842,2)==0x8005);
+                                                const eon::DeuterosAmigaObservedLoopRequestService returned{
+                                                    14,0x12a8e,4,command_read(4,4),0x12a92,0x12a96,0xdeadbeef,-0x1c8};
+                                                const auto selected=eon::execute_deuteros_amiga_outer_service(
+                                                    dispatched,returned,command_read,command_write);
+                                                const auto index=(command_read(0x12a34,2)<<2)&0xffffU;
+                                                assert(selected.d0_value==(0xdead0000U|index));
+                                                assert(selected.next_call_address==0x12aa8&&selected.next_return_address==0x12aaa);
+                                                assert(selected.local_call_target==command_read(0x12a36+index,4));
+                                                auto wrong=returned;wrong.vector=-0x1c2;
+                                                bool refused=false;
+                                                try{(void)eon::execute_deuteros_amiga_outer_service(dispatched,wrong,command_read,command_write);}
+                                                catch(const std::runtime_error&){refused=true;}
+                                                assert(refused);
+                                            }
                                         }
                                     }
                                 }
