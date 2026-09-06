@@ -4318,6 +4318,40 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_loop_prepare_body()
     return r;
 }
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_graphics_return(
+    const DeuterosAmigaObservedMainStageExecReturn o){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()
+        ||!native_runtime_memory_){
+        result.error="Deuteros loop graphics return requires active owned memory";return result;
+    }
+    try{
+        const auto read_long=[&](const std::uint32_t address){
+            std::uint32_t value=0;
+            for(std::uint32_t i=0;i<4;++i){
+                const auto byte=native_runtime_memory_->read_byte(
+                    {NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
+                if(!byte)throw std::runtime_error("Deuteros loop graphics source is not owned");
+                value=(value<<8U)|*byte;
+            }
+            return value;
+        };
+        // The first return executes two actual memory reloads. The second
+        // reaches a local call without reading either cell again.
+        const auto a1=o.call_address==0x21310?read_long(0x21266):0U;
+        const auto a6=o.call_address==0x21310?read_long(0x12fec):0U;
+        auto pending=*deuteros_amiga_->title_stage_session();
+        if(!pending.advance_main_stage_loop_graphics_return(o,a1,a6)){
+            result.error="Deuteros loop graphics return did not match boundary";return result;
+        }
+        if(!deuteros_amiga_->advance_main_stage_loop_graphics_return(o,a1,a6)){
+            result.error="Deuteros loop graphics return disappeared before commit";return result;
+        }
+        result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_prepare_return(
     const DeuterosAmigaObservedLocalCallReturn o){
     DeuterosAmigaTitleDependencyObservationResult r;

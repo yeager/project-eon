@@ -456,8 +456,8 @@ the caller's typed re-entry D0 supplies that selector through `$21704` and
 probe/body transfer, and observed released `$2196e` hardware retry into owned
 `$2ad24/$32a24` memory. The earlier typed OpenLibrary return now owns `$12fec`
 only through its exact post-return store, so `$21276` can consume both owned
-sources and stop at `$21310`, the first `-$c0(A6)` boundary. Continue with that
-typed vector return; do not reuse unrelated observed bases or assign graphics,
+sources. Ordered typed returns at `$21310` and `$2132a` now continue to the
+local `$2132e->$20888` call. Recover that callee; do not reuse unrelated observed bases or assign graphics,
 audio, scheduler, input, or resource semantics.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,

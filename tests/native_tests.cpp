@@ -6231,6 +6231,24 @@ int main() {
             assert(runtime_byte(*after_loop_prepare_body,0x12fed)==0xab);
             assert(runtime_byte(*after_loop_prepare_body,0x12fee)==0xcd);
             assert(runtime_byte(*after_loop_prepare_body,0x12fef)==0xef);
+            eon::DeuterosAmigaObservedMainStageExecReturn loop_graphics_return{
+                runtime_copy_sequence+105,0x21310,-0xc0,0x21314,0x12345678};
+            auto wrong_graphics_return=loop_graphics_return;
+            wrong_graphics_return.call_address=0x2132a;
+            wrong_graphics_return.return_address=0x2132e;
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_loop_graphics_return(
+                wrong_graphics_return).accepted);
+            assert(opening_controller.observe_deuteros_amiga_main_stage_loop_graphics_return(
+                loop_graphics_return).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_loop_graphics_return(
+                loop_graphics_return).accepted);
+            wrong_graphics_return.trace_sequence=runtime_copy_sequence+106;
+            assert(opening_controller.observe_deuteros_amiga_main_stage_loop_graphics_return(
+                wrong_graphics_return).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_loop_graphics_return(
+                wrong_graphics_return).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum
+                ==after_loop_prepare_body->checksum);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

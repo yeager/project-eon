@@ -1388,6 +1388,12 @@ struct DeuterosAmigaMainStageLoopSchedulerReturnPlan {
     std::uint8_t next_bit=0;
     std::string next_instruction_sha256;
 };
+struct DeuterosAmigaMainStageLoopGraphicsPlan {
+    std::uint32_t next_call_address=0,next_return_address=0;
+    std::uint32_t a0_value=0,a1_value=0,a6_value=0,d0_value=0;
+    std::int16_t next_vector=0;
+    std::uint32_t local_call_target=0;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -1458,7 +1464,9 @@ public:
             ||to_hex(sha256(main_stage.subspan(0x1822,8)))
                 !="72c3eb4341f9202ad6480cc45f030df358e2babffbfd8396b80715a86700557a"
             ||to_hex(sha256(main_stage.subspan(0x1276,0x9a)))
-                !="f86946a0b1323b9f85c0ab5259395fa11962961c72ca17bc02ab230bc008dbed")
+                !="f86946a0b1323b9f85c0ab5259395fa11962961c72ca17bc02ab230bc008dbed"
+            ||to_hex(sha256(main_stage.subspan(0x1314,32)))
+                !="3c03bd624f997572d76c303a2e14e9f1838f8473d8efa30be4484e9ad61e047f")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
@@ -3805,6 +3813,28 @@ public:
         main_stage_loop_prepare_body_plan_=result;
         return result;
     }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    advance_main_stage_loop_graphics_return(const DeuterosAmigaObservedMainStageExecReturn&o,
+        const std::uint32_t a1,const std::uint32_t a6){
+        if(!main_stage_loop_prepare_body_plan_||main_stage_loop_graphics_returns_>=2)
+            return std::nullopt;
+        const bool first=main_stage_loop_graphics_returns_==0;
+        if(o.trace_sequence<=last_command_sequence_||o.vector!=-0xc0
+            ||o.call_address!=(first?0x21310U:0x2132aU)
+            ||o.return_address!=(first?0x21314U:0x2132eU))
+            throw std::runtime_error("Deuteros loop graphics return does not match boundary");
+        DeuterosAmigaMainStageLoopGraphicsPlan plan;
+        if(first){
+            plan={0x2132a,0x2132e,0x12f12,a1,a6,
+                (o.result_d0&0xffff0000U)|0x10U,-0xc0,0};
+        }else{
+            plan={0x2132e,0x21334,0,0,0,o.result_d0,0,0x20888};
+        }
+        ++main_stage_loop_graphics_returns_;
+        last_command_sequence_=o.trace_sequence;
+        main_stage_loop_graphics_plan_=plan;
+        return plan;
+    }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareReturnPlan>
     observe_main_stage_loop_prepare_return(const DeuterosAmigaObservedLocalCallReturn&o){
         if(!main_stage_loop_service_return_||main_stage_loop_prepare_body_plan_
@@ -4078,6 +4108,8 @@ private:
     std::optional<DeuterosAmigaObservedMainStageCiaABitSet>
         main_stage_cia_a_bit_set_;
     std::optional<DeuterosAmigaObservedMainStageResourceLoad> main_stage_resource_load_;
+    unsigned main_stage_loop_graphics_returns_=0;
+    std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> main_stage_loop_graphics_plan_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> main_stage_loop_service_return_;
     std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>
         main_stage_loop_prepare_body_plan_;

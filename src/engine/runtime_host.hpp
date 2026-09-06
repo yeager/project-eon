@@ -301,6 +301,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_resource_load(DeuterosAmigaObservedMainStageResourceLoad);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_loop_service_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_main_stage_loop_prepare_body();
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_loop_graphics_return(DeuterosAmigaObservedMainStageExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_loop_prepare_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_loop_scheduler_return(DeuterosAmigaObservedLocalCallReturn);
 

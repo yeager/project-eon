@@ -3475,6 +3475,18 @@ loop and never writes the cell. The later main-stage reload does not cover
 payload and permits the `$21276` body to reach `$21310`. A previously observed
 graphics-base value is not used as a substitute; ownership comes from the
 actual caller return and store instruction.
+
+The two subsequent `-$c0(A6)` returns now have a strict ordered continuation:
+`$21310->$21314`, then `$2132a->$2132e`. The 32 bytes at clean disk-1 ADF
+offset `$6b14` (runtime `$21314..$21333`) hash to
+`3c03bd624f997572d76c303a2e14e9f1838f8473d8efa30be4484e9ad61e047f`.
+After the first return, Eon reloads A1 from owned `$21266` and A6 from owned
+`$12fec`, sets A0 to `$12f12`, and changes only D0's low word to `$0010`.
+Its high word comes from the typed return, not from a fabricated zero.
+After the second return, execution stops at the local `$2132e->$20888` call,
+return address `$21334`. Neither continuation writes memory or synthesizes
+library-internal effects. Out-of-order, mismatched, and replayed returns do
+not advance the session. The local callee remains unrecovered on this path.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,

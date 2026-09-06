@@ -439,6 +439,7 @@ EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_cia_a_bit_set,(const D
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_resource_load,(const DeuterosAmigaObservedMainStageResourceLoad o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_loop_service_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_main_stage_loop_prepare_body,(),())
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_loop_graphics_return,(const DeuterosAmigaObservedMainStageExecReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_loop_prepare_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_loop_scheduler_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 #undef EON_HOST_DEUTEROS_TITLE
