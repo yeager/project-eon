@@ -8307,6 +8307,22 @@ original RTS to `$12a7e -> $12932`, reconnecting the existing bootstrap
 dispatch. The remaining decompressed `$27d20..$283ff` bytes are retained but
 not assigned a meaning because this caller does not consume them.
 
+The runtime now exposes this state as an immutable Original-mode 320x200
+frame, but only after the typed `$133aa` `LoadRGB4` return is accepted by the
+owning session. Merely reaching the call boundary does not publish pixels.
+The renderer reads all four dynamic planes selected by owned cell `$12ff4`
+and the 16 RGB4 words at `$20000`; every source byte must be initialized.
+Indexed pixels are SHA-256
+`a55891e61536aa9d154720f08858b66ca7754b5b72d0bd94578df16ad5fd7e39`.
+RGB4 nibbles expand exactly by multiplication with 17 and opaque alpha,
+producing RGBA SHA-256
+`9d3a40c805ada5111f9253ef1a06e5f6d0f6a523b8920485b22ea8864e852f65`.
+The snapshot is generation- and memory-checksum-addressed, is cleared with
+the release lifecycle, and is withheld while host revocation is pending.
+SDL gives it precedence over the earlier cached opening frame; a later
+admitted title surface still takes precedence. No filter, generated asset or
+Modern replacement participates in this Original pixel path.
+
 Caller source gate: ADF `$370e`, 160 bytes, SHA-256
 `c2b321aa5d287fb5328c36556d9bfdd9b730bdb1e0e3afc54889d5cbe1f8cef2`.
 Independent decoding with Ancient 2.3.0 identifies the same ByteKiller stream

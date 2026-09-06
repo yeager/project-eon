@@ -273,7 +273,7 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("deuteros_external_modern_resolver->resolve(source_tick, title_handed_off)", refresh_block)
         self.assertIn("deuteros_external_modern_resolver.reset()", refresh_block)
         render_block = SOURCE[renderer:SOURCE.index("SDL_SetTextureScaleMode(texture", renderer)]
-        self.assertIn("if (modern && !title_surface)", render_block)
+        self.assertIn("if (modern && !title_surface && !bootstrap_frame)", render_block)
         self.assertIn("refresh_deuteros_external_modern_texture(source_tick", render_block)
         self.assertLess(render_block.index("refresh_deuteros_external_modern_texture"),
                         render_block.index("deuteros_modern_pipeline.resolve(requested_key, *frame"))
@@ -285,8 +285,9 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("SDL_BLENDMODE_BLEND", block)
         self.assertIn("title_surface->rgba.data()", block)
         self.assertIn("title_surface->decoded_pixel_count", block)
-        self.assertIn("? deuteros_title_planar_texture : preview_texture", block)
-        self.assertIn("if (modern && !title_surface)", block)
+        self.assertIn("? deuteros_title_planar_texture", block)
+        self.assertIn(": bootstrap_frame ? deuteros_bootstrap_frame_texture : preview_texture", block)
+        self.assertIn("if (modern && !title_surface && !bootstrap_frame)", block)
         reset = SOURCE.index("const auto reset_deuteros_runtime")
         reset_block = SOURCE[reset:SOURCE.index("const auto reset_active_runtime", reset)]
         self.assertIn("SDL_DestroyTexture(deuteros_title_planar_texture)", reset_block)

@@ -4506,6 +4506,12 @@ int main(int argc, char** argv) {
     SDL_Texture* deuteros_title_planar_texture = nullptr;
     std::optional<std::uint64_t> deuteros_title_planar_generation;
     std::optional<std::uint64_t> deuteros_title_planar_memory_checksum;
+    // The main-stage bootstrap display is a later recovered original frame
+    // than the held opening. Keep a distinct texture so its disappearance or
+    // replacement can never expose stale opening pixels behind it.
+    SDL_Texture* deuteros_bootstrap_frame_texture = nullptr;
+    std::optional<std::uint64_t> deuteros_bootstrap_frame_generation;
+    std::optional<std::uint64_t> deuteros_bootstrap_frame_memory_checksum;
     // A complete external Modern sequence is an alternative presentation of
     // the finite held-input route only.  It neither provides VM state nor
     // substitutes a single original pixel in Original mode.
@@ -4935,11 +4941,15 @@ int main(int argc, char** argv) {
         if (preview_texture) SDL_DestroyTexture(preview_texture);
         if (modern_preview_texture) SDL_DestroyTexture(modern_preview_texture);
         if (deuteros_title_planar_texture) SDL_DestroyTexture(deuteros_title_planar_texture);
+        if (deuteros_bootstrap_frame_texture) SDL_DestroyTexture(deuteros_bootstrap_frame_texture);
         preview_texture = nullptr;
         modern_preview_texture = nullptr;
         deuteros_title_planar_texture = nullptr;
+        deuteros_bootstrap_frame_texture = nullptr;
         deuteros_title_planar_generation.reset();
         deuteros_title_planar_memory_checksum.reset();
+        deuteros_bootstrap_frame_generation.reset();
+        deuteros_bootstrap_frame_memory_checksum.reset();
         discard_deuteros_external_modern_sequence();
     };
     const auto reset_active_runtime = [&] {
@@ -6428,7 +6438,8 @@ int main(int argc, char** argv) {
                 const auto opening = runtime.deuteros_amiga_opening_presentation();
                 const auto title_stage = runtime.deuteros_amiga_title_stage_boundary();
                 const auto title_surface = runtime.deuteros_amiga_title_planar_surface();
-                if (!opening && !title_stage && !title_surface) {
+                const auto bootstrap_frame = runtime.deuteros_amiga_bootstrap_frame();
+                if (!opening && !title_stage && !title_surface && !bootstrap_frame) {
                     draw_text(renderer, 64, 220, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
                     continue;
                 }
@@ -6472,6 +6483,27 @@ int main(int argc, char** argv) {
                             title_surface->runtime_memory_checksum;
                     } else if (deuteros_title_planar_texture) {
                         std::cerr << "Unable to update sparse Deuteros title texture: "
+                                  << SDL_GetError() << '\n';
+                    }
+                }
+                if (bootstrap_frame && (!deuteros_bootstrap_frame_generation
+                        || *deuteros_bootstrap_frame_generation != bootstrap_frame->generation
+                        || !deuteros_bootstrap_frame_memory_checksum
+                        || *deuteros_bootstrap_frame_memory_checksum
+                            != bootstrap_frame->runtime_memory_checksum)) {
+                    if (!deuteros_bootstrap_frame_texture) {
+                        deuteros_bootstrap_frame_texture = SDL_CreateTexture(renderer,
+                            SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING,
+                            bootstrap_frame->width, bootstrap_frame->height);
+                    }
+                    if (deuteros_bootstrap_frame_texture
+                        && SDL_UpdateTexture(deuteros_bootstrap_frame_texture, nullptr,
+                            bootstrap_frame->rgba.data(), bootstrap_frame->width * 4)) {
+                        deuteros_bootstrap_frame_generation = bootstrap_frame->generation;
+                        deuteros_bootstrap_frame_memory_checksum =
+                            bootstrap_frame->runtime_memory_checksum;
+                    } else if (deuteros_bootstrap_frame_texture) {
+                        std::cerr << "Unable to update Deuteros bootstrap frame texture: "
                                   << SDL_GetError() << '\n';
                     }
                 }
@@ -6552,9 +6584,9 @@ int main(int argc, char** argv) {
                         << "; PLANE-BYTES=" << title_surface->initialized_plane_byte_count;
                     draw_text(renderer, 64, 238, surface_provenance.str());
                 }
-                SDL_Texture* texture = title_surface
-                    ? deuteros_title_planar_texture : preview_texture;
-                if (modern && !title_surface) {
+                SDL_Texture* texture = title_surface ? deuteros_title_planar_texture
+                    : bootstrap_frame ? deuteros_bootstrap_frame_texture : preview_texture;
+                if (modern && !title_surface && !bootstrap_frame) {
                     if (SDL_Texture* external = refresh_deuteros_external_modern_texture(source_tick,
                             title_stage.has_value())) {
                         texture = external;
@@ -6601,14 +6633,15 @@ int main(int argc, char** argv) {
                     }
                 }
                 if (texture) SDL_SetTextureScaleMode(texture,
-                    modern && !title_surface && modern_graphics_settings.smooth_scaling
+                    modern && !title_surface && !bootstrap_frame
+                        && modern_graphics_settings.smooth_scaling
                         ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
                 // Keep the original pixels intact while allowing the extra
                 // provenance boundary to remain visible after title handoff.
                 const auto preview_bounds = aspect_viewport(64,
-                    title_stage || title_surface ? 350.0F
+                    title_stage || title_surface || bootstrap_frame ? 350.0F
                         : deuteros_title_resource ? 306.0F : 274.0F,
-                    576, title_stage || title_surface ? 350.0F : 400.0F,
+                    576, title_stage || title_surface || bootstrap_frame ? 350.0F : 400.0F,
                     modern_graphics_settings);
                 if (modern && modern_graphics_settings.frame) draw_modern_surface_frame(renderer, preview_bounds);
                 if (texture) SDL_RenderTexture(renderer, texture, nullptr, &preview_bounds);
@@ -6665,6 +6698,7 @@ int main(int argc, char** argv) {
     SDL_DestroyTexture(preview_texture);
     SDL_DestroyTexture(modern_preview_texture);
     SDL_DestroyTexture(deuteros_title_planar_texture);
+    SDL_DestroyTexture(deuteros_bootstrap_frame_texture);
     SDL_DestroyTexture(deuteros_external_modern_texture);
     SDL_DestroyAudioStream(deuteros_audio_stream);
     active_text_renderer.reset();

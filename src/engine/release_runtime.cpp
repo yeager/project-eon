@@ -296,6 +296,8 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
 }
 
 void ReleaseRuntimeCoordinator::reset() {
+    deuteros_amiga_bootstrap_frame_.reset();
+    deuteros_amiga_bootstrap_frame_generation_ = 0;
     native_runtime_memory_.reset();
     millennium_atari_config_consumer_.reset();
     millennium_dos_title_to_game_.reset();
@@ -2860,6 +2862,15 @@ ReleaseRuntimeCoordinator::deuteros_amiga_title_dependency_chain_checkpoint() co
     return result;
 }
 
+std::optional<DeuterosAmigaBootstrapFrameSnapshot>
+ReleaseRuntimeCoordinator::deuteros_amiga_bootstrap_frame() const {
+    if (!active_ || !session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_title_stage) {
+        return std::nullopt;
+    }
+    return deuteros_amiga_bootstrap_frame_;
+}
+
 #define EON_DEUTEROS_TITLE_ADVANCE(name, expression) \
 DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::name { \
     DeuterosAmigaTitleDependencyObservationResult result; \
@@ -4907,12 +4918,28 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_service(const DeuterosAm
             const auto applied=memory.apply(batch);
             if(!applied.accepted)throw std::runtime_error(applied.error);
         }
+        std::optional<DeuterosAmigaBootstrapFrameSnapshot> bootstrap_frame;
+        // Publish only after the observed graphics.library LoadRGB4 call has
+        // returned. Reaching its call boundary after decrunch/deinterleave is
+        // necessary, but is not evidence that the original accepted it.
+        if(current->next_call_address==0x133aa){
+            bootstrap_frame=decode_deuteros_amiga_bootstrap_frame(
+                memory.checkpoint(),read(0x12ff4,4),
+                deuteros_amiga_bootstrap_frame_generation_+1);
+            if(!bootstrap_frame){
+                result.error="Deuteros bootstrap frame bytes did not match the admitted frame";return result;
+            }
+        }
         if(!deuteros_amiga_->observe_main_stage_outer_service(o,service_plan)){
             result.error="Deuteros outer service disappeared before commit";return result;
         }
         if(plan.next_call_address==0x133aa
             &&!deuteros_amiga_->advance_main_stage_auxiliary_local_path(plan)){
             result.error="Deuteros auxiliary local continuation disappeared before commit";return result;
+        }
+        if(bootstrap_frame){
+            deuteros_amiga_bootstrap_frame_=std::move(bootstrap_frame);
+            ++deuteros_amiga_bootstrap_frame_generation_;
         }
         *native_runtime_memory_=std::move(memory);result.accepted=true;
     }catch(const std::exception&e){result.error=e.what();}

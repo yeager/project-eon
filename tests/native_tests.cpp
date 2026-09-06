@@ -6,6 +6,7 @@
 #include "presentation_preferences.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/deuteros_amiga_opening_runner.hpp"
+#include "engine/deuteros_amiga_bootstrap_frame.hpp"
 #include "engine/release_runtime.hpp"
 #include "engine/release_runtime_capability.hpp"
 #include "engine/menu_runtime_launch.hpp"
@@ -16877,6 +16878,30 @@ int main() {
                     |decoded_auxiliary.bytes[source+1];
                 assert(get(0x8ab00+plane*0x1f40+word*2,2)==expected);
             }
+        eon::NativeRuntimeMemoryCheckpoint frame_memory;
+        frame_memory.applied_batch_count=42;
+        frame_memory.checksum=0x123456789abcdef0ULL;
+        for(const auto&[address,value]:auxiliary_memory)
+            frame_memory.initialized_bytes.push_back({
+                {eon::NativeRuntimeAddressSpace::linear,std::nullopt,address},value});
+        const auto bootstrap_frame=eon::decode_deuteros_amiga_bootstrap_frame(
+            frame_memory,0x8ab00,42);
+        assert(bootstrap_frame);
+        assert(bootstrap_frame->width==320&&bootstrap_frame->height==200);
+        assert(bootstrap_frame->generation==42);
+        assert(bootstrap_frame->plane_base==0x8ab00);
+        assert(bootstrap_frame->runtime_memory_checksum==frame_memory.checksum);
+        assert(bootstrap_frame->palette_rgb4==auxiliary_palette);
+        assert(bootstrap_frame->color_indices.size()==320*200);
+        assert(bootstrap_frame->rgba.size()==320*200*4);
+        assert(bootstrap_frame->color_indices_sha256
+            =="a55891e61536aa9d154720f08858b66ca7754b5b72d0bd94578df16ad5fd7e39");
+        assert(bootstrap_frame->rgba_sha256
+            =="9d3a40c805ada5111f9253ef1a06e5f6d0f6a523b8920485b22ea8864e852f65");
+        auto incomplete_frame_memory=frame_memory;
+        incomplete_frame_memory.initialized_bytes.pop_back();
+        assert(!eon::decode_deuteros_amiga_bootstrap_frame(
+            incomplete_frame_memory,0x8ab00,42));
         auxiliary_plan=eon::execute_deuteros_amiga_outer_service(auxiliary_plan,
             {1,0x133a4,0x12fec,0x123400,0x133aa,0x133ae,0x12345678,-0xc0},get,put);
         assert(auxiliary_plan.next_call_address==0x12a7e);

@@ -549,8 +549,10 @@ span to `$1fe00`. Its ByteKiller routine is now translated natively with exact
 input/output/checksum bounds; the resulting palette and 320x200x4 image are
 written to owned memory, deinterleaved into the four original planes, and
 continued through the typed `LoadRGB4` return to `$12a7e`. Continue the now
-reached configured bootstrap/profile dispatch and connect this original frame
-to the runtime presentation path. Library-generated list pointers are still
+reached configured bootstrap/profile dispatch. The accepted palette return
+now atomically publishes the hash-locked 320x200 Original frame through the
+coordinator, host and SDL renderer, superseding the stale opening preview.
+Library-generated list pointers are still
 not inferred from return values, and the final `$6e0` decoded bytes remain
 unlabelled until a consumer proves their role.
 The unconfigured `$13000` graphics initialization remains separate. Opening

@@ -516,6 +516,11 @@ NativeSessionController::deuteros_amiga_title_dependency_chain_checkpoint() cons
     if (state_ != NativeSessionState::deuteros_amiga_title_stage_boundary) return std::nullopt;
     return runtime_.deuteros_amiga_title_dependency_chain_checkpoint();
 }
+std::optional<DeuterosAmigaBootstrapFrameSnapshot>
+NativeSessionController::deuteros_amiga_bootstrap_frame() const {
+    if (state_ != NativeSessionState::deuteros_amiga_title_stage_boundary) return std::nullopt;
+    return runtime_.deuteros_amiga_bootstrap_frame();
+}
 #define EON_NATIVE_DEUTEROS_TITLE(name,signature,arg) DeuterosAmigaTitleDependencyObservationResult NativeSessionController::name signature { if(state_!=NativeSessionState::deuteros_amiga_title_stage_boundary) return {false,"Deuteros title observation requires the active title stage"}; return runtime_.name arg; }
 EON_NATIVE_DEUTEROS_TITLE(advance_deuteros_amiga_title_local_prefix,(),())
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_exec_return,(const DeuterosAmigaObservedExecReturn o),(o))

@@ -299,6 +299,10 @@ LauncherRuntimeController::deuteros_amiga_title_dependency_chain_checkpoint() co
     return coordinator_.deuteros_amiga_title_dependency_chain_checkpoint();
 }
 #define EON_LAUNCHER_DEUTEROS_TITLE(name,signature,arg) DeuterosAmigaTitleDependencyObservationResult LauncherRuntimeController::name signature { return coordinator_.name arg; }
+std::optional<DeuterosAmigaBootstrapFrameSnapshot>
+LauncherRuntimeController::deuteros_amiga_bootstrap_frame() const {
+    return coordinator_.deuteros_amiga_bootstrap_frame();
+}
 EON_LAUNCHER_DEUTEROS_TITLE(advance_deuteros_amiga_title_local_prefix,(),())
 EON_LAUNCHER_DEUTEROS_TITLE(observe_deuteros_amiga_title_exec_return,(const DeuterosAmigaObservedExecReturn o),(o))
 EON_LAUNCHER_DEUTEROS_TITLE(observe_deuteros_amiga_title_open_library_return,(const DeuterosAmigaObservedOpenLibraryReturn o),(o))

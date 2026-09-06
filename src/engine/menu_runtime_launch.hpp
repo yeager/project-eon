@@ -178,6 +178,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleStageBoundarySnapshot>
     deuteros_amiga_title_stage_boundary() const;
     [[nodiscard]] std::optional<DeuterosAmigaTitleDependencyChainCheckpoint> deuteros_amiga_title_dependency_chain_checkpoint() const;
+    [[nodiscard]] std::optional<DeuterosAmigaBootstrapFrameSnapshot> deuteros_amiga_bootstrap_frame() const;
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_local_prefix();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_exec_return(DeuterosAmigaObservedExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_open_library_return(DeuterosAmigaObservedOpenLibraryReturn);
