@@ -46,6 +46,54 @@ class RepositoryArtifactPolicyTests(unittest.TestCase):
                 ["innocent.md"],
             )
 
+    def test_rejects_unfenced_raw_instruction_report_body(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "report.txt").write_text(
+                "Reverse-engineering notes\n00102a: 4e 75  rts\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                forbidden_tracked_content(["report.txt"], root),
+                ["report.txt"],
+            )
+
+    def test_rejects_large_byte_initializer_in_new_production_source(self) -> None:
+        byte_literals = ", ".join(f"0x{value:02x}" for value in range(64))
+        source = (
+            "#include <array>\n#include <cstdint>\n"
+            "constexpr std::array<std::uint8_t, 64> extracted{{"
+            f"{byte_literals}}};\n"
+        ).encode("ascii")
+        self.assertEqual(forbidden_tracked_content(
+            ["src/data/new_anchor.cpp"],
+            blob_reader=lambda _path: source,
+        ), ["src/data/new_anchor.cpp"])
+
+    def test_allows_small_ordinary_production_constant_table(self) -> None:
+        byte_literals = ", ".join(f"0x{value:02x}" for value in range(32))
+        source = (
+            "#include <array>\n#include <cstdint>\n"
+            "constexpr std::array<std::uint8_t, 32> palette{{"
+            f"{byte_literals}}};\n"
+        ).encode("ascii")
+        self.assertEqual(forbidden_tracked_content(
+            ["src/ui/palette.cpp"],
+            blob_reader=lambda _path: source,
+        ), [])
+
+    def test_rejects_large_byte_initializer_in_known_production_source(self) -> None:
+        byte_literals = ", ".join("0x90" for _ in range(133))
+        source = (
+            "#include <array>\n#include <cstdint>\n"
+            "constexpr std::array<std::uint8_t, 133> expected{{"
+            f"{byte_literals}}};\n"
+        ).encode("ascii")
+        self.assertEqual(forbidden_tracked_content(
+            ["src/data/millennium_amiga_loader.cpp"],
+            blob_reader=lambda _path: source,
+        ), ["src/data/millennium_amiga_loader.cpp"])
+
     def test_allows_hash_addressed_preservation_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

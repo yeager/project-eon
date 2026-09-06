@@ -9,11 +9,27 @@
 namespace eon {
 namespace {
 
+template <std::size_t Size>
+struct ExecutableByteAnchor {
+    std::string_view sha256;
+    static constexpr std::size_t size() { return Size; }
+    bool matches(const std::span<const std::uint8_t> bytes) const {
+        return bytes.size() == Size && to_hex(eon::sha256(bytes)) == sha256;
+    }
+};
+
 bool has_bytes(const std::span<const std::uint8_t> bytes, const std::size_t offset,
     const std::span<const std::uint8_t> expected) {
     return offset <= bytes.size() && expected.size() <= bytes.size() - offset
         && std::equal(expected.begin(), expected.end(),
             bytes.begin() + static_cast<std::ptrdiff_t>(offset));
+}
+
+template <std::size_t Size>
+bool has_bytes(const std::span<const std::uint8_t> bytes, const std::size_t offset,
+    const ExecutableByteAnchor<Size>& expected) {
+    return offset <= bytes.size() && Size <= bytes.size() - offset
+        && expected.matches(bytes.subspan(offset, Size));
 }
 
 } // namespace
@@ -25,17 +41,7 @@ MillenniumDosSoundSelectionEvidence parse_millennium_dos_sound_selection(
     if (mill_com.size() != 1445 || to_hex(sha256(mill_com)) != launcher_sha256) {
         throw std::runtime_error("Unsupported Millennium DOS sound-selection launcher");
     }
-    constexpr auto selector = std::to_array<std::uint8_t>({
-        0x33, 0xc0, 0xbe, 0x80, 0x00, 0x0e, 0x1f, 0xac, 0x3c, 0x00, 0x74, 0x20,
-        0xac, 0x3c, 0x0d, 0x74, 0x1b, 0xa2, 0x03, 0x04, 0x2c, 0x30, 0x72, 0xf4,
-        0x3c, 0x03, 0x73, 0xf0, 0x32, 0xe4, 0x50, 0xba, 0x03, 0x04, 0x58, 0xc3,
-        0xb4, 0x0f, 0xcd, 0x10, 0xb4, 0x00, 0xcd, 0x10, 0x0e, 0x1f, 0xba, 0x07,
-        0x04, 0x89, 0xd2, 0xb4, 0x09, 0xcd, 0x21, 0x0e, 0x1f, 0xba, 0xe4, 0x04,
-        0xb8, 0x0a, 0x0c, 0xcd, 0x21, 0xbe, 0xe4, 0x04, 0x8a, 0x44, 0x01, 0x22,
-        0xc0, 0x74, 0xd9, 0x8a, 0x44, 0x02, 0x2c, 0x30, 0x72, 0xd2, 0x3c, 0x03,
-        0x73, 0xce, 0x32, 0xe4, 0x50, 0xba, 0xa2, 0x04, 0x89, 0xd2, 0xb4, 0x09,
-        0xcd, 0x21, 0x58, 0xc3,
-    });
+    constexpr ExecutableByteAnchor<100> selector{"f9e63fc4c7c590fc57abef4a0154a2399f714951c787f98d2f7d64eee86a7434"};
     constexpr auto filenames = std::to_array<std::uint8_t>({
         's','i','b','m','.','d','r','v',0, 's','a','d','l','.','d','r','v',0,
         's','r','o','l','.','d','r','v',0, 's','s','b','l','.','d','r','v',0,

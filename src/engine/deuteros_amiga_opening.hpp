@@ -51,6 +51,12 @@ public:
     [[nodiscard]] std::span<const std::uint8_t> bootstrap_load_bytes() const {
         return disk_.bytes(load_plan_.bootstrap_loader.disk_offset,load_plan_.bootstrap_loader.length);
     }
+    [[nodiscard]] std::span<const std::uint8_t,1024> disk_transition_boot_block(
+        const AmigaDiskKind selected) const {
+        if(selected==AmigaDiskKind::dos)return disk_.boot_block();
+        if(selected==AmigaDiskKind::deuteros_data)return data_disk_.boot_block();
+        throw std::runtime_error("Deuteros disk transition requires an explicitly selected disk");
+    }
     [[nodiscard]] std::span<const std::uint8_t> bootstrap_profile_payload(
         std::uint32_t destination,std::uint32_t length,std::uint32_t offset) const {
         for(const auto& stage:{load_plan_.main_stage,load_plan_.title_stage})
@@ -231,6 +237,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> advance_main_stage_fade_buffers(std::uint32_t final_a0,std::uint32_t cleanup_d0) { return title_stage_session_ ? title_stage_session_->advance_main_stage_fade_buffers(final_a0,cleanup_d0) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> observe_main_stage_outer_counter(const DeuterosAmigaObservedOuterCounter&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_outer_counter(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> observe_main_stage_outer_service(const DeuterosAmigaObservedLoopRequestService&o,const DeuterosAmigaMainStageLoopGraphicsPlan&plan) { return title_stage_session_ ? title_stage_session_->observe_main_stage_outer_service(o,plan) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> advance_main_stage_disk_transition(const DeuterosAmigaOwnedDiskTransitionPlan&plan) { return title_stage_session_ ? title_stage_session_->advance_main_stage_disk_transition(plan) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> advance_main_stage_auxiliary_local_path(const DeuterosAmigaMainStageLoopGraphicsPlan&plan) { return title_stage_session_ ? title_stage_session_->advance_main_stage_auxiliary_local_path(plan) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> observe_main_stage_command_palette_return(const DeuterosAmigaObservedMainStageExecReturn&o,std::uint32_t library,std::optional<std::uint16_t> fade_remaining=std::nullopt) { return title_stage_session_ ? title_stage_session_->observe_main_stage_command_palette_return(o,library,fade_remaining) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> observe_main_stage_view_wait(const DeuterosAmigaObservedViewWait&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_view_wait(o) : std::nullopt; }

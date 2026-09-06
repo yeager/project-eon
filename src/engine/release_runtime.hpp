@@ -898,6 +898,9 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_fade_buffers();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_outer_counter(DeuterosAmigaObservedOuterCounter);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_outer_service(DeuterosAmigaObservedLoopRequestService);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult begin_deuteros_amiga_disk_transition(AmigaDiskKind selected_disk);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_disk_transition_palette_return(DeuterosAmigaObservedDiskTransitionPaletteReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_disk_transition_input(DeuterosAmigaObservedDiskTransitionInput);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_outer_input(DeuterosAmigaObservedOuterInput);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_command_palette_return(DeuterosAmigaObservedMainStageExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_view_selection();
@@ -1236,6 +1239,7 @@ private:
     DeuterosAmigaMainStageFrame deuteros_amiga_main_stage_frame_;
     std::uint64_t deuteros_amiga_main_stage_frame_generation_ = 0;
     std::optional<DeuterosAmigaTitleProgramEntrySnapshot> deuteros_amiga_title_program_entry_;
+    std::optional<DeuterosAmigaOwnedDiskTransitionPlan> deuteros_amiga_disk_transition_;
     std::optional<DeuterosAmigaTitleServiceSetupLocalPlan> deuteros_amiga_title_service_setup_plan_;
     std::optional<DeuterosAmigaTitleSecondServiceLocalPlan> deuteros_amiga_title_second_service_plan_;
     std::optional<DeuterosAmigaTitleThirdServiceLocalPlan> deuteros_amiga_title_third_service_plan_;

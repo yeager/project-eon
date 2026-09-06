@@ -8,6 +8,7 @@
 #include "engine/deuteros_amiga_owned_outer_loop.hpp"
 #include "engine/deuteros_amiga_owned_bitmap.hpp"
 #include "engine/deuteros_amiga_owned_optional_resource.hpp"
+#include "engine/deuteros_amiga_owned_disk_transition.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -5187,6 +5188,32 @@ public:
             plan.command_stop->instruction=0x214aa;
         }
         main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    advance_main_stage_disk_transition(const DeuterosAmigaOwnedDiskTransitionPlan& transition){
+        if(!main_stage_loop_graphics_plan_)return std::nullopt;
+        const auto& current=*main_stage_loop_graphics_plan_;
+        const bool initial=current.next_instruction_address==0x219f8;
+        const bool palette=current.next_call_address==0x21a30
+            &&current.next_return_address==0x21a34&&current.next_vector==-0xc0;
+        const bool input=current.pending_read_instruction==0x21a40
+            &&current.pending_read_address==0xbfe001;
+        if((transition.state==DeuterosAmigaOwnedDiskTransitionState::matched_boot_disk&&!initial)
+            ||(transition.state==DeuterosAmigaOwnedDiskTransitionState::awaiting_palette_return&&!initial)
+            ||(transition.state==DeuterosAmigaOwnedDiskTransitionState::awaiting_left_button&&!palette&&!input)
+            ||(transition.state==DeuterosAmigaOwnedDiskTransitionState::retry_disk_check&&!input))
+            throw std::runtime_error("Deuteros disk transition does not match main-stage boundary");
+        auto plan=current;
+        plan.a0_value=transition.a0_value;plan.a1_value=transition.a1_value;
+        plan.a6_value=transition.a6_value;plan.d0_value=transition.d0_value;
+        plan.next_instruction_address=transition.next_instruction_address;
+        plan.next_call_address=transition.next_call_address;
+        plan.next_return_address=transition.next_return_address;
+        plan.next_vector=transition.next_vector;
+        plan.pending_read_instruction=transition.pending_read_instruction;
+        plan.pending_read_address=transition.pending_read_address;
+        plan.local_call_target=0;
+        main_stage_loop_graphics_plan_=plan;return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
     advance_main_stage_scheduler_pass(std::optional<DeuterosAmigaOwnedCommandStop> stop=std::nullopt){

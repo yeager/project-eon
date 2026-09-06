@@ -305,6 +305,7 @@ void ReleaseRuntimeCoordinator::reset() {
     deuteros_amiga_main_stage_frame_.reset();
     deuteros_amiga_main_stage_frame_generation_ = 0;
     deuteros_amiga_title_program_entry_.reset();
+    deuteros_amiga_disk_transition_.reset();
     native_runtime_memory_.reset();
     millennium_atari_config_consumer_.reset();
     millennium_dos_title_to_game_.reset();
@@ -5172,6 +5173,122 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_service(const DeuterosAm
         result.accepted=true;
     }catch(const std::exception&e){result.error=e.what();}
     return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::begin_deuteros_amiga_disk_transition(const AmigaDiskKind selected_disk){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
+        result.error="Deuteros disk transition requires active owned memory";return result;
+    }
+    if(selected_disk!=AmigaDiskKind::dos&&selected_disk!=AmigaDiskKind::deuteros_data){
+        result.error="Deuteros disk transition requires an explicitly selected disk";return result;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto current=pending.main_stage_loop_graphics_plan();
+        if(!current||current->next_instruction_address!=0x219f8||deuteros_amiga_disk_transition_){
+            result.error="Deuteros disk transition did not match boundary";return result;
+        }
+        auto memory=*native_runtime_memory_;
+        std::map<std::uint32_t,std::uint8_t> writes;
+        const auto read=[&](const std::uint32_t address,const std::uint32_t width){
+            if((width>1&&(address&1U))||address>0x1000000U-width)
+                throw std::runtime_error("Deuteros disk transition source is outside aligned native memory");
+            std::uint32_t value=0;
+            for(std::uint32_t i=0;i<width;++i){
+                const auto found=writes.find(address+i);
+                const auto byte=found!=writes.end()?std::optional<std::uint8_t>(found->second)
+                    :memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
+                if(!byte)throw std::runtime_error("Deuteros disk transition source is not owned");
+                value=(value<<8U)|*byte;
+            }
+            return value;
+        };
+        const auto write=[&](const std::uint32_t address,const MemoryTransferElementWidth width,
+            const std::uint32_t value){
+            const auto count=static_cast<std::uint32_t>(width);
+            if((count>1&&(address&1U))||address>0x1000000U-count)
+                throw std::runtime_error("Deuteros disk transition destination is outside aligned native memory");
+            for(std::uint32_t i=0;i<count;++i)
+                writes[address+i]=static_cast<std::uint8_t>(value>>((count-1-i)*8U));
+        };
+        const auto boot=deuteros_amiga_->disk_transition_boot_block(selected_disk);
+        const auto media_read=[&](const std::uint32_t offset,const std::uint32_t width){
+            if(width!=1||offset>=boot.size())throw std::runtime_error("Deuteros disk transition media read is outside boot block");
+            return static_cast<std::uint32_t>(boot[offset]);
+        };
+        const auto plan=begin_deuteros_amiga_owned_disk_transition(boot.size(),read,write,media_read);
+        if(!pending.advance_main_stage_disk_transition(plan)){
+            result.error="Deuteros disk transition continuation rejected";return result;
+        }
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-disk-transition",true,{}};
+        batch.effects.reserve(writes.size());
+        for(const auto&[address,value]:writes)
+            batch.effects.push_back({batch.effects.size()+1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},
+                MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,value});
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted)throw std::runtime_error(applied.error);
+        if(!deuteros_amiga_->advance_main_stage_disk_transition(plan)){
+            result.error="Deuteros disk transition disappeared before commit";return result;
+        }
+        *native_runtime_memory_=std::move(memory);
+        if(plan.state==DeuterosAmigaOwnedDiskTransitionState::awaiting_palette_return)
+            deuteros_amiga_disk_transition_=plan;
+        result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_disk_transition_palette_return(
+    const DeuterosAmigaObservedDiskTransitionPaletteReturn o){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()
+        ||!native_runtime_memory_||!deuteros_amiga_disk_transition_){
+        result.error="Deuteros disk-message palette return requires an active transition";return result;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();auto memory=*native_runtime_memory_;
+        std::map<std::uint32_t,std::uint8_t> writes;
+        const auto read=[&](const std::uint32_t address,const std::uint32_t width){
+            if((width>1&&(address&1U))||address>0x1000000U-width)throw std::runtime_error("Deuteros disk-message source is invalid");
+            std::uint32_t value=0;
+            for(std::uint32_t i=0;i<width;++i){
+                const auto found=writes.find(address+i);
+                const auto byte=found!=writes.end()?std::optional<std::uint8_t>(found->second):memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
+                if(!byte)throw std::runtime_error("Deuteros disk-message source is not owned");
+                value=(value<<8U)|*byte;
+            }return value;
+        };
+        const auto write=[&](const std::uint32_t address,const MemoryTransferElementWidth width,const std::uint32_t value){
+            const auto count=static_cast<std::uint32_t>(width);
+            if((count>1&&(address&1U))||address>0x1000000U-count)throw std::runtime_error("Deuteros disk-message destination is invalid");
+            for(std::uint32_t i=0;i<count;++i)writes[address+i]=static_cast<std::uint8_t>(value>>((count-1-i)*8U));
+        };
+        const auto plan=resume_deuteros_amiga_owned_disk_transition_palette(*deuteros_amiga_disk_transition_,o,read,write);
+        if(!pending.advance_main_stage_disk_transition(plan)){result.error="Deuteros disk-message continuation rejected";return result;}
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-disk-message",true,{}};batch.effects.reserve(writes.size());
+        for(const auto&[address,value]:writes)batch.effects.push_back({batch.effects.size()+1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,value});
+        const auto applied=memory.apply(batch);if(!applied.accepted)throw std::runtime_error(applied.error);
+        if(!deuteros_amiga_->advance_main_stage_disk_transition(plan)){result.error="Deuteros disk-message continuation disappeared before commit";return result;}
+        *native_runtime_memory_=std::move(memory);deuteros_amiga_disk_transition_=plan;result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_disk_transition_input(
+    const DeuterosAmigaObservedDiskTransitionInput o){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!deuteros_amiga_disk_transition_){
+        result.error="Deuteros disk-message input requires an active transition";return result;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto plan=resume_deuteros_amiga_owned_disk_transition_input(*deuteros_amiga_disk_transition_,o);
+        if(!pending.advance_main_stage_disk_transition(plan)){result.error="Deuteros disk-message input continuation rejected";return result;}
+        if(!deuteros_amiga_->advance_main_stage_disk_transition(plan)){result.error="Deuteros disk-message input disappeared before commit";return result;}
+        deuteros_amiga_disk_transition_=plan;
+        if(plan.state==DeuterosAmigaOwnedDiskTransitionState::retry_disk_check)deuteros_amiga_disk_transition_.reset();
+        result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}return result;
 }
 DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_counter(const DeuterosAmigaObservedOuterCounter o){

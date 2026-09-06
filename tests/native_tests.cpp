@@ -5205,6 +5205,12 @@ int main() {
                 && !hosted_opening.deuteros_amiga_opening_presentation()
                 && !hosted_opening.deuteros_amiga_title_stage_boundary()
                 && !hosted_opening.render_deuteros_amiga_opening_audio(1));
+            assert(!hosted_opening.begin_deuteros_amiga_disk_transition(
+                eon::AmigaDiskKind::deuteros_data).accepted);
+            assert(!hosted_opening.observe_deuteros_amiga_disk_transition_palette_return(
+                {0x21a30,-0xc0,0x21a34,0,0}).accepted);
+            assert(!hosted_opening.observe_deuteros_amiga_disk_transition_input(
+                {0x21a40,0xbfe001,6,0}).accepted);
             hosted_opening.finish_source_revocation();
             assert(hosted_opening.snapshot().state == eon::NativeSessionState::menu);
 
@@ -6845,6 +6851,20 @@ int main() {
             assert(!opening_controller.observe_deuteros_amiga_outer_service(
                 {runtime_copy_sequence+118,0x208c6,4,0,0x208ca,0x208ce,0,-0xae}).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==before_outer_input->checksum);
+            // These calls cross the complete production facade into the
+            // coordinator. Unknown media is never substituted, and neither
+            // a valid selected disk nor later callbacks may run at the wrong
+            // recovered boundary. Every rejection is atomic.
+            assert(!opening_controller.begin_deuteros_amiga_disk_transition(
+                eon::AmigaDiskKind::unknown).accepted);
+            assert(!opening_controller.begin_deuteros_amiga_disk_transition(
+                eon::AmigaDiskKind::deuteros_data).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_disk_transition_palette_return(
+                {0x21a30,-0xc0,0x21a34,0,0}).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_disk_transition_input(
+                {0x21a40,0xbfe001,6,0}).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum
+                ==before_outer_input->checksum);
             const eon::DeuterosAmigaObservedOuterInput primary_outer_input{
                 runtime_copy_sequence+118,0x21822,0xdff016,10,0};
             auto bad_outer_input=primary_outer_input;bad_outer_input.bit=2;

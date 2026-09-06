@@ -494,8 +494,12 @@ then either the raw restart wait to `$217f6` or the `$20a74` request writes,
 typed return and native selector increment. The reached `$21926` resource
 loader and `$21a4c` special transition are implemented. The complete
 `$219f8` boot-disk check is hash-gated and has a bounded native
-success/mismatch/message/input state machine; connect its selected-media and
-ordered trackdisk phases to the production coordinator. Recurring resource
+success/mismatch/message/input state machine. It is now connected through the
+production launcher, revocation-aware host, native-session state gate, and
+coordinator with explicit system/data selection and atomic memory/session
+publication. Direct coordinator/facade tests reject unknown media, wrong
+boundaries, out-of-order palette/input callbacks, and source revocation
+without changing the native-memory checksum. Recurring resource
 0/1 loads now verify the owned table, transfer original bytes in native
 memory and follow the retained primary return into fresh loop preparation;
 branch-entered unknown returns remain at `$21978`.

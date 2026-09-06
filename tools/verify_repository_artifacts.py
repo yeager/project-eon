@@ -29,6 +29,27 @@ FORBIDDEN_GENERATED_ENDINGS = (
     ".disassembly.txt",
 )
 FORBIDDEN_CONTENT = re.compile(rb"(?im)^```(?:asm|disassembly|objdump)\s*$")
+# A report body is still a raw listing when its author omits the Markdown
+# fence.  Require an address, at least two encoded bytes, and a mnemonic-like
+# token so ordinary hashes, tables, and prose addresses do not match.
+RAW_INSTRUCTION_LINE = re.compile(
+    rb"(?im)^\s*(?:0x)?[0-9a-f]{4,8}:\s+"
+    rb"(?:[0-9a-f]{2}\s+){2,}[a-z][a-z0-9.]*\b"
+)
+
+# An initializer is counted only when it contains at least 64 byte literals:
+# normal palettes, protocol constants, UUIDs, and unit-test fixtures remain
+# outside this gate. Original-derived executable spans belong in the external
+# reproducible analysis cache; production code retains their length and hash.
+BYTE_INITIALIZER = re.compile(
+    rb"(?:std::array\s*<\s*std::uint8_t\s*,\s*\d+\s*>|"
+    rb"std::to_array\s*<\s*std::uint8_t\s*>\s*\()"
+    rb"[^;={]*[({]{1,2}(.*?)[})]{1,2}\s*;",
+    re.DOTALL,
+)
+BYTE_LITERAL = re.compile(
+    rb"(?<![A-Za-z0-9_])0x[0-9a-fA-F]{1,2}(?![A-Za-z0-9_])"
+)
 
 
 def forbidden_tracked_paths(paths: list[str]) -> list[str]:
@@ -53,15 +74,24 @@ def tracked_paths() -> list[str]:
 
 def forbidden_tracked_content(paths: list[str], root: Path = ROOT,
                               blob_reader=None) -> list[str]:
-    """Reject raw instruction listings even when their filename looks benign."""
+    """Reject raw listings and unbudgeted production executable-byte arrays."""
     rejected: list[str] = []
     for raw_path in paths:
         try:
             data = blob_reader(raw_path) if blob_reader else (root / raw_path).read_bytes()
         except (OSError, ValueError, subprocess.CalledProcessError):
             continue
-        if FORBIDDEN_CONTENT.search(data):
+        if FORBIDDEN_CONTENT.search(data) or RAW_INSTRUCTION_LINE.search(data):
             rejected.append(raw_path)
+            continue
+        if raw_path.startswith("src/") and raw_path.endswith((".c", ".cpp", ".h", ".hpp")):
+            lengths = [
+                len(BYTE_LITERAL.findall(match.group(1)))
+                for match in BYTE_INITIALIZER.finditer(data)
+            ]
+            lengths = [length for length in lengths if length >= 64]
+            if lengths:
+                rejected.append(raw_path)
     return sorted(rejected)
 
 

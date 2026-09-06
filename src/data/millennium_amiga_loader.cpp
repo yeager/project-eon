@@ -123,19 +123,7 @@ parse_millennium_amiga_bootstrap_opaque_invocation_boundary(
     // the following source bytes are not evidence that it returns at runtime.
     constexpr std::uint32_t entry_address = 0x7029e;
     constexpr std::size_t raw_disk_offset = 0x69e;
-    constexpr std::array<std::uint8_t, 132> expected{{
-        0x23,0xc9,0x00,0x06,0x60,0x42,0x20,0x3c,0x00,0x06,0x1a,0x80,
-        0x53,0x80,0x66,0xfc,0x4e,0xb9,0x00,0x06,0x61,0x28,0x22,0x3c,
-        0x00,0x04,0x10,0x00,0x20,0x3c,0x00,0x02,0x42,0x00,0x2e,0x3c,
-        0x00,0x00,0x16,0x00,0xce,0xfc,0x00,0x50,0x4e,0xb9,0x00,0x06,
-        0x61,0xda,0x70,0x00,0x2e,0x79,0x00,0x07,0xff,0x00,0x26,0x7c,
-        0x00,0x04,0x10,0x00,0x22,0x79,0x00,0x06,0x60,0x42,0x4e,0x93,
-        0x22,0x3c,0x00,0x06,0x80,0x00,0x20,0x3c,0x00,0x01,0x64,0x00,
-        0x2e,0x3c,0x00,0x00,0x16,0x00,0xde,0x87,0x4e,0xb9,0x00,0x06,
-        0x61,0xda,0x70,0x00,0x2e,0x79,0x00,0x07,0xff,0x00,0x26,0x7c,
-        0x00,0x06,0x80,0x00,0x22,0x79,0x00,0x06,0x60,0x42,0x60,0x04,
-        0x20,0x4b,0x4e,0x75,0x2c,0x3c,0xa8,0xd3,0x98,0xfb,0x4e,0xd3,
-    }};
+    constexpr std::size_t expected_size = 132;
     constexpr std::string_view expected_hash =
         "b8ca18e61e5372ba4387abd69f6796435671465ddaf48cd3a3e4b41e2528efdc";
     constexpr std::uint32_t first_invocation = 0x702e4;
@@ -151,15 +139,15 @@ parse_millennium_amiga_bootstrap_opaque_invocation_boundary(
     }
     if (raw_disk_offset < plan.bootstrap_loader.disk_offset
         || raw_disk_offset > plan.bootstrap_loader.disk_offset + plan.bootstrap_loader.length
-        || expected.size() > plan.bootstrap_loader.disk_offset + plan.bootstrap_loader.length - raw_disk_offset) {
+        || expected_size > plan.bootstrap_loader.disk_offset + plan.bootstrap_loader.length - raw_disk_offset) {
         throw std::runtime_error("Millennium Amiga opaque invocation boundary outside bootstrap loader");
     }
-    const auto bytes = disk.bytes(raw_disk_offset, expected.size());
+    const auto bytes = disk.bytes(raw_disk_offset, expected_size);
     const auto hash = to_hex(sha256(bytes));
-    if (!std::equal(expected.begin(), expected.end(), bytes.begin()) || hash != expected_hash) {
+    if (hash != expected_hash) {
         throw std::runtime_error("Unexpected Millennium Amiga opaque invocation boundary");
     }
-    return {entry_address, raw_disk_offset, expected.size(), hash, first_invocation,
+    return {entry_address, raw_disk_offset, expected_size, hash, first_invocation,
         plan.first_stage.destination, static_post_first, resident_jump,
         plan.resident_stage.destination};
 }
@@ -217,14 +205,7 @@ parse_millennium_amiga_bootstrap_relocation_boundary(
     constexpr std::uint32_t relocated_continuation = 0x6629e;
     constexpr std::uint32_t raw_continuation = 0x7029e;
     constexpr std::size_t raw_disk_offset = 0x400;
-    constexpr std::array<std::uint8_t, 66> expected{{
-        0x33,0xfc,0x00,0x24,0x00,0xdf,0xf1,0x04,0x4e,0x71,0x4e,0x71,
-        0x26,0x7c,0x00,0x06,0x60,0x32,0x22,0x3c,0x00,0x06,0x64,0x00,
-        0x04,0x81,0x00,0x06,0x60,0x32,0x23,0xcf,0x00,0x07,0xff,0x00,
-        0x2e,0x7c,0x00,0x07,0xfe,0x00,0x48,0xe7,0x00,0xfe,0x48,0x7a,
-        0x00,0x00,0x2a,0x5f,0x54,0x8d,0x16,0xdd,0x51,0xc9,0xff,0xfc,
-        0x4e,0xf9,0x00,0x06,0x62,0x9e,
-    }};
+    constexpr std::size_t expected_size = 66;
     constexpr std::string_view expected_hash =
         "341e6cff049ff9cda953ad0c91f9a064ed2d2cdc1782b417f27ecad7c9b279b4";
     if (plan.bootstrap_loader.disk_offset != raw_disk_offset
@@ -232,9 +213,9 @@ parse_millennium_amiga_bootstrap_relocation_boundary(
         || plan.bootstrap_loader.destination != entry_address) {
         throw std::runtime_error("Unexpected Millennium Amiga bootstrap relocation plan");
     }
-    const auto bytes = disk.bytes(raw_disk_offset, expected.size());
+    const auto bytes = disk.bytes(raw_disk_offset, expected_size);
     const auto digest = to_hex(sha256(bytes));
-    if (!std::equal(expected.begin(), expected.end(), bytes.begin()) || digest != expected_hash) {
+    if (digest != expected_hash) {
         throw std::runtime_error("Unexpected Millennium Amiga bootstrap relocator");
     }
     if (copy_source + copy_count - 1U != copy_end
@@ -244,7 +225,7 @@ parse_millennium_amiga_bootstrap_relocation_boundary(
     }
     return {entry_address, entry_address, loaded_end, copy_source, copy_destination,
         copy_count, copy_end, relocated_continuation, raw_continuation, raw_disk_offset,
-        static_cast<std::uint32_t>(expected.size()), digest};
+        static_cast<std::uint32_t>(expected_size), digest};
 }
 
 MillenniumAmigaFirstStageSourceAnchorBoundary
@@ -1200,17 +1181,7 @@ parse_millennium_amiga_resident_independent_post_call_tail_boundary(
     // This starts at the return PC of JSR $7b26a. That return is not
     // presumed: hash-lock its call-free caller-side tail as source evidence.
     constexpr std::uint32_t entry = 0x68596;
-    constexpr std::array<std::uint8_t, 104> expected{{
-        0x4c,0xdf,0x20,0x0f,0x42,0x46,0x1c,0x39,0x00,0x07,0xb3,0xb0,
-        0x1e,0x39,0x00,0x07,0xb3,0xb1,0xdf,0x39,0x00,0x07,0xb3,0xb4,
-        0x64,0x02,0x52,0x06,0x4a,0x79,0x00,0x07,0xb3,0xb6,0x6b,0x02,
-        0x44,0x46,0xd4,0x46,0x52,0x43,0xda,0xfc,0x00,0x90,0x42,0x46,
-        0x1c,0x39,0x00,0x07,0xb3,0xba,0x1e,0x39,0x00,0x07,0xb3,0xbb,
-        0xdf,0x39,0x00,0x07,0xb3,0xbc,0x64,0x02,0x52,0x06,0x4a,0x39,
-        0x00,0x07,0xb3,0xbd,0x67,0x02,0x44,0x46,0xd2,0x46,0x6b,0x0a,
-        0x53,0x40,0x67,0x06,0x4e,0xf9,0x00,0x07,0xbc,0xf8,0x06,0x42,
-        0x28,0x00,0x06,0x43,0x28,0x00,0x4e,0x75,
-    }};
+    constexpr std::size_t expected_size = 104;
     constexpr std::string_view expected_hash =
         "eeed978d0afd278cc48868c0d2b76205304ddfa80b174d2aac95dc50b80dd551";
     if (boundary.unknown_call_address != 0x68590 || boundary.unknown_call_target != 0x7b26a
@@ -1218,15 +1189,15 @@ parse_millennium_amiga_resident_independent_post_call_tail_boundary(
         throw std::runtime_error("Unexpected Millennium Amiga independent post-call tail placement");
     }
     const auto relative = entry - plan.resident_stage.destination;
-    if (relative > plan.resident_stage.length || expected.size() > plan.resident_stage.length - relative) {
+    if (relative > plan.resident_stage.length || expected_size > plan.resident_stage.length - relative) {
         throw std::runtime_error("Millennium Amiga independent post-call tail is outside raw range");
     }
-    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected.size());
+    const auto bytes = disk.bytes(plan.resident_stage.disk_offset + relative, expected_size);
     const auto hash = to_hex(sha256(bytes));
-    if (!std::equal(expected.begin(), expected.end(), bytes.begin()) || hash != expected_hash) {
+    if (hash != expected_hash) {
         throw std::runtime_error("Unexpected Millennium Amiga independent post-call tail");
     }
-    return {entry, plan.resident_stage.disk_offset + relative, expected.size(), hash,
+    return {entry, plan.resident_stage.disk_offset + relative, expected_size, hash,
         {0x7b3b0, 0x7b3b1, 0x7b3b4, 0x7b3ba, 0x7b3bb, 0x7b3bc},
         0x685ee, 0x7bcf8, 0x685f4, 0x685fc, 0x685fe};
 }

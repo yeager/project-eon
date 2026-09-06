@@ -4100,10 +4100,17 @@ and, only after that typed return, renders the original command stream at
 The resulting state waits on bit 6 of `$bfe001`; a held sample remains at
 `$21a40`, while a pressed sample retries at `$21a02`. Tests use both genuine
 system and data disks, proving the expected markers `$4452f018` and
-`$8b632804` without altering either source. Public coordinator wiring for
-runtime disk-slot selection and the three ordered trackdisk returns remains
-the next integration step; the helper never treats a media read as an
-observed operating-system return.
+`$8b632804` without altering either source. The production coordinator now
+owns this transition as an atomic native transaction. The launcher, runtime
+host, and native-session facades require an explicit `dos` (system disk) or
+`deuteros_data` selection; `unknown` and every wrong-order callback fail
+without publishing memory or session state. The coordinator reads the selected
+ADF boot block directly in place, journals all native-memory effects in a
+private copy, retains only the typed transition plan across palette/input
+callbacks, and clears that plan on retry or runtime reset. Source revocation
+rejects all three public operations. This is not a trackdisk emulation
+contract: the helper never treats a media read as an observed operating-system
+return, retains no media bytes, and never modifies the selected disk.
 
 The re-entered stage's raw resource loader at `$21932` is independently
 validated. It shifts its incoming D0 index by two, reads the selected longword
