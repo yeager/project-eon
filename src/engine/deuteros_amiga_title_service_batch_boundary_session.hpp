@@ -1316,6 +1316,16 @@ struct DeuterosAmigaMainStage209caExecReturnPlan {
     std::int16_t next_vector=0;
     std::string source_sha256;
 };
+struct DeuterosAmigaMainStage209f0ExecReturnPlan {
+    DeuterosAmigaObservedMainStageExecReturn observation;
+    bool terminal_spin=false;
+    std::array<std::uint32_t,2> destination_addresses{};
+    std::array<std::uint32_t,2> values{};
+    std::uint32_t local_return_address=0,caller_resume_address=0,d1_value=0;
+    std::uint32_t next_instruction_address=0,next_address=0;
+    std::uint8_t next_bit=0;
+    std::string local_source_sha256,caller_source_sha256;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -1372,7 +1382,11 @@ public:
             ||to_hex(sha256(main_stage.subspan(0x9a2,44)))
                 !="2dd0b05e3fef1b0fdfb3ab2b9b1324e371f1335247b9424e212b8f50e5c2c5e7"
             ||to_hex(sha256(main_stage.subspan(0x9ce,38)))
-                !="f3c3c6520108823762e82c5ff8dae039b89b7961a23698df640eb88c74f34b76")
+                !="f3c3c6520108823762e82c5ff8dae039b89b7961a23698df640eb88c74f34b76"
+            ||to_hex(sha256(main_stage.subspan(0x9f4,30)))
+                !="93b5af841a21c4972e899f8112960b10e7cf6d702e7bd7bf1e29351ceac66c8f"
+            ||to_hex(sha256(main_stage.subspan(0x17de,14)))
+                !="bddd50234d5142a95cb582e1829eb49a00a79ff2f3307f8af4de8f880994e3f9")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
@@ -3637,6 +3651,27 @@ public:
             0x20982,0x2091c,0,0,0x209f0,0x209f4,-0x1bc,
             "f3c3c6520108823762e82c5ff8dae039b89b7961a23698df640eb88c74f34b76"};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStage209f0ExecReturnPlan>
+    observe_main_stage_209f0_exec_return(
+        const DeuterosAmigaObservedMainStageExecReturn&o){
+        if(!main_stage_209ca_exec_return_||main_stage_209f0_exec_return_)
+            return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x209f0
+            ||o.vector!=-0x1bc||o.return_address!=0x209f4)
+            throw std::runtime_error("Deuteros main-stage $209f0 Exec return does not match boundary");
+        main_stage_209f0_exec_return_=o;last_command_sequence_=o.trace_sequence;
+        const bool spin=o.result_d0!=0;
+        return DeuterosAmigaMainStage209f0ExecReturnPlan{o,spin,
+            spin?std::array<std::uint32_t,2>{0,0}:
+                 std::array<std::uint32_t,2>{0x2094c,0x2093a},
+            spin?std::array<std::uint32_t,2>{0,0}:
+                 std::array<std::uint32_t,2>{0xffffffff,0},
+            spin?0U:0x20a10U,spin?0U:0x217deU,spin?0U:0x20000U,
+            spin?0x209faU:0x217e4U,spin?0U:0xbfe001U,
+            static_cast<std::uint8_t>(spin?0U:1U),
+            "93b5af841a21c4972e899f8112960b10e7cf6d702e7bd7bf1e29351ceac66c8f",
+            spin?"":"bddd50234d5142a95cb582e1829eb49a00a79ff2f3307f8af4de8f880994e3f9"};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3884,6 +3919,8 @@ private:
         main_stage_2099e_exec_return_;
     std::optional<DeuterosAmigaObservedMainStageExecReturn>
         main_stage_209ca_exec_return_;
+    std::optional<DeuterosAmigaObservedMainStageExecReturn>
+        main_stage_209f0_exec_return_;
     std::vector<std::uint8_t> first_title_exit_source_bytes_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;

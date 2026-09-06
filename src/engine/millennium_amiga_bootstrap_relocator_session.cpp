@@ -82,8 +82,30 @@ MillenniumAmigaBootstrapRelocatorSession::boundary() const {
         return {0x411ee,0,0xa183ec32};
     case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_custom_chip_write:
         return {0x42504,0,0xdff180};
+    case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_exec_service:
+        return {0x4251a,4,custom_chip_exec_prefix_execution_->pending_vector_address};
     }
     throw std::runtime_error("Invalid Millennium Amiga bootstrap relocator state");
+}
+
+MillenniumAmigaCustomChipExecPrefixExecution
+MillenniumAmigaBootstrapRelocatorSession::execute_custom_chip_exec_prefix(
+    const MillenniumAmigaCustomChipExecBaseObservation& o) {
+    if(state_!=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_custom_chip_write
+        ||!bus_error_prefix_execution_||o.instruction_address!=0x42504
+        ||o.custom_chip_base!=0xdff000||o.register_offset!=0x0180||o.value!=0x0f00
+        ||o.exec_base_source_address!=4||o.exec_base_value<=150
+        ||o.exec_base_value>0xffffff||(o.exec_base_value&1U)!=0)
+        throw std::runtime_error("Detached Millennium Amiga custom-chip/ExecBase observation");
+    MillenniumAmigaCustomChipExecPrefixExecution r;
+    r.custom_chip_effect={0x42504,0xdff180,0x0f00};
+    r.saved_d0_address=0x40ffc;r.saved_d0_value=trace_register_prefix_execution_->resulting_d0;
+    r.resulting_stack_pointer=0x65134;r.resulting_a6=o.exec_base_value;
+    r.exec_base_source_address=4;r.pending_call_address=0x4251a;
+    r.pending_exec_vector=-150;r.pending_vector_address=o.exec_base_value-150;
+    custom_chip_exec_prefix_execution_=r;
+    state_=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_exec_service;
+    return r;
 }
 
 MillenniumAmigaBusErrorPrefixExecution

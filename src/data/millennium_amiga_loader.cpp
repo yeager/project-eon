@@ -170,11 +170,11 @@ parse_millennium_amiga_first_stage_entry_boundary(
     constexpr std::size_t source_offset = 0x6e000;
     constexpr std::size_t source_size = 0x24200;
     constexpr std::uint32_t destination = 0x41000;
-    constexpr std::size_t entry_size = 0x1510;
+    constexpr std::size_t entry_size = 0x151e;
     constexpr std::string_view source_hash =
         "df97c7f6cd622b16b9ffb57bc562906e349c18c56ed8abeb564c6f411e64891c";
     constexpr std::string_view entry_hash =
-        "8eb4e5b1310b5f891697735653bc6365ea7a62b976482978c29dc6d87496b33c";
+        "7fdf3bd5f9e142e18de37258d45ef8ba836703cdd2aafd16781567fe9992f76e";
     if (plan.first_stage.disk_offset != source_offset
         || plan.first_stage.length != source_size
         || plan.first_stage.destination != destination

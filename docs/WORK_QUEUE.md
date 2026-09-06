@@ -202,8 +202,10 @@ The corrected Millennium Amiga first stage is native from `$41000` through
 its register-save/vector setup, two typed frame-complete ILLEGAL exception
 entries. Vector-9 tracing decrypts and executes the exact ADDX plus ten
 unconditional branch steps through `$411d8`, then the deterministic LEA,
-MOVEQ, table-word and ADD register prefix. Continue at the decrypted external
-memory write `$411ee -> $a183ec32`.
+MOVEQ, table-word and ADD register prefix. A typed group-0 frame admits the
+24-bit bus-error route, and a typed custom-chip/ExecBase observation advances
+the deterministic setup. Continue at the external Exec vector `-150` call at
+`$4251a`; do not infer its return.
 
 | Rank | Work package | Exact current evidence | Required acceptance evidence | Status / boundary |
 | --- | --- | --- | --- | --- |
@@ -441,8 +443,11 @@ types the `$2099e` vector `-$126` return, atomically applies its five exact
 big-endian writes, and stops at the `$209ca` vector `-$162` boundary (return
 `$209ce`). Its return is now typed; two exact longword writes commit atomically
 before the next boundary at `$209f0`, vector `-$1bc`, return `$209f4`.
-Continue only from that typed return; do not assign audio cadence, vector
-purpose, or pointer semantics.
+That return now preserves both exact branches: nonzero terminates in the
+`$209fa` spin, while zero atomically writes `$2094c/$2093a`, returns to
+`$217de`, loads D1 with `$20000`, and stops before the `$217e4` bit-set on
+`$bfe001`. Continue only with a typed stateful-bit observation; do not assign
+audio cadence, vector purpose, or pointer semantics.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

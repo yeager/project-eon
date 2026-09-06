@@ -72,6 +72,14 @@ MillenniumDosSixthFunctionBoundary MillenniumDosSixthFunctionSession::boundary()
         result.instruction_address = 0xcc80;
         result.runtime_address = 0xda05;
         break;
+    case MillenniumDosSixthFunctionState::caller_helper_first_random_al:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::register_al;
+        result.instruction_address = 0xcd53;
+        break;
+    case MillenniumDosSixthFunctionState::caller_helper_second_random_al:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::register_al;
+        result.instruction_address = 0xcd5b;
+        break;
     case MillenniumDosSixthFunctionState::awaiting_word:
         result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_word;
         result.instruction_address = 0x7437;
@@ -304,6 +312,16 @@ void MillenniumDosSixthFunctionSession::observe_call_return(
         enter_call(MillenniumDosSixthFunctionState::caller_helper_post_initialization_call_return,
             0xcd4d, 0x40af);
         return;
+    case MillenniumDosSixthFunctionState::caller_helper_post_initialization_call_return:
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_first_random_call_return,
+            0xcd50, 0x4241);
+        return;
+    case MillenniumDosSixthFunctionState::caller_helper_first_random_call_return:
+        state_ = MillenniumDosSixthFunctionState::caller_helper_first_random_al;
+        return;
+    case MillenniumDosSixthFunctionState::caller_helper_second_random_call_return:
+        state_ = MillenniumDosSixthFunctionState::caller_helper_second_random_al;
+        return;
     case MillenniumDosSixthFunctionState::restoration_first_call_return:
         enter_call(MillenniumDosSixthFunctionState::restoration_second_call_return,
             0x746e, 0x7b47);
@@ -389,6 +407,30 @@ void MillenniumDosSixthFunctionSession::observe_bl(
     } else {
         state_ = MillenniumDosSixthFunctionState::returned;
     }
+}
+
+void MillenniumDosSixthFunctionSession::observe_al(
+    const std::uint16_t instruction_address, const std::uint8_t value) {
+    const auto expected = boundary();
+    if (expected.kind != MillenniumDosSixthFunctionBoundaryKind::register_al
+        || expected.instruction_address != instruction_address) {
+        throw std::runtime_error("Millennium DOS F6 AL observation is detached");
+    }
+    if (state_ == MillenniumDosSixthFunctionState::caller_helper_first_random_al) {
+        record_effect(0xcb86, 1, std::nullopt,
+            static_cast<std::uint8_t>(value & 0x0fU));
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_second_random_call_return,
+            0xcd58, 0x4241);
+        return;
+    }
+    if (state_ == MillenniumDosSixthFunctionState::caller_helper_second_random_al) {
+        record_effect(0xcb87, 1, std::nullopt,
+            static_cast<std::uint8_t>(value & 0x0fU));
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_random_setup_call_return,
+            0xcd60, 0xcbc0);
+        return;
+    }
+    throw std::runtime_error("Unsupported Millennium DOS F6 AL state");
 }
 
 } // namespace eon

@@ -1786,8 +1786,8 @@ interpretation would overwrite the reader while it was executing.
 
 After a typed successful trackdisk return, the native runtime atomically maps
 the exact `0x24200` source bytes to `$41000..$651ff`. The stage begins
-`BRA.W $410bc`. Its first `0x1510` bytes hash to
-`8eb4e5b1310b5f891697735653bc6365ea7a62b976482978c29dc6d87496b33c`
+`BRA.W $410bc`. Its first `0x151e` bytes hash to
+`7fdf3bd5f9e142e18de37258d45ef8ba836703cdd2aafd16781567fe9992f76e`
 and statically establish the register-save/vector setup through `ILLEGAL` at
 `$410de`, which uses exception vector address `$10`. A typed register/vector
 observation now advances the native session through the exact `BRA.W`, saved
@@ -1843,13 +1843,19 @@ than emulating it.
 The genuine handler bytes at `$415d6` are `JMP $424f6`. The caller-connected
 prefix there saves A1=`$8` at `$4198c`, copies the observed exception-frame
 SP to A1, and loads A0=`$dff000`. It then reaches `MOVE.W #$0f00,$180(A0)` at
-`$42504`. That custom-chip write is the next stateful boundary and is not
-performed by Eon. Frame materialization and the A1 save are one atomic batch;
-an invalid frame commits neither. The admitted ADF span is now `$1510` bytes,
-SHA-256 `8eb4e5b1310b5f891697735653bc6365ea7a62b976482978c29dc6d87496b33c`.
+`$42504`. Eon admits that hardware effect only when a typed observation names
+the exact base, register and value. The same observation supplies the even,
+24-bit ExecBase value read from address `$4`; no ExecBase value is inferred.
+The deterministic continuation saves D0=`$7` at `$40ffc`, sets SP=`$65134`,
+loads the observed ExecBase into A6, and stops before `JSR -150(A6)` at
+`$4251a`. The call and its return remain external. Frame materialization and
+the A1 save are one atomic batch; the later D0/ExecBase materialization is a
+second atomic batch, and an invalid hardware or ExecBase observation commits
+neither. The admitted ADF span is now `$151e` bytes,
+SHA-256 `7fdf3bd5f9e142e18de37258d45ef8ba836703cdd2aafd16781567fe9992f76e`.
 The reproducible disassembly report has SHA-256
-`8c0ff6b15ef8de052c58d0971f0ca565f70f8a744cca8a44919892f303ff0b99`
-and 1,582 lines. FS-UAE source revision
+`13da0c2a305f13bb3e8060d53f30c90dc8c26c9a8b5ade627eaa977e08c838ca`
+and 1,585 lines. FS-UAE source revision
 `f362278ccd4c60991caac3b4d240d4a3f751bea2` was retained externally as a
 cross-check for its explicit 24-bit address-space model; it is not embedded
 or treated as a substitute runtime.
@@ -3367,7 +3373,16 @@ The continuation atomically writes longword `$2091c` at `$20976` and
 longword `$20954` at `$2092a`, loads A0/A1 with `$20982/$2091c`, clears D0
 and D1, and stops at external call `$209f0`, vector `-$1bc`, return `$209f4`.
 That call's result and effects remain unknown. No memory batch is emitted
-for the register-only entry prefix. A wrong entry,
+until its typed return is supplied. A nonzero D0 follows the exact terminal
+branch at `$209fa` without writes. Zero follows the 30-byte local span,
+SHA-256 `93b5af841a21c4972e899f8112960b10e7cf6d702e7bd7bf1e29351ceac66c8f`:
+it atomically writes longword `$ffffffff` at `$2094c` and byte zero at
+`$2093a`, returns through `$20a10->$217de`, loads D1 with `$20000`, and stops
+before the stateful bit-set at `$217e4` against `$bfe001`. The 14-byte caller
+prefix has SHA-256
+`bddd50234d5142a95cb582e1829eb49a00a79ff2f3307f8af4de8f880994e3f9`.
+No effect of that bit-set is applied or inferred. No memory batch is emitted
+for the register-only entry prefix or the nonzero terminal branch. A wrong entry,
 missing/replaced resident stage, replay, or revoked owner produces no partial
 write. All observed results and service effects remain deliberately uninterpreted.
 

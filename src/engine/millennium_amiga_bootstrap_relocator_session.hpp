@@ -21,6 +21,7 @@ enum class MillenniumAmigaBootstrapRelocatorState {
     awaiting_first_stage_decrypted_instruction,
     awaiting_first_stage_decrypted_memory_write,
     awaiting_first_stage_custom_chip_write,
+    awaiting_first_stage_exec_service,
 };
 
 struct MillenniumAmigaBootstrapRelocatorBoundary {
@@ -193,6 +194,23 @@ struct MillenniumAmigaBusErrorPrefixExecution {
     std::uint32_t pending_instruction_address=0, pending_destination_address=0;
     std::uint16_t pending_value=0;
 };
+struct MillenniumAmigaCustomChipExecBaseObservation {
+    std::uint32_t instruction_address=0;
+    std::uint32_t custom_chip_base=0;
+    std::uint16_t register_offset=0;
+    std::uint16_t value=0;
+    std::uint32_t exec_base_source_address=0;
+    std::uint32_t exec_base_value=0;
+};
+struct MillenniumAmigaCustomChipExecPrefixExecution {
+    MillenniumAmigaBootstrapCustomChipEffect custom_chip_effect;
+    std::uint32_t saved_d0_address=0, saved_d0_value=0;
+    std::uint32_t resulting_stack_pointer=0, resulting_a6=0;
+    std::uint32_t exec_base_source_address=0;
+    std::uint32_t pending_call_address=0;
+    std::int16_t pending_exec_vector=0;
+    std::uint32_t pending_vector_address=0;
+};
 
 // Manual recompilation of the exact, direct Defjam bootstrap relocator at
 // $70000..$70041. The original DBRA reads one byte beyond the authenticated
@@ -254,6 +272,10 @@ public:
     execute_bus_error_prefix(const MillenniumAmigaBusErrorObservation&);
     [[nodiscard]] const std::optional<MillenniumAmigaBusErrorPrefixExecution>&
     bus_error_prefix_execution() const { return bus_error_prefix_execution_; }
+    [[nodiscard]] MillenniumAmigaCustomChipExecPrefixExecution
+    execute_custom_chip_exec_prefix(const MillenniumAmigaCustomChipExecBaseObservation&);
+    [[nodiscard]] const std::optional<MillenniumAmigaCustomChipExecPrefixExecution>&
+    custom_chip_exec_prefix_execution() const { return custom_chip_exec_prefix_execution_; }
 
 private:
     MillenniumAmigaBootstrapRelocatorState state_ =
@@ -272,6 +294,7 @@ private:
     std::optional<MillenniumAmigaTraceBranchChainExecution> trace_branch_chain_execution_;
     std::optional<MillenniumAmigaTraceRegisterPrefixExecution> trace_register_prefix_execution_;
     std::optional<MillenniumAmigaBusErrorPrefixExecution> bus_error_prefix_execution_;
+    std::optional<MillenniumAmigaCustomChipExecPrefixExecution> custom_chip_exec_prefix_execution_;
 };
 
 } // namespace eon

@@ -32,6 +32,11 @@ enum class MillenniumDosSixthFunctionState {
     caller_helper_saved_byte,
     caller_helper_external_continuation,
     caller_helper_post_initialization_call_return,
+    caller_helper_first_random_call_return,
+    caller_helper_first_random_al,
+    caller_helper_second_random_call_return,
+    caller_helper_second_random_al,
+    caller_helper_random_setup_call_return,
     restoration_first_call_return,
     restoration_second_call_return,
     restoration_third_call_return,
@@ -55,6 +60,7 @@ enum class MillenniumDosSixthFunctionBoundaryKind {
     register_bl,
     local_return,
     external_continuation,
+    register_al,
 };
 
 struct MillenniumDosSixthFunctionBoundary {
@@ -143,6 +149,7 @@ public:
     void observe_call_return(std::uint16_t call_address,
         std::uint16_t return_address);
     void observe_bl(std::uint16_t shift_address, std::uint8_t value);
+    void observe_al(std::uint16_t instruction_address, std::uint8_t value);
     void begin_restoration();
     void begin_restoration_caller_helper_prefix();
 

@@ -43,9 +43,9 @@ It calls `$cc4e`, discards one stack word after the typed return at `$74c4`,
 and tail-jumps to `$7455`. The runtime therefore admits restoration through
 this caller boundary; it does not bypass the opaque call.
 
-The caller helper is now opened through its exact `$cc4e..$cd4f` span
-(258-byte SHA-256
-`2ad180524be55ea7a0cbf693116a042133d26b01a9701131371445bb8b77b7cb`).
+The caller helper is now opened through its exact `$cc4e..$cd62` span
+(277-byte SHA-256
+`4a397c5288f1b47472c1a73a386c2a1ea6843008316a96236b58f90321aa0e59`).
 The typed path follows calls to `$408a`, `$4d36` with `AX=$0028`, `$0666` with
 `AX=$00c1`, and `$05f1`; records the literal word writes `$cbbe := $080f` and
 `$cbe1 := 0`; then observes the far pointer loaded from `$0112:$0114`. The
@@ -64,6 +64,12 @@ After the exact `$942c` return, the local continuation records the literal
 `$caf0`, the 39 strided zero words rooted at `$2aac`, and the remaining literal
 bytes through `$2b4f`. These are address/value effects only. Execution stops at
 the next typed external call `$cd4d -> $40af`.
+
+After the exact `$40af` return, two `$4241` calls remain typed external result
+boundaries. Their observed AL bytes are masked by the original `AND AL,$0f`
+instructions and recorded at `$cb86` and `$cb87`. The continuation then stops
+at `$cd60 -> $cbc0`; no randomness, clock source, or `$cbc0` behavior is
+inferred.
 
 The typed session exposes only addresses, call targets, proved register values,
 and memory effects. In particular, the byte read at `$613a` is not assigned a
