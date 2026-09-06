@@ -514,6 +514,13 @@ its zero-result spin; success continues through `$2013a/$2008e` to the
 typed graphics return and both pointer stores at `$21768/$21772`. Continue
 the reached `$2177c -> $22a5a` and two `$22bea` audio calls. The loaded title
 at `$13000` remains a separate program-entry boundary.
+Native re-entry now performs that sound reset and both `$22bea` consumers,
+retaining the four ordered DMA write intents and reaching `$2178e`.
+The consumer implements all four descriptor channels, delayed silence,
+countdown, period changes, tail selection and ROM-dependent random modes.
+Continue the custom-register/pointer setup at `$2178e`, then connect native
+audio intents to the SDL mixer; raw register writes do not prove playback.
+Random audio modes require their original owned ROM byte at `$ff0000+index`.
 The unconfigured `$13000` graphics initialization remains separate. Opening
 acquisition now retains the genuine 24-byte bootstrap profile table in owned
 memory from its boot-track source. Tests consume that production checkpoint,

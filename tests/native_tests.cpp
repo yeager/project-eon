@@ -6458,6 +6458,54 @@ int main() {
                     owned_command_bytes[address+j]=static_cast<std::uint8_t>(value>>((bytes-1-j)*8U));
             };
             assert(command_read(0x22a6c,2)==3);
+            // Controlled audio arithmetic fixtures, not original media or
+            // capture evidence. No ROM is installed in the runtime by these tests.
+            for(unsigned tested_channel=0;tested_channel<4;++tested_channel){
+                for(const unsigned mode:{0U,0x401U,0x402U,0x200U,0x201U,0x101U,0x1ffU,0x2000U,0x803U,0x1003U}){
+                    std::map<std::uint32_t,std::uint8_t> audio_bytes;
+                    const auto put=[&](std::uint32_t address,eon::MemoryTransferElementWidth width,std::uint32_t value){
+                        const auto size=static_cast<unsigned>(width);
+                        for(unsigned i=0;i<size;++i)audio_bytes[address+i]=static_cast<std::uint8_t>(value>>((size-i-1)*8));
+                    };
+                    const auto get=[&](std::uint32_t address,unsigned width){
+                        std::uint32_t value=0;
+                        for(unsigned i=0;i<width;++i)value=(value<<8)|audio_bytes.at(address+i);
+                        return value;
+                    };
+                    using W=eon::MemoryTransferElementWidth;
+                    put(0x22a6c,W::word,0);put(0x22a32,W::word,0);put(0x2079e,W::longword,0);
+                    put(0xff0000,W::byte,0x23); // Explicit arithmetic fixture for $22a34.
+                    put(0x22aaa,W::longword,command_read(0x22aaa,4));put(0x22aae,W::word,command_read(0x22aae,2));
+                    for(unsigned c=0;c<4;++c){
+                        const auto d=0x22a6e + 14*c;
+                        put(d,W::longword,0x80000);put(d+4,W::word,10);put(d+6,W::word,100);
+                        put(d+8,W::word,20);put(d+10,W::word,c==tested_channel?mode:0);
+                        put(d+12,W::word,mode==0x2000?6:mode==0x1ff?90:mode==0x101?101:100);
+                    }
+                    const auto d=0x22a6e + 14*tested_channel,h=0xdff0a0+16*tested_channel;
+                    const auto result=eon::consume_deuteros_amiga_owned_audio(get,put);
+                    assert((result.dma_writes==std::array<std::uint16_t,2>{0,0x800f}));
+                    assert(get(0x22a6c,2)==0);
+                    if(mode==0x401||mode==0x402){
+                        assert(get(h,4)==0x22a6a&&get(h+4,2)==1&&get(h+8,2)==0);
+                        assert(get(d+10,2)==(mode==0x401?0U:0x401U));
+                    }else if(mode==0x200){
+                        assert(get(d,4)==command_read(0x22aaa,4)&&get(d+10,2)==0);
+                    }else if(mode==0x201)assert(get(d+10,2)==0x200);
+                    else if(mode==0x101||mode==0x1ff)assert(get(d+6,2)==(mode==0x101?101U:99U));
+                    else if(mode==0x2000)assert(get(d,4)==0x8000e&&get(d+4,2)==3&&get(d+10,2)==0);
+                    else if(mode==0x803)assert(get(d+6,2)==100+(3U<<(tested_channel<2?5:tested_channel==2?4:3)));
+                    else if(mode==0x1003)assert(get(h+8,2)==103&&get(d+8,2)==103&&get(d+10,2)==0x201);
+                    if(mode==0x803||mode==0x1003){
+                        assert(get(0x22a32,2)==0x23);
+                        audio_bytes.erase(0xff0000);put(0x22a32,W::word,0);put(d+10,W::word,mode);
+                        bool missing_rom=false;
+                        try{(void)eon::consume_deuteros_amiga_owned_audio(get,put);}
+                        catch(const std::out_of_range&){missing_rom=true;}
+                        assert(missing_rom);
+                    }
+                }
+            }
             const auto sound_table=command_read(0x22aa6,4);
             for(std::uint32_t channel=0;channel<2;++channel){
                 const auto source=sound_table+(channel+1)*14;
@@ -7024,7 +7072,11 @@ int main() {
                                                             {22,0x200ac,0x12fec,opened.result_d0,0x200b2,0x200b6,0x98765432,-0xde},command_read,command_write);
                                                         assert(command_read(0x2012c,2)==0&&command_read(0x20510,4)==command_read(0x20128,4));
                                                         assert(command_read(0x20c20,4)==command_read(0x20128,4));
-                                                        assert(main.next_call_address==0x2177c&&main.local_call_target==0x22a5a);
+                                                        assert(main.next_instruction_address==0x2178e&&main.next_call_address==0);
+                                                        assert((main.main_stage_audio_dma_writes==std::array<std::uint16_t,4>{15,0x8000,0,0x800f}));
+                                                        assert(command_read(0x22a6c,2)==0&&command_read(0x22a30,2)==0);
+                                                        for(unsigned audio_channel=0;audio_channel<4;++audio_channel)
+                                                            assert(command_read(0xdff0a8+16*audio_channel,2)==0);
                                                     }
                                                 }
                                                 auto wrong=returned;wrong.vector=-0x1c2;

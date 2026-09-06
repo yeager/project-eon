@@ -1411,6 +1411,7 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
     std::uint32_t bootstrap_stack_top=0;
     std::uint32_t bootstrap_return_destination=0;
     std::uint32_t main_stage_stack_top=0;
+    std::array<std::uint16_t,4> main_stage_audio_dma_writes{};
 };
 struct DeuterosAmigaObservedLoopRequestService {
     std::uint64_t trace_sequence=0;
@@ -1517,7 +1518,15 @@ DeuterosAmigaMainStageLoopGraphicsPlan execute_deuteros_amiga_outer_service(
             const auto pointer=read(0x20128,4);
             write(0x20510,MemoryTransferElementWidth::longword,pointer);
             write(0x20c20,MemoryTransferElementWidth::longword,pointer);
-            plan.next_call_address=0x2177c;plan.local_call_target=0x22a5a;plan.next_return_address=0x21782;
+            write(0x22a30,MemoryTransferElementWidth::word,0);
+            std::uint32_t sound=0;std::uint16_t channels=15;
+            stage_deuteros_amiga_owned_sound(sound,channels,read,write);
+            const auto first_audio=consume_deuteros_amiga_owned_audio(read,write);
+            const auto second_audio=consume_deuteros_amiga_owned_audio(read,write);
+            plan.main_stage_audio_dma_writes={first_audio.dma_writes[0],first_audio.dma_writes[1],
+                second_audio.dma_writes[0],second_audio.dma_writes[1]};
+            plan.next_call_address=0;plan.local_call_target=0;plan.next_return_address=0;
+            plan.next_instruction_address=0x2178e;
             plan.next_vector=0;plan.pending_read_instruction=0;plan.pending_read_address=0;
         }
         return plan;
@@ -1899,6 +1908,10 @@ public:
                 !="e4826a60a00a9c9ed6797e5636ca0e99f038e10cea9d732ebe53452ca659a658")
             throw std::runtime_error("Unsupported Deuteros bootstrap re-entry route");
         const auto main_stage=disk.bytes(plan.main_stage.disk_offset,plan.main_stage.length);
+        if(to_hex(sha256(disk.bytes(0x83ea,1082)))!="6f4ad399c05cf86ca968ca4dbfd8009c1219dc44eabd67bde05de17369ba19f7"
+            ||to_hex(sha256(disk.bytes(0x8234,38)))!="3912a3943e0cf7654daabbcd611746d3df0dcda45be4361061a953fb2c8ca2b0"
+            ||to_hex(sha256(disk.bytes(0x825a,16)))!="ec2f836b1613a0aaf24099396c38c467d04c937cafaaeb5d529494491700ecf9")
+            throw std::runtime_error("Unsupported Deuteros native audio consumer");
         if(to_hex(sha256(disk.bytes(0x5800,6)))!="1c3c420f68950a319e336a84f65a55bf597afbfd867ad3e2340dfc428c916e11"
             ||to_hex(sha256(disk.bytes(0x6f34,52)))!="912d3ca9b43b99a847ede8bf8ed5e5035d3969deef3e46c21b86500d8fb28001"
             ||to_hex(sha256(disk.bytes(0x5868,36)))!="2ff9cff593d65f9e3fecfc289cd8d675f7e6309b1e5bb2a27d74605cfecff8ba"

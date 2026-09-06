@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <array>
 #include <stdexcept>
 
 namespace eon {
@@ -43,6 +44,85 @@ void stage_deuteros_amiga_owned_sound(std::uint32_t& d0, std::uint16_t& d1_word,
         write(destination+8,Width::longword,read(descriptor+8,4));
         write(destination+12,Width::word,read(descriptor+12,2));
     }
+}
+
+// Ordered DMA write intents are retained separately: a final raw register
+// value is not a model of Amiga set/clear semantics or proof of host playback.
+struct DeuterosAmigaOwnedAudioResult {
+    std::array<std::uint16_t,2> dma_writes{};
+};
+
+// Native $22bea consumer. Read/write must use an unpublished transaction;
+// the ROM-dependent random modes reject if their original byte is not owned.
+template<class Read,class Write>
+DeuterosAmigaOwnedAudioResult consume_deuteros_amiga_owned_audio(Read read,Write write){
+    using Width=MemoryTransferElementWidth;
+    const auto mask=static_cast<std::uint16_t>(read(0x22a6c,2));
+    DeuterosAmigaOwnedAudioResult result{{mask,static_cast<std::uint16_t>(mask^0x800fU)}};
+    for(const auto value:result.dma_writes)write(0xdff096,Width::word,value);
+    const auto random=[&](){
+        auto value=read(0x22a32,2)&0x7fffU;
+        value=(value&0xff00U)|read(0xff0000+value,1);
+        value+=read(0x2079e,4);
+        write(0x22a32,Width::word,(read(0x22a32,2)+value)&0xffffU);
+        return value&0xffU;
+    };
+    for(std::uint32_t channel=0;channel<4;++channel){
+        const auto descriptor=0x22a6e + 14*channel;
+        const auto hardware=0xdff0a0+16*channel;
+        auto control=read(descriptor+10,2);
+        auto count=control&0xffU;
+        if((control&0x400U)&&count){
+            --count;
+            write(descriptor+10,Width::word,count?((control&0xff00U)|count):0);
+            write(hardware,Width::longword,0x22a6a);
+            write(hardware+4,Width::word,1);write(hardware+8,Width::word,0);
+            continue;
+        }
+        write(hardware,Width::longword,read(descriptor,4));
+        write(hardware+4,Width::longword,read(descriptor+4,4));
+        write(hardware+8,Width::word,read(descriptor+8,2));
+        if(control==0)continue;
+        if(control&0x100U){
+            const auto delta=count<128?count:count+0xff00U;
+            const auto sum=read(descriptor+6,2)+delta;
+            auto period=sum&0xffffU;
+            const auto limit=read(descriptor+12,2);
+            if(sum>0xffffU){if(period<limit)period=limit;}
+            else if(period>=limit)period=limit;
+            write(descriptor+6,Width::word,period);
+            continue;
+        }
+        if(!(control&0x200U)){
+            if(control&0x800U){
+                const auto shift=channel<2?5U:channel==2?4U:3U;
+                write(descriptor+6,Width::word,(((random()&count)<<shift)+read(descriptor+12,2))&0xffffU);
+                continue;
+            }
+            if(!(control&0x1000U)&&(control&0x2000U)){
+                if(!(read(0x22a6c,2)&(1U<<channel))){
+                    const auto length=read(descriptor+4,2);
+                    const auto tail=read(descriptor+12,2);
+                    const auto displacement=(((length<<1)&0xffffU)-tail)&0xffffU;
+                    write(descriptor+4,Width::word,tail>>1);
+                    write(descriptor,Width::longword,read(descriptor,4)+displacement);
+                    write(descriptor+10,Width::word,0);
+                }
+                continue;
+            }
+            count=((random()&count)+read(descriptor+12,2))&0xffffU;
+            write(hardware+8,Width::word,count);write(descriptor+8,Width::word,count);
+            write(descriptor+10,Width::word,0x202);
+        }
+        write(descriptor+10,Width::word,(read(descriptor+10,2)-1U)&0xffffU);
+        if((count&0xffU)==0){
+            write(descriptor,Width::longword,read(0x22aaa,4));
+            write(descriptor+4,Width::word,read(0x22aae,2));
+            write(descriptor+10,Width::word,0);
+        }
+    }
+    write(0x22a6c,Width::word,0);
+    return result;
 }
 
 // $2016a reads the owned original seed/counter and original resource word.

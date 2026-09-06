@@ -8076,3 +8076,52 @@ these four service returns, zero/nonzero library results, the controller and
 profile stores, the two buffer roots, the word reset and both final pointer
 copies. They use a private map from the genuine checkpoint and do not claim
 full device emulation or capture-derived gameplay parity.
+
+### Deuteros native four-channel audio consumer
+
+`consume_deuteros_amiga_owned_audio` implements the unrolled `$22bea..$23022`
+routine as four native descriptor operations, not a CPU interpreter. It emits
+the raw `$dff096` writes in order: owned `$22a6c`, then that word XOR `$800f`.
+Both intents are returned separately from the final memory value. Native
+initialization at `$2177c` now runs `$22a5a` and both following consumers,
+retains `{15, $8000, 0, $800f}` for that reset path, and reaches `$2178e`.
+This is not yet a hardware DMA model or audible SDL mixer integration.
+
+Each 14-byte descriptor at `$22a6e + 14*channel` supplies pointer, word length,
+period, volume, control and parameter to AUD0–AUD3. The original ordering is
+preserved: normal pointer/length/period/volume writes precede control updates,
+so a changed period generally reaches hardware on the next call. Bit 10 with
+a nonzero low-byte count instead decrements that byte and emits the fixed
+silent pointer `$22a6a`, length one and volume zero. A count reaching zero
+clears the full control word.
+
+Normal control priority is bit 8 (signed-byte period addition with the exact
+unsigned carry/comparison clamps), bit 9 (word countdown), bit 11 (random
+period), then bit 12 or the fallback (random volume), otherwise bit 13
+(tail selection gated by the corresponding original DMA-mask bit). Countdown
+tests the pre-decrement low byte and restores the raw silent descriptor
+pointer/length when it is zero. Tail selection performs word-sized shifts
+and subtraction before adding the unsigned 16-bit displacement to the sample
+pointer. The random-period shifts are **5, 5, 4, 3**, not one shared constant.
+
+The `$22a34` random helper reads the owned word seed at `$22a32`, masks its
+index to `$7fff`, reads one byte from original ROM at `$ff0000+index`, adds
+the owned `$2079e` longword counter and updates the seed as a word. There is
+no host PRNG, fabricated ROM fallback or inferred ROM byte. Missing bytes
+reject the caller's unpublished transaction. The initialization descriptors
+have zero control and therefore do not require this ROM path.
+
+Source gates (ADF offset, byte count, SHA-256):
+
+- `$83ea`, 1082: `6f4ad399c05cf86ca968ca4dbfd8009c1219dc44eabd67bde05de17369ba19f7`.
+- `$8234`, 38: `3912a3943e0cf7654daabbcd611746d3df0dcda45be4361061a953fb2c8ca2b0`.
+- `$825a`, 16: `ec2f836b1613a0aaf24099396c38c467d04c937cafaaeb5d529494491700ecf9`.
+
+Controlled arithmetic tests exercise ten mode cases on each of four channels,
+including the differing shifts, delayed silence, countdown and tail pointer
+updates. The random-helper unit fixture supplies one explicit test byte only
+to its isolated map; it is not installed as game media or runtime ROM and is
+not capture evidence. Removing it verifies the missing-ROM rejection. The
+genuine-checkpoint re-entry tests cover both reset consumers and all four
+zero-volume outputs. DMA set/clear interpretation, sample ownership and SDL
+playback remain separate work.
