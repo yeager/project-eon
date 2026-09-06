@@ -457,7 +457,8 @@ probe/body transfer, and observed released `$2196e` hardware retry into owned
 `$2ad24/$32a24` memory. The earlier typed OpenLibrary return now owns `$12fec`
 only through its exact post-return store, so `$21276` can consume both owned
 sources. Ordered typed returns at `$21310` and `$2132a` now continue to the
-local `$2132e->$20888` call. Recover that callee; do not reuse unrelated observed bases or assign graphics,
+local `$2132e->$20888` call and its four native stores. Continue from the
+`$208b0` ExecBase read, before vector `-$a8`; do not reuse unrelated observed bases or assign graphics,
 audio, scheduler, input, or resource semantics.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,

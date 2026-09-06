@@ -1393,6 +1393,11 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
     std::uint32_t a0_value=0,a1_value=0,a6_value=0,d0_value=0;
     std::int16_t next_vector=0;
     std::uint32_t local_call_target=0;
+    std::uint32_t pending_read_instruction=0,pending_read_address=0;
+    std::array<std::uint32_t,4> write_addresses{};
+    std::array<std::uint32_t,4> write_values{};
+    std::array<MemoryTransferElementWidth,4> write_widths{};
+    std::size_t write_count=0;
 };
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
@@ -1466,7 +1471,9 @@ public:
             ||to_hex(sha256(main_stage.subspan(0x1276,0x9a)))
                 !="f86946a0b1323b9f85c0ab5259395fa11962961c72ca17bc02ab230bc008dbed"
             ||to_hex(sha256(main_stage.subspan(0x1314,32)))
-                !="3c03bd624f997572d76c303a2e14e9f1838f8473d8efa30be4484e9ad61e047f")
+                !="3c03bd624f997572d76c303a2e14e9f1838f8473d8efa30be4484e9ad61e047f"
+            ||to_hex(sha256(main_stage.subspan(0x888,44)))
+                !="4b31f3ba22021d8fdd1bbf5909614083d96c973fcfa9d5dd5eccb4fb90898a18")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
@@ -3828,7 +3835,17 @@ public:
             plan={0x2132a,0x2132e,0x12f12,a1,a6,
                 (o.result_d0&0xffff0000U)|0x10U,-0xc0,0};
         }else{
-            plan={0x2132e,0x21334,0,0,0,o.result_d0,0,0x20888};
+            // Enter the direct local call. No opaque return from $20888 is
+            // asserted: its four literal stores run before the ExecBase read.
+            plan={0x208b4,0x208b8,0,0x2086a,0,5,-0xa8,0x20888};
+            plan.pending_read_instruction=0x208b0;
+            plan.pending_read_address=4;
+            plan.write_addresses={0x20872,0x20873,0x20878,0x2087c};
+            plan.write_values={2,0xc4,0x20880,0x207ec};
+            plan.write_widths={MemoryTransferElementWidth::byte,
+                MemoryTransferElementWidth::byte,MemoryTransferElementWidth::longword,
+                MemoryTransferElementWidth::longword};
+            plan.write_count=4;
         }
         ++main_stage_loop_graphics_returns_;
         last_command_sequence_=o.trace_sequence;

@@ -3483,10 +3483,17 @@ offset `$6b14` (runtime `$21314..$21333`) hash to
 After the first return, Eon reloads A1 from owned `$21266` and A6 from owned
 `$12fec`, sets A0 to `$12f12`, and changes only D0's low word to `$0010`.
 Its high word comes from the typed return, not from a fabricated zero.
-After the second return, execution stops at the local `$2132e->$20888` call,
-return address `$21334`. Neither continuation writes memory or synthesizes
-library-internal effects. Out-of-order, mismatched, and replayed returns do
-not advance the session. The local callee remains unrecovered on this path.
+After the second return, execution enters the local `$2132e->$20888` call
+without asserting an opaque callee return. Its 44 bytes at ADF offset `$6088`
+hash to `4b31f3ba22021d8fdd1bbf5909614083d96c973fcfa9d5dd5eccb4fb90898a18`.
+The native prefix writes bytes `$02/$c4` at `$20872/$20873` and longwords
+`$20880/$207ec` at `$20878/$2087c` as one atomic big-endian batch. A1 becomes
+`$2086a` and the entire D0 becomes 5. Execution stops at the `$208b0` read of
+ExecBase at address 4, before the `-$a8(A6)` call at `$208b4`. No library base
+or service result is fabricated. Out-of-order, mismatched, and replayed returns
+do not advance the session or repeat the stores. The first graphics-return
+continuation remains register-only, and library-internal effects are not
+synthesized.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,

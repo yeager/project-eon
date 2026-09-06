@@ -6242,13 +6242,26 @@ int main() {
                 loop_graphics_return).accepted);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_loop_graphics_return(
                 loop_graphics_return).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum
+                ==after_loop_prepare_body->checksum);
             wrong_graphics_return.trace_sequence=runtime_copy_sequence+106;
             assert(opening_controller.observe_deuteros_amiga_main_stage_loop_graphics_return(
                 wrong_graphics_return).accepted);
             assert(!opening_controller.observe_deuteros_amiga_main_stage_loop_graphics_return(
                 wrong_graphics_return).accepted);
-            assert(opening_controller.native_runtime_memory_checkpoint()->checksum
-                ==after_loop_prepare_body->checksum);
+            const auto after_loop_local_request=opening_controller.native_runtime_memory_checkpoint();
+            assert(after_loop_local_request&&after_loop_local_request->applied_batch_count
+                ==after_loop_prepare_body->applied_batch_count+1);
+            assert(runtime_byte(*after_loop_local_request,0x20872)==2);
+            assert(runtime_byte(*after_loop_local_request,0x20873)==0xc4);
+            assert(runtime_byte(*after_loop_local_request,0x20878)==0);
+            assert(runtime_byte(*after_loop_local_request,0x20879)==2);
+            assert(runtime_byte(*after_loop_local_request,0x2087a)==8);
+            assert(runtime_byte(*after_loop_local_request,0x2087b)==0x80);
+            assert(runtime_byte(*after_loop_local_request,0x2087c)==0);
+            assert(runtime_byte(*after_loop_local_request,0x2087d)==2);
+            assert(runtime_byte(*after_loop_local_request,0x2087e)==7);
+            assert(runtime_byte(*after_loop_local_request,0x2087f)==0xec);
             const auto post_command_memory=
                 opening_controller.native_runtime_memory_checkpoint();
             assert(post_command_memory

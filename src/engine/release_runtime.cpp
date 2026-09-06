@@ -4341,12 +4341,24 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_graphics_retur
         const auto a1=o.call_address==0x21310?read_long(0x21266):0U;
         const auto a6=o.call_address==0x21310?read_long(0x12fec):0U;
         auto pending=*deuteros_amiga_->title_stage_session();
-        if(!pending.advance_main_stage_loop_graphics_return(o,a1,a6)){
+        const auto plan=pending.advance_main_stage_loop_graphics_return(o,a1,a6);
+        if(!plan){
             result.error="Deuteros loop graphics return did not match boundary";return result;
+        }
+        auto memory=*native_runtime_memory_;
+        if(plan->write_count!=0){
+            NativeRuntimeEffectBatch batch{"deuteros-amiga-loop-local-request",true,{}};
+            for(std::size_t i=0;i<plan->write_count;++i)
+                batch.effects.push_back({i+1,
+                    {NativeRuntimeAddressSpace::linear,std::nullopt,plan->write_addresses[i]},
+                    plan->write_widths[i],NativeRuntimeByteOrder::big_endian,plan->write_values[i]});
+            const auto applied=memory.apply(batch);
+            if(!applied.accepted){result.error=applied.error;return result;}
         }
         if(!deuteros_amiga_->advance_main_stage_loop_graphics_return(o,a1,a6)){
             result.error="Deuteros loop graphics return disappeared before commit";return result;
         }
+        *native_runtime_memory_=std::move(memory);
         result.accepted=true;
     }catch(const std::exception&e){result.error=e.what();}
     return result;
