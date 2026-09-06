@@ -4782,6 +4782,32 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_input(const DeuterosAmig
     return result;
 }
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_counter(const DeuterosAmigaObservedOuterCounter o){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
+        result.error="Deuteros outer counter requires active owned memory";return result;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto plan=pending.observe_main_stage_outer_counter(o);
+        if(!plan){result.error="Deuteros outer counter did not match boundary";return result;}
+        auto memory=*native_runtime_memory_;
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-outer-counter-"+std::to_string(o.trace_sequence),true,{{
+            1,{NativeRuntimeAddressSpace::linear,std::nullopt,0x2079e},MemoryTransferElementWidth::longword,
+            NativeRuntimeByteOrder::big_endian,o.value}}};
+        if(plan->next_call_address==0x218f8)
+            batch.effects.push_back({2,{NativeRuntimeAddressSpace::linear,std::nullopt,0x12fe4},
+                MemoryTransferElementWidth::longword,NativeRuntimeByteOrder::big_endian,plan->d0_value});
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted){result.error=applied.error;return result;}
+        if(!deuteros_amiga_->observe_main_stage_outer_counter(o)){
+            result.error="Deuteros outer counter disappeared before commit";return result;
+        }
+        *native_runtime_memory_=std::move(memory);result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::advance_deuteros_amiga_fade_buffers(){
     DeuterosAmigaTitleDependencyObservationResult result;
     if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
@@ -4819,7 +4845,8 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_fade_buffers(){
         };
         static_cast<void>(clear_deuteros_amiga_owned_frame(read,write));
         const auto final_a0=clear_deuteros_amiga_owned_frame(read,write);
-        if(!pending.advance_main_stage_fade_buffers(final_a0)){
+        const auto cleanup_d0=execute_deuteros_amiga_owned_cleanup(read,write);
+        if(!pending.advance_main_stage_fade_buffers(final_a0,cleanup_d0)){
             result.error="Deuteros fade buffer continuation rejected";return result;
         }
         // Admission represents final state, not a bus trace. Counters and
@@ -4830,7 +4857,7 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_fade_buffers(){
                 MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,value});
         const auto applied=memory.apply(batch);
         if(!applied.accepted){result.error=applied.error;return result;}
-        if(!deuteros_amiga_->advance_main_stage_fade_buffers(final_a0)){
+        if(!deuteros_amiga_->advance_main_stage_fade_buffers(final_a0,cleanup_d0)){
             result.error="Deuteros fade buffers disappeared before commit";return result;
         }
         *native_runtime_memory_=std::move(memory);result.accepted=true;

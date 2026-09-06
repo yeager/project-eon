@@ -3772,14 +3772,41 @@ in one private native-memory transaction; read-through writes preserve
 sequential pointer/counter semantics and shared-buffer aliasing.
 The published batch contains unique final byte values, not a bus-write trace.
 Missing owned pointers or invalid geometry reject the transaction without publishing
-either clear. Final A0 is the second buffer's end and D0 is zero.
-The `$2232a` return restores the exact fade caller and stops before its
+either clear. Before cleanup, A0 is the second buffer's end and D0 is zero.
+The `$2232a` return restores the exact fade caller and enters its
 `$224a2` cleanup call: `$2189e` returns to `$218a2`, or `$218d8` returns
 to `$218dc`. The enclosing `$21854` return remains separately retained.
 Tests cover both parities, `$ffff` word wrapping, aliased buffers, the
 unconditional even-pointer read, 16,004 ordered stores across both calls,
-both return routes and rejection outside the reached fade boundary. Hardware
-vector restoration and audio control writes in `$224a2` remain unexecuted.
+both return routes and rejection outside the reached fade boundary.
+
+Cleanup `$224a2..$224cb` (ADF `$7ca2`, 42 bytes, SHA-256
+`d4e9a1ee0065537a627cdd9ee8827f11d5fa28e0f860aacb21bbdc7e11784bd1`)
+now executes in that same private transaction. It reads owned `$224e6`,
+restores longword `$6c`, clears the four AUDxVOL words at `$dff0a8` through
+`$dff0d8`, and writes command `$000f` to `$dff096`. These are raw write
+values, not a DMACON readback value or proof of host audio acknowledgement.
+The following `$22a5a` clears `$22a30` and stages sound zero on all four
+channels. A0 becomes `$22aaa`, A1 `$22a98`, D1's low word zero, and D0
+the final staged descriptor pointer; the buffer-end A0 is no longer current.
+Missing owned vector/descriptor bytes reject the entire operation.
+
+The subsequent waits are independently hash-gated: `$218a8..$218bd` (ADF
+`$70a8`, 22 bytes, SHA-256
+`7306f2b341dc8ff55c9462f50d18805388f7afb1fcdf57b94f8724355adaad65`)
+and `$218e2..$218fd` (ADF `$70e2`, 28 bytes, SHA-256
+`5be290bea6b600957b902a1ae117cfac9bde4031eb049a9fc2e84e8fc4a0f752`).
+An ordered typed observation of longword `$2079e` supplies the initial D0
+snapshot. Later observations at `$218ae` or `$218e8` load D1 and wait while
+equal; any unequal 32-bit value, including wrapping to zero, continues to
+`$208ba`. The second route writes the original D0 snapshot, not the changed
+D1 sample, to `$12fe4` before call `$218f8` (return `$218fe`). The first
+calls `$218b8` (return `$218be`) without that store. Each sample, optional
+store and next boundary publish atomically, with stale sequence, wrong
+instruction and wrong source rejected. No host timer supplies these values.
+Tests cover vector/control writes and descriptor reset, both counter routes,
+equal waits, wrapping values, source rejection and completed-route replay.
+The `$208ba` service body and later input/resource transitions remain next.
 
 Sample bytes, latch writes, trace sequence and next boundary publish atomically.
 Wrong bit/address/order or replay leaves committed state unchanged. The test

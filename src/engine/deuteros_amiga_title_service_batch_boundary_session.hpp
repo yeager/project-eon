@@ -1406,6 +1406,7 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
     std::uint32_t command_palette_address=0;
     std::uint32_t outer_transition_return=0;
     std::uint32_t outer_fade_return=0;
+    std::uint32_t d1_value=0;
 };
 struct DeuterosAmigaObservedLoopRequestService {
     std::uint64_t trace_sequence=0;
@@ -1430,6 +1431,32 @@ struct DeuterosAmigaObservedOuterInput {
     std::uint32_t instruction_address=0,port_address=0;
     std::uint8_t bit=0,value=0;
 };
+struct DeuterosAmigaObservedOuterCounter {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t instruction_address=0,source_address=0,value=0;
+};
+
+inline DeuterosAmigaMainStageLoopGraphicsPlan resume_deuteros_amiga_outer_counter(
+    DeuterosAmigaMainStageLoopGraphicsPlan plan,const DeuterosAmigaObservedOuterCounter&o){
+    const auto instruction=plan.pending_read_instruction;
+    const bool first=instruction==0x218a8||instruction==0x218e2;
+    if((!first&&instruction!=0x218ae&&instruction!=0x218e8)
+        ||o.instruction_address!=instruction||o.source_address!=0x2079e
+        ||plan.pending_read_address!=0x2079e)
+        throw std::runtime_error("Deuteros outer counter does not match boundary");
+    if(first){
+        plan.d0_value=o.value;plan.pending_read_instruction=instruction+6;
+    }else{
+        plan.d1_value=o.value;
+        if(o.value!=plan.d0_value){
+            plan.pending_read_instruction=0;plan.pending_read_address=0;
+            plan.next_call_address=instruction==0x218ae?0x218b8:0x218f8;
+            plan.local_call_target=0x208ba;plan.next_return_address=plan.next_call_address+6;
+            plan.next_instruction_address=0;plan.next_vector=0;
+        }
+    }
+    return plan;
+}
 
 // Pure continuation over an already admitted graphics return. Memory writes
 // (including the fade counter) belong to the coordinator's private transaction.
@@ -1458,15 +1485,18 @@ inline DeuterosAmigaMainStageLoopGraphicsPlan resume_deuteros_amiga_fade_palette
 }
 
 inline DeuterosAmigaMainStageLoopGraphicsPlan finish_deuteros_amiga_fade_buffers(
-    DeuterosAmigaMainStageLoopGraphicsPlan plan,std::uint32_t final_a0){
+    DeuterosAmigaMainStageLoopGraphicsPlan plan,std::uint32_t final_a0,std::uint32_t cleanup_d0){
     if(plan.next_call_address!=0x2231e||plan.local_call_target!=0x21698
         ||plan.next_return_address!=0x22324
         ||(plan.outer_fade_return!=0x2189e&&plan.outer_fade_return!=0x218d8))
         throw std::runtime_error("Deuteros fade buffer continuation does not match boundary");
-    plan.a0_value=final_a0;plan.d0_value=0;
-    plan.next_call_address=plan.outer_fade_return;plan.next_return_address=plan.outer_fade_return+4;
-    plan.local_call_target=0x224a2;plan.next_vector=0;
-    plan.pending_read_instruction=0;plan.pending_read_address=0;plan.next_instruction_address=0;
+    if((final_a0&1U)||final_a0<32000||final_a0>0x1000000)
+        throw std::runtime_error("Deuteros final clear pointer is invalid");
+    plan.a0_value=0x22aaa;plan.a1_value=0x22a98;plan.d0_value=cleanup_d0;
+    plan.d1_value&=0xffff0000U;
+    plan.pending_read_instruction=plan.outer_fade_return==0x2189e?0x218a8:0x218e2;
+    plan.pending_read_address=0x2079e;plan.next_instruction_address=0;
+    plan.next_call_address=0;plan.next_return_address=0;plan.local_call_target=0;plan.next_vector=0;
     plan.outer_fade_return=0;
     return plan;
 }
@@ -1584,6 +1614,12 @@ public:
                 !="ec2f836b1613a0aaf24099396c38c467d04c937cafaaeb5d529494491700ecf9"
             ||to_hex(sha256(main_stage.subspan(0x229c,148)))
                 !="d1a162af50f92b60d03b1da4ab186a547e46d145b0599cfbbeff7fb5af324ac1"
+            ||to_hex(sha256(main_stage.subspan(0x24a2,42)))
+                !="d4e9a1ee0065537a627cdd9ee8827f11d5fa28e0f860aacb21bbdc7e11784bd1"
+            ||to_hex(sha256(main_stage.subspan(0x18a8,22)))
+                !="7306f2b341dc8ff55c9462f50d18805388f7afb1fcdf57b94f8724355adaad65"
+            ||to_hex(sha256(main_stage.subspan(0x18e2,28)))
+                !="5be290bea6b600957b902a1ae117cfac9bde4031eb049a9fc2e84e8fc4a0f752"
             ||to_hex(sha256(main_stage.subspan(0xc8c,58)))
                 !="8ff4fab0b4a3e04504ee99a0deece00dc0c903f89ceec4dfe95f94a1916b7f62"
             ||to_hex(sha256(main_stage.subspan(0xcc6,200)))
@@ -4074,15 +4110,25 @@ public:
         }else if(next==0x218a8||next==0x218e2){
             plan.next_instruction_address=0;plan.pending_read_instruction=next;
             plan.pending_read_address=0x2079e;
+            plan.a0_value=0x22aaa;plan.a1_value=0x22a98;plan.d1_value&=0xffff0000U;
         }
         main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
-    advance_main_stage_fade_buffers(std::uint32_t final_a0){
+    advance_main_stage_fade_buffers(std::uint32_t final_a0,std::uint32_t cleanup_d0){
         if(!main_stage_loop_graphics_plan_||main_stage_loop_graphics_plan_->next_call_address!=0x2231e)
             return std::nullopt;
-        const auto plan=finish_deuteros_amiga_fade_buffers(*main_stage_loop_graphics_plan_,final_a0);
+        const auto plan=finish_deuteros_amiga_fade_buffers(*main_stage_loop_graphics_plan_,final_a0,cleanup_d0);
         main_stage_loop_graphics_plan_=plan;return plan;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    observe_main_stage_outer_counter(const DeuterosAmigaObservedOuterCounter&o){
+        if(!main_stage_loop_graphics_plan_||main_stage_loop_graphics_plan_->pending_read_address!=0x2079e)
+            return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_)
+            throw std::runtime_error("Deuteros outer counter sequence is stale");
+        const auto plan=resume_deuteros_amiga_outer_counter(*main_stage_loop_graphics_plan_,o);
+        main_stage_loop_graphics_plan_=plan;last_command_sequence_=o.trace_sequence;return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
     advance_main_stage_command_palette(std::uint32_t palette,std::uint32_t library){

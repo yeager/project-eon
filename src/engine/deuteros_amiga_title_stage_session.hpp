@@ -64,7 +64,8 @@ public:
     [[nodiscard]] const std::string& original_sha256() const noexcept { return original_sha256_; }
     [[nodiscard]] auto observe_main_stage_outer_input(const DeuterosAmigaObservedOuterInput&o,DeuterosAmigaOuterInputRoute route) { return service_batch_boundary_session_.observe_main_stage_outer_input(o,route); }
     [[nodiscard]] auto advance_main_stage_command_palette(std::uint32_t palette,std::uint32_t library) { return service_batch_boundary_session_.advance_main_stage_command_palette(palette,library); }
-    [[nodiscard]] auto advance_main_stage_fade_buffers(std::uint32_t final_a0) { return service_batch_boundary_session_.advance_main_stage_fade_buffers(final_a0); }
+    [[nodiscard]] auto advance_main_stage_fade_buffers(std::uint32_t final_a0,std::uint32_t cleanup_d0) { return service_batch_boundary_session_.advance_main_stage_fade_buffers(final_a0,cleanup_d0); }
+    [[nodiscard]] auto observe_main_stage_outer_counter(const DeuterosAmigaObservedOuterCounter&o) { return service_batch_boundary_session_.observe_main_stage_outer_counter(o); }
     [[nodiscard]] auto observe_main_stage_command_palette_return(const DeuterosAmigaObservedMainStageExecReturn&o,std::uint32_t library,std::optional<std::uint16_t> fade_remaining=std::nullopt) { return service_batch_boundary_session_.observe_main_stage_command_palette_return(o,library,fade_remaining); }
     [[nodiscard]] auto observe_main_stage_view_wait(const DeuterosAmigaObservedViewWait&o) { return service_batch_boundary_session_.observe_main_stage_view_wait(o); }
     [[nodiscard]] auto advance_main_stage_view_selection(std::uint16_t counter,std::uint32_t a6) { return service_batch_boundary_session_.advance_main_stage_view_selection(counter,a6); }

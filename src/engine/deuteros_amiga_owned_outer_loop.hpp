@@ -16,6 +16,23 @@ struct DeuterosAmigaOuterInputRoute {
     std::uint32_t library=0;
 };
 
+// $224a2 restores the owned vector operand and emits raw audio-control
+// writes; $22a5a then resets the software descriptors. These writes alone
+// are not a host-audio acknowledgement or a hardware readback model.
+template<class Read,class Write>
+std::uint32_t execute_deuteros_amiga_owned_cleanup(Read read,Write write){
+    using Width=MemoryTransferElementWidth;
+    write(0x6c,Width::longword,read(0x224e6,4));
+    for(std::uint32_t channel=0;channel<4;++channel)
+        write(0xdff0a8+channel*16,Width::word,0);
+    write(0xdff096,Width::word,15);
+    write(0x22a30,Width::byte,0);
+    std::uint32_t d0=0;
+    std::uint16_t channels=15;
+    stage_deuteros_amiga_owned_sound(d0,channels,read,write);
+    return d0;
+}
+
 // Follow the local cleanup prefix, retaining the primary BSR's return site.
 // Stop before fade service calls or the asynchronous counter read.
 template<class Read,class Write>

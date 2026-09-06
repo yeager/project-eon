@@ -480,8 +480,10 @@ next. The distinct `$218cc`, `$21892` and `$21982` cleanup/transition
 prefixes now execute native selector decisions and software sound reset;
 the nonzero-resource fade now performs its 16-color RGB4 steps, ordered
 dual palette calls and owned 32-step counter. Its two final native buffer
-clears and exact fade return are implemented. Continue the `$224a2` cleanup
-and asynchronous counter wait next.
+clears, exact fade return, `$224a2` cleanup writes and software sound reset
+are implemented. Ordered asynchronous counter observations now continue both
+wait routes to `$208ba`, retaining the original snapshot at `$12fe4` where
+required. Continue the `$208ba` service and following input/resource routes.
 Connect
 the separately staged sound descriptors to the `$22bea` consumer without
 claiming that a software descriptor write already started audio hardware.

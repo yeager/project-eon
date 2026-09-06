@@ -6603,6 +6603,8 @@ int main() {
             assert(!opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
             const auto before_outer_input=opening_controller.native_runtime_memory_checkpoint();
             assert(!opening_controller.advance_deuteros_amiga_fade_buffers().accepted);
+            assert(!opening_controller.observe_deuteros_amiga_outer_counter(
+                {runtime_copy_sequence+118,0x218a8,0x2079e,0}).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==before_outer_input->checksum);
             const eon::DeuterosAmigaObservedOuterInput primary_outer_input{
                 runtime_copy_sequence+118,0x21822,0xdff016,10,0};
@@ -6758,12 +6760,14 @@ int main() {
                         &&fade_plan.next_return_address==0x22324&&fade_plan.pending_read_instruction==0);
                     for(const unsigned return_address:{0x2189eU,0x218d8U}){
                         fade_plan.outer_fade_return=return_address;
-                        const auto finished=eon::finish_deuteros_amiga_fade_buffers(fade_plan,0x97d00);
-                        assert(finished.next_call_address==return_address&&finished.next_return_address==return_address+4);
-                        assert(finished.local_call_target==0x224a2&&finished.outer_fade_return==0);
-                        assert(finished.outer_transition_return==0x21854&&finished.a0_value==0x97d00&&finished.d0_value==0);
+                        const auto finished=eon::finish_deuteros_amiga_fade_buffers(fade_plan,0x97d00,0x32a24);
+                        assert(finished.next_call_address==0&&finished.next_return_address==0);
+                        assert(finished.pending_read_instruction==(return_address==0x2189e?0x218a8U:0x218e2U));
+                        assert(finished.local_call_target==0&&finished.outer_fade_return==0);
+                        assert(finished.outer_transition_return==0x21854&&finished.a0_value==0x22aaa
+                            &&finished.a1_value==0x22a98&&finished.d0_value==0x32a24);
                         bool rejected_repeat=false;
-                        try{static_cast<void>(eon::finish_deuteros_amiga_fade_buffers(finished,0x97d00));}
+                        try{static_cast<void>(eon::finish_deuteros_amiga_fade_buffers(finished,0x97d00,0x32a24));}
                         catch(const std::runtime_error&){rejected_repeat=true;}
                         assert(rejected_repeat);
                     }
@@ -6792,6 +6796,42 @@ int main() {
                 }
             }
             command_write(0x2126a,eon::MemoryTransferElementWidth::longword,0);
+            const auto restored_vector=command_read(0x224e6,4);
+            const auto cleanup_result=eon::execute_deuteros_amiga_owned_cleanup(command_read,command_write);
+            assert(command_read(0x6c,4)==restored_vector);
+            assert(command_read(0xdff096,2)==15&&command_read(0x22a30,1)==0);
+            assert(cleanup_result==command_read(0x22aaa,4)+0x32a24);
+            for(unsigned channel=0;channel<4;++channel){
+                assert(command_read(0xdff0a8+channel*16,2)==0);
+                assert(command_read(0x22a6e + channel*14,4)==cleanup_result);
+            }
+            for(const unsigned instruction:{0x218a8U,0x218e2U}){
+                for(const std::uint32_t initial:{0U,0x12345678U,0xffffffffU}){
+                    eon::DeuterosAmigaMainStageLoopGraphicsPlan counter_plan;
+                    counter_plan.pending_read_instruction=instruction;counter_plan.pending_read_address=0x2079e;
+                    counter_plan.outer_transition_return=0x21854;
+                    auto wrong_counter=eon::DeuterosAmigaObservedOuterCounter{1,instruction,0x21696,initial};
+                    bool rejected_counter_source=false;
+                    try{static_cast<void>(eon::resume_deuteros_amiga_outer_counter(counter_plan,wrong_counter));}
+                    catch(const std::runtime_error&){rejected_counter_source=true;}
+                    assert(rejected_counter_source);
+                    counter_plan=eon::resume_deuteros_amiga_outer_counter(counter_plan,{1,instruction,0x2079e,initial});
+                    assert(counter_plan.d0_value==initial&&counter_plan.pending_read_instruction==instruction+6);
+                    counter_plan=eon::resume_deuteros_amiga_outer_counter(counter_plan,{2,instruction+6,0x2079e,initial});
+                    assert(counter_plan.d0_value==initial&&counter_plan.d1_value==initial);
+                    assert(counter_plan.pending_read_instruction==instruction+6&&counter_plan.next_call_address==0);
+                    counter_plan=eon::resume_deuteros_amiga_outer_counter(counter_plan,{3,instruction+6,0x2079e,initial+1U});
+                    assert(counter_plan.pending_read_instruction==0&&counter_plan.pending_read_address==0);
+                    assert(counter_plan.d0_value==initial&&counter_plan.d1_value==initial+1U);
+                    assert(counter_plan.next_call_address==(instruction==0x218a8?0x218b8U:0x218f8U));
+                    assert(counter_plan.next_return_address==counter_plan.next_call_address+6);
+                    assert(counter_plan.local_call_target==0x208ba&&counter_plan.outer_transition_return==0x21854);
+                    bool rejected_counter_replay=false;
+                    try{static_cast<void>(eon::resume_deuteros_amiga_outer_counter(counter_plan,{3,instruction+6,0x2079e,initial+1U}));}
+                    catch(const std::runtime_error&){rejected_counter_replay=true;}
+                    assert(rejected_counter_replay);
+                }
+            }
             for(const unsigned entry:{0x21850U,0x21892U,0x21982U}){
                 command_write(0x21704,eon::MemoryTransferElementWidth::word,0);
                 command_write(0x22a30,eon::MemoryTransferElementWidth::byte,0xff);
