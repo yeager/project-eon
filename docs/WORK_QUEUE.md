@@ -617,6 +617,10 @@ observation, then stops idempotently. It never creates an Exec, graphics,
 custom-register, counter, input, or media observation. A nonzero step cap
 guards accidental local cycles, and every constituent transition retains its
 copy/validate/commit rollback contract.
+The SDL path now uses the encompassing deterministic session driver rather
+than special-casing `$13000` and invoking the main-stage pump separately. It
+reports an exact typed stop reason and boundary address across title load,
+profile reload/re-entry, title-stage local work, and main-stage local work.
 
 For every row, commit only source code, metadata, hashes, bounded offsets,
 tests, and documentation. Keep raw captures, ROMs, original media, generated

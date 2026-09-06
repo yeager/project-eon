@@ -2714,6 +2714,17 @@ low-memory and custom-register writes atomically, returns, and invokes the
 native software-sound reset. These raw writes are not host-audio playback and
 do not recover the asynchronous `$224cc` cadence.
 
+The production front end advances Deuteros through one bounded deterministic
+session driver. It crosses an admitted profile-1 or profile-5 `$13000`
+program-entry transaction, then dispatches every currently proven argument-free
+title-stage local advance and the main-stage local driver. Classification is
+performed against a private session copy; exactly one matching owner
+transaction is then committed. Its result distinguishes an external
+observation boundary, a finite step cap, an inactive session, and a leaf
+failure, and retains the current `stop_before_address`. Repeated calls at an
+external boundary are inert. The driver never manufactures an Exec, graphics,
+input, hardware-register, counter, media, or service return.
+
 The following JSR target `$22a5a..$22b89` maps to ADF `+$825a`, is 304 bytes,
 and hashes to `d5fdbdacd004d2cf377ea0dbaefb9d8b308ba23b568cfb3785456622bde49d19`.
 It initializes literal zero at `$22a30`, starts with mask `$000f`, branches

@@ -4066,6 +4066,7 @@ int main() {
         == eon::RuntimeInputDisposition::rejected);
     assert(!controlled_dos_runtime.tick_deuteros_amiga_opening());
     assert(!controlled_dos_runtime.drive_deuteros_amiga_main_stage().accepted);
+    assert(!controlled_dos_runtime.drive_deuteros_amiga_session().accepted);
     assert(!controlled_dos_runtime.launch_direct(controlled_dos_request, releases).accepted());
     assert(controlled_dos_runtime.state() == eon::NativeSessionState::returning_to_menu);
     controlled_dos_runtime.finish_return_to_menu();
@@ -5266,6 +5267,9 @@ int main() {
                 && hosted_opening.observe_input(eon::RuntimeInputObservation::opening_input_held(true))
                     == eon::RuntimeInputDisposition::observed);
             hosted_opening.begin_source_revocation();
+            const auto revoked_drive=hosted_opening.drive_deuteros_amiga_session();
+            assert(!revoked_drive.accepted
+                &&revoked_drive.stop_reason==eon::DeuterosAmigaSessionStopReason::inactive);
             const auto hosted_revoking = hosted_opening.snapshot();
             assert(hosted_revoking.revoking && !hosted_revoking.session
                 && !hosted_revoking.presentation);
@@ -5366,7 +5370,14 @@ int main() {
             assert(!opening_controller.advance_deuteros_amiga_title_local_prefix().accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum
                 ==before_profile_one->checksum);
-            assert(opening_controller.advance_deuteros_amiga_title_program_entry().accepted);
+            const auto profile_one_drive=opening_controller.drive_deuteros_amiga_session(8);
+            assert(profile_one_drive.accepted&&profile_one_drive.steps==1
+                &&profile_one_drive.stop_reason==eon::DeuterosAmigaSessionStopReason::external_observation
+                &&profile_one_drive.stop_before_address==0x40456);
+            const auto profile_one_blocked_again=opening_controller.drive_deuteros_amiga_session(8);
+            assert(profile_one_blocked_again.accepted&&profile_one_blocked_again.steps==0
+                &&profile_one_blocked_again.stop_reason==eon::DeuterosAmigaSessionStopReason::external_observation
+                &&profile_one_blocked_again.stop_before_address==0x40456);
             const auto after_profile_one=opening_controller.native_runtime_memory_checkpoint();
             assert(after_profile_one&&after_profile_one->applied_batch_count
                 ==before_profile_one->applied_batch_count+1);

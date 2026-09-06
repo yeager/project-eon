@@ -2867,6 +2867,107 @@ ReleaseRuntimeCoordinator::drive_deuteros_amiga_main_stage(const std::uint32_t s
     return result;
 }
 
+DeuterosAmigaSessionDriveResult
+ReleaseRuntimeCoordinator::drive_deuteros_amiga_session(const std::uint32_t step_limit) {
+    DeuterosAmigaSessionDriveResult result;
+    if (step_limit == 0) {
+        result.stop_reason = DeuterosAmigaSessionStopReason::failed;
+        result.error = "Deuteros deterministic session drive requires a nonzero step limit";
+        return result;
+    }
+    if (!active_ || !session_snapshot_ || !deuteros_amiga_) {
+        result.stop_reason = DeuterosAmigaSessionStopReason::inactive;
+        result.error = "Deuteros deterministic session drive requires an active session";
+        return result;
+    }
+    result.accepted = true;
+    try {
+    for (; result.steps < step_limit; ++result.steps) {
+        DeuterosAmigaTitleDependencyObservationResult advanced;
+        bool deterministic = true;
+        if (session_snapshot_->kind == RuntimeSessionKind::deuteros_amiga_title_program_entry) {
+            advanced = advance_deuteros_amiga_title_program_entry();
+        } else if (session_snapshot_->kind == RuntimeSessionKind::deuteros_amiga_title_stage
+            && deuteros_amiga_->title_stage_session()) {
+            enum class Action { none, local_prefix, post_open, controller_seed,
+                first_dispatch, first_packet, first_decode, first_tail,
+                second_dispatch, second_decode, service_prefix, nested_loop,
+                selected_stream, descriptor_loop, repeated_nested, caller_indirect,
+                tail_subroutine, profile_two };
+            Action action = Action::none;
+            const auto accepts = [&](auto operation) {
+                auto pending = *deuteros_amiga_->title_stage_session();
+                return static_cast<bool>(operation(pending));
+            };
+            if (accepts([](auto& p){return p.execute_local_prefix();})) action=Action::local_prefix;
+            else if (accepts([](auto& p){return p.advance_post_open_library_local_path();})) action=Action::post_open;
+            else if (accepts([](auto& p){return p.advance_controller_pointer_seed();})) action=Action::controller_seed;
+            else if (accepts([](auto& p){return p.advance_post_command_first_dispatch();})) action=Action::first_dispatch;
+            else if (accepts([](auto& p){return p.advance_post_command_first_dispatch_packet();})) action=Action::first_packet;
+            else if (accepts([](auto& p){return p.advance_post_command_first_dispatch_decode();})) action=Action::first_decode;
+            else if (accepts([](auto& p){return p.advance_post_command_first_dispatch_caller_tail();})) action=Action::first_tail;
+            else if (accepts([](auto& p){return p.advance_post_command_second_dispatch();})) action=Action::second_dispatch;
+            else if (accepts([](auto& p){return p.advance_post_command_second_dispatch_decode();})) action=Action::second_decode;
+            else if (accepts([](auto& p){return p.advance_post_command_service_route_prefix();})) action=Action::service_prefix;
+            else if (accepts([](auto& p){return p.advance_post_command_nested_loop();})) action=Action::nested_loop;
+            else if (accepts([](auto& p){return p.advance_post_command_selected_stream();})) action=Action::selected_stream;
+            else if (accepts([](auto& p){return p.advance_post_command_descriptor_loop();})) action=Action::descriptor_loop;
+            else if (accepts([](auto& p){return p.advance_post_adjusted_repeated_nested_loop();})) action=Action::repeated_nested;
+            else if (accepts([](auto& p){return p.advance_post_adjusted_caller_indirect();})) action=Action::caller_indirect;
+            else if (accepts([](auto& p){return p.advance_title_tail_subroutine();})) action=Action::tail_subroutine;
+            else if (accepts([](auto& p){return p.advance_title_profile_two_bootstrap();})) action=Action::profile_two;
+            switch(action) {
+            case Action::local_prefix: advanced=advance_deuteros_amiga_title_local_prefix(); break;
+            case Action::post_open: advanced=advance_deuteros_amiga_title_post_open_library_local_path(); break;
+            case Action::controller_seed: advanced=advance_deuteros_amiga_title_controller_pointer_seed(); break;
+            case Action::first_dispatch: advanced=advance_deuteros_amiga_title_post_command_first_dispatch(); break;
+            case Action::first_packet: advanced=advance_deuteros_amiga_title_post_command_first_dispatch_packet(); break;
+            case Action::first_decode: advanced=advance_deuteros_amiga_title_post_command_first_dispatch_decode(); break;
+            case Action::first_tail: advanced=advance_deuteros_amiga_title_post_command_first_dispatch_caller_tail(); break;
+            case Action::second_dispatch: advanced=advance_deuteros_amiga_title_post_command_second_dispatch(); break;
+            case Action::second_decode: advanced=advance_deuteros_amiga_title_post_command_second_dispatch_decode(); break;
+            case Action::service_prefix: advanced=advance_deuteros_amiga_title_post_command_service_route_prefix(); break;
+            case Action::nested_loop: advanced=advance_deuteros_amiga_title_post_command_nested_loop(); break;
+            case Action::selected_stream: advanced=advance_deuteros_amiga_title_post_command_selected_stream(); break;
+            case Action::descriptor_loop: advanced=advance_deuteros_amiga_title_post_command_descriptor_loop(); break;
+            case Action::repeated_nested: advanced=advance_deuteros_amiga_title_post_adjusted_repeated_nested_loop(); break;
+            case Action::caller_indirect: advanced=advance_deuteros_amiga_title_post_adjusted_caller_indirect(); break;
+            case Action::tail_subroutine: advanced=advance_deuteros_amiga_title_tail_subroutine(); break;
+            case Action::profile_two: advanced=advance_deuteros_amiga_title_profile_two_bootstrap(); break;
+            case Action::none: {
+                const auto main = drive_deuteros_amiga_main_stage(1);
+                if (main.steps == 1 && main.accepted) continue;
+                if (!main.accepted && !main.error.empty()) {
+                    advanced.error = main.error;
+                } else deterministic = false;
+                break;
+            }}
+        } else deterministic = false;
+        if (!deterministic) {
+            result.stop_reason = DeuterosAmigaSessionStopReason::external_observation;
+            if (const auto checkpoint=deuteros_amiga_title_dependency_chain_checkpoint())
+                result.stop_before_address=checkpoint->stop_before_address;
+            return result;
+        }
+        if (!advanced.accepted) {
+            result.accepted=false;
+            result.stop_reason=DeuterosAmigaSessionStopReason::failed;
+            result.error=advanced.error;
+            return result;
+        }
+    }
+    result.stop_reason=DeuterosAmigaSessionStopReason::step_limit;
+    if (const auto checkpoint=deuteros_amiga_title_dependency_chain_checkpoint())
+        result.stop_before_address=checkpoint->stop_before_address;
+    return result;
+    } catch (const std::exception& exception) {
+        result.accepted=false;
+        result.stop_reason=DeuterosAmigaSessionStopReason::failed;
+        result.error=exception.what();
+        return result;
+    }
+}
+
 std::optional<std::vector<float>>
 ReleaseRuntimeCoordinator::render_deuteros_amiga_opening_audio(const std::size_t frames) {
     if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_opening

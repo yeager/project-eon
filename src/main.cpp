@@ -6460,21 +6460,14 @@ int main(int argc, char** argv) {
                 // copied through the native-session firewall.  In particular,
                 // this renderer never inspects the coordinator-owned VM or
                 // title-stage adapter after a lifecycle transition.
-                // The profile-five program-entry boundary is wholly local and
-                // hash-validated. Advance it before querying presentation so
-                // the SDL loop cannot strand the native engine at $13000.
-                if (runtime.deuteros_amiga_title_program_entry()) {
-                    const auto advanced = runtime.advance_deuteros_amiga_title_program_entry();
-                    if (!advanced.accepted) {
-                        std::cerr << "Unable to advance Deuteros title program entry: "
-                                  << advanced.error << '\n';
-                    }
-                }
-                const auto main_stage_drive = runtime.drive_deuteros_amiga_main_stage();
-                if (!main_stage_drive.accepted && !main_stage_drive.error.empty()
-                    && main_stage_drive.error.find("requires") == std::string::npos) {
-                    std::cerr << "Unable to drive Deuteros main stage: "
-                              << main_stage_drive.error << '\n';
+                // The unified bounded driver crosses either hash-validated
+                // program-entry profile and every reached deterministic local
+                // step, then stops before the next external observation.
+                const auto session_drive = runtime.drive_deuteros_amiga_session();
+                if (!session_drive.accepted
+                    && session_drive.stop_reason == eon::DeuterosAmigaSessionStopReason::failed) {
+                    std::cerr << "Unable to drive Deuteros native session: "
+                              << session_drive.error << '\n';
                 }
                 const auto opening = runtime.deuteros_amiga_opening_presentation();
                 const auto title_stage = runtime.deuteros_amiga_title_stage_boundary();

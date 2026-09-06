@@ -133,6 +133,19 @@ struct DeuterosAmigaMainStageDriveResult {
     bool step_limit_reached = false;
     std::string error;
 };
+enum class DeuterosAmigaSessionStopReason {
+    external_observation,
+    step_limit,
+    failed,
+    inactive,
+};
+struct DeuterosAmigaSessionDriveResult {
+    bool accepted = false;
+    std::uint32_t steps = 0;
+    DeuterosAmigaSessionStopReason stop_reason = DeuterosAmigaSessionStopReason::inactive;
+    std::uint32_t stop_before_address = 0;
+    std::string error;
+};
 
 // Media-safe facts for the exact Deuteros Atari ST bootstrap boundary.  The
 // retained prefixes are only local copy/entry results; this DTO cannot select
@@ -766,6 +779,8 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
     [[nodiscard]] DeuterosAmigaMainStageDriveResult
     drive_deuteros_amiga_main_stage(std::uint32_t step_limit = 64);
+    [[nodiscard]] DeuterosAmigaSessionDriveResult
+    drive_deuteros_amiga_session(std::uint32_t step_limit = 64);
     // Audio is mixed within the same owner as the recovered VM and is
     // therefore revoked at title handoff/reset. SDL receives only a transient
     // float buffer; it never borrows the opening sound bank or its PCM bytes.

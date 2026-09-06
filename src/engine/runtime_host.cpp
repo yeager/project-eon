@@ -315,6 +315,12 @@ RuntimeHost::drive_deuteros_amiga_main_stage(const std::uint32_t step_limit) {
     if (revoking()) return {false, 0, false, false, "Runtime source is being revoked"};
     return NativeSessionController::drive_deuteros_amiga_main_stage(step_limit);
 }
+DeuterosAmigaSessionDriveResult
+RuntimeHost::drive_deuteros_amiga_session(const std::uint32_t step_limit) {
+    if(revoking())return {false,0,DeuterosAmigaSessionStopReason::inactive,0,
+        "Runtime source is being revoked"};
+    return NativeSessionController::drive_deuteros_amiga_session(step_limit);
+}
 std::optional<DeuterosAmigaNativeAudioCheckpoint>
 RuntimeHost::deuteros_amiga_native_audio_checkpoint()const{
     if(revoking())return std::nullopt;
