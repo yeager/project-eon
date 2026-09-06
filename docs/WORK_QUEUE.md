@@ -470,8 +470,10 @@ reaches the second record's palette boundary `$214ee`. The native prefix,
 ordered library-return admission and saved-position scheduler resumption now
 continue through the second buffer/view pass to the outer `$21822` gate.
 The ordered outer port samples and native latch/control logic now re-enter
-the scheduler and select the first sprite. Implement the sprite-bearing
-frame path next, followed by the distinct `$218cc`, `$21892` and `$21982`
+the scheduler and select the first sprite. Native opaque rendering now writes
+its exact bitplanes and covers all 142 original resource bitmaps in tests.
+Implement the masked `$20cc6/$20fb2` path next (the following real frame reaches
+it), then saved-scanline/alternate-resource rendering and the distinct `$218cc`, `$21892` and `$21982`
 cleanup/transition routes. Connect
 the separately staged sound descriptors to the `$22bea` consumer without
 claiming that a software descriptor write already started audio hardware.

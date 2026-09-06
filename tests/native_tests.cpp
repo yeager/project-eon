@@ -6632,9 +6632,42 @@ int main() {
             assert(runtime_byte(*third_pass,0x21131)==0x4e&&runtime_byte(*third_pass,0x21149)==0x4e);
             const eon::DeuterosAmigaObservedFrameBuffer third_frame_buffer{
                 runtime_copy_sequence+120,0x2143a,0xdff01f,5,0x20,0x216b0,0x12ff0,0x90000};
-            const auto sprite_boundary=opening_controller.observe_deuteros_amiga_frame_buffer(third_frame_buffer);
-            assert(!sprite_boundary.accepted&&sprite_boundary.error.find("sprite renderer continuation")!=std::string::npos);
-            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==third_pass->checksum);
+            assert(opening_controller.observe_deuteros_amiga_frame_buffer(third_frame_buffer).accepted);
+            const auto first_sprite_memory=opening_controller.native_runtime_memory_checkpoint();
+            assert(first_sprite_memory->applied_batch_count==third_pass->applied_batch_count+3);
+            assert(runtime_byte(*first_sprite_memory,0x20c11)==12&&runtime_byte(*first_sprite_memory,0x20c13)==17);
+            std::vector<std::uint8_t> first_sprite_planes(32000);
+            std::size_t plane_cells=0;
+            for(const auto& cell:first_sprite_memory->initialized_bytes){
+                if(cell.location.address_space==eon::NativeRuntimeAddressSpace::linear
+                    &&cell.location.offset>=0x90000&&cell.location.offset<0x97d00){
+                    first_sprite_planes[cell.location.offset-0x90000]=cell.value;++plane_cells;
+                }
+            }
+            assert(plane_cells==32000);
+            assert(eon::to_hex(eon::sha256(first_sprite_planes))==
+                "f80cb36153a70203f4d42d6abb286f0f83038f4b6f7ed83e489915b2f03e91f1");
+            assert(!opening_controller.observe_deuteros_amiga_frame_buffer(third_frame_buffer).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==first_sprite_memory->checksum);
+            assert(opening_controller.advance_deuteros_amiga_view_selection().accepted);
+            assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->main_stage_loop_graphics->d0_value==3);
+            const eon::DeuterosAmigaObservedViewWait third_view_wait{
+                runtime_copy_sequence+122,
+                eon::DeuterosAmigaObservedMainStageExecReturn{runtime_copy_sequence+121,0x216ee,-0xde,0x216f2,0},
+                0x216f2,0xdff01f,5,0x20};
+            assert(opening_controller.observe_deuteros_amiga_view_wait(third_view_wait).accepted);
+            assert(opening_controller.observe_deuteros_amiga_outer_input(
+                {runtime_copy_sequence+123,0x21822,0xdff016,10,4}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_outer_input(
+                {runtime_copy_sequence+124,0x2185e,0xbfe001,6,0x40}).accepted);
+            assert(opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
+            const auto fourth_pass=opening_controller.native_runtime_memory_checkpoint();
+            assert(runtime_byte(*fourth_pass,0x210fd)==181&&runtime_byte(*fourth_pass,0x21110)==0x80);
+            const eon::DeuterosAmigaObservedFrameBuffer fourth_frame_buffer{
+                runtime_copy_sequence+125,0x2143a,0xdff01f,5,0x20,0x216a4,0x12ff4,0x80000};
+            const auto masked_boundary=opening_controller.observe_deuteros_amiga_frame_buffer(fourth_frame_buffer);
+            assert(!masked_boundary.accepted&&masked_boundary.error.find("masked or saved-scanline")!=std::string::npos);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum==fourth_pass->checksum);
 
             // Branch-condition tests use private owned-state variations, not
             // claimed captures or substituted source media.
@@ -15947,6 +15980,84 @@ int main() {
         == "a7abcb6a308f7016e28611862a14de3adfa12881efcce458e5888b07e2d0c1cb");
     const auto first_bitmap_catalog = eon::inspect_deuteros_amiga_bitmap_catalog(
         system_disk, first_bundle, first_indexed_blob);
+    // Cross-check the native planar writer against the independent asset
+    // decoder for every real bitmap in this bundle, including both layouts.
+    {
+        std::vector<std::uint8_t> planes(32000);
+        std::map<std::uint32_t,std::uint8_t> globals;
+        const auto put=[&](std::uint32_t address,eon::MemoryTransferElementWidth width,std::uint32_t value){
+            const auto bytes=static_cast<std::uint32_t>(width);
+            for(std::uint32_t byte=0;byte<bytes;++byte){
+                const auto target=address+byte;
+                const auto sample=static_cast<std::uint8_t>(value>>((bytes-1-byte)*8U));
+                if(target>=0x90000&&target<0x97d00)planes[target-0x90000]=sample;
+                else globals[target]=sample;
+            }
+        };
+        const auto get=[&](std::uint32_t address,std::uint32_t width){
+            if((width>1&&(address&1U))||address>0x1000000U-width)
+                throw std::runtime_error("Unaligned native bitmap test source");
+            std::uint32_t value=0;
+            for(std::uint32_t byte=0;byte<width;++byte){
+                const auto source=address+byte;
+                std::uint8_t sample=0;
+                if(source>=0x90000&&source<0x97d00)sample=planes[source-0x90000];
+                else if(const auto found=globals.find(source);found!=globals.end())sample=found->second;
+                else if(source>=0x32a24&&source-0x32a24<first_bundle.length)
+                    sample=system_disk.bytes(first_bundle.disk_offset+source-0x32a24,1)[0];
+                else throw std::runtime_error("Unowned native bitmap test source");
+                value=(value<<8U)|sample;
+            }
+            return value;
+        };
+        put(0x2126e,eon::MemoryTransferElementWidth::longword,0x32a24+first_indexed_blob.table_relative_offset);
+        put(0x21272,eon::MemoryTransferElementWidth::longword,0x32a24+first_indexed_blob.data_relative_offset);
+        put(0x20128,eon::MemoryTransferElementWidth::longword,0x90000);
+        put(0x210fa,eon::MemoryTransferElementWidth::word,0);
+        put(0x210fc,eon::MemoryTransferElementWidth::word,0);
+        for(std::size_t index=0;index<first_bitmap_catalog.record_count;++index){
+            std::fill(planes.begin(),planes.end(),0);
+            put(0x210f8,eon::MemoryTransferElementWidth::word,static_cast<std::uint32_t>(index));
+            eon::draw_deuteros_amiga_owned_bitmap(0x210f8,get,put);
+            const auto expected=eon::decode_deuteros_amiga_bitmap(system_disk,first_bundle,first_indexed_blob,index);
+            for(std::uint32_t y=0;y<200;++y){
+                for(std::uint32_t x=0;x<320;++x){
+                    unsigned color=0;
+                    for(unsigned plane=0;plane<4;++plane)
+                        color|=((planes[plane*8000+y*40+x/8]>>(7-x%8))&1U)<<plane;
+                    const auto expected_color=x<expected.width&&y<expected.height
+                        ?expected.color_indices[y*expected.width+x]:0;
+                    assert(color==expected_color);
+                }
+            }
+        }
+        std::fill(planes.begin(),planes.end(),0);
+        put(0x210f8,eon::MemoryTransferElementWidth::word,1);
+        put(0x210fc,eon::MemoryTransferElementWidth::word,190);
+        eon::draw_deuteros_amiga_owned_bitmap(0x210f8,get,put);
+        assert(get(0x20c12,2)==10);
+        for(std::uint32_t y=0;y<200;++y){
+            for(std::uint32_t x=0;x<320;++x){
+                unsigned color=0;
+                for(unsigned plane=0;plane<4;++plane)
+                    color|=((planes[plane*8000+y*40+x/8]>>(7-x%8))&1U)<<plane;
+                assert(color==(y>=190&&x<first_bitmap.width
+                    ?first_bitmap.color_indices[(y-190)*first_bitmap.width+x]:0));
+            }
+        }
+        put(0x210fc,eon::MemoryTransferElementWidth::word,0);
+        put(0x210f8,eon::MemoryTransferElementWidth::word,0x8001);
+        bool rejected_masked=false;
+        try{eon::draw_deuteros_amiga_owned_bitmap(0x210f8,get,put);}
+        catch(const std::runtime_error&){rejected_masked=true;}
+        assert(rejected_masked);
+        put(0x210f8,eon::MemoryTransferElementWidth::word,1);
+        put(0x210fa,eon::MemoryTransferElementWidth::word,19);
+        bool rejected_geometry=false;
+        try{eon::draw_deuteros_amiga_owned_bitmap(0x210f8,get,put);}
+        catch(const std::runtime_error&){rejected_geometry=true;}
+        assert(rejected_geometry);
+    }
     assert(first_bitmap_catalog.record_count == 142);
     assert(first_bitmap_catalog.records.size() == 142);
     assert(first_bitmap_catalog.records[1].source_relative_offset == 0x12ef2);

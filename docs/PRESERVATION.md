@@ -3647,8 +3647,8 @@ Frame-clear/count batch identifiers now include the admitted sequence, allowing
 the following even-counter buffer at `$80000` to be cleared and selected
 without colliding with the first frame's batch identifiers. The complete
 second no-draw walk, even view at `$12e00`, and return to `$21822` are tested.
-The outer input gate is now connected as described below; sprite-bearing
-frames remain separate work.
+The outer input gate and opaque sprite-bearing frames are now connected as
+described below; masked and saved-scanline paths remain separate work.
 The genuine first record at resource offset `$382` executes opcode `$13`,
 setting `$2171e` to one, then executes sound arguments `(1,1)` and `(2,2)`
 through the native descriptor routine below. It yields timer one, which the
@@ -3702,11 +3702,46 @@ Wrong bit/address/order or replay leaves committed state unchanged. The test
 fixture's two clear samples with the genuine enabled gate re-enter the native
 scheduler: record zero selects sprite 1 at `(8,183)`, records zero/one finish
 their one-tick waits, and records two/three reach timers `$4e`. The following
-buffer attempt now encounters the explicit original-sprite-renderer boundary
-and rolls its private clear back completely. Separate condition tests vary
+buffer attempt now executes the opaque sprite path described below.
+Separate condition tests vary
 only private runtime flags/counter to cover latched release, even/odd paths,
 the transition request and D0 high-word retention. They are not captures and
 do not establish a mapping from host buttons or keys to those port bits.
+
+The native opaque bitmap path is gated by `$20c8c..$20ca9` (ADF `$648c`,
+30 bytes, SHA-256
+`788a4592d40da7cbacb0f4beb68af5ef811d42fbad23ac90dacaa2467ca6d695`)
+and `$20d8e..$20fb1` (ADF `$658e`, 548 bytes, SHA-256
+`01ea72727e1bcbbf64021ac52ad184c31c6841e9cb70e59181348f6a0e9884b8`).
+It reads the owned `$2126e/$21272` table/data pointers, applies the original
+word-shift/signed table displacement, and writes the four planes selected by
+owned `$20128`. The next indexed offset supplies a preservation bound rather
+than being represented as an original executed read. Unsupported flags,
+negative/off-screen coordinates, invalid dimensions, zero runs and truncated
+records reject the entire private frame instead of inventing clipping or data.
+
+The decoder writes the original `$20c10/$20c12` dimension words and the
+`$20c14/$20c16` sequential-plane work cells where applicable. It supports
+literal words, repeated bytes, reversed-byte word pairs and extended pair
+runs. Both interleaved-plane and sequential-plane output follow the native
+loop's termination and lower-edge height adjustment. A read-through byte
+overlay preserves the order of source reads and writes, including repeated
+destinations. Its final unique bytes publish atomically with the buffer clear,
+counter and active-record count; the consolidated delta is not a bus trace.
+
+For the first genuine sprite, the compressed record is ADF `$2e6f2`, 298
+bytes, SHA-256
+`f7d59685a8baf42b3c89af586d3d07b4312d11801963f72f2fa9f741c758cf5f`.
+It produces a 48-by-17 image at pixel `(128,183)` from the record's word
+coordinate `(8,183)`. The complete 32,000-byte planar buffer has SHA-256
+`f80cb36153a70203f4d42d6abb286f0f83038f4b6f7ed83e489915b2f03e91f1`.
+Tests compare all 142 real bitmaps against the independent asset decoder at
+an unclipped origin, and test partial lower-edge clipping of the first sprite.
+The next genuine pass moves that sprite to y=181 and requests a masked second
+sprite; that later failure rolls back both the clear and already evaluated
+opaque writes. Masking, saved scanlines and alternate resources remain explicit
+boundaries. Owned bitplane bytes are not yet proof of a displayed frame,
+palette-library effects, or end-to-end gameplay parity.
 Wrong call order/address, replay, revoked ownership, or batch failure cannot
 partially advance the owned session. No memory batch is emitted for the
 register-only entry prefix or the nonzero terminal branch. A wrong entry,

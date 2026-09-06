@@ -4625,10 +4625,15 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_frame_buffer(const DeuterosAmi
     }
     try{
         auto memory=*native_runtime_memory_;
+        std::map<std::uint32_t,std::uint8_t> sprite_bytes;
         const auto read=[&](std::uint32_t address,std::uint32_t width){
+            if((width>1&&(address&1U))||address>0x1000000U-width)
+                throw std::runtime_error("Deuteros frame source is outside aligned native memory");
             std::uint32_t value=0;
             for(std::uint32_t i=0;i<width;++i){
-                const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
+                const auto pending_byte=sprite_bytes.find(address+i);
+                const auto byte=pending_byte!=sprite_bytes.end()?std::optional<std::uint8_t>(pending_byte->second)
+                    :memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
                 if(!byte)throw std::runtime_error("Deuteros frame source is not owned");
                 value=(value<<8U)|*byte;
             }
@@ -4661,14 +4666,36 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_frame_buffer(const DeuterosAmi
             add(o.buffer_address+i,MemoryTransferElementWidth::longword,0);
         const auto cleared=memory.apply(batch);
         if(!cleared.accepted){result.error=cleared.error;return result;}
+        const auto sprite_write=[&](std::uint32_t address,MemoryTransferElementWidth width,std::uint32_t value){
+            const auto bytes=static_cast<std::uint32_t>(width);
+            if((bytes>1&&(address&1U))||address>0x1000000U-bytes)
+                throw std::runtime_error("Deuteros sprite write is outside aligned native memory");
+            for(std::uint32_t i=0;i<bytes;++i)
+                sprite_bytes[address+i]=static_cast<std::uint8_t>(value>>((bytes-1-i)*8U));
+        };
         const auto count=read(0x21248,2);
         std::uint8_t active_count=0;
         for(std::uint32_t i=0;i<(count?count:0x10000U);++i){
             const auto record=0x210f8+i*24U;
             if(read(record+6,2)==0)continue;
             active_count=static_cast<std::uint8_t>(active_count+1U);
-            if(read(record,2)!=0xff)
-                throw std::runtime_error("Deuteros frame requires its original sprite renderer continuation");
+            const auto selector=read(record,2);
+            if(selector==0xff)continue;
+            if(selector==0xfe)
+                throw std::runtime_error("Deuteros frame requires its alternate-resource continuation");
+            draw_deuteros_amiga_owned_bitmap(record,read,sprite_write);
+        }
+        if(!sprite_bytes.empty()){
+            NativeRuntimeEffectBatch sprite_batch{"deuteros-amiga-frame-sprites-"+frame_id,true,{}};
+            sprite_batch.effects.reserve(sprite_bytes.size());
+            // The read-through overlay already evaluated stores in instruction
+            // order. Publish its final unique bytes as one atomic state delta.
+            for(const auto& [address,value]:sprite_bytes)
+                sprite_batch.effects.push_back({sprite_batch.effects.size()+1,
+                    {NativeRuntimeAddressSpace::linear,std::nullopt,address},MemoryTransferElementWidth::byte,
+                    NativeRuntimeByteOrder::big_endian,value});
+            const auto drawn=memory.apply(sprite_batch);
+            if(!drawn.accepted){result.error=drawn.error;return result;}
         }
         const auto counted=memory.apply({"deuteros-amiga-frame-active-count-"+frame_id,true,{{
             1,{NativeRuntimeAddressSpace::linear,std::nullopt,0x210f2},MemoryTransferElementWidth::word,

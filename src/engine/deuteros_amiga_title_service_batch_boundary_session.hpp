@@ -6,6 +6,7 @@
 #include "engine/bounded_memory_transfer.hpp"
 #include "engine/deuteros_amiga_owned_commands.hpp"
 #include "engine/deuteros_amiga_owned_outer_loop.hpp"
+#include "engine/deuteros_amiga_owned_bitmap.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -1530,7 +1531,11 @@ public:
             ||to_hex(sha256(main_stage.subspan(0x16a,0x2a)))
                 !="6abfc259f7293f1d5155b0f352c03dd6ccfb7dd2757d35ca91e33716bb27230d"
             ||to_hex(sha256(main_stage.subspan(0x1822,0x76)))
-                !="55047c31e4eb79f3c68741aa644f8686203f7f948be1475855e3d79df14c8a27")
+                !="55047c31e4eb79f3c68741aa644f8686203f7f948be1475855e3d79df14c8a27"
+            ||to_hex(sha256(main_stage.subspan(0xc8c,30)))
+                !="788a4592d40da7cbacb0f4beb68af5ef811d42fbad23ac90dacaa2467ca6d695"
+            ||to_hex(sha256(main_stage.subspan(0xd8e,548)))
+                !="01ea72727e1bcbbf64021ac52ad184c31c6841e9cb70e59181348f6a0e9884b8")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
@@ -3946,8 +3951,9 @@ public:
         auto plan=*main_stage_loop_graphics_plan_;
         plan.pending_read_instruction=0;plan.pending_read_address=0;
         plan.a1_value=(counter&1U)?0x12f00:0x12e00;plan.a6_value=a6;
-        // The admitted no-draw path follows MOVEQ #0,D0 in the clear loop;
-        // its later word moves leave the high word zero.
+        // Clear-only paths leave D0's high word zero. Admitted opaque draws
+        // bound the MULU coordinates inside 320x200, also leaving it zero;
+        // their subsequent byte/word operations do not change that high word.
         plan.d0_value=counter;
         plan.next_call_address=0x216ee;plan.next_return_address=0x216f2;
         plan.next_vector=-0xde;
