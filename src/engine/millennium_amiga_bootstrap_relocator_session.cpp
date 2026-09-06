@@ -84,8 +84,30 @@ MillenniumAmigaBootstrapRelocatorSession::boundary() const {
         return {0x42504,0,0xdff180};
     case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_exec_service:
         return {0x4251a,4,custom_chip_exec_prefix_execution_->pending_vector_address};
+    case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_setup_call:
+        return {0x4252e,0,0x415ea};
     }
     throw std::runtime_error("Invalid Millennium Amiga bootstrap relocator state");
+}
+
+MillenniumAmigaExecTransitionExecution
+MillenniumAmigaBootstrapRelocatorSession::execute_exec_transition(
+    const MillenniumAmigaExecTransitionObservation& o) {
+    if(state_!=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_exec_service
+        ||!custom_chip_exec_prefix_execution_||o.exec_base_source_address!=4
+        ||o.exec_base_value!=custom_chip_exec_prefix_execution_->resulting_a6
+        ||o.first_call_address!=0x4251a||o.first_vector!=-150||o.first_return_address!=0x4251e
+        ||o.second_call_address!=0x42528||o.second_vector!=-156||o.second_return_address!=0x4252c
+        ||o.second_result_a7<4||o.second_result_a7>0xfffffc||(o.second_result_a7&1U)!=0)
+        throw std::runtime_error("Detached Millennium Amiga Exec transition observation");
+    MillenniumAmigaExecTransitionExecution r;
+    r.observed=o;r.user_stack_argument=0x7fff0;r.saved_a1_address=o.second_result_a7-4;
+    r.saved_a1_value=bus_error_prefix_execution_->exception_frame_address;
+    r.resulting_d0=o.second_result_d0;r.resulting_sr=o.second_result_sr;
+    r.pending_call_address=0x4252e;r.pending_call_target=0x415ea;
+    exec_transition_execution_=r;
+    state_=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_setup_call;
+    return r;
 }
 
 MillenniumAmigaCustomChipExecPrefixExecution

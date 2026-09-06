@@ -2,6 +2,7 @@
 
 #include "data/millennium_dos_game_flow.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -37,6 +38,9 @@ enum class MillenniumDosSixthFunctionState {
     caller_helper_second_random_call_return,
     caller_helper_second_random_al,
     caller_helper_random_setup_call_return,
+    caller_helper_random_candidate_call_return,
+    caller_helper_random_candidate_al,
+    caller_helper_random_table_call_return,
     restoration_first_call_return,
     restoration_second_call_return,
     restoration_third_call_return,
@@ -141,6 +145,9 @@ public:
     caller_helper_state_clear_effect() const { return caller_helper_state_clear_effect_; }
     [[nodiscard]] const std::vector<MillenniumDosSixthFunctionBulkEffect>&
     caller_helper_bulk_effects() const { return caller_helper_bulk_effects_; }
+    [[nodiscard]] std::size_t caller_helper_random_table_entries() const {
+        return caller_helper_random_table_entries_;
+    }
 
     void observe_runtime_word(std::uint16_t instruction_address,
         std::uint16_t runtime_address, std::uint16_t value);
@@ -178,6 +185,8 @@ private:
     std::optional<MillenniumDosSixthFunctionStateClearEffect>
         caller_helper_state_clear_effect_;
     std::vector<MillenniumDosSixthFunctionBulkEffect> caller_helper_bulk_effects_;
+    std::array<std::uint8_t, 0x27> caller_helper_random_table_{};
+    std::size_t caller_helper_random_table_entries_ = 0;
 };
 
 } // namespace eon

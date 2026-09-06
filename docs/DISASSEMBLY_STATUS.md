@@ -328,7 +328,8 @@ Millennium Amiga's earlier shared-resident listing was revoked after the
 loader's `io_Length` and `io_Offset` registers were found to have been
 inverted. The authoritative first-stage entry is ADF `+0x6e000`, length
 `0x151e`, at `$41000`; typed vector-9 and bus-error passes reach the exact
-custom-chip/ExecBase prefix and stop before Exec vector `-150` at `$4251a`.
+custom-chip/ExecBase prefix, admit typed `-$96`/`-$9c` returns, and stop before
+the internal `$415ea` call at `$4252e`.
 
 ## Reproduced byte-complete candidate reports
 

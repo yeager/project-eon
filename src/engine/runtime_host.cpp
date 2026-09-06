@@ -435,6 +435,7 @@ EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_main_stage_20994_exec_entry,(),()
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_2099e_exec_return,(const DeuterosAmigaObservedMainStageExecReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_209ca_exec_return,(const DeuterosAmigaObservedMainStageExecReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_209f0_exec_return,(const DeuterosAmigaObservedMainStageExecReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_cia_a_bit_set,(const DeuterosAmigaObservedMainStageCiaABitSet o),(o))
 #undef EON_HOST_DEUTEROS_TITLE
 
 DeuterosAmigaTitleDisplayTraceAdmission
@@ -480,6 +481,7 @@ MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millenni
 MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millennium_amiga_trace_register_prefix(const MillenniumAmigaTraceRegisterPrefixRuntimeObservation o){if(revoking())return{false,"Trace register prefix rejected during source revocation"};return NativeSessionController::observe_millennium_amiga_trace_register_prefix(o);}
 MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millennium_amiga_bus_error_prefix(const MillenniumAmigaBusErrorRuntimeObservation o){if(revoking())return{false,"Bus-error prefix rejected during source revocation"};return NativeSessionController::observe_millennium_amiga_bus_error_prefix(o);}
 MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millennium_amiga_custom_chip_exec_prefix(const MillenniumAmigaCustomChipExecRuntimeObservation o){if(revoking())return{false,"Custom-chip/ExecBase prefix rejected during source revocation"};return NativeSessionController::observe_millennium_amiga_custom_chip_exec_prefix(o);}
+MillenniumAmigaBootstrapRelocatorObservationResult RuntimeHost::observe_millennium_amiga_exec_transition(const MillenniumAmigaExecTransitionRuntimeObservation o){if(revoking())return{false,"Exec transition rejected during source revocation"};return NativeSessionController::observe_millennium_amiga_exec_transition(o);}
 std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint> RuntimeHost::millennium_amiga_bootstrap_relocator_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_amiga_bootstrap_relocator_checkpoint();}
 
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>

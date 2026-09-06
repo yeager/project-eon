@@ -80,6 +80,10 @@ MillenniumDosSixthFunctionBoundary MillenniumDosSixthFunctionSession::boundary()
         result.kind = MillenniumDosSixthFunctionBoundaryKind::register_al;
         result.instruction_address = 0xcd5b;
         break;
+    case MillenniumDosSixthFunctionState::caller_helper_random_candidate_al:
+        result.kind = MillenniumDosSixthFunctionBoundaryKind::register_al;
+        result.instruction_address = 0xcd75;
+        break;
     case MillenniumDosSixthFunctionState::awaiting_word:
         result.kind = MillenniumDosSixthFunctionBoundaryKind::runtime_word;
         result.instruction_address = 0x7437;
@@ -322,6 +326,16 @@ void MillenniumDosSixthFunctionSession::observe_call_return(
     case MillenniumDosSixthFunctionState::caller_helper_second_random_call_return:
         state_ = MillenniumDosSixthFunctionState::caller_helper_second_random_al;
         return;
+    case MillenniumDosSixthFunctionState::caller_helper_random_setup_call_return:
+        caller_helper_bulk_effects_.push_back({
+            MillenniumDosSixthFunctionBulkEffectKind::fill,
+            0, 0xcb1e, 0x0027, 1, 0, 1, 0});
+        enter_call(MillenniumDosSixthFunctionState::caller_helper_random_candidate_call_return,
+            0xcd72, 0xcc23);
+        return;
+    case MillenniumDosSixthFunctionState::caller_helper_random_candidate_call_return:
+        state_ = MillenniumDosSixthFunctionState::caller_helper_random_candidate_al;
+        return;
     case MillenniumDosSixthFunctionState::restoration_first_call_return:
         enter_call(MillenniumDosSixthFunctionState::restoration_second_call_return,
             0x746e, 0x7b47);
@@ -428,6 +442,27 @@ void MillenniumDosSixthFunctionSession::observe_al(
             static_cast<std::uint8_t>(value & 0x0fU));
         enter_call(MillenniumDosSixthFunctionState::caller_helper_random_setup_call_return,
             0xcd60, 0xcbc0);
+        return;
+    }
+    if (state_ == MillenniumDosSixthFunctionState::caller_helper_random_candidate_al) {
+        auto candidate = static_cast<std::uint8_t>(value & 0x3fU);
+        if (candidate >= 0x26U) candidate = static_cast<std::uint8_t>(candidate >> 1U);
+        candidate = static_cast<std::uint8_t>(candidate + 1U);
+        const bool excluded = candidate >= 3U && candidate < 9U;
+        const bool duplicate = caller_helper_random_table_[candidate] == candidate;
+        if (!excluded && !duplicate) {
+            caller_helper_random_table_[candidate] = candidate;
+            record_effect(static_cast<std::uint16_t>(0xcb1eU + candidate), 1, 0,
+                candidate);
+            ++caller_helper_random_table_entries_;
+        }
+        if (caller_helper_random_table_entries_ == 0x12U) {
+            enter_call(MillenniumDosSixthFunctionState::caller_helper_random_table_call_return,
+                0xcd9a, 0xcbc0);
+        } else {
+            enter_call(MillenniumDosSixthFunctionState::caller_helper_random_candidate_call_return,
+                0xcd72, 0xcc23);
+        }
         return;
     }
     throw std::runtime_error("Unsupported Millennium DOS F6 AL state");

@@ -1326,6 +1326,22 @@ struct DeuterosAmigaMainStage209f0ExecReturnPlan {
     std::uint8_t next_bit=0;
     std::string local_source_sha256,caller_source_sha256;
 };
+struct DeuterosAmigaObservedMainStageCiaABitSet {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t instruction_address=0,port_address=0;
+    std::uint8_t bit=0,prior_port_value=0;
+    std::uint32_t source_word_address=0;
+    std::uint16_t source_word=0;
+};
+struct DeuterosAmigaMainStageCiaABitSetPlan {
+    DeuterosAmigaObservedMainStageCiaABitSet observation;
+    std::uint8_t resulting_port_value=0;
+    bool prior_bit_set=false;
+    std::array<std::uint32_t,2> destination_addresses{};
+    std::array<std::uint16_t,2> values{};
+    std::uint32_t local_call_address=0,local_call_target=0,local_return_address=0;
+    std::string source_sha256;
+};
 
 class DeuterosAmigaTitleServiceBatchBoundarySession {
 public:
@@ -1386,7 +1402,9 @@ public:
             ||to_hex(sha256(main_stage.subspan(0x9f4,30)))
                 !="93b5af841a21c4972e899f8112960b10e7cf6d702e7bd7bf1e29351ceac66c8f"
             ||to_hex(sha256(main_stage.subspan(0x17de,14)))
-                !="bddd50234d5142a95cb582e1829eb49a00a79ff2f3307f8af4de8f880994e3f9")
+                !="bddd50234d5142a95cb582e1829eb49a00a79ff2f3307f8af4de8f880994e3f9"
+            ||to_hex(sha256(main_stage.subspan(0x17e4,26)))
+                !="cb9046ad20fffc0a52f43431949927b4d159ecc795fe5f62dbbd01accd0684c7")
             throw std::runtime_error("Unsupported Deuteros profile-two bootstrap route");
         main_stage_source_bytes_.assign(main_stage.begin(),main_stage.end());
         const auto first_title_exit_source = disk.bytes(
@@ -3672,6 +3690,22 @@ public:
             "93b5af841a21c4972e899f8112960b10e7cf6d702e7bd7bf1e29351ceac66c8f",
             spin?"":"bddd50234d5142a95cb582e1829eb49a00a79ff2f3307f8af4de8f880994e3f9"};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageCiaABitSetPlan>
+    observe_main_stage_cia_a_bit_set(
+        const DeuterosAmigaObservedMainStageCiaABitSet&o){
+        if(!main_stage_209f0_exec_return_||main_stage_cia_a_bit_set_)return std::nullopt;
+        if(main_stage_209f0_exec_return_->result_d0!=0)return std::nullopt;
+        if(o.trace_sequence<=last_command_sequence_||o.instruction_address!=0x217e4
+            ||o.port_address!=0xbfe001||o.bit!=1||o.source_word_address!=0x21704)
+            throw std::runtime_error("Deuteros main-stage CIA-A bit-set does not match boundary");
+        main_stage_cia_a_bit_set_=o;last_command_sequence_=o.trace_sequence;
+        return DeuterosAmigaMainStageCiaABitSetPlan{o,
+            static_cast<std::uint8_t>(o.prior_port_value|0x02U),
+            (o.prior_port_value&0x02U)!=0,
+            {0x21704,0x21706},{o.source_word,o.source_word},
+            0x217f8,0x22a5a,0x217fe,
+            "cb9046ad20fffc0a52f43431949927b4d159ecc795fe5f62dbbd01accd0684c7"};
+    }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandOperandLocalPlan>
     observe_command_operand_byte(
@@ -3921,6 +3955,8 @@ private:
         main_stage_209ca_exec_return_;
     std::optional<DeuterosAmigaObservedMainStageExecReturn>
         main_stage_209f0_exec_return_;
+    std::optional<DeuterosAmigaObservedMainStageCiaABitSet>
+        main_stage_cia_a_bit_set_;
     std::vector<std::uint8_t> first_title_exit_source_bytes_;
     std::vector<std::uint8_t> adjusted_c0_values_;
     std::uint32_t adjusted_c0_packets_=0;

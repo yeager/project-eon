@@ -176,6 +176,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaMainStage2099eExecReturnPlan> observe_main_stage_2099e_exec_return(const DeuterosAmigaObservedMainStageExecReturn&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_2099e_exec_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStage209caExecReturnPlan> observe_main_stage_209ca_exec_return(const DeuterosAmigaObservedMainStageExecReturn&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_209ca_exec_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStage209f0ExecReturnPlan> observe_main_stage_209f0_exec_return(const DeuterosAmigaObservedMainStageExecReturn&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_209f0_exec_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageCiaABitSetPlan> observe_main_stage_cia_a_bit_set(const DeuterosAmigaObservedMainStageCiaABitSet&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_cia_a_bit_set(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&
     title_bootstrap_session() const { return title_bootstrap_session_; }
 

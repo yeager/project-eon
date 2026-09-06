@@ -22,6 +22,7 @@ enum class MillenniumAmigaBootstrapRelocatorState {
     awaiting_first_stage_decrypted_memory_write,
     awaiting_first_stage_custom_chip_write,
     awaiting_first_stage_exec_service,
+    awaiting_first_stage_setup_call,
 };
 
 struct MillenniumAmigaBootstrapRelocatorBoundary {
@@ -211,6 +212,20 @@ struct MillenniumAmigaCustomChipExecPrefixExecution {
     std::int16_t pending_exec_vector=0;
     std::uint32_t pending_vector_address=0;
 };
+struct MillenniumAmigaExecTransitionObservation {
+    std::uint32_t exec_base_source_address=0, exec_base_value=0;
+    std::uint32_t first_call_address=0, first_return_address=0, first_result_d0=0;
+    std::int16_t first_vector=0; std::uint16_t first_result_sr=0;
+    std::uint32_t second_call_address=0, second_return_address=0, second_result_d0=0;
+    std::int16_t second_vector=0; std::uint16_t second_result_sr=0;
+    std::uint32_t second_result_a7=0;
+};
+struct MillenniumAmigaExecTransitionExecution {
+    MillenniumAmigaExecTransitionObservation observed;
+    std::uint32_t user_stack_argument=0, saved_a1_address=0, saved_a1_value=0;
+    std::uint32_t resulting_d0=0; std::uint16_t resulting_sr=0;
+    std::uint32_t pending_call_address=0, pending_call_target=0;
+};
 
 // Manual recompilation of the exact, direct Defjam bootstrap relocator at
 // $70000..$70041. The original DBRA reads one byte beyond the authenticated
@@ -276,6 +291,8 @@ public:
     execute_custom_chip_exec_prefix(const MillenniumAmigaCustomChipExecBaseObservation&);
     [[nodiscard]] const std::optional<MillenniumAmigaCustomChipExecPrefixExecution>&
     custom_chip_exec_prefix_execution() const { return custom_chip_exec_prefix_execution_; }
+    [[nodiscard]] MillenniumAmigaExecTransitionExecution execute_exec_transition(const MillenniumAmigaExecTransitionObservation&);
+    [[nodiscard]] const std::optional<MillenniumAmigaExecTransitionExecution>& exec_transition_execution() const { return exec_transition_execution_; }
 
 private:
     MillenniumAmigaBootstrapRelocatorState state_ =
@@ -295,6 +312,7 @@ private:
     std::optional<MillenniumAmigaTraceRegisterPrefixExecution> trace_register_prefix_execution_;
     std::optional<MillenniumAmigaBusErrorPrefixExecution> bus_error_prefix_execution_;
     std::optional<MillenniumAmigaCustomChipExecPrefixExecution> custom_chip_exec_prefix_execution_;
+    std::optional<MillenniumAmigaExecTransitionExecution> exec_transition_execution_;
 };
 
 } // namespace eon

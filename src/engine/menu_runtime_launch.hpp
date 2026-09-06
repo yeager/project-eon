@@ -284,6 +284,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_2099e_exec_return(DeuterosAmigaObservedMainStageExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_209ca_exec_return(DeuterosAmigaObservedMainStageExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_209f0_exec_return(DeuterosAmigaObservedMainStageExecReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_cia_a_bit_set(DeuterosAmigaObservedMainStageCiaABitSet);
 
 
     [[nodiscard]] DeuterosAmigaTitleDisplayTraceAdmission
@@ -312,6 +313,7 @@ public:
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_trace_register_prefix(MillenniumAmigaTraceRegisterPrefixRuntimeObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_bus_error_prefix(MillenniumAmigaBusErrorRuntimeObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_custom_chip_exec_prefix(MillenniumAmigaCustomChipExecRuntimeObservation);
+    [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_exec_transition(MillenniumAmigaExecTransitionRuntimeObservation);
     [[nodiscard]] std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint> millennium_amiga_bootstrap_relocator_checkpoint() const;
 
     [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>

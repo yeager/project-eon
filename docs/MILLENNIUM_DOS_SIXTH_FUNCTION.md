@@ -43,9 +43,9 @@ It calls `$cc4e`, discards one stack word after the typed return at `$74c4`,
 and tail-jumps to `$7455`. The runtime therefore admits restoration through
 this caller boundary; it does not bypass the opaque call.
 
-The caller helper is now opened through its exact `$cc4e..$cd62` span
-(277-byte SHA-256
-`4a397c5288f1b47472c1a73a386c2a1ea6843008316a96236b58f90321aa0e59`).
+The caller helper is now opened through its exact `$cc4e..$cd9c` span
+(335-byte SHA-256
+`2b0d73e35b2e49332d559b32128c425b08a983731e6ba8bc30e33c0dca2a88c4`).
 The typed path follows calls to `$408a`, `$4d36` with `AX=$0028`, `$0666` with
 `AX=$00c1`, and `$05f1`; records the literal word writes `$cbbe := $080f` and
 `$cbe1 := 0`; then observes the far pointer loaded from `$0112:$0114`. The
@@ -67,9 +67,14 @@ the next typed external call `$cd4d -> $40af`.
 
 After the exact `$40af` return, two `$4241` calls remain typed external result
 boundaries. Their observed AL bytes are masked by the original `AND AL,$0f`
-instructions and recorded at `$cb86` and `$cb87`. The continuation then stops
-at `$cd60 -> $cbc0`; no randomness, clock source, or `$cbc0` behavior is
-inferred.
+instructions and recorded at `$cb86` and `$cb87`. After the exact `$cd60 ->
+$cbc0` return, the continuation clears 39 bytes at `$cb1e..$cb44`. It then
+observes each `$cd72 -> $cc23` result at the `$cd75` AL boundary. The original
+mask, fold, increment, `$03..$08` exclusion, and table duplicate check are
+reproduced until exactly 18 distinct accepted bytes have been written within
+that cleared range. Rejected values commit no memory effect and repeat the
+same typed call. The continuation stops at the second `$cd9a -> $cbc0` call;
+no randomness, clock source, `$cc23` source, or `$cbc0` behavior is inferred.
 
 The typed session exposes only addresses, call targets, proved register values,
 and memory effects. In particular, the byte read at `$613a` is not assigned a

@@ -1787,7 +1787,7 @@ interpretation would overwrite the reader while it was executing.
 After a typed successful trackdisk return, the native runtime atomically maps
 the exact `0x24200` source bytes to `$41000..$651ff`. The stage begins
 `BRA.W $410bc`. Its first `0x151e` bytes hash to
-`7fdf3bd5f9e142e18de37258d45ef8ba836703cdd2aafd16781567fe9992f76e`
+`4bb8745ffe13392e729ab9529306c793af0cf5b1887027acde2831028e72e6c3`
 and statically establish the register-save/vector setup through `ILLEGAL` at
 `$410de`, which uses exception vector address `$10`. A typed register/vector
 observation now advances the native session through the exact `BRA.W`, saved
@@ -1848,14 +1848,20 @@ the exact base, register and value. The same observation supplies the even,
 24-bit ExecBase value read from address `$4`; no ExecBase value is inferred.
 The deterministic continuation saves D0=`$7` at `$40ffc`, sets SP=`$65134`,
 loads the observed ExecBase into A6, and stops before `JSR -150(A6)` at
-`$4251a`. The call and its return remain external. Frame materialization and
+`$4251a`. A typed observation can now admit the exact `-$96` return at
+`$4251e` and the following `-$9c` return at `$4252c`, retaining both D0/SR
+pairs without interpreting privilege state. The intervening D0 literal
+`$7fff0`, second ExecBase read from `$4`, and A1 push to `$65130` are
+byte-proved; its address derives from the observed even 24-bit post-return A7.
+The push commits atomically only after both returns validate, and
+the chain stops before the unresolved `$415ea` call at `$4252e`.
+Frame materialization and
 the A1 save are one atomic batch; the later D0/ExecBase materialization is a
 second atomic batch, and an invalid hardware or ExecBase observation commits
-neither. The admitted ADF span is now `$151e` bytes,
-SHA-256 `7fdf3bd5f9e142e18de37258d45ef8ba836703cdd2aafd16781567fe9992f76e`.
+neither.
 The reproducible disassembly report has SHA-256
-`13da0c2a305f13bb3e8060d53f30c90dc8c26c9a8b5ade627eaa977e08c838ca`
-and 1,585 lines. FS-UAE source revision
+`79cde8ff33a54727687b141630dde11612177e46eb3eaca303dee30545b7943c`
+and 1,589 lines. FS-UAE source revision
 `f362278ccd4c60991caac3b4d240d4a3f751bea2` was retained externally as a
 cross-check for its explicit 24-bit address-space model; it is not embedded
 or treated as a substitute runtime.
@@ -3381,8 +3387,18 @@ it atomically writes longword `$ffffffff` at `$2094c` and byte zero at
 before the stateful bit-set at `$217e4` against `$bfe001`. The 14-byte caller
 prefix has SHA-256
 `bddd50234d5142a95cb582e1829eb49a00a79ff2f3307f8af4de8f880994e3f9`.
-No effect of that bit-set is applied or inferred. No memory batch is emitted
-for the register-only entry prefix or the nonzero terminal branch. A wrong entry,
+The next typed observation owns the prior byte read at CIA-A port A `$bfe001`
+and the word read at `$21704`. The exact 26-byte span beginning at `$217e4`,
+SHA-256 `cb9046ad20fffc0a52f43431949927b4d159ecc795fe5f62dbbd01accd0684c7`,
+sets bit 1 in that observed byte, preserves whether the bit was previously set,
+loads the owned `$21704` word into D0, calls local `$21926`, mirrors that word
+at `$21704` and `$21706`, and stops at `$217f8->$22a5a` (return `$217fe`).
+The changed CIA byte and both big-endian words commit as one batch. The owned
+word must agree with resident runtime memory; a mismatch, wrong address/bit,
+replay, or memory failure commits none of the three writes. The CIA operation
+is retained only as raw stateful hardware evidence; no device, audio, timing,
+or gameplay meaning is assigned. No memory batch is emitted for the
+register-only entry prefix or the nonzero terminal branch. A wrong entry,
 missing/replaced resident stage, replay, or revoked owner produces no partial
 write. All observed results and service effects remain deliberately uninterpreted.
 
@@ -7153,6 +7169,16 @@ through the coordinator, native controller, host, and launcher layers. Source
 revocation destroys the span-backed session before its admitted media owner and
 rejects subsequent observations. See `MILLENNIUM_DOS_SIXTH_FUNCTION.md` for the
 instruction-level evidence and excluded `$7455` restoration routine.
+
+The caller-connected F6 helper is hash-owned through `$cd9c` (file
+`+$cb4e`, 335 bytes, SHA-256
+`2b0d73e35b2e49332d559b32128c425b08a983731e6ba8bc30e33c0dca2a88c4`).
+After the observed `$cd60 -> $cbc0` return it records the literal 39-byte clear
+at `$cb1e`, then consumes explicit AL results from repeated `$cd72 -> $cc23`
+calls. Only the encoded mask/fold, excluded `$03..$08` range, duplicate check,
+and 18 accepted byte writes are owned. Rejections are atomic and retry without
+an effect. The next boundary is the second `$cd9a -> $cbc0` call; neither
+callee is assigned a random-number or timing meaning.
 ### Millennium DOS `$0c6d` / `$0c8b` far-memory copy continuations
 
 The hash-bound `$0bdf` service now owns both mode-1 copy branches through their
