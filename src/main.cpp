@@ -5830,12 +5830,15 @@ int main(int argc, char** argv) {
             }
         }
 
-        // The DOS compatibility service is a bounded native tick. It can
-        // consume only deterministic operations against the already admitted
-        // immutable driver leaf, its owned paragraph arena and local vector
-        // table. It becomes a no-op when external parent-stack state is needed.
+        // Advance the currently admitted deterministic native path exactly
+        // once per real launch frame, before scanner work or SDL rendering.
+        // This typed facade is deliberately the only per-frame route: it
+        // selects neither a platform nor a preview and its lifecycle guard
+        // refuses opening, hand-off, teardown, and all unresolved boundaries.
+        // In particular, rendering a held preview must never be what makes a
+        // recovered program path advance.
         if (screen == Screen::launching) {
-            static_cast<void>(runtime.drive_millennium_dos_session());
+            static_cast<void>(runtime.drive_active_native_session());
         }
 
         if (!scanner->done()) {
@@ -6460,15 +6463,10 @@ int main(int argc, char** argv) {
                 // copied through the native-session firewall.  In particular,
                 // this renderer never inspects the coordinator-owned VM or
                 // title-stage adapter after a lifecycle transition.
-                // The unified bounded driver crosses either hash-validated
-                // program-entry profile and every reached deterministic local
-                // step, then stops before the next external observation.
-                const auto session_drive = runtime.drive_deuteros_amiga_session();
-                if (!session_drive.accepted
-                    && session_drive.stop_reason == eon::DeuterosAmigaSessionStopReason::failed) {
-                    std::cerr << "Unable to drive Deuteros native session: "
-                              << session_drive.error << '\n';
-                }
+                // Native execution was already stepped once for this real
+                // launch frame, outside this presentation branch. This code
+                // consumes snapshots only and cannot make an invisible,
+                // clipped, or unavailable SDL texture affect native progress.
                 const auto opening = runtime.deuteros_amiga_opening_presentation();
                 const auto title_stage = runtime.deuteros_amiga_title_stage_boundary();
                 const auto title_surface = runtime.deuteros_amiga_title_planar_surface();

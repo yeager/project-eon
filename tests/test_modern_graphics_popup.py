@@ -313,6 +313,19 @@ class ModernGraphicsPopupTests(unittest.TestCase):
         self.assertIn("SDL_ClearAudioStream(deuteros_audio_stream)", scheduler_block)
         self.assertIn("TITLE-STAGE EXECUTION IS NOT YET RECOVERED", SOURCE)
 
+    def test_active_native_driver_runs_once_per_launch_frame_outside_rendering(self) -> None:
+        """Renderer visibility must never decide whether native code advances."""
+        frame_driver = SOURCE.index("runtime.drive_active_native_session()")
+        scanner = SOURCE.index("if (!scanner->done())", frame_driver)
+        render_start = SOURCE.index("const bool modern", frame_driver)
+        deuteros_preview = SOURCE.index("selected == eon::Game::deuteros && preview_texture")
+        self.assertLess(frame_driver, scanner)
+        self.assertLess(scanner, render_start)
+        self.assertLess(render_start, deuteros_preview)
+        self.assertEqual(SOURCE.count("runtime.drive_active_native_session()"), 1)
+        self.assertNotIn("runtime.drive_millennium_dos_session()", SOURCE)
+        self.assertNotIn("runtime.drive_deuteros_amiga_session()", SOURCE)
+
     def test_deuteros_title_panel_shows_only_session_provenance_before_exec(self) -> None:
         panel = SOURCE.index("const auto title_stage = runtime.deuteros_amiga_title_stage_boundary();")
         palette = SOURCE.index("graphics_setup_palette", panel)
