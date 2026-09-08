@@ -366,10 +366,15 @@ std::optional<std::vector<std::uint8_t>> ZipArchive::extract_asset_by_sha256(
     return recurse_extract(*this, expected_sha256, 0, maximum_nesting);
 }
 
-std::vector<ArchiveAsset> inventory_zip(const std::filesystem::path& path, unsigned maximum_nesting) {
+std::vector<ArchiveAsset> ZipArchive::inventory(const std::string_view logical_prefix,
+    const unsigned maximum_nesting) const {
     std::vector<ArchiveAsset> assets;
-    recurse_inventory(ZipArchive::open(path), path.filename().string(), 0, maximum_nesting, assets);
+    recurse_inventory(*this, std::string(logical_prefix), 0, maximum_nesting, assets);
     return assets;
+}
+
+std::vector<ArchiveAsset> inventory_zip(const std::filesystem::path& path, unsigned maximum_nesting) {
+    return ZipArchive::open(path).inventory(path.filename().string(), maximum_nesting);
 }
 
 std::optional<std::vector<std::uint8_t>> extract_asset_by_sha256(
@@ -383,10 +388,8 @@ std::vector<ArchiveAsset> inventory_verified_zip(
     const std::filesystem::path& path,
     std::string_view expected_archive_sha256,
     unsigned maximum_nesting) {
-    std::vector<ArchiveAsset> assets;
-    recurse_inventory(ZipArchive::open_verified(path, expected_archive_sha256),
-        path.filename().string(), 0, maximum_nesting, assets);
-    return assets;
+    return ZipArchive::open_verified(path, expected_archive_sha256).inventory(
+        path.filename().string(), maximum_nesting);
 }
 
 std::optional<std::vector<std::uint8_t>> extract_verified_asset_by_sha256(

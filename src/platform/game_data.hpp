@@ -50,7 +50,8 @@ public:
 
 private:
     VerifiedReleaseMedia(ReleaseArchive release, ZipArchive archive)
-        : release_(std::move(release)), archives_{std::move(archive)} {}
+        : release_(std::move(release)), archive_inventory_prefix_(release_.path.filename().string()),
+          archives_{std::move(archive)} {}
     VerifiedReleaseMedia(ReleaseArchive release, std::vector<ZipArchive> archives,
                          std::vector<ArchiveAsset> assets)
         : release_(std::move(release)), archives_(std::move(archives)),
@@ -66,6 +67,7 @@ private:
           direct_assets_(std::move(direct_assets)) {}
 
     ReleaseArchive release_;
+    std::string archive_inventory_prefix_;
     std::vector<ZipArchive> archives_;
     std::vector<ArchiveAsset> direct_inventory_;
     // A direct-media session retains only verified member locations and

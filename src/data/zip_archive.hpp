@@ -33,6 +33,8 @@ struct ZipEntry {
     bool directory = false;
 };
 
+struct ArchiveAsset;
+
 class ZipArchive {
 public:
     explicit ZipArchive(std::vector<std::uint8_t> bytes);
@@ -51,6 +53,10 @@ public:
     // bounded by the same parser limits as path-based extraction.
     [[nodiscard]] std::optional<std::vector<std::uint8_t>> extract_asset_by_sha256(
         std::string_view expected_sha256, unsigned maximum_nesting = 2) const;
+    // Inventory the already admitted byte stream. `logical_prefix` is a
+    // presentation label only; it never opens or resolves a filesystem path.
+    [[nodiscard]] std::vector<ArchiveAsset> inventory(std::string_view logical_prefix,
+        unsigned maximum_nesting = 2) const;
 
 private:
     std::vector<std::uint8_t> bytes_;

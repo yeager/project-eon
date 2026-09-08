@@ -344,10 +344,10 @@ bool verified_release_media_has_declared_profile_ranges(const VerifiedReleaseMed
 
 std::vector<ArchiveAsset> VerifiedReleaseMedia::inventory() const {
     if (release_.layout != ReleaseMediaLayout::zip_archive) return direct_inventory_;
-    // Inventory helpers intentionally reopen ZIP sources, so direct callers
-    // use the already admitted snapshot. ZIP callers retain their established
-    // helper semantics below.
-    return inventory_verified_zip(release_.path, release_.sha256);
+    if (archives_.size() != 1U) throw std::runtime_error("Verified ZIP media has no unique archive");
+    // Do not reopen release_.path here: the inventory must describe exactly
+    // the same byte stream whose outer hash was checked at admission.
+    return archives_.front().inventory(archive_inventory_prefix_);
 }
 
 std::vector<ArchiveAsset> inventory_verified_release(const ReleaseArchive& release) {

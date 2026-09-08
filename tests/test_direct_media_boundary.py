@@ -40,6 +40,13 @@ class DirectMediaBoundaryTests(unittest.TestCase):
         self.assertIn("directory is never misrepresented as an outer archive", documentation)
         self.assertIn("retains only its immutable hash, expected size and", documentation)
 
+    def test_admitted_zip_inventory_does_not_reopen_the_release_path(self):
+        source = (ROOT / "src" / "platform" / "game_data.cpp").read_text(encoding="utf-8")
+        start = source.index("std::vector<ArchiveAsset> VerifiedReleaseMedia::inventory() const")
+        body = source[start:source.index("std::vector<ArchiveAsset> inventory_verified_release", start)]
+        self.assertIn("archives_.front().inventory(archive_inventory_prefix_)", body)
+        self.assertNotIn("inventory_verified_zip(release_", body)
+
 
 if __name__ == "__main__":
     unittest.main()
