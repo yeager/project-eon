@@ -1348,6 +1348,7 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
 // before SDL, input, audio, timing, save, or another scheduler pass.
 void report_native_step_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
     const eon::ActiveNativeSessionDriveResult& result) {
+    std::string_view reported_error = result.error;
     std::cout << "{\"schema\":\"project-eon.native-step-diagnostics/v1\",\"release\":{\"game\":";
     write_json_string(std::cout, eon::name(launch.release.game));
     std::cout << ",\"platform\":"; write_json_string(std::cout, eon::name(launch.release.platform));
@@ -1360,6 +1361,7 @@ void report_native_step_diagnostics_json(const eon::ResolvedLaunchRequest& launc
     std::cout << ",\"result\":";
     if (result.millennium_dos) {
         const auto& drive = *result.millennium_dos;
+        if (reported_error.empty()) reported_error = drive.error;
         std::cout << "{\"accepted\":" << (drive.accepted ? "true" : "false")
             << ",\"steps\":" << drive.steps << ",\"stop_reason\":";
         const char* stop_reason = drive.stop_reason == eon::MillenniumDosSessionStopReason::external_observation
@@ -1374,6 +1376,7 @@ void report_native_step_diagnostics_json(const eon::ResolvedLaunchRequest& launc
             << (drive.external_observation_requirement ? "true" : "false") << '}';
     } else if (result.deuteros_amiga) {
         const auto& drive = *result.deuteros_amiga;
+        if (reported_error.empty()) reported_error = drive.error;
         std::cout << "{\"accepted\":" << (drive.accepted ? "true" : "false")
             << ",\"steps\":" << drive.steps << ",\"stop_reason\":";
         const char* stop_reason = drive.stop_reason == eon::DeuterosAmigaSessionStopReason::external_observation
@@ -1390,7 +1393,7 @@ void report_native_step_diagnostics_json(const eon::ResolvedLaunchRequest& launc
     } else {
         std::cout << "null";
     }
-    std::cout << ",\"error\":"; write_json_string(std::cout, result.error);
+    std::cout << ",\"error\":"; write_json_string(std::cout, reported_error);
     std::cout << "}\n";
 }
 
