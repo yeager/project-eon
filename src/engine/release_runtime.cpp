@@ -1610,16 +1610,23 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_private_interrupt_result
             next.consume_next_descriptor_pair(reached.last_sequence+1,*library);
             const auto stream=next.checkpoint();
             const auto driven=next.drive_next_descriptor_stream_from_title_library(
-                // Sixteen observations complete the proven low/high decoder
-                // prefix through the next admitted mode-two run.  This remains
-                // a finite, canonical TITLE.LIB transaction, not DOS memory
-                // emulation or a general stream decoder.
+                // Two finite canonical TITLE.LIB transactions drive the
+                // proven decoder prefix without becoming DOS memory emulation
+                // or a general stream decoder.
                 *library,{stream.last_sequence+1,256});
             if(!driven.accepted || driven.stopped_at_boundary
                 || driven.observation_count!=256)
                 throw std::runtime_error(driven.error.empty()
                     ? "TITLE.LIB descriptor stream did not complete its verified continuation"
                     : driven.error);
+            const auto next_stream=next.checkpoint();
+            const auto next_driven=next.drive_next_descriptor_stream_from_title_library(
+                *library,{next_stream.last_sequence+1,256});
+            if(!next_driven.accepted || next_driven.stopped_at_boundary
+                || next_driven.observation_count!=256)
+                throw std::runtime_error(next_driven.error.empty()
+                    ? "TITLE.LIB descriptor stream did not complete its second verified continuation"
+                    : next_driven.error);
         }
         if(next.checkpoint().state==MillenniumDosTitleInitializationState::post_video_followup_call_boundary){
             const auto reached=next.checkpoint();
