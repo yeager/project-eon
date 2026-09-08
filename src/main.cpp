@@ -594,6 +594,10 @@ struct ModernRuntimeDiagnostics {
     // interpreted as an active input mapping or executed game path.
     std::string millennium_dos_static_dispatch;
     std::string millennium_dos_owned_function;
+    // A copied stop boundary from the one launcher-owned native driver call
+    // in this frame.  It names the next fact that must be observed, but it
+    // deliberately has no field for supplying that fact back to the engine.
+    std::string millennium_dos_external_requirement;
     std::string deuteros_amiga_title_dependency_chain;
     std::string native_code_images;
     // This comes only from the launcher preflight object. It does not expose
@@ -616,6 +620,38 @@ struct ModernRuntimeDiagnostics {
         {{"{documents}", std::to_string(static_control_flow->document_count)},
          {"{ranges}", std::to_string(static_control_flow->range_count)},
          {"{candidates}", std::to_string(static_control_flow->candidate_count)}});
+}
+
+[[nodiscard]] std::string millennium_dos_external_requirement_summary(
+    const eon::MillenniumDosTitleExternalObservationRequirement& requirement) {
+    // Keep this a compact technical code rather than a claim that the SDL
+    // frontend can inspect DOS, BIOS, or far memory.  The address identifies
+    // the already-declared recovery boundary only; no observed value crosses
+    // the presentation boundary.
+    const char* kind = "FAR-BYTE";
+    switch (requirement.kind) {
+    case eon::MillenniumDosTitleExternalObservationKind::dos_vector_result:
+        kind = "DOS-VECTOR";
+        break;
+    case eon::MillenniumDosTitleExternalObservationKind::setup_bios_result:
+        kind = "SETUP-BIOS";
+        break;
+    case eon::MillenniumDosTitleExternalObservationKind::far_words:
+        kind = "FAR-WORDS";
+        break;
+    case eon::MillenniumDosTitleExternalObservationKind::far_word:
+        kind = "FAR-WORD";
+        break;
+    case eon::MillenniumDosTitleExternalObservationKind::far_byte:
+        break;
+    }
+    std::ostringstream summary;
+    summary << "WAIT=" << kind << " @$" << std::hex << requirement.instruction_address;
+    if (requirement.source_segment || requirement.source_offset) {
+        summary << " SRC=$" << requirement.source_segment << ':' << requirement.source_offset;
+    }
+    if (requirement.element_width) summary << " WIDTH=" << std::dec << requirement.element_width;
+    return summary.str();
 }
 
 [[nodiscard]] std::string modern_pack_renderer_targets_summary(
@@ -1533,7 +1569,9 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
             + (diagnostics.deuteros_amiga_title_dependency_chain.empty() ? ""
                 : " / " + diagnostics.deuteros_amiga_title_dependency_chain)
             + (diagnostics.native_code_images.empty() ? ""
-                : " / " + diagnostics.native_code_images)},
+                : " / " + diagnostics.native_code_images)
+            + (diagnostics.millennium_dos_external_requirement.empty() ? ""
+                : " / " + diagnostics.millennium_dos_external_requirement)},
         {"MODERN PACK", diagnostics.modern_pack},
         {"PACK RENDER TARGETS", diagnostics.modern_pack_targets},
         {"GRAPHICS PRESET", tr(modern_graphics_preset_names.at(static_cast<std::size_t>(settings.preset)))},
@@ -4953,6 +4991,11 @@ int main(int argc, char** argv) {
     // while this marker also gives the event loop a fail-closed guard if a
     // future lifecycle route revokes the native runtime independently.
     std::optional<std::uint64_t> sdl_resource_generation = runtime.generation();
+    // This is an ephemeral presentation copy of the only native-driver
+    // result permitted per launch frame. Pair it with the host generation so
+    // a diagnostic can never survive a source revocation or a new launch.
+    std::optional<std::pair<std::uint64_t, eon::ActiveNativeSessionDriveResult>>
+        active_native_session_drive;
     const auto reset_active_runtime = [&] {
         // Leaving a launch or changing its source is a hard preservation
         // boundary. Nothing derived from the former exact archive may remain
@@ -4969,6 +5012,7 @@ int main(int argc, char** argv) {
         runtime.begin_source_revocation();
         runtime.finish_source_revocation();
         sdl_resource_generation = runtime.generation();
+        active_native_session_drive.reset();
         launcher_runtime_admission = std::string(
             eon::release_runtime_admission_label(runtime.admission()));
         launcher_runtime_rejection = std::string(
@@ -5257,6 +5301,16 @@ int main(int argc, char** argv) {
                 << " " << owned->mode;
             diagnostics.millennium_dos_owned_function = summary.str();
         }
+        if (active_native_session_drive
+            && active_native_session_drive->first == runtime_view.generation
+            && active_native_session_drive->second.millennium_dos) {
+            const auto& drive = *active_native_session_drive->second.millennium_dos;
+            if (drive.external_observation_requirement) {
+                diagnostics.millennium_dos_external_requirement =
+                    millennium_dos_external_requirement_summary(
+                        *drive.external_observation_requirement);
+            }
+        }
         if (const auto chain = runtime.deuteros_amiga_title_dependency_chain_checkpoint()) {
             std::ostringstream summary;
             summary << "DEUTEROS TITLE STOP=$" << std::hex << chain->stop_before_address
@@ -5540,6 +5594,7 @@ int main(int argc, char** argv) {
             discard_millennium_assets();
             reset_deuteros_runtime();
             sdl_resource_generation = runtime_generation;
+            active_native_session_drive.reset();
         }
         std::optional<OriginalDataSourceSelection> selected_original_data_source;
         {
@@ -5853,7 +5908,13 @@ int main(int argc, char** argv) {
         // In particular, rendering a held preview must never be what makes a
         // recovered program path advance.
         if (screen == Screen::launching) {
-            static_cast<void>(runtime.drive_active_native_session());
+            auto drive = runtime.drive_active_native_session();
+            // The result is presentation-only and generation-scoped. It is
+            // never a route for a diagnostic panel to supply a value, change
+            // a scheduler limit, or resurrect a revoked source.
+            active_native_session_drive.emplace(runtime.snapshot().generation, std::move(drive));
+        } else {
+            active_native_session_drive.reset();
         }
 
         if (!scanner->done()) {
