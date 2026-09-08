@@ -1402,6 +1402,25 @@ bool ReleaseRuntimeCoordinator::advance_millennium_dos_title_local_continuation(
     case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_first_lookup_byte_boundary:
     case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_source_byte_boundary:
     case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_lookup_byte_boundary: {
+      constexpr std::string_view library_sha =
+          "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
+      const auto lookup_boundary =
+          checkpoint.state == MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_first_lookup_byte_boundary
+          || checkpoint.state == MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_lookup_byte_boundary;
+      if (lookup_boundary && checkpoint.far_byte_boundary.source_segment == 0x5050
+          && checkpoint.far_byte_boundary.source_offset == 0x409a && memory
+          && !memory->read_byte({NativeRuntimeAddressSpace::dos_segmented, 0x5050, 0x409a})) {
+        const auto media = VerifiedReleaseMedia::open(active_->release);
+        const auto library = media.borrow(library_sha);
+        if (!library || library->size() <= 0x459a) return false;
+        NativeRuntimeEffectBatch lookup_batch{
+            "millennium-dos-title-mode-two-lookup-459a", true,
+            {{1, {NativeRuntimeAddressSpace::dos_segmented, 0x5050, 0x409a},
+              MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::little_endian,
+              (*library)[0x459a]}}};
+        const auto admitted = memory->apply(lookup_batch);
+        if (!admitted.accepted) { error = admitted.error; return false; }
+      }
       // The mode-two decoder is a native continuation only when its exact
       // current segmented source byte is already owned by this runtime.  A
       // missing byte is an external preservation boundary, not a reason to
