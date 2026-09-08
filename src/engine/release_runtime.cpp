@@ -1614,9 +1614,9 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_private_interrupt_result
                 // prefix through the next admitted mode-two run.  This remains
                 // a finite, canonical TITLE.LIB transaction, not DOS memory
                 // emulation or a general stream decoder.
-                *library,{stream.last_sequence+1,16});
+                *library,{stream.last_sequence+1,256});
             if(!driven.accepted || driven.stopped_at_boundary
-                || driven.observation_count!=16)
+                || driven.observation_count!=256)
                 throw std::runtime_error(driven.error.empty()
                     ? "TITLE.LIB descriptor stream did not complete its verified continuation"
                     : driven.error);
