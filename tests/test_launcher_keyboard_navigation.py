@@ -379,8 +379,12 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn('tr("DATA SOURCE: ARCHIVE")', SOURCE)
         self.assertIn('tr("DATA SOURCE: MISSING")', SOURCE)
         self.assertIn('tr("DATA SOURCE: UNSUPPORTED")', SOURCE)
-        self.assertIn('tr("REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}")', SOURCE)
-        self.assertIn('tr("VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}")', SOURCE)
+        # Aggregate counters carry runtime values, so they must go through the
+        # placeholder-aware localization path rather than the no-argument
+        # tr(...) convenience wrapper.
+        self.assertIn("eon::format_translation(translator,", SOURCE)
+        self.assertIn('"REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}"', SOURCE)
+        self.assertIn('"VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}"', SOURCE)
 
     def test_replacing_data_source_invalidates_every_release_bound_runtime(self) -> None:
         # A new scanner cannot inherit a resolved archive, decoded frames, VM
