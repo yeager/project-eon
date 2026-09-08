@@ -5835,7 +5835,7 @@ int main(int argc, char** argv) {
         // immutable driver leaf, its owned paragraph arena and local vector
         // table. It becomes a no-op when external parent-stack state is needed.
         if (screen == Screen::launching) {
-            static_cast<void>(runtime.tick_millennium_dos_compatibility_runner());
+            static_cast<void>(runtime.drive_millennium_dos_session());
         }
 
         if (!scanner->done()) {

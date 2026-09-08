@@ -1368,6 +1368,77 @@ ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner() {
   }
 }
 
+MillenniumDosSessionDriveResult
+ReleaseRuntimeCoordinator::drive_millennium_dos_session(
+    const std::uint32_t step_limit) {
+  MillenniumDosSessionDriveResult result;
+  if (step_limit == 0) {
+    result.stop_reason = MillenniumDosSessionStopReason::failed;
+    result.error =
+        "Millennium deterministic session drive requires a nonzero step limit";
+    return result;
+  }
+  if (!active_ || !session_snapshot_ || !millennium_dos_compatibility_runner_) {
+    result.stop_reason = MillenniumDosSessionStopReason::inactive;
+    result.error = "Millennium deterministic session drive requires an active session";
+    return result;
+  }
+  const auto is_drivable = [&] {
+    return session_snapshot_->kind ==
+               RuntimeSessionKind::millennium_dos_sound_driver_boundary ||
+           session_snapshot_->kind == RuntimeSessionKind::millennium_dos_title;
+  };
+  if (!is_drivable()) {
+    result.stop_reason = MillenniumDosSessionStopReason::inactive;
+    result.error = "Millennium deterministic session drive has no active DOS boundary";
+    return result;
+  }
+  const auto boundary = [&]() -> std::uint16_t {
+    if (millennium_dos_title_initialization_) {
+      const auto checkpoint = millennium_dos_title_initialization_->checkpoint();
+      result.title_state = checkpoint.state;
+      if (checkpoint.continuation_address != 0)
+        return checkpoint.continuation_address;
+      if (checkpoint.dos_boundary.interrupt_address != 0)
+        return checkpoint.dos_boundary.interrupt_address;
+      return checkpoint.bios_boundary.interrupt_address;
+    }
+    if (millennium_dos_sound_driver_load_)
+      return millennium_dos_sound_driver_load_->boundary().instruction_address;
+    return 0;
+  };
+  result.accepted = true;
+  for (; result.steps < step_limit; ++result.steps) {
+    const auto before_sequence = millennium_dos_title_initialization_
+        ? millennium_dos_title_initialization_->checkpoint().last_sequence
+        : millennium_dos_sound_driver_load_last_sequence_;
+    const auto advanced = tick_millennium_dos_compatibility_runner();
+    if (!advanced) {
+      result.stop_reason = MillenniumDosSessionStopReason::external_observation;
+      result.stop_before_address = boundary();
+      return result;
+    }
+    if (!advanced->error.empty()) {
+      result.accepted = false;
+      result.stop_reason = MillenniumDosSessionStopReason::failed;
+      result.stop_before_address = boundary();
+      result.error = advanced->error;
+      return result;
+    }
+    const auto after_sequence = millennium_dos_title_initialization_
+        ? millennium_dos_title_initialization_->checkpoint().last_sequence
+        : millennium_dos_sound_driver_load_last_sequence_;
+    if (after_sequence == before_sequence) {
+      result.stop_reason = MillenniumDosSessionStopReason::external_observation;
+      result.stop_before_address = boundary();
+      return result;
+    }
+  }
+  result.stop_reason = MillenniumDosSessionStopReason::step_limit;
+  result.stop_before_address = boundary();
+  return result;
+}
+
 MillenniumDosTitleExecEntryObservationResult
 ReleaseRuntimeCoordinator::observe_millennium_dos_title_child_process_entry(
     const MillenniumDosTitleExecProcessEntry observation) {

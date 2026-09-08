@@ -4401,14 +4401,16 @@ int main() {
         ==completed_bios_checksum);
     const auto before_library_load=
         admitted_dos_runtime.native_runtime_memory_diagnostics();
-    const auto title_compatibility_stop=
-        admitted_dos_runtime.tick_millennium_dos_compatibility_runner();
+    const auto title_session_drive=
+        admitted_dos_runtime.drive_millennium_dos_session();
     title_entry=admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint();
-    assert(title_compatibility_stop&&title_compatibility_stop->title_state);
-    assert(title_compatibility_stop->error.empty());
-    assert(*title_compatibility_stop->title_state
+    assert(title_session_drive.accepted&&title_session_drive.steps==1
+        &&title_session_drive.stop_reason
+            ==eon::MillenniumDosSessionStopReason::external_observation
+        &&title_session_drive.title_state);
+    assert(*title_session_drive.title_state
         ==eon::MillenniumDosTitleInitializationState::library_palette_copy_boundary);
-    assert(title_compatibility_stop->external_result_required);
+    assert(title_session_drive.stop_before_address==0x0fc6);
     assert(title_entry&&title_entry->title_initialization);
     assert(title_entry->title_initialization->state
         ==eon::MillenniumDosTitleInitializationState::library_palette_copy_boundary);
@@ -4453,11 +4455,12 @@ int main() {
     assert(has_loaded_byte(0xe33f,0x0e4a,3));
     assert(has_loaded_byte(0xe33f,0x0e4c,0x22));
     assert(has_loaded_byte(0xe33f,0x0e4d,0x54));
-    const auto repeated_title_compatibility_stop=
-        admitted_dos_runtime.tick_millennium_dos_compatibility_runner();
-    assert(repeated_title_compatibility_stop
-        &&repeated_title_compatibility_stop->last_sequence
-            ==title_compatibility_stop->last_sequence
+    const auto repeated_title_session_drive=
+        admitted_dos_runtime.drive_millennium_dos_session();
+    assert(repeated_title_session_drive.accepted
+        &&repeated_title_session_drive.steps==0
+        &&repeated_title_session_drive.stop_reason
+            ==eon::MillenniumDosSessionStopReason::external_observation
         &&admitted_dos_runtime.native_runtime_memory_diagnostics()->checksum
             ==after_library_load->checksum);
     assert(!admitted_dos_runtime.observe_millennium_dos_title_child_process_entry(

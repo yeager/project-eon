@@ -147,6 +147,25 @@ struct DeuterosAmigaSessionDriveResult {
     std::string error;
 };
 
+// Native Millennium DOS scheduler result.  It deliberately reports a typed
+// stop before any ABI, BIOS, vector, far-memory or input boundary; those
+// observations remain outside the compatibility service.
+enum class MillenniumDosSessionStopReason {
+    external_observation,
+    step_limit,
+    failed,
+    inactive,
+};
+struct MillenniumDosSessionDriveResult {
+    bool accepted = false;
+    std::uint32_t steps = 0;
+    MillenniumDosSessionStopReason stop_reason =
+        MillenniumDosSessionStopReason::inactive;
+    std::optional<MillenniumDosTitleInitializationState> title_state;
+    std::uint16_t stop_before_address = 0;
+    std::string error;
+};
+
 // Media-safe facts for the exact Deuteros Atari ST bootstrap boundary.  The
 // retained prefixes are only local copy/entry results; this DTO cannot select
 // a protected state, issue Floprd, or cross the unrecovered XBIOS boundary.
@@ -719,6 +738,8 @@ public:
     [[nodiscard]] MillenniumDosSoundDriverLoadObservationResult observe_millennium_dos_sound_driver_load(MillenniumDosSoundDriverLoadObservation);
     [[nodiscard]] std::optional<MillenniumDosSoundDriverLoadCheckpoint> millennium_dos_sound_driver_load_checkpoint() const;
     [[nodiscard]] std::optional<MillenniumDosCompatibilityRunnerCheckpoint> tick_millennium_dos_compatibility_runner();
+    [[nodiscard]] MillenniumDosSessionDriveResult
+    drive_millennium_dos_session(std::uint32_t step_limit = 64);
     [[nodiscard]] MillenniumDosTitleExecEntryObservationResult
     observe_millennium_dos_title_child_process_entry(MillenniumDosTitleExecProcessEntry);
     [[nodiscard]] MillenniumDosTitleExecEntryObservationResult
