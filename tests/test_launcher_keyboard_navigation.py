@@ -43,6 +43,16 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("VERIFIED ORIGINAL DATA", SOURCE)
         self.assertIn("session.choose_platform(releases, platforms[focus.platform])", ROUTE_SOURCE)
 
+    def test_keyboard_and_gamepad_focus_skip_disabled_platform_cards(self) -> None:
+        # Missing-media cards remain rendered, but navigation must not present
+        # a dimmed card as the next actionable destination.
+        self.assertIn("move_platform_focus_to_selectable", ROUTE_SOURCE)
+        self.assertIn("platform_card_selectable(platform_card_status", ROUTE_SOURCE)
+        move = ROUTE_SOURCE[ROUTE_SOURCE.index("void LauncherInteractionController::move"):
+                            ROUTE_SOURCE.index("bool LauncherInteractionController::page_releases")]
+        self.assertIn("page == LauncherPage::platforms && direction != 0", move)
+        self.assertIn("move_platform_focus_to_selectable", move)
+
     def test_card_focus_is_bounded_in_the_shared_launcher_core(self) -> None:
         self.assertIn("struct LauncherCardFocus", ROUTE_HEADER)
         self.assertIn("void move(LauncherPage page, std::size_t count, int direction)", ROUTE_HEADER)

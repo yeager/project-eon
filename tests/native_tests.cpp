@@ -2408,6 +2408,22 @@ int main() {
         assert(eon::platform_card_status(duplicate_english_releases,
             eon::Game::millennium, eon::Platform::amiga)
             == eon::PlatformCardStatus::release_selection_required);
+        // Missing platform cards stay visibly present for preservation
+        // coverage, but keyboard/gamepad focus must skip them. Otherwise a
+        // disabled DOS/Atari card can look like an actionable next choice
+        // even though activation must reject it.
+        eon::LauncherInteractionController sparse_platform_controller;
+        sparse_platform_controller.synchronize(duplicate_english_releases);
+        assert(sparse_platform_controller.activate(duplicate_english_releases)
+            == eon::LauncherInteractionEffect::none);
+        assert(sparse_platform_controller.session.route.page == eon::LauncherPage::platforms);
+        assert(sparse_platform_controller.focus.platform == 1); // Amiga.
+        sparse_platform_controller.move(duplicate_english_releases, 1);
+        assert(sparse_platform_controller.focus.platform == 1);
+        sparse_platform_controller.first(duplicate_english_releases);
+        assert(sparse_platform_controller.focus.platform == 1);
+        sparse_platform_controller.last(duplicate_english_releases);
+        assert(sparse_platform_controller.focus.platform == 1);
         const auto exact_duplicate = eon::resolve_release_identity(duplicate_english_releases,
             eon::Game::millennium, eon::Platform::amiga,
             "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "en");

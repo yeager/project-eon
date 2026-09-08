@@ -743,6 +743,49 @@ std::size_t card_count_for(const LauncherSessionState& session,
     return 0;
 }
 
+// Platform cards with no admitted original release remain visible so the
+// launcher can distinguish unsupported targets from missing user media. They
+// are not keyboard/gamepad destinations, though: focus must never advertise a
+// disabled card as the next actionable choice.  If no supplied platform is
+// selectable we deliberately retain the bounded visual focus; it still cannot
+// activate or launch.
+bool move_platform_focus_to_selectable(LauncherCardFocus& focus,
+    const std::vector<ReleaseArchive>& releases, const Game game,
+    const int direction, const bool edge) {
+    const auto platforms = supported_platforms(game);
+    if (platforms.empty()) return false;
+    const auto selectable = [&](const std::size_t index) {
+        return platform_card_selectable(platform_card_status(releases, game, platforms[index]));
+    };
+    if (edge) {
+        if (direction < 0) {
+            for (std::size_t index = platforms.size(); index-- > 0U;) {
+                if (!selectable(index)) continue;
+                focus.set(LauncherPage::platforms, platforms.size(), index);
+                return true;
+            }
+        } else {
+            for (std::size_t index = 0; index < platforms.size(); ++index) {
+                if (!selectable(index)) continue;
+                focus.set(LauncherPage::platforms, platforms.size(), index);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    const auto current = std::min(focus.platform, platforms.size() - 1U);
+    for (std::size_t step = 1; step <= platforms.size(); ++step) {
+        const auto index = direction < 0
+            ? (current + platforms.size() - (step % platforms.size())) % platforms.size()
+            : (current + step) % platforms.size();
+        if (!selectable(index)) continue;
+        focus.set(LauncherPage::platforms, platforms.size(), index);
+        return true;
+    }
+    return false;
+}
+
 } // namespace
 
 void LauncherInteractionController::synchronize(const std::vector<ReleaseArchive>& releases) {
@@ -768,21 +811,36 @@ void LauncherInteractionController::synchronize(const std::vector<ReleaseArchive
 
 void LauncherInteractionController::move(const std::vector<ReleaseArchive>& releases, const int direction) {
     const auto page = session.route.page;
-    focus.move(page, card_count_for(session, releases), direction);
+    if (page == LauncherPage::platforms && direction != 0) {
+        static_cast<void>(move_platform_focus_to_selectable(focus, releases, session.route.game,
+            direction, false));
+    } else {
+        focus.move(page, card_count_for(session, releases), direction);
+    }
     if (page == LauncherPage::games) synchronize(releases);
     if (page == LauncherPage::profiles) session.invalidate_custom();
 }
 
 void LauncherInteractionController::first(const std::vector<ReleaseArchive>& releases) {
     const auto page = session.route.page;
-    focus.first(page, card_count_for(session, releases));
+    if (page == LauncherPage::platforms) {
+        static_cast<void>(move_platform_focus_to_selectable(focus, releases, session.route.game,
+            1, true));
+    } else {
+        focus.first(page, card_count_for(session, releases));
+    }
     if (page == LauncherPage::games) synchronize(releases);
     if (page == LauncherPage::profiles) session.invalidate_custom();
 }
 
 void LauncherInteractionController::last(const std::vector<ReleaseArchive>& releases) {
     const auto page = session.route.page;
-    focus.last(page, card_count_for(session, releases));
+    if (page == LauncherPage::platforms) {
+        static_cast<void>(move_platform_focus_to_selectable(focus, releases, session.route.game,
+            -1, true));
+    } else {
+        focus.last(page, card_count_for(session, releases));
+    }
     if (page == LauncherPage::games) synchronize(releases);
     if (page == LauncherPage::profiles) session.invalidate_custom();
 }
