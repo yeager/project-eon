@@ -49,6 +49,17 @@ external-transfer entry sequence, so a completed invocation can be applied at
 most once. Other BDF modes remain unapplied until their address-space meaning
 (including VGA plane selection) is represented explicitly.
 
+## Deuteros opening self-consistency checkpoints
+
+The recovered Deuteros Amiga opening also publishes a value-only checkpoint
+after its native channel VM has composed an Original frame.  It carries the
+two individually admitted ADF SHA-256 identities, native tick and VBL
+counters, the recovered input-gate value, and hashes of the already composed
+indexed and RGBA frame.  The checkpoint is unavailable before its first frame
+and after the title handoff.  It is a native self-consistency/replay aid, not
+an emulator result, a capture receipt, title-stage evidence, or a parity
+claim; it cannot advance timing, inject input, or expose media bytes.
+
 The Deuteros title-stage route now forwards every typed observation from the
 fifth Exec-service return through the controller seed, graphics calls, tail
 wrappers, source table, load service and selector to the `$38a28` copy loop.

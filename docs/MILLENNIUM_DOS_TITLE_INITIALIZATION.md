@@ -592,10 +592,11 @@ The tag admits only the already recovered DOS-vector result, setup-BIOS result,
 far-words, far-word, and far-byte observation forms. Dispatch is a direct
 route to the corresponding state-machine observer; it never creates runtime
 memory, supplies a value, advances a program counter, or converts a failed
-observation into a default result. RuntimeHost also rejects the entire tagged
-boundary during source revocation before dispatch. This makes the public
-SDL/CLI route explicit while retaining every per-observation sequence, address,
-media-hash, and state check below it.
+observation into a default result. The single dispatcher is coordinator-owned;
+the session controller and launcher forward it without reinterpreting the tag.
+RuntimeHost rejects the entire tagged boundary during source revocation before
+dispatch. This makes the public SDL/CLI route explicit while retaining every
+per-observation sequence, address, media-hash, and state check below it.
 
 The terminal `$16e8` RET is now caller-connected without another runtime
 observation. The exact 36 bytes at `$1740..$1763` (file

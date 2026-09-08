@@ -153,6 +153,8 @@ std::optional<DeuterosAmigaOpeningCheckpoint> DeuterosAmigaOpening::checkpoint()
     const auto rgba = rgba_frame();
     if (!rgba) return std::nullopt;
     return DeuterosAmigaOpeningCheckpoint{
+        "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+        "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a",
         ticks_, random_.vblank_counter(), vm_.input_gate(),
         to_hex(sha256(last_frame_->color_indices)), to_hex(sha256(*rgba))};
 }

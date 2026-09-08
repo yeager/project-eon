@@ -22,6 +22,12 @@ namespace eon {
 // only. It is not emulator output, a capture receipt, title-stage evidence or
 // a parity claim. Hashes describe frames already composed from the exact ADFs.
 struct DeuterosAmigaOpeningCheckpoint {
+    // These are the two immutable ADF identities admitted by this native
+    // opening adapter.  Carry them with the value-only checkpoint so a
+    // future replay or capture comparison cannot accidentally join a frame
+    // digest to another disk pair from the same outer release.
+    std::string system_adf_sha256;
+    std::string data_adf_sha256;
     std::uint64_t tick = 0;
     std::uint32_t vblank_counter = 0;
     bool input_gate = false;

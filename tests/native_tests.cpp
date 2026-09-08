@@ -5309,6 +5309,10 @@ int main() {
             const auto first_checkpoint = opening_controller.deuteros_amiga_opening_checkpoint();
             assert(first_checkpoint && first_checkpoint->tick > 0
                 && first_checkpoint->vblank_counter > 0
+                && first_checkpoint->system_adf_sha256
+                    == "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38"
+                && first_checkpoint->data_adf_sha256
+                    == "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a"
                 && first_checkpoint->indexed_frame_sha256.size() == 64
                 && first_checkpoint->rgba_frame_sha256.size() == 64);
             const auto opening_presentation = opening_controller.deuteros_amiga_opening_presentation();

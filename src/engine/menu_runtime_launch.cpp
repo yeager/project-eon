@@ -2,19 +2,6 @@
 
 namespace eon {
 
-namespace {
-
-struct LauncherTitleContinuationDispatcher {
-    LauncherRuntimeController& controller;
-    MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleDosVectorResultObservation o) const { return controller.observe_millennium_dos_title_dos_vector_result(o); }
-    MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleSetupBiosResultObservation o) const { return controller.observe_millennium_dos_title_setup_bios_result(o); }
-    MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleFarWordsObservation o) const { return controller.observe_millennium_dos_title_far_words(o); }
-    MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleFarWordObservation o) const { return controller.observe_millennium_dos_title_far_word(o); }
-    MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleFarByteObservation o) const { return controller.observe_millennium_dos_title_far_byte(o); }
-};
-
-} // namespace
-
 RuntimeCandidateLaunchResult launch_runtime_candidate(const std::optional<LaunchRequest>& candidate,
     const std::vector<ReleaseArchive>& releases, ReleaseRuntimeCoordinator& coordinator) {
     const auto gate = admit_runtime_launch(coordinator, candidate, releases);
@@ -75,7 +62,7 @@ MillenniumDosTitleInitializationObservationResult LauncherRuntimeController::obs
 MillenniumDosTitleInitializationObservationResult LauncherRuntimeController::observe_millennium_dos_title_far_words(MillenniumDosTitleFarWordsObservation o){return coordinator_.observe_millennium_dos_title_far_words(o);}
 MillenniumDosTitleInitializationObservationResult LauncherRuntimeController::observe_millennium_dos_title_far_word(MillenniumDosTitleFarWordObservation o){return coordinator_.observe_millennium_dos_title_far_word(o);}
 MillenniumDosTitleInitializationObservationResult LauncherRuntimeController::observe_millennium_dos_title_far_byte(MillenniumDosTitleFarByteObservation o){return coordinator_.observe_millennium_dos_title_far_byte(o);}
-MillenniumDosTitleInitializationObservationResult LauncherRuntimeController::observe_millennium_dos_title_continuation(MillenniumDosTitleContinuationObservation o){return std::visit(LauncherTitleContinuationDispatcher{*this},o);}
+MillenniumDosTitleInitializationObservationResult LauncherRuntimeController::observe_millennium_dos_title_continuation(MillenniumDosTitleContinuationObservation o){return coordinator_.observe_millennium_dos_title_continuation(std::move(o));}
 MillenniumDosTitleModeTwoDriveResult LauncherRuntimeController::drive_millennium_dos_title_mode_two(MillenniumDosTitleModeTwoDriveRequest r){return coordinator_.drive_millennium_dos_title_mode_two(r);}
 
 MillenniumDosTitleToGameObservationResult LauncherRuntimeController::observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation o){return coordinator_.observe_millennium_dos_title_to_game_call_return(o);}
