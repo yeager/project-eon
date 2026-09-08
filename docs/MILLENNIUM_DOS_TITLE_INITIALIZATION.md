@@ -598,6 +598,13 @@ RuntimeHost rejects the entire tagged boundary during source revocation before
 dispatch. This makes the public SDL/CLI route explicit while retaining every
 per-observation sequence, address, media-hash, and state check below it.
 
+The deterministic session driver also reports a value-only requirement when
+its current stop is one of those typed continuation boundaries. The report
+contains the kind, instruction address and, for a far read, exact source
+segment, offset and element width. It never contains a byte, word, register,
+or BIOS/DOS return result. Stops outside this recovered tagged set, including
+the `library_palette_copy_boundary`, deliberately report no requirement.
+
 The terminal `$16e8` RET is now caller-connected without another runtime
 observation. The exact 36 bytes at `$1740..$1763` (file
 `TITLES.EXE+$1640`, SHA-256

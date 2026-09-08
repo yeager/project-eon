@@ -4467,6 +4467,7 @@ int main() {
     assert(*title_session_drive.title_state
         ==eon::MillenniumDosTitleInitializationState::library_palette_copy_boundary);
     assert(title_session_drive.stop_before_address==0x0fc6);
+    assert(!title_session_drive.external_observation_requirement);
     assert(title_entry&&title_entry->title_initialization);
     assert(title_entry->title_initialization->state
         ==eon::MillenniumDosTitleInitializationState::library_palette_copy_boundary);

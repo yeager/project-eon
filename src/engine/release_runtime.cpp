@@ -1524,6 +1524,47 @@ ReleaseRuntimeCoordinator::drive_millennium_dos_session(
       return millennium_dos_sound_driver_load_->boundary().instruction_address;
     return 0;
   };
+  const auto external_requirement = [&]()
+      -> std::optional<MillenniumDosTitleExternalObservationRequirement> {
+    if (!millennium_dos_title_initialization_)
+      return std::nullopt;
+    const auto checkpoint = millennium_dos_title_initialization_->checkpoint();
+    const auto continuation = checkpoint.continuation_address;
+    const auto vector_state = checkpoint.state
+        == MillenniumDosTitleInitializationState::dos_get_vector_zero_result_boundary
+        || checkpoint.state
+            == MillenniumDosTitleInitializationState::dos_set_vector_zero_result_boundary
+        || checkpoint.state
+            == MillenniumDosTitleInitializationState::dos_get_vector_four_result_boundary
+        || checkpoint.state
+            == MillenniumDosTitleInitializationState::dos_set_vector_four_result_boundary;
+    if (vector_state && continuation == checkpoint.dos_boundary.interrupt_address)
+      return {{MillenniumDosTitleExternalObservationKind::dos_vector_result,
+          continuation, 0, 0, 0}};
+    const auto bios_state = checkpoint.state
+        == MillenniumDosTitleInitializationState::bios_int15_first_result_boundary
+        || checkpoint.state
+            == MillenniumDosTitleInitializationState::bios_int15_second_result_boundary;
+    if (bios_state && continuation == checkpoint.setup_bios_boundary.interrupt_address)
+      return {{MillenniumDosTitleExternalObservationKind::setup_bios_result,
+          continuation, 0, 0, 0}};
+    if (continuation == checkpoint.far_byte_boundary.instruction_address
+        && continuation != 0)
+      return {{MillenniumDosTitleExternalObservationKind::far_byte,
+          continuation, checkpoint.far_byte_boundary.source_segment,
+          checkpoint.far_byte_boundary.source_offset, 1}};
+    if (continuation == checkpoint.far_read_boundary.instruction_address
+        && continuation != 0
+        && (checkpoint.far_read_boundary.word_count == 1
+            || checkpoint.far_read_boundary.word_count == 2))
+      return {{checkpoint.far_read_boundary.word_count == 2
+              ? MillenniumDosTitleExternalObservationKind::far_words
+              : MillenniumDosTitleExternalObservationKind::far_word,
+          continuation, checkpoint.far_read_boundary.source_segment,
+          checkpoint.far_read_boundary.source_offset,
+          checkpoint.far_read_boundary.word_count}};
+    return std::nullopt;
+  };
   result.accepted = true;
   for (; result.steps < step_limit; ++result.steps) {
     std::string local_error;
@@ -1543,6 +1584,7 @@ ReleaseRuntimeCoordinator::drive_millennium_dos_session(
     if (!advanced) {
       result.stop_reason = MillenniumDosSessionStopReason::external_observation;
       result.stop_before_address = boundary();
+      result.external_observation_requirement = external_requirement();
       return result;
     }
     if (!advanced->error.empty()) {
@@ -1558,6 +1600,7 @@ ReleaseRuntimeCoordinator::drive_millennium_dos_session(
     if (after_sequence == before_sequence) {
       result.stop_reason = MillenniumDosSessionStopReason::external_observation;
       result.stop_before_address = boundary();
+      result.external_observation_requirement = external_requirement();
       return result;
     }
   }

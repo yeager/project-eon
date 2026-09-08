@@ -156,12 +156,32 @@ enum class MillenniumDosSessionStopReason {
     failed,
     inactive,
 };
+enum class MillenniumDosTitleExternalObservationKind {
+    dos_vector_result,
+    setup_bios_result,
+    far_words,
+    far_word,
+    far_byte,
+};
+// Value-only description of the next admitted title fact.  It intentionally
+// contains no register, memory, file or device result: diagnostics may name
+// a boundary but cannot turn it into synthetic runtime input.
+struct MillenniumDosTitleExternalObservationRequirement {
+    MillenniumDosTitleExternalObservationKind kind =
+        MillenniumDosTitleExternalObservationKind::far_byte;
+    std::uint16_t instruction_address = 0;
+    std::uint16_t source_segment = 0;
+    std::uint16_t source_offset = 0;
+    std::uint16_t element_width = 0;
+};
 struct MillenniumDosSessionDriveResult {
     bool accepted = false;
     std::uint32_t steps = 0;
     MillenniumDosSessionStopReason stop_reason =
         MillenniumDosSessionStopReason::inactive;
     std::optional<MillenniumDosTitleInitializationState> title_state;
+    std::optional<MillenniumDosTitleExternalObservationRequirement>
+        external_observation_requirement;
     std::uint16_t stop_before_address = 0;
     std::string error;
 };
