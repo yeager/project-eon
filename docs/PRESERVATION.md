@@ -614,6 +614,13 @@ The F10 developer diagnostics page reads this same snapshot; its adapter and
 boundary values are provenance codes, while the visible row labels remain
 translated launcher chrome.
 
+When a currently admitted native driver stops, Modern F10 may additionally
+show a generation-scoped `WAIT=` code. Millennium names only the declared
+kind and instruction/source boundary (never a DOS/BIOS/far-memory value);
+Deuteros names only its exact stop-before address. The copied result is cleared
+on every source revocation or generation change. This readout has no callback
+for submitting an observation and cannot advance a native session.
+
 `NativeSessionController` is the SDL-free lifecycle state machine around that
 coordinator. Its complete vocabulary is `MENU`, `ADMISSION REJECTED`, each
 published Millennium/Deuteros session kind, the explicit DOS and Deuteros
