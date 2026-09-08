@@ -255,6 +255,13 @@ state, or a route for executing original code. `runtime_rejection` is `NONE`
 after a successful admission; otherwise it identifies only the native gate
 class (launch identity, original media, capability, adapter construction,
 input contract, child session, or lifecycle transition). It is not an emulator result or gameplay
+
+`--native-step-diagnostics-json` is deliberately distinct from that static
+report. It opts into exactly one bounded, already-proven native-driver pass,
+then emits only driver identity, step count, stop address and whether the
+result requires an external observation. It exits immediately and cannot feed
+an observation back into the runtime. No SDL, emulator, input, audio, timing,
+or save path is initialized.
 state.
 
 Before it exposes those provenance records, the diagnostics composition

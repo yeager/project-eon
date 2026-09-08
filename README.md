@@ -308,6 +308,13 @@ can inspect an observation. `runtime_rejection` is `NONE` only after the
 native admission succeeds; a non-`NONE` value names a safe gate class rather
 than exposing parser errors, media paths, emulator state, or gameplay state.
 
+`--native-step-diagnostics-json` is an explicit preservation probe. After the
+same admission it runs **one bounded native-driver pass** and emits
+`project-eon.native-step-diagnostics/v1`, including only the selected driver,
+step count, stop address, and whether it needs an external observation. It
+then exits. It never initializes SDL, an emulator, input, audio, timing, or
+saves, and it cannot submit the observation it reports.
+
 Before it reports preservation provenance, this diagnostics path validates
 the compiled declarative maps: recovery rows cover parser profiles one-to-one,
 startup rows cover recognised releases one-to-one, and function rows have
