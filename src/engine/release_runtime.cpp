@@ -1495,9 +1495,14 @@ ReleaseRuntimeCoordinator::drive_millennium_dos_session(
         "Millennium deterministic session drive requires a nonzero step limit";
     return result;
   }
-  if (!active_ || !session_snapshot_ || !millennium_dos_compatibility_runner_) {
+  if (!active_ || !session_snapshot_) {
     result.stop_reason = MillenniumDosSessionStopReason::inactive;
     result.error = "Millennium deterministic session drive requires an active session";
+    return result;
+  }
+  if (!millennium_dos_compatibility_runner_) {
+    result.stop_reason = MillenniumDosSessionStopReason::inactive;
+    result.error = "Millennium deterministic session drive requires admitted sound-driver setup";
     return result;
   }
   const auto is_drivable = [&] {
