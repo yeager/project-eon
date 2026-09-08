@@ -308,9 +308,10 @@ rendering, audio, input, game timing, or save activity:
 
 `--launch-check-json` emits the same result as
 `project-eon.launch-check/v1`, including the exact release SHA-256 and the
-explicit `original` or `modern` presentation choice plus renderer-only
-resolution/aspect settings and a stable media-safe `runtime_rejection` code,
-without creating SDL resources.
+explicit `original` or `modern` presentation choice plus the complete resolved
+renderer-only configuration (resolution, aspect, preset, pacing,
+reconstruction, scaling, scanlines, frame, and reduced motion) and a stable
+media-safe `runtime_rejection` code, without creating SDL resources.
 
 `--runtime-diagnostics-json` follows the same native launch gate, then emits
 `project-eon.runtime-diagnostics/v1`: the active adapter and capabilities,

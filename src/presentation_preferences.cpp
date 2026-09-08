@@ -38,6 +38,47 @@ std::optional<std::size_t> parse_index(const std::string_view value, const std::
     return result;
 }
 
+bool valid_preferences(const PresentationPreferences& preferences) {
+    return preferences.output_resolution_index <= 2 && preferences.aspect_ratio_index <= 2
+        && preferences.modern_preset_index <= 4 && preferences.render_pacing_index <= 2
+        && preferences.pixel_reconstruction_index <= 2
+        && is_canonical_launcher_language(preferences.launcher_language);
+}
+
+void apply_named_preset(PresentationPreferences& preferences, const std::size_t preset) {
+    preferences.modern_preset_index = preset;
+    switch (preset) {
+    case 0: // Clean
+        preferences.pixel_reconstruction_index = 1;
+        preferences.smooth_scaling = true;
+        preferences.scanlines = false;
+        preferences.frame = true;
+        break;
+    case 1: // CRT
+        preferences.pixel_reconstruction_index = 0;
+        preferences.smooth_scaling = false;
+        preferences.scanlines = true;
+        preferences.frame = true;
+        break;
+    case 2: // Cinematic
+        preferences.pixel_reconstruction_index = 1;
+        preferences.smooth_scaling = true;
+        preferences.scanlines = false;
+        preferences.frame = false;
+        break;
+    case 3: // High contrast
+        preferences.pixel_reconstruction_index = 1;
+        preferences.smooth_scaling = false;
+        preferences.scanlines = false;
+        preferences.frame = true;
+        break;
+    case 4: // Custom retains its already explicit component controls.
+        break;
+    default:
+        throw std::invalid_argument("Unknown Project Eon renderer preset");
+    }
+}
+
 } // namespace
 
 std::filesystem::path default_presentation_preferences_path() {
@@ -61,6 +102,27 @@ std::filesystem::path default_presentation_preferences_path() {
     }
     return std::filesystem::path(".config") / "project-eon" / "presentation-v1.ini";
 #endif
+}
+
+std::optional<PresentationPreferences> resolve_presentation_preferences(
+    PresentationPreferences base, const PresentationPreferenceOverrides& overrides) {
+    if (!valid_preferences(base)) return std::nullopt;
+    try {
+        if (overrides.modern_preset_index) apply_named_preset(base, *overrides.modern_preset_index);
+    } catch (const std::invalid_argument&) {
+        return std::nullopt;
+    }
+    const bool individual_override = overrides.render_pacing_index || overrides.pixel_reconstruction_index
+        || overrides.smooth_scaling || overrides.scanlines || overrides.frame || overrides.reduced_motion;
+    if (overrides.render_pacing_index) base.render_pacing_index = *overrides.render_pacing_index;
+    if (overrides.pixel_reconstruction_index) base.pixel_reconstruction_index = *overrides.pixel_reconstruction_index;
+    if (overrides.smooth_scaling) base.smooth_scaling = *overrides.smooth_scaling;
+    if (overrides.scanlines) base.scanlines = *overrides.scanlines;
+    if (overrides.frame) base.frame = *overrides.frame;
+    if (overrides.reduced_motion) base.reduced_motion = *overrides.reduced_motion;
+    if (individual_override) base.modern_preset_index = 4;
+    return valid_preferences(base) ? std::optional<PresentationPreferences>(std::move(base))
+                                   : std::nullopt;
 }
 
 std::optional<PresentationPreferences> load_presentation_preferences(const std::filesystem::path& path) {
@@ -104,10 +166,7 @@ std::optional<PresentationPreferences> load_presentation_preferences(const std::
 
 bool save_presentation_preferences(const std::filesystem::path& path,
     const PresentationPreferences& preferences) {
-    if (preferences.output_resolution_index > 2 || preferences.aspect_ratio_index > 2
-        || preferences.modern_preset_index > 4 || preferences.render_pacing_index > 2
-        || preferences.pixel_reconstruction_index > 2
-        || !is_canonical_launcher_language(preferences.launcher_language)) return false;
+    if (!valid_preferences(preferences)) return false;
     std::error_code error;
     std::filesystem::create_directories(path.parent_path(), error);
     if (error) return false;

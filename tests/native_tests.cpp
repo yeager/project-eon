@@ -2418,19 +2418,41 @@ int main() {
         const auto custom_renderer = eon::parse_command_line(17, custom_renderer_args);
         assert(custom_renderer.request && custom_renderer.request->presentation == eon::Presentation::modern
             && custom_renderer.request->presentation_custom
-            && custom_renderer.request->modern_preset_index == 2
-            && custom_renderer.request->render_pacing_index == 1
-            && custom_renderer.request->pixel_reconstruction_index == 2
-            && custom_renderer.request->smooth_scaling == true
-            && custom_renderer.request->scanlines == false
-            && custom_renderer.request->modern_frame == true
-            && custom_renderer.request->reduced_motion == true);
+            && custom_renderer.request->renderer_overrides.modern_preset_index == 2
+            && custom_renderer.request->renderer_overrides.render_pacing_index == 1
+            && custom_renderer.request->renderer_overrides.pixel_reconstruction_index == 2
+            && custom_renderer.request->renderer_overrides.smooth_scaling == true
+            && custom_renderer.request->renderer_overrides.scanlines == false
+            && custom_renderer.request->renderer_overrides.frame == true
+            && custom_renderer.request->renderer_overrides.reduced_motion == true);
         char* original_renderer_args[] = {program, graphics_preset_option, cinematic};
         assert(!eon::parse_command_line(3, original_renderer_args).request);
         char invalid_on_off[] = "yes";
         char* invalid_scaling_args[] = {program, presentation_option, modern,
             smooth_scaling_option, invalid_on_off};
         assert(!eon::parse_command_line(5, invalid_scaling_args).request);
+        eon::PresentationPreferences saved_renderer_preferences;
+        saved_renderer_preferences.modern_preset_index = 1;
+        saved_renderer_preferences.pixel_reconstruction_index = 0;
+        saved_renderer_preferences.smooth_scaling = false;
+        saved_renderer_preferences.scanlines = true;
+        saved_renderer_preferences.frame = true;
+        eon::PresentationPreferenceOverrides renderer_overrides;
+        renderer_overrides.modern_preset_index = 2;
+        renderer_overrides.pixel_reconstruction_index = 2;
+        renderer_overrides.frame = true;
+        const auto resolved_renderer_preferences = eon::resolve_presentation_preferences(
+            saved_renderer_preferences, renderer_overrides);
+        assert(resolved_renderer_preferences
+            && resolved_renderer_preferences->modern_preset_index == 4
+            && resolved_renderer_preferences->pixel_reconstruction_index == 2
+            && resolved_renderer_preferences->smooth_scaling
+            && !resolved_renderer_preferences->scanlines
+            && resolved_renderer_preferences->frame);
+        eon::PresentationPreferenceOverrides invalid_renderer_overrides;
+        invalid_renderer_overrides.render_pacing_index = 99;
+        assert(!eon::resolve_presentation_preferences(saved_renderer_preferences,
+            invalid_renderer_overrides));
 
         const std::vector<eon::ReleaseArchive> menu_releases{
             {eon::Game::millennium, eon::Platform::dos, "en", {}, {}},

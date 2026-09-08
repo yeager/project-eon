@@ -36,7 +36,7 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
             self.assertIn(option, ROUTE_SOURCE)
         self.assertIn("presentation_custom", ROUTE_HEADER)
         self.assertIn("Modern renderer options require --presentation modern", ROUTE_SOURCE)
-        self.assertIn("apply_modern_graphics_preset(modern_graphics_settings", SOURCE)
+        self.assertIn("resolve_presentation_preferences(", SOURCE)
         self.assertIn("mark_modern_graphics_custom(modern_graphics_settings)", SOURCE)
 
     def test_menu_has_explicit_game_platform_release_and_profile_pages(self) -> None:

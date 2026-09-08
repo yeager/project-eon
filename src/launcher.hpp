@@ -1,6 +1,7 @@
 #pragma once
 
 #include "platform/game_data.hpp"
+#include "presentation_preferences.hpp"
 
 #include <cstddef>
 #include <filesystem>
@@ -135,13 +136,7 @@ struct LaunchRequest {
     // Command-line overrides for the exact renderer controls exposed by the
     // F10 panel.  These use the same bounded preference values as that panel;
     // they do not describe original media, game state, input, or saves.
-    std::optional<std::size_t> modern_preset_index;
-    std::optional<std::size_t> render_pacing_index;
-    std::optional<std::size_t> pixel_reconstruction_index;
-    std::optional<bool> smooth_scaling;
-    std::optional<bool> scanlines;
-    std::optional<bool> modern_frame;
-    std::optional<bool> reduced_motion;
+    PresentationPreferenceOverrides renderer_overrides;
     // `--language` is an explicit launcher-chrome choice.  It must take
     // precedence over a persisted menu preference, while an omitted option
     // can restore the last deliberate menu choice.

@@ -480,6 +480,15 @@ constexpr std::array<const char*, 5> modern_graphics_preset_names{{
 constexpr std::array<const char*, 3> render_pacing_names{{
     "VSYNC (DISPLAY)", "120 FPS (RENDER ONLY)", "UNCAPPED (RENDER ONLY)",
 }};
+constexpr std::array<const char*, 5> modern_graphics_preset_identifiers{{
+    "clean", "crt", "cinematic", "high-contrast", "custom",
+}};
+constexpr std::array<const char*, 3> render_pacing_identifiers{{
+    "vsync", "120fps", "uncapped",
+}};
+constexpr std::array<const char*, 3> pixel_reconstruction_identifiers{{
+    "off", "scale2x", "scale4x",
+}};
 constexpr int original_display_option_count = 2;
 constexpr int modern_graphics_option_count = 11;
 
@@ -1055,7 +1064,8 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
     const std::optional<eon::DeuterosAmigaTitleDependencyChainCheckpoint>& deuteros_title_chain,
     const eon::NativeCodeImageRegistryDiagnostics& code_images,
     const eon::Presentation presentation,
-    const eon::DisplayPreferences& display, const std::string_view aspect_identifier) {
+    const eon::PresentationPreferences& renderer_preferences,
+    const std::string_view aspect_identifier) {
     const auto diagnostics = eon::runtime_diagnostics_for_release(launch.release);
     std::cout << "{\"schema\":\"project-eon.runtime-diagnostics/v1\",\"release\":{\"game\":";
     write_json_string(std::cout, eon::name(launch.release.game));
@@ -1065,9 +1075,24 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
     std::cout << "},\"presentation\":";
     write_json_string(std::cout, presentation == eon::Presentation::original ? "original" : "modern");
     std::cout << ",\"display\":{\"resolution\":";
-    write_json_string(std::cout, std::to_string(display.width) + "x" + std::to_string(display.height));
+    write_json_string(std::cout, std::to_string(output_resolutions.at(
+        renderer_preferences.output_resolution_index).width) + "x" + std::to_string(
+            output_resolutions.at(renderer_preferences.output_resolution_index).height));
     std::cout << ",\"aspect\":"; write_json_string(std::cout, aspect_identifier);
-    std::cout << "},\"runtime_admission\":";
+    std::cout << "},\"renderer\":{\"preset\":";
+    write_json_string(std::cout, modern_graphics_preset_identifiers.at(
+        renderer_preferences.modern_preset_index));
+    std::cout << ",\"pacing\":";
+    write_json_string(std::cout, render_pacing_identifiers.at(renderer_preferences.render_pacing_index));
+    std::cout << ",\"pixel_reconstruction\":";
+    write_json_string(std::cout, pixel_reconstruction_identifiers.at(
+        renderer_preferences.pixel_reconstruction_index));
+    std::cout << ",\"smooth_scaling\":"
+        << (renderer_preferences.smooth_scaling ? "true" : "false")
+        << ",\"scanlines\":" << (renderer_preferences.scanlines ? "true" : "false")
+        << ",\"frame\":" << (renderer_preferences.frame ? "true" : "false")
+        << ",\"reduced_motion\":" << (renderer_preferences.reduced_motion ? "true" : "false")
+        << "},\"runtime_admission\":";
     write_json_string(std::cout, eon::release_runtime_admission_label(admission));
     std::cout << ",\"runtime_rejection\":";
     write_json_string(std::cout, eon::release_runtime_rejection_label(rejection));
@@ -4150,6 +4175,21 @@ int main(int argc, char** argv) {
             request.display.aspect_ratio_index = saved_presentation_preferences->aspect_ratio_index;
         }
     }
+    // Resolve the renderer-only configuration before any CLI diagnostic or
+    // SDL path diverges. Both paths can therefore report the same bounded
+    // settings that an interactive F10 panel would use.
+    auto presentation_preference_base = saved_presentation_preferences.value_or(
+        eon::PresentationPreferences{});
+    presentation_preference_base.output_resolution_index = output_resolution_index_for(request.display);
+    presentation_preference_base.aspect_ratio_index = request.display.aspect_ratio_index;
+    presentation_preference_base.launcher_language = request.language;
+    auto effective_presentation_preferences = eon::resolve_presentation_preferences(
+        presentation_preference_base, request.renderer_overrides);
+    if (!effective_presentation_preferences) {
+        std::cerr << "Resolved Project Eon renderer preferences are invalid.\n";
+        return 2;
+    }
+    if (request.presentation_custom) effective_presentation_preferences->modern_preset_index = 4;
     const bool command_requires_data = request.verify_game || request.inspect_data
         || request.game || request.reference_trace;
     if (command_requires_data && !eon::is_original_data_source(
@@ -4517,8 +4557,8 @@ int main(int argc, char** argv) {
                 runtime.deuteros_atari_bootstrap_checkpoint(),
                 runtime.deuteros_amiga_title_dependency_chain_checkpoint(),
                 runtime.native_code_image_registry_diagnostics(),
-                request.presentation, request.display,
-                display_aspect_identifiers.at(request.display.aspect_ratio_index));
+                request.presentation, *effective_presentation_preferences,
+                display_aspect_identifiers.at(effective_presentation_preferences->aspect_ratio_index));
             return 0;
         }
         if (request.launch_check_json) {
@@ -4539,12 +4579,29 @@ int main(int argc, char** argv) {
             write_json_string(std::cout, request.presentation == eon::Presentation::original
                 ? "original" : "modern");
             std::cout << ",\"display\":{\"resolution\":";
-            write_json_string(std::cout, std::to_string(request.display.width) + "x"
-                + std::to_string(request.display.height));
+            write_json_string(std::cout, std::to_string(output_resolutions.at(
+                effective_presentation_preferences->output_resolution_index).width) + "x"
+                + std::to_string(output_resolutions.at(
+                    effective_presentation_preferences->output_resolution_index).height));
             std::cout << ",\"aspect\":";
             write_json_string(std::cout,
-                display_aspect_identifiers.at(request.display.aspect_ratio_index));
-            std::cout << '}';
+                display_aspect_identifiers.at(effective_presentation_preferences->aspect_ratio_index));
+            std::cout << "},\"renderer\":{\"preset\":";
+            write_json_string(std::cout, modern_graphics_preset_identifiers.at(
+                effective_presentation_preferences->modern_preset_index));
+            std::cout << ",\"pacing\":";
+            write_json_string(std::cout, render_pacing_identifiers.at(
+                effective_presentation_preferences->render_pacing_index));
+            std::cout << ",\"pixel_reconstruction\":";
+            write_json_string(std::cout, pixel_reconstruction_identifiers.at(
+                effective_presentation_preferences->pixel_reconstruction_index));
+            std::cout << ",\"smooth_scaling\":"
+                << (effective_presentation_preferences->smooth_scaling ? "true" : "false")
+                << ",\"scanlines\":"
+                << (effective_presentation_preferences->scanlines ? "true" : "false")
+                << ",\"frame\":" << (effective_presentation_preferences->frame ? "true" : "false")
+                << ",\"reduced_motion\":"
+                << (effective_presentation_preferences->reduced_motion ? "true" : "false") << '}';
             std::cout << ",\"coverage\":";
             const auto diagnostics = eon::runtime_diagnostics_for_release(active_launch()->release);
             write_json_string(std::cout, eon::name(diagnostics.coverage));
@@ -5347,46 +5404,25 @@ int main(int argc, char** argv) {
         start_millennium_title();
     }
     if (screen == Screen::launching && selected == eon::Game::deuteros) start_deuteros();
+    // The CLI and F10 panel consume one resolved Eon preference object.  The
+    // saved/default values are first reconciled with the display request, and
+    // only then do the explicit, bounded CLI overrides win.  This is renderer
+    // state only: Original bytes, input timing, simulation and saves never
+    // cross this configuration boundary.
     ModernGraphicsSettings modern_graphics_settings;
-    modern_graphics_settings.output_resolution_index = output_resolution_index_for(request.display);
-    modern_graphics_settings.aspect_ratio_index = request.display.aspect_ratio_index;
-    if (saved_presentation_preferences) {
-        const auto& saved = *saved_presentation_preferences;
-        if (!request.display_resolution_explicit) {
-            modern_graphics_settings.output_resolution_index = saved.output_resolution_index;
-        }
-        if (!request.display_aspect_explicit) {
-            modern_graphics_settings.aspect_ratio_index = saved.aspect_ratio_index;
-        }
-        apply_modern_graphics_preset(modern_graphics_settings,
-            static_cast<ModernGraphicsPreset>(saved.modern_preset_index));
-        modern_graphics_settings.render_pacing = static_cast<RenderPacing>(saved.render_pacing_index);
-        modern_graphics_settings.pixel_reconstruction = static_cast<PixelReconstruction>(saved.pixel_reconstruction_index);
-        modern_graphics_settings.smooth_scaling = saved.smooth_scaling;
-        modern_graphics_settings.scanlines = saved.scanlines;
-        modern_graphics_settings.frame = saved.frame;
-        modern_graphics_settings.reduced_motion = saved.reduced_motion;
-    }
-    // CLI and F10 operate on the same bounded renderer settings.  Apply these
-    // last so an explicit invocation is deterministic over saved Eon chrome
-    // preferences, while leaving Original's decoded pixels and all game data
-    // outside this host-only configuration path.
-    if (request.modern_preset_index) {
-        apply_modern_graphics_preset(modern_graphics_settings,
-            static_cast<ModernGraphicsPreset>(*request.modern_preset_index));
-    }
-    if (request.render_pacing_index) modern_graphics_settings.render_pacing =
-        static_cast<RenderPacing>(*request.render_pacing_index);
-    if (request.pixel_reconstruction_index) modern_graphics_settings.pixel_reconstruction =
-        static_cast<PixelReconstruction>(*request.pixel_reconstruction_index);
-    if (request.smooth_scaling) modern_graphics_settings.smooth_scaling = *request.smooth_scaling;
-    if (request.scanlines) modern_graphics_settings.scanlines = *request.scanlines;
-    if (request.modern_frame) modern_graphics_settings.frame = *request.modern_frame;
-    if (request.reduced_motion) modern_graphics_settings.reduced_motion = *request.reduced_motion;
-    if (request.presentation_custom || request.render_pacing_index || request.pixel_reconstruction_index
-        || request.smooth_scaling || request.scanlines || request.modern_frame || request.reduced_motion) {
-        mark_modern_graphics_custom(modern_graphics_settings);
-    }
+    modern_graphics_settings.output_resolution_index = effective_presentation_preferences->output_resolution_index;
+    modern_graphics_settings.aspect_ratio_index = effective_presentation_preferences->aspect_ratio_index;
+    modern_graphics_settings.preset = static_cast<ModernGraphicsPreset>(
+        effective_presentation_preferences->modern_preset_index);
+    modern_graphics_settings.render_pacing = static_cast<RenderPacing>(
+        effective_presentation_preferences->render_pacing_index);
+    modern_graphics_settings.pixel_reconstruction = static_cast<PixelReconstruction>(
+        effective_presentation_preferences->pixel_reconstruction_index);
+    modern_graphics_settings.smooth_scaling = effective_presentation_preferences->smooth_scaling;
+    modern_graphics_settings.scanlines = effective_presentation_preferences->scanlines;
+    modern_graphics_settings.frame = effective_presentation_preferences->frame;
+    modern_graphics_settings.reduced_motion = effective_presentation_preferences->reduced_motion;
+    if (request.presentation_custom) mark_modern_graphics_custom(modern_graphics_settings);
     const auto current_modern_runtime_diagnostics = [&] {
         ModernRuntimeDiagnostics diagnostics;
         const auto runtime_view = runtime.snapshot();

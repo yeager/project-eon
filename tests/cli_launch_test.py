@@ -317,6 +317,11 @@ def main() -> int:
         launch_check_payload = json.loads(launch_check_json.stdout)
     except json.JSONDecodeError as error:
         raise SystemExit(f"--launch-check-json did not emit JSON: {error}") from error
+    default_renderer = {
+        "preset": "clean", "pacing": "vsync", "pixel_reconstruction": "scale2x",
+        "smooth_scaling": True, "scanlines": False, "frame": True,
+        "reduced_motion": False,
+    }
     if (launch_check_json.returncode != 0
             or launch_check_payload != {
                 "schema": "project-eon.launch-check/v1",
@@ -326,6 +331,7 @@ def main() -> int:
                 },
                 "presentation": "original",
                 "display": {"resolution": "1280x720", "aspect": "original"},
+                "renderer": default_renderer,
                 "coverage": "RECOVERED STARTUP",
                 "runtime_admission": "READY",
                 "runtime_rejection": "NONE",
@@ -369,6 +375,7 @@ def main() -> int:
             or runtime_diagnostics_payload.get("release") != launch_check_payload["release"]
             or runtime_diagnostics_payload.get("presentation") != "original"
             or runtime_diagnostics_payload.get("display") != launch_check_payload["display"]
+            or runtime_diagnostics_payload.get("renderer") != launch_check_payload["renderer"]
             or runtime_diagnostics_payload.get("runtime_admission")
                 != launch_check_payload["runtime_admission"]
             or runtime_diagnostics_payload.get("runtime_rejection")
@@ -586,6 +593,7 @@ def main() -> int:
             },
             "presentation": "original",
             "display": {"resolution": "1280x720", "aspect": "original"},
+            "renderer": default_renderer,
             "coverage": coverage,
             "runtime_admission": "READY",
             "runtime_rejection": "NONE",
@@ -678,6 +686,33 @@ def main() -> int:
                 f"{presentation} display request changed the recovered launch session:\n"
                 f"{display_launch.stdout}\n{display_launch.stderr}"
             )
+
+    custom_renderer_launch = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "millennium",
+            "--platform", "dos", "--presentation", "custom",
+            "--graphics-preset", "cinematic", "--render-pacing", "120fps",
+            "--pixel-reconstruction", "scale4x", "--smooth-scaling", "on",
+            "--scanlines", "off", "--modern-frame", "on", "--reduced-motion", "on",
+            "--launch-check-json"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    try:
+        custom_renderer_payload = json.loads(custom_renderer_launch.stdout)
+    except json.JSONDecodeError as error:
+        raise SystemExit(f"Custom renderer launch check did not emit JSON: {error}") from error
+    if (custom_renderer_launch.returncode != 0
+            or custom_renderer_payload.get("presentation") != "modern"
+            or custom_renderer_payload.get("renderer") != {
+                "preset": "custom", "pacing": "120fps", "pixel_reconstruction": "scale4x",
+                "smooth_scaling": True, "scanlines": False, "frame": True,
+                "reduced_motion": True,
+            }
+            or custom_renderer_payload.get("release") != launch_check_payload["release"]
+            or custom_renderer_payload.get("runtime_session") != launch_check_payload["runtime_session"]):
+        raise SystemExit(
+            "Custom renderer options did not resolve through the shared launch configuration:\n"
+            f"{custom_renderer_launch.stdout}\n{custom_renderer_launch.stderr}"
+        )
 
     # A hash-language mismatch must fail before an SDL loop, rather than
     # normalize one field from a different recognised DOS release.  No output

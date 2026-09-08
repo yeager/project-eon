@@ -324,26 +324,26 @@ ParseResult parse_command_line(int argc, char** argv) {
             }
             request.display_aspect_explicit = true;
         } else if (argument == "--graphics-preset") {
-            request.modern_preset_index = parse_graphics_preset(value);
-            if (!request.modern_preset_index) return {{}, "Unknown graphics preset: " + std::string(value), false};
+            request.renderer_overrides.modern_preset_index = parse_graphics_preset(value);
+            if (!request.renderer_overrides.modern_preset_index) return {{}, "Unknown graphics preset: " + std::string(value), false};
         } else if (argument == "--render-pacing") {
-            request.render_pacing_index = parse_render_pacing(value);
-            if (!request.render_pacing_index) return {{}, "Unknown render pacing: " + std::string(value), false};
+            request.renderer_overrides.render_pacing_index = parse_render_pacing(value);
+            if (!request.renderer_overrides.render_pacing_index) return {{}, "Unknown render pacing: " + std::string(value), false};
         } else if (argument == "--pixel-reconstruction") {
-            request.pixel_reconstruction_index = parse_pixel_reconstruction(value);
-            if (!request.pixel_reconstruction_index) return {{}, "Unknown pixel reconstruction: " + std::string(value), false};
+            request.renderer_overrides.pixel_reconstruction_index = parse_pixel_reconstruction(value);
+            if (!request.renderer_overrides.pixel_reconstruction_index) return {{}, "Unknown pixel reconstruction: " + std::string(value), false};
         } else if (argument == "--smooth-scaling") {
-            request.smooth_scaling = parse_on_off(value);
-            if (!request.smooth_scaling) return {{}, "--smooth-scaling accepts on or off", false};
+            request.renderer_overrides.smooth_scaling = parse_on_off(value);
+            if (!request.renderer_overrides.smooth_scaling) return {{}, "--smooth-scaling accepts on or off", false};
         } else if (argument == "--scanlines") {
-            request.scanlines = parse_on_off(value);
-            if (!request.scanlines) return {{}, "--scanlines accepts on or off", false};
+            request.renderer_overrides.scanlines = parse_on_off(value);
+            if (!request.renderer_overrides.scanlines) return {{}, "--scanlines accepts on or off", false};
         } else if (argument == "--modern-frame") {
-            request.modern_frame = parse_on_off(value);
-            if (!request.modern_frame) return {{}, "--modern-frame accepts on or off", false};
+            request.renderer_overrides.frame = parse_on_off(value);
+            if (!request.renderer_overrides.frame) return {{}, "--modern-frame accepts on or off", false};
         } else if (argument == "--reduced-motion") {
-            request.reduced_motion = parse_on_off(value);
-            if (!request.reduced_motion) return {{}, "--reduced-motion accepts on or off", false};
+            request.renderer_overrides.reduced_motion = parse_on_off(value);
+            if (!request.renderer_overrides.reduced_motion) return {{}, "--reduced-motion accepts on or off", false};
         } else if (argument == "--language" || argument == "-l") {
             request.language = normalize_language(value);
             if (request.language.empty()) return {{}, "Unknown language: " + std::string(value), false};
@@ -422,9 +422,10 @@ ParseResult parse_command_line(int argc, char** argv) {
     if (request.launch_check && (!request.game || !request.platform)) {
         return {{}, "--launch-check requires both --game and --platform", false};
     }
-    const bool has_modern_renderer_override = request.modern_preset_index || request.render_pacing_index
-        || request.pixel_reconstruction_index || request.smooth_scaling || request.scanlines
-        || request.modern_frame || request.reduced_motion;
+    const auto& renderer = request.renderer_overrides;
+    const bool has_modern_renderer_override = renderer.modern_preset_index || renderer.render_pacing_index
+        || renderer.pixel_reconstruction_index || renderer.smooth_scaling || renderer.scanlines
+        || renderer.frame || renderer.reduced_motion;
     if (has_modern_renderer_override && request.presentation == Presentation::original) {
         return {{}, "Modern renderer options require --presentation modern or --presentation custom", false};
     }

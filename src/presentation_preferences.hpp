@@ -29,6 +29,27 @@ struct PresentationPreferences {
     std::string launcher_language = "en";
 };
 
+// A one-invocation overlay for the same bounded renderer controls stored in
+// PresentationPreferences.  It deliberately has no game-media, input, save,
+// or simulation field.  The CLI produces this value; the SDL/F10 path consumes
+// the resolved preferences rather than maintaining a second configuration.
+struct PresentationPreferenceOverrides {
+    std::optional<std::size_t> modern_preset_index;
+    std::optional<std::size_t> render_pacing_index;
+    std::optional<std::size_t> pixel_reconstruction_index;
+    std::optional<bool> smooth_scaling;
+    std::optional<bool> scanlines;
+    std::optional<bool> frame;
+    std::optional<bool> reduced_motion;
+};
+
+// Applies an explicit renderer overlay after the saved/default preferences.
+// Named presets first select their documented renderer combination; individual
+// controls then win and make the resulting preset Custom. Invalid values are
+// rejected before a renderer can consume them.
+[[nodiscard]] std::optional<PresentationPreferences> resolve_presentation_preferences(
+    PresentationPreferences base, const PresentationPreferenceOverrides& overrides);
+
 [[nodiscard]] std::filesystem::path default_presentation_preferences_path();
 [[nodiscard]] std::optional<PresentationPreferences> load_presentation_preferences(
     const std::filesystem::path& path);
