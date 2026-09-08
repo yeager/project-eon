@@ -2963,6 +2963,12 @@ int main() {
         const eon::ZipArchive valid_zip(zip);
         assert(valid_zip.entries().size() == 1);
         assert(valid_zip.extract(valid_zip.entries().front()).empty());
+        // Inventory from an admitted in-memory archive must use the supplied
+        // logical label only; it has no source path to reopen.
+        const auto memory_inventory = valid_zip.inventory("admitted.zip");
+        assert(memory_inventory.size() == 1);
+        assert(memory_inventory.front().path == "admitted.zip!a");
+        assert(memory_inventory.front().size == 0);
 
         // EOCD comments are part of the original archive byte stream.  A
         // marker-looking sequence inside one is data, not a second archive
