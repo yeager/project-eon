@@ -322,6 +322,15 @@ RuntimeHost::drive_deuteros_amiga_session(const std::uint32_t step_limit) {
         "Runtime source is being revoked"};
     return NativeSessionController::drive_deuteros_amiga_session(step_limit);
 }
+ActiveNativeSessionDriveResult
+RuntimeHost::drive_active_native_session(const std::uint32_t step_limit) {
+    ActiveNativeSessionDriveResult result;
+    if (revoking()) {
+        result.error = "Active native session drive rejected during revocation";
+        return result;
+    }
+    return NativeSessionController::drive_active_native_session(step_limit);
+}
 std::optional<DeuterosAmigaNativeAudioCheckpoint>
 RuntimeHost::deuteros_amiga_native_audio_checkpoint()const{
     if(revoking())return std::nullopt;

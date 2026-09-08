@@ -4080,6 +4080,12 @@ int main() {
         == eon::RuntimeInputDisposition::boundary_reached);
     assert(controlled_dos_runtime.state()
         == eon::NativeSessionState::millennium_dos_sound_driver_boundary);
+    const auto controlled_active_drive =
+        controlled_dos_runtime.drive_active_native_session(1);
+    assert(controlled_active_drive.driver
+            == eon::ActiveNativeSessionDriver::millennium_dos
+        && controlled_active_drive.millennium_dos
+        && !controlled_active_drive.deuteros_amiga);
     controlled_dos_runtime.reset();
     assert(controlled_dos_runtime.state() == eon::NativeSessionState::menu
         && !controlled_dos_runtime.active());
@@ -4094,6 +4100,12 @@ int main() {
     assert(!controlled_dos_runtime.tick_deuteros_amiga_opening());
     assert(!controlled_dos_runtime.drive_deuteros_amiga_main_stage().accepted);
     assert(!controlled_dos_runtime.drive_deuteros_amiga_session().accepted);
+    const auto returning_active_drive =
+        controlled_dos_runtime.drive_active_native_session();
+    assert(returning_active_drive.driver
+            == eon::ActiveNativeSessionDriver::unavailable
+        && !returning_active_drive.accepted()
+        && !returning_active_drive.error.empty());
     assert(!controlled_dos_runtime.launch_direct(controlled_dos_request, releases).accepted());
     assert(controlled_dos_runtime.state() == eon::NativeSessionState::returning_to_menu);
     controlled_dos_runtime.finish_return_to_menu();

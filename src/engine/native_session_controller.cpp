@@ -490,6 +490,13 @@ NativeSessionController::drive_deuteros_amiga_session(const std::uint32_t step_l
     return result;
 }
 
+ActiveNativeSessionDriveResult
+NativeSessionController::drive_active_native_session(const std::uint32_t step_limit) {
+    auto result = runtime_.drive_active_native_session(step_limit);
+    synchronize_after_runtime_change();
+    return result;
+}
+
 bool NativeSessionController::start_deuteros_amiga_opening_scheduler(
     const std::uint64_t initial_tick) {
     if (state_ != NativeSessionState::deuteros_amiga_opening) return false;

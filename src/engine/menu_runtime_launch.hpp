@@ -175,6 +175,8 @@ public:
     drive_deuteros_amiga_main_stage(std::uint32_t step_limit = 64);
     [[nodiscard]] DeuterosAmigaSessionDriveResult
     drive_deuteros_amiga_session(std::uint32_t step_limit = 64);
+    [[nodiscard]] ActiveNativeSessionDriveResult
+    drive_active_native_session(std::uint32_t step_limit = 64);
     [[nodiscard]] std::optional<std::vector<float>>
     render_deuteros_amiga_opening_audio(std::size_t frames);
     [[nodiscard]] std::optional<DeuterosAmigaNativeAudioCheckpoint> deuteros_amiga_native_audio_checkpoint() const;

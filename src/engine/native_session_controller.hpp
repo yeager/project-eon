@@ -188,6 +188,8 @@ public:
     drive_deuteros_amiga_main_stage(std::uint32_t step_limit = 64);
     [[nodiscard]] DeuterosAmigaSessionDriveResult
     drive_deuteros_amiga_session(std::uint32_t step_limit = 64);
+    [[nodiscard]] ActiveNativeSessionDriveResult
+    drive_active_native_session(std::uint32_t step_limit = 64);
     // The 50 Hz opening scheduler is native-session lifecycle state. SDL
     // supplies a monotonic timestamp, receives only immutable VM events, and
     // cannot retain a runner that outlives a source switch or teardown.

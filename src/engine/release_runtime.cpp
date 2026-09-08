@@ -3330,6 +3330,34 @@ ReleaseRuntimeCoordinator::drive_deuteros_amiga_session(const std::uint32_t step
     }
 }
 
+ActiveNativeSessionDriveResult
+ReleaseRuntimeCoordinator::drive_active_native_session(const std::uint32_t step_limit) {
+    ActiveNativeSessionDriveResult result;
+    if (!session_snapshot_) {
+        result.error = "Active native session drive requires an admitted session";
+        return result;
+    }
+
+    switch (session_snapshot_->kind) {
+    case RuntimeSessionKind::millennium_dos_sound_driver_boundary:
+    case RuntimeSessionKind::millennium_dos_title:
+        result.driver = ActiveNativeSessionDriver::millennium_dos;
+        result.millennium_dos = drive_millennium_dos_session(step_limit);
+        return result;
+
+    case RuntimeSessionKind::deuteros_amiga_title_stage:
+    case RuntimeSessionKind::deuteros_amiga_title_program_entry:
+        result.driver = ActiveNativeSessionDriver::deuteros_amiga;
+        result.deuteros_amiga = drive_deuteros_amiga_session(step_limit);
+        return result;
+
+    default:
+        result.error = "Active native session has no deterministic driver: "
+            + std::string(runtime_session_kind_label(session_snapshot_->kind));
+        return result;
+    }
+}
+
 std::optional<std::vector<float>>
 ReleaseRuntimeCoordinator::render_deuteros_amiga_opening_audio(const std::size_t frames) {
     if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_opening

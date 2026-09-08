@@ -166,6 +166,28 @@ struct MillenniumDosSessionDriveResult {
     std::string error;
 };
 
+// A tagged envelope around one already-existing deterministic session driver.
+// It deliberately does not normalize platform stop reasons, addresses, or
+// checkpoints: callers must inspect the populated platform result.  The
+// envelope simply lets a front end advance the currently active native
+// session without guessing which recovered platform driver owns it.
+enum class ActiveNativeSessionDriver {
+    unavailable,
+    millennium_dos,
+    deuteros_amiga,
+};
+struct ActiveNativeSessionDriveResult {
+    ActiveNativeSessionDriver driver = ActiveNativeSessionDriver::unavailable;
+    std::optional<MillenniumDosSessionDriveResult> millennium_dos;
+    std::optional<DeuterosAmigaSessionDriveResult> deuteros_amiga;
+    std::string error;
+
+    [[nodiscard]] bool accepted() const {
+        return millennium_dos ? millennium_dos->accepted
+             : deuteros_amiga ? deuteros_amiga->accepted : false;
+    }
+};
+
 // Media-safe facts for the exact Deuteros Atari ST bootstrap boundary.  The
 // retained prefixes are only local copy/entry results; this DTO cannot select
 // a protected state, issue Floprd, or cross the unrecovered XBIOS boundary.
@@ -802,6 +824,8 @@ public:
     drive_deuteros_amiga_main_stage(std::uint32_t step_limit = 64);
     [[nodiscard]] DeuterosAmigaSessionDriveResult
     drive_deuteros_amiga_session(std::uint32_t step_limit = 64);
+    [[nodiscard]] ActiveNativeSessionDriveResult
+    drive_active_native_session(std::uint32_t step_limit = 64);
     // Audio is mixed within the same owner as the recovered VM and is
     // therefore revoked at title handoff/reset. SDL receives only a transient
     // float buffer; it never borrows the opening sound bank or its PCM bytes.
