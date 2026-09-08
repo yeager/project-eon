@@ -57,6 +57,7 @@ class DirectMediaBoundaryTests(unittest.TestCase):
         callback_body = source[callback:source.index("if (!millennium_dos_sound_driver_load_", callback)]
         self.assertIn("admit_native_code_image(*active_media_", callback_body)
         self.assertNotIn("VerifiedReleaseMedia::open(active_->release)", callback_body)
+        self.assertNotIn("VerifiedReleaseMedia::open(active_->release)", source)
 
 
 if __name__ == "__main__":
