@@ -1361,7 +1361,13 @@ void report_native_step_diagnostics_json(const eon::ResolvedLaunchRequest& launc
     if (result.millennium_dos) {
         const auto& drive = *result.millennium_dos;
         std::cout << "{\"accepted\":" << (drive.accepted ? "true" : "false")
-            << ",\"steps\":" << drive.steps << ",\"stop_before\":";
+            << ",\"steps\":" << drive.steps << ",\"stop_reason\":";
+        const char* stop_reason = drive.stop_reason == eon::MillenniumDosSessionStopReason::external_observation
+            ? "external-observation" : drive.stop_reason == eon::MillenniumDosSessionStopReason::step_limit
+            ? "step-limit" : drive.stop_reason == eon::MillenniumDosSessionStopReason::failed
+            ? "failed" : "inactive";
+        write_json_string(std::cout, stop_reason);
+        std::cout << ",\"stop_before\":";
         write_json_string(std::cout, "$" + [&] { std::ostringstream value; value << std::hex
             << drive.stop_before_address; return value.str(); }());
         std::cout << ",\"waiting_for_external_observation\":"
@@ -1369,7 +1375,13 @@ void report_native_step_diagnostics_json(const eon::ResolvedLaunchRequest& launc
     } else if (result.deuteros_amiga) {
         const auto& drive = *result.deuteros_amiga;
         std::cout << "{\"accepted\":" << (drive.accepted ? "true" : "false")
-            << ",\"steps\":" << drive.steps << ",\"stop_before\":";
+            << ",\"steps\":" << drive.steps << ",\"stop_reason\":";
+        const char* stop_reason = drive.stop_reason == eon::DeuterosAmigaSessionStopReason::external_observation
+            ? "external-observation" : drive.stop_reason == eon::DeuterosAmigaSessionStopReason::step_limit
+            ? "step-limit" : drive.stop_reason == eon::DeuterosAmigaSessionStopReason::failed
+            ? "failed" : "inactive";
+        write_json_string(std::cout, stop_reason);
+        std::cout << ",\"stop_before\":";
         write_json_string(std::cout, "$" + [&] { std::ostringstream value; value << std::hex
             << drive.stop_before_address; return value.str(); }());
         std::cout << ",\"waiting_for_external_observation\":"
