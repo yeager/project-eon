@@ -492,6 +492,18 @@ NativeSessionController::drive_deuteros_amiga_session(const std::uint32_t step_l
 
 ActiveNativeSessionDriveResult
 NativeSessionController::drive_active_native_session(const std::uint32_t step_limit) {
+    switch (state_) {
+    case NativeSessionState::millennium_dos_sound_driver_boundary:
+    case NativeSessionState::millennium_dos_title:
+    case NativeSessionState::deuteros_amiga_title_stage_boundary:
+    case NativeSessionState::deuteros_amiga_title_program_entry:
+        break;
+    default: {
+        ActiveNativeSessionDriveResult result;
+        result.error = "Active native session drive has no deterministic driver in this lifecycle state";
+        return result;
+    }
+    }
     auto result = runtime_.drive_active_native_session(step_limit);
     synchronize_after_runtime_change();
     return result;

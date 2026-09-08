@@ -5064,6 +5064,13 @@ the bounded bytes are exactly words `$2a16/$0000`. The runtime rejects every
 other offset, hash, size, or absent leaf before mutation. The existing exact
 pointer suffix then atomically stores normalized `$32a1:$0006` and stops at
 the next external record word `$32a1:$001e`.
+The same bounded alias also proves the complete five-field header at
+`TITLE.LIB+$2a16`: words `$0010/$0017/$0000` and bytes `$02/$02`. All fields
+are validated before the automatic pair transition mutates state. The shared
+hash-bound descriptor instructions atomically store dimensions `$0017/$0010`,
+product/adjustment `$0170`, incremented byte `$03`, and mode byte `$02`, then
+select output `$4000:$02e0`. Execution stops before the first payload byte at
+`$1419`, source `$32a1:$0022`; payload data and codec meaning remain external.
 caller effects commit in the same transaction as the owned-memory loop. The
 private result and all presentation semantics remain explicit boundaries.
 Its raw value is retained as AX without assigning width or graphics meaning,

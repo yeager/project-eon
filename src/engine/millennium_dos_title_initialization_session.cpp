@@ -1259,8 +1259,41 @@ void MillenniumDosTitleInitializationSession::consume_next_descriptor_pair(
         throw std::runtime_error("Unproven Millennium DOS TITLE.LIB descriptor alias");
     const auto word=[&](const std::size_t offset){return static_cast<std::uint16_t>(
         title_library[offset]|static_cast<std::uint16_t>(title_library[offset+1])<<8U);};
+    // The normalized pair points to $32a1:$0006, physical TITLE.LIB+$2a16.
+    // Admit its complete fixed header before performing either the pair or
+    // header mutation so a changed leaf cannot leave a partial transition.
+    constexpr std::size_t record_offset=0x2a16;
+    if(record_offset+0x1dU>title_library.size()
+        ||word(record_offset+0x18)!=0x0010
+        ||word(record_offset+0x16)!=0x0017
+        ||word(record_offset+0x14)!=0x0000
+        ||title_library[record_offset+1]!=0x02
+        ||title_library[record_offset+4]!=0x02)
+        throw std::runtime_error("Contradictory Millennium DOS next descriptor header");
+    const auto output_offset=latest_local_word(memory_effects_,0x010c);
+    const auto output_segment=latest_local_word(memory_effects_,0x010e);
+    if(!output_offset||!output_segment)
+        throw std::runtime_error("Missing Millennium DOS next descriptor output pointer");
     observe_far_words({sequence,0x13aa,far_read_boundary_.source_segment,
         far_read_boundary_.source_offset,word(file_offset),word(file_offset+2)});
+    if(state_!=MillenniumDosTitleInitializationState::post_descriptor_next_loop_record_word_read_boundary)
+        throw std::runtime_error("Detached Millennium DOS next descriptor header continuation");
+    memory_effects_.insert(memory_effects_.end(),{
+        {0x13d3,0x1357,MillenniumDosTitleInitializationEffectWidth::word,0x0017},
+        {0x13d8,0x1359,MillenniumDosTitleInitializationEffectWidth::word,0x0010},
+        {0x13de,0x133b,MillenniumDosTitleInitializationEffectWidth::word,0x0170},
+        {0x13e5,0x138a,MillenniumDosTitleInitializationEffectWidth::word,0x0170},
+        {0x13ee,0x1389,MillenniumDosTitleInitializationEffectWidth::byte,0x03},
+        {0x13f5,0x1388,MillenniumDosTitleInitializationEffectWidth::byte,0x02}});
+    effects_.insert(effects_.end(),{{0x13cd,"AX",0x0010},{0x13d0,"CX",0x0017},
+        {0x13dc,"AX",0x0170},{0x13e2,"AX",0x0170},
+        {0x13e9,"AL",0x02},{0x13ec,"AL",0x03},{0x13f2,"AL",0x02},
+        {0x1407,"DI",*output_offset},{0x1407,"ES",*output_segment},
+        {0x140c,"AH",0},{0x140e,"SI",0x0022},{0x140e,"DS",0x32a1},
+        {0x1417,"CL",0}});
+    far_byte_boundary_={0x1419,0x32a1,0x0022,*output_offset};
+    continuation_address_=0x1419;
+    state_=MillenniumDosTitleInitializationState::post_descriptor_next_loop_payload_byte_boundary;
 }
 
 void MillenniumDosTitleInitializationSession::execute_video_hook_setup(
