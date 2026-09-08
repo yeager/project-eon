@@ -3225,6 +3225,7 @@ RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(
             return RuntimeInputDisposition::ignored;
         }
         if (!active_) return RuntimeInputDisposition::rejected;
+        const auto title_snapshot = *session_snapshot_;
         session_snapshot_ = make_runtime_session_snapshot(*active_,
             RuntimeSessionKind::millennium_dos_sound_driver_boundary);
         // The old route made the visible launcher wait for a test-only host
@@ -3237,6 +3238,7 @@ RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(
                 compatibility_process_code_segment,
                 MillenniumDosSoundDriverCodeSegmentProvenance::eon_compatibility_process)
                 .accepted) {
+            session_snapshot_ = title_snapshot;
             return RuntimeInputDisposition::rejected;
         }
         return RuntimeInputDisposition::boundary_reached;
