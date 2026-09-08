@@ -10278,6 +10278,41 @@ int main() {
                 valid_title_handoff_trace.substr(0, valid_title_handoff_trace.size() - 1));
         assert(!malformed_title_handoff_admission.session
             && !malformed_title_handoff_admission.error.empty());
+
+        const auto title_handoff_events_path = std::filesystem::path(std::getenv("EON_TEST_TMPDIR"))
+            / "title-handoff-runtime-gate-events.eontrace";
+        {
+            std::ofstream output(title_handoff_events_path, std::ios::binary | std::ios::trunc);
+            output << valid_title_handoff_trace;
+        }
+        eon::ReferenceTrace title_handoff_runtime_trace;
+        title_handoff_runtime_trace.source_release = *english_dos;
+        title_handoff_runtime_trace.events_path = title_handoff_events_path;
+        title_handoff_runtime_trace.adapter = "millennium-dos-en-title-handoff-v3";
+        title_handoff_runtime_trace.event_count = 8;
+        title_handoff_runtime_trace.event_size = valid_title_handoff_trace.size();
+        title_handoff_runtime_trace.event_sha256 = eon::to_hex(eon::sha256(
+            std::vector<std::uint8_t>(valid_title_handoff_trace.begin(),
+                valid_title_handoff_trace.end())));
+        eon::ReleaseRuntimeCoordinator title_handoff_trace_gate;
+        const auto title_handoff_runtime_admission =
+            title_handoff_trace_gate.admit_millennium_dos_title_handoff_reference_trace(
+                title_handoff_runtime_trace);
+        assert(title_handoff_runtime_admission.session
+            && title_handoff_runtime_admission.error.empty()
+            && title_handoff_runtime_admission.session->state()
+                == eon::MillenniumDosTitleToGameState::game_exec_boundary);
+        assert(!title_handoff_trace_gate.active() && !title_handoff_trace_gate.session_snapshot()
+            && !title_handoff_trace_gate.native_runtime_memory_checkpoint());
+        {
+            std::ofstream output(title_handoff_events_path, std::ios::binary | std::ios::trunc);
+            output << valid_title_handoff_trace << "# modified\n";
+        }
+        const auto changed_title_handoff_admission =
+            title_handoff_trace_gate.admit_millennium_dos_title_handoff_reference_trace(
+                title_handoff_runtime_trace);
+        assert(!changed_title_handoff_admission.session
+            && changed_title_handoff_admission.error == "Reference trace events changed after validation");
     }
     {
         constexpr std::string_view valid_gx_trace =

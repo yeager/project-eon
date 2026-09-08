@@ -2255,6 +2255,58 @@ ReleaseRuntimeCoordinator::admit_millennium_dos_gx_startup_reference_trace(
     }
 }
 
+MillenniumDosTitleHandoffTraceAdmission
+ReleaseRuntimeCoordinator::admit_millennium_dos_title_handoff_reference_trace(
+    const ReferenceTrace& trace) const {
+    MillenniumDosTitleHandoffTraceAdmission rejected;
+    constexpr std::string_view mill_sha256 =
+        "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e";
+    constexpr std::string_view titles_sha256 =
+        "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
+    const auto* descriptor = reference_trace_adapter_descriptor(trace.adapter);
+    if (!descriptor
+        || descriptor->runtime_policy != ReferenceTraceRuntimePolicy::transient_title_handoff
+        || trace.source_release.game != descriptor->game
+        || trace.source_release.platform != descriptor->platform
+        || trace.source_release.language != descriptor->language
+        || trace.source_release.sha256 != descriptor->release_sha256) {
+        rejected.error = "Reference trace does not name the exact Millennium DOS title-handoff boundary";
+        return rejected;
+    }
+    std::error_code filesystem_error;
+    const auto event_size = std::filesystem::file_size(trace.events_path, filesystem_error);
+    if (filesystem_error || event_size != trace.event_size
+        || event_size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
+        rejected.error = "Reference trace events changed after validation";
+        return rejected;
+    }
+    try {
+        std::ifstream stream(trace.events_path, std::ios::binary);
+        std::string events(static_cast<std::size_t>(event_size), '\0');
+        stream.read(events.data(), static_cast<std::streamsize>(events.size()));
+        if (!stream || static_cast<std::size_t>(stream.gcount()) != events.size()) {
+            rejected.error = "Reference trace events changed after validation";
+            return rejected;
+        }
+        const std::vector<std::uint8_t> event_bytes(events.begin(), events.end());
+        if (to_hex(sha256(event_bytes)) != trace.event_sha256) {
+            rejected.error = "Reference trace events changed after validation";
+            return rejected;
+        }
+        const auto media = VerifiedReleaseMedia::open(trace.source_release);
+        const auto launcher = media.extract(mill_sha256);
+        const auto titles = media.extract(titles_sha256);
+        if (!launcher || !titles) {
+            rejected.error = "Verified title-handoff leaves are unavailable";
+            return rejected;
+        }
+        return admit_millennium_dos_title_handoff_trace(*launcher, *titles, events);
+    } catch (...) {
+        rejected.error = "Unable to admit the Millennium DOS title-handoff boundary";
+        return rejected;
+    }
+}
+
 MillenniumDosGxActiveTraceAdmission
 ReleaseRuntimeCoordinator::admit_active_millennium_dos_gx_startup_reference_trace(
     const ReferenceTrace& trace) {

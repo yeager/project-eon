@@ -4189,11 +4189,11 @@ int main(int argc, char** argv) {
                 << error.what() << '\n';
             return 6;
         }
-        // The registry is the only policy authority. Its sole non-diagnostic
-        // policy remains the narrow GX exception: the release-runtime gate
-        // reopens and rehashes source/events before a call-free overlay is
-        // constructed, and never launches or publishes a session.
+        // The registry is the only policy authority. Each transient boundary
+        // reopens and rehashes its source/events before a finite native state
+        // machine is constructed; neither policy launches a game runtime.
         std::optional<eon::MillenniumDosGxStartupTraceAdmission> gx_admission;
+        std::optional<eon::MillenniumDosTitleHandoffTraceAdmission> title_handoff_admission;
         const auto* trace_descriptor = eon::reference_trace_adapter_descriptor(trace.adapter);
         if (!trace.adapter.empty() && trace_descriptor == nullptr) {
             std::cerr << "Reference trace rejected: adapter is absent from the policy registry\n";
@@ -4205,6 +4205,16 @@ int main(int argc, char** argv) {
             gx_admission.emplace(trace_gate.admit_millennium_dos_gx_startup_reference_trace(trace));
             if (!gx_admission->session) {
                 std::cerr << "Reference trace rejected: " << gx_admission->error << '\n';
+                return 6;
+            }
+        }
+        if (trace_descriptor && trace_descriptor->runtime_policy
+                == eon::ReferenceTraceRuntimePolicy::transient_title_handoff) {
+            const eon::ReleaseRuntimeCoordinator trace_gate;
+            title_handoff_admission.emplace(
+                trace_gate.admit_millennium_dos_title_handoff_reference_trace(trace));
+            if (!title_handoff_admission->session) {
+                std::cerr << "Reference trace rejected: " << title_handoff_admission->error << '\n';
                 return 6;
             }
         }
@@ -4616,7 +4626,7 @@ int main(int argc, char** argv) {
     for (auto& card : profile_cards) card.texture = load_card(renderer, card.filename);
     // Project Eon branding is original launcher artwork, never recovered game
     // pixels. It remains a renderer-only menu resource in every profile.
-    SDL_Texture* project_eon_logo_texture = load_branding_texture(renderer, "project-eon-logo-v1.png");
+    SDL_Texture* project_eon_logo_texture = load_branding_texture(renderer, "project-eon-logo-v2.png");
     SDL_AudioStream* deuteros_audio_stream = nullptr;
     std::optional<std::uint64_t> deuteros_native_audio_generation;
     SDL_Texture* preview_texture = nullptr;

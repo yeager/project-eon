@@ -149,7 +149,9 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         self.assertEqual(sum("ReferenceTraceRuntimePolicy::transient_call_free_gx_startup" in row
                              for row in registry_rows), 1)
         self.assertEqual(sum("ReferenceTraceRuntimePolicy::diagnostics_only" in row
-                             for row in registry_rows), 8)
+                             for row in registry_rows), 7)
+        self.assertEqual(sum("ReferenceTraceRuntimePolicy::transient_title_handoff" in row
+                             for row in registry_rows), 1)
         self.assertEqual(sum(
             "ReferenceTraceRuntimePolicy::immutable_deuteros_title_display_checkpoint" in row
             for row in registry_rows), 2)

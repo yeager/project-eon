@@ -14,6 +14,7 @@ namespace eon {
 enum class ReferenceTraceRuntimePolicy {
     diagnostics_only,
     transient_call_free_gx_startup,
+    transient_title_handoff,
     immutable_deuteros_title_display_checkpoint,
 };
 

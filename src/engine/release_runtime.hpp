@@ -23,6 +23,7 @@
 #include "engine/millennium_dos_title_child_compatibility_service.hpp"
 #include "engine/millennium_dos_title_initialization_session.hpp"
 #include "engine/millennium_dos_gx_startup_trace_admission.hpp"
+#include "engine/millennium_dos_title_handoff_trace_admission.hpp"
 #include "engine/millennium_dos_native_process_admission.hpp"
 #include "engine/millennium_dos_owned_function_diagnostics.hpp"
 #include "engine/millennium_dos_external_transfer_admission.hpp"
@@ -1124,6 +1125,11 @@ public:
     // diagnostics-only.
     [[nodiscard]] MillenniumDosGxStartupTraceAdmission
     admit_millennium_dos_gx_startup_reference_trace(const ReferenceTrace& trace) const;
+    // A transient, hash-checked replay of the finite title-to-game handoff.
+    // It returns only a native terminal EXEC boundary and never publishes a
+    // runtime or child process.
+    [[nodiscard]] MillenniumDosTitleHandoffTraceAdmission
+    admit_millennium_dos_title_handoff_reference_trace(const ReferenceTrace& trace) const;
     // Active-session transition: unlike the diagnostics-only helper above,
     // this requires the exact English DOS adapter to have independently
     // reached its title-handoff boundary before it owns the admitted suffix.
