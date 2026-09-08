@@ -1281,14 +1281,19 @@ int main(int argc, char** argv) {
             &&rejected_stream.checkpoint().memory_effects.size()==stream_before.memory_effects.size());
         const auto driven_stream=owned_mode_two.drive_next_descriptor_stream_from_title_library(
             title_library,{automatic_pair.last_sequence+1,2});
-        assert(driven_stream.accepted && driven_stream.stopped_at_boundary
-            &&driven_stream.observation_count==1);
+        if(!driven_stream.accepted)
+            throw std::runtime_error(driven_stream.error);
+        assert(driven_stream.accepted && !driven_stream.stopped_at_boundary
+            &&driven_stream.observation_count==2);
         const auto after_stream=owned_mode_two.checkpoint();
         assert(after_stream.state
-            ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_mode_two_word_boundary
-            &&after_stream.continuation_address==0x144a
-            &&after_stream.far_read_boundary.source_segment==0x32a1
-            &&after_stream.far_read_boundary.source_offset==0x0024);
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_nibble_byte_boundary
+            &&after_stream.continuation_address==0x1428
+            &&after_stream.far_byte_boundary.source_segment==0x32a1
+            &&after_stream.far_byte_boundary.source_offset==0x0025
+            &&after_stream.memory_effects.back().instruction_address==0x146b
+            &&after_stream.memory_effects.back().offset==0x02e5
+            &&after_stream.memory_effects.back().value==0x01);
 
         auto missing_mode_two=compact_owned_mode_two;
         eon::NativeRuntimeMemory missing_memory;

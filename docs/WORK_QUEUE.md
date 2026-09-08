@@ -75,9 +75,10 @@ and its two admitted lookup bytes now execute both decoder nibbles, producing
 `$00/$01` at `$4000:$02e1..$02e2`. A bounded transactional stream driver then
 admits only the canonical relocated second-descriptor byte at `$32a1:$0024`
 (`TITLE.LIB+$2a34 == $1e`); it rejects physical-equivalent aliases and
-commits no partial transition on a contradictory leaf. That byte takes the
-verified mode-two branch and stops at typed word boundary `$144a`, source
-`$32a1:$0024`. Do not infer codec semantics or generalize this relocation into
+commits no partial transition on a contradictory leaf. That byte and its
+canonical little-endian word `$201e` now execute `$144a..$146b`, writing the
+three repeated bytes at `$4000:$02e3..$02e5` and returning to `$1428`, source
+`$32a1:$0025`. Do not infer codec semantics or generalize this relocation into
 DOS-memory aliasing.
 The other-value branch owns the second descriptor and first two raw words plus
 their product and subtraction; continue at `$13e9`, source `$3c80:$0001`. Do not assign

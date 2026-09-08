@@ -295,8 +295,9 @@ struct MillenniumDosTitleModeTwoDriveResult {
 };
 
 // A deliberately narrow owned-media continuation for the second descriptor's
-// byte decoder.  This is not a DOS address-space resolver: it only admits the
-// one relocated TITLE.LIB view established by the verified descriptor pair.
+// byte and word decoder.  This is not a DOS address-space resolver: it only
+// admits the canonical relocated TITLE.LIB view established by the verified
+// descriptor pair.
 struct MillenniumDosTitleDescriptorStreamDriveRequest {
     std::uint64_t first_sequence = 0;
     std::size_t maximum_observations = 0;
