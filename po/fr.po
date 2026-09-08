@@ -658,3 +658,12 @@ msgstr "Oui, merci"
 
 msgid "No, thanks"
 msgstr "Non, merci"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "FLUX STATIQUE : {documents} DOCUMENTS / {ranges} PLAGES / {candidates} CANDIDATS"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "CIBLES DU TITRE : 640={small}; 1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "CIBLES D'OUVERTURE : 640={small}/{total}; 1280={large}/{total}"

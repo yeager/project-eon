@@ -696,3 +696,12 @@ msgstr "Tak, proszę"
 
 msgid "No, thanks"
 msgstr "Nie, dziękuję"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "PRZEPŁYW STATYCZNY: {documents} DOKUMENTY / {ranges} ZAKRESY / {candidates} KANDYDACI"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "CELE TYTUŁU: 640={small}; 1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "CELE OTWARCIA: 640={small}/{total}; 1280={large}/{total}"

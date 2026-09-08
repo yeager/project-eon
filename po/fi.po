@@ -657,3 +657,12 @@ msgstr "Kyllä, kiitos"
 
 msgid "No, thanks"
 msgstr "Ei, kiitos"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "STAATTINEN VIRTA: {documents} ASIAKIRJAA / {ranges} ALUETTA / {candidates} EHDOKASTA"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "OTSIKON KOHTEET: 640={small}; 1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "ALOITUKSEN KOHTEET: 640={small}/{total}; 1280={large}/{total}"

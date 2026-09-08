@@ -2840,6 +2840,18 @@ int main() {
 
         const auto swedish_catalog = eon::Translator::from_language("sv");
         assert(swedish_catalog.translate("ENTER / CLICK: START") == "ENTER / KLICKA: STARTA");
+        assert(eon::format_translation(swedish_catalog,
+            "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES",
+            {{"{documents}", "2"}, {"{ranges}", "9"}, {"{candidates}", "4"}})
+            == "STATISKT FLÖDE: 2 DOKUMENT / 9 INTERVALL / 4 KANDIDATER");
+        // Templates may repeat a display-only value; formatting must replace
+        // every occurrence without interpreting the value as source text.
+        assert(eon::format_translation(swedish_catalog,
+            "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}",
+            {{"{small}", "1"}, {"{large}", "82"}, {"{total}", "82"}})
+            == "ÖPPNINGSMÅL: 640=1/82; 1280=82/82");
+        assert(eon::format_translation(swedish_catalog, "Missing {value}",
+            {{"{value}", "kept"}}) == "Missing kept");
         const auto portuguese_catalog = eon::Translator::from_language("pt_BR.UTF-8");
         assert(!portuguese_catalog.empty());
         const auto chinese_catalog = eon::Translator::from_language("zh_CN.UTF-8");

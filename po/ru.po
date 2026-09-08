@@ -685,3 +685,12 @@ msgstr "Да, пожалуйста"
 
 msgid "No, thanks"
 msgstr "Нет, спасибо"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "СТАТИЧЕСКИЙ ПОТОК: {documents} ДОКУМЕНТОВ / {ranges} ДИАПАЗОНОВ / {candidates} КАНДИДАТОВ"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "ЦЕЛИ ТИТУЛА: 640={small}; 1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "ЦЕЛИ ВСТУПЛЕНИЯ: 640={small}/{total}; 1280={large}/{total}"

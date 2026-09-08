@@ -696,3 +696,12 @@ msgstr "Ja, graag"
 
 msgid "No, thanks"
 msgstr "Nee, bedankt"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "STATISCHE STROOM: {documents} DOCUMENTEN / {ranges} BEREIKEN / {candidates} KANDIDATEN"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "TITELDOELEN: 640={small}; 1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "OPENINGDOELEN: 640={small}/{total}; 1280={large}/{total}"

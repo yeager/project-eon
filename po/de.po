@@ -658,3 +658,12 @@ msgstr "Ja, bitte"
 
 msgid "No, thanks"
 msgstr "Nein, danke"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "STATISCHER ABLAUF: {documents} DOKUMENTE / {ranges} BEREICHE / {candidates} KANDIDATEN"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "TITELZIELE: 640={small}; 1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "ÖFFNUNGSZIELE: 640={small}/{total}; 1280={large}/{total}"

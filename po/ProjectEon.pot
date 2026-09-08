@@ -905,3 +905,13 @@ msgstr ""
 #: src/game_text_localization.cpp
 msgid "No, thanks"
 msgstr ""
+
+#: src/main.cpp
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr ""
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr ""
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr ""

@@ -696,3 +696,12 @@ msgstr "Evet, lütfen"
 
 msgid "No, thanks"
 msgstr "Hayır, teşekkürler"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "STATİK AKIŞ: {documents} BELGE / {ranges} ARALIK / {candidates} ADAY"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "BAŞLIK HEDEFLERİ: 640={small}; 1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "AÇILIŞ HEDEFLERİ: 640={small}/{total}; 1280={large}/{total}"

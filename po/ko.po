@@ -685,3 +685,12 @@ msgstr "예"
 
 msgid "No, thanks"
 msgstr "아니요"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "정적 흐름: 문서 {documents} / 범위 {ranges} / 후보 {candidates}"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "타이틀 대상: 640={small}; 1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "오프닝 대상: 640={small}/{total}; 1280={large}/{total}"

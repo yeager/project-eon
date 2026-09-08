@@ -685,3 +685,12 @@ msgstr "Так, будь ласка"
 
 msgid "No, thanks"
 msgstr "Ні, дякую"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "СТАТИЧНИЙ ПОТІК: {documents} ДОКУМЕНТІВ / {ranges} ДІАПАЗОНІВ / {candidates} КАНДИДАТІВ"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "ЦІЛІ ТИТУЛУ: 640={small}; 1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "ЦІЛІ ВСТУПУ: 640={small}/{total}; 1280={large}/{total}"

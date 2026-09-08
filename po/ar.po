@@ -646,3 +646,12 @@ msgstr "نعم، من فضلك"
 
 msgid "No, thanks"
 msgstr "لا، شكرًا"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "التدفق الثابت: {documents} مستندات / {ranges} نطاقات / {candidates} مرشحات"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "أهداف العنوان: 640={small}; 1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "أهداف الافتتاحية: 640={small}/{total}; 1280={large}/{total}"

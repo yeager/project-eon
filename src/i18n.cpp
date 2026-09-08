@@ -194,4 +194,18 @@ bool Translator::has_translation(const std::string_view message) const {
     return messages_.contains(std::string(message));
 }
 
+std::string format_translation(const Translator& translator, const std::string_view message,
+    const std::initializer_list<std::pair<std::string_view, std::string_view>> replacements) {
+    std::string formatted(translator.translate(message));
+    for (const auto& [placeholder, value] : replacements) {
+        if (placeholder.empty()) continue;
+        std::size_t offset = 0;
+        while ((offset = formatted.find(placeholder, offset)) != std::string::npos) {
+            formatted.replace(offset, placeholder.size(), value);
+            offset += value.size();
+        }
+    }
+    return formatted;
+}
+
 } // namespace eon

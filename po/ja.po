@@ -646,3 +646,12 @@ msgstr "はい"
 
 msgid "No, thanks"
 msgstr "いいえ"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "静的フロー: 文書 {documents} / 範囲 {ranges} / 候補 {candidates}"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "タイトル対象: 640={small}; 1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "オープニング対象: 640={small}/{total}; 1280={large}/{total}"

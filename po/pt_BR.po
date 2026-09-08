@@ -697,3 +697,12 @@ msgstr "Sim, por favor"
 
 msgid "No, thanks"
 msgstr "Não, obrigado"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "FLUXO ESTÁTICO: {documents} DOCUMENTOS / {ranges} FAIXAS / {candidates} CANDIDATOS"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "ALVOS DO TÍTULO: 640={small}; 1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "ALVOS DA ABERTURA: 640={small}/{total}; 1280={large}/{total}"

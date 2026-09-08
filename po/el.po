@@ -657,3 +657,12 @@ msgstr "Ναι, παρακαλώ"
 
 msgid "No, thanks"
 msgstr "Όχι, ευχαριστώ"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "ΣΤΑΤΙΚΗ ΡΟΗ: {documents} ΕΓΓΡΑΦΑ / {ranges} ΕΥΡΗ / {candidates} ΥΠΟΨΗΦΙΑ"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "ΣΤΟΧΟΙ ΤΙΤΛΟΥ: 640={small}; 1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "ΣΤΟΧΟΙ ΕΙΣΑΓΩΓΗΣ: 640={small}/{total}; 1280={large}/{total}"

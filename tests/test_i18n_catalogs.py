@@ -309,6 +309,9 @@ class CatalogTests(unittest.TestCase):
             "DIAGNOSTICS ARE READ-ONLY; ORIGINAL DATA IS NOT MODIFIED.",
             "SCALE4X (MEMORY ONLY)", "NOT LOADED", "OPEN",
             "CODE IMAGES", "EXCLUDED", "ACTIVE",
+            "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES",
+            "TITLE TARGETS: 640={small}; 1280={large}",
+            "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}",
         }
         # English is the source-language default; every other shipped
         # catalogue must translate this complete Eon-owned diagnostics page.
@@ -317,6 +320,32 @@ class CatalogTests(unittest.TestCase):
                 catalog = po_messages(PO / f"{language}.po")
                 self.assertTrue(all(catalog.get(label) not in {None, "", label}
                                     for label in labels))
+
+    def test_diagnostic_templates_keep_their_named_placeholder_contract(self) -> None:
+        """Translations may reorder values, but cannot silently drop them."""
+        templates = {
+            "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES",
+            "TITLE TARGETS: 640={small}; 1280={large}",
+            "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}",
+            "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}",
+            "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}",
+        }
+        source_catalog = po_messages(PO / "ProjectEon.pot")
+        placeholder_pattern = re.compile(r"\\{[a-z]+\\}")
+        for template in templates:
+            self.assertIn(template, source_catalog)
+            expected = sorted(placeholder_pattern.findall(template))
+            for language in sorted(CATALOGS):
+                with self.subTest(language=language, template=template):
+                    translated = po_messages(PO / f"{language}.po")[template]
+                    self.assertEqual(sorted(placeholder_pattern.findall(translated)), expected)
+
+    def test_dynamic_diagnostic_summaries_use_the_catalog_formatter(self) -> None:
+        """Counts and target reports must not reconstruct English UI at runtime."""
+        self.assertIn("eon::format_translation(translator,", LAUNCHER_SOURCE)
+        self.assertIn("STATIC FLOW: {documents} DOCUMENTS", LAUNCHER_SOURCE)
+        self.assertIn("TITLE TARGETS: 640={small}; 1280={large}", LAUNCHER_SOURCE)
+        self.assertIn("OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}", LAUNCHER_SOURCE)
 
     def test_common_title_pack_and_page_labels_are_localized(self) -> None:
         """These launcher labels are not original-game strings or asset names."""

@@ -697,3 +697,12 @@ msgstr "Ja, tack"
 
 msgid "No, thanks"
 msgstr "Nej, tack"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "STATISKT FLÖDE: {documents} DOKUMENT / {ranges} INTERVALL / {candidates} KANDIDATER"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "TITELMÅL: 640={small}; 1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "ÖPPNINGSMÅL: 640={small}/{total}; 1280={large}/{total}"

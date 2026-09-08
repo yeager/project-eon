@@ -646,3 +646,12 @@ msgstr "हाँ, कृपया"
 
 msgid "No, thanks"
 msgstr "नहीं, धन्यवाद"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "स्थिर प्रवाह: {documents} दस्तावेज़ / {ranges} सीमाएँ / {candidates} उम्मीदवार"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "शीर्षक लक्ष्य: 640={small}; 1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "आरंभ लक्ष्य: 640={small}/{total}; 1280={large}/{total}"

@@ -685,3 +685,12 @@ msgstr "是，请继续"
 
 msgid "No, thanks"
 msgstr "不，谢谢"
+
+msgid "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES"
+msgstr "静态流程：{documents} 个文档 / {ranges} 个范围 / {candidates} 个候选项"
+
+msgid "TITLE TARGETS: 640={small}; 1280={large}"
+msgstr "标题目标：640={small}；1280={large}"
+
+msgid "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}"
+msgstr "开场目标：640={small}/{total}；1280={large}/{total}"

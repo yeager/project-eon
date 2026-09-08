@@ -611,26 +611,29 @@ struct ModernRuntimeDiagnostics {
     // These counts came from metadata already admitted by the launcher. They
     // are never decoded instructions, addresses, sidecar names, paths, or
     // original-media bytes.
-    return "DOCUMENTS=" + std::to_string(static_control_flow->document_count)
-        + " / RANGES=" + std::to_string(static_control_flow->range_count)
-        + " / CANDIDATES=" + std::to_string(static_control_flow->candidate_count);
+    return eon::format_translation(translator,
+        "STATIC FLOW: {documents} DOCUMENTS / {ranges} RANGES / {candidates} CANDIDATES",
+        {{"{documents}", std::to_string(static_control_flow->document_count)},
+         {"{ranges}", std::to_string(static_control_flow->range_count)},
+         {"{candidates}", std::to_string(static_control_flow->candidate_count)}});
 }
 
 [[nodiscard]] std::string modern_pack_renderer_targets_summary(
-    const eon::ModernAssetPackRendererTargets& targets) {
+    const eon::ModernAssetPackRendererTargets& targets, const eon::Translator& translator) {
     std::vector<std::string> entries;
     if (targets.millennium_dos_title_640x400 || targets.millennium_dos_title_1280x800) {
-        entries.push_back("TITLE 640/1280="
-            + std::string(targets.millennium_dos_title_640x400 ? "Y" : "N")
-            + "/" + std::string(targets.millennium_dos_title_1280x800 ? "Y" : "N"));
+        entries.push_back(eon::format_translation(translator,
+            "TITLE TARGETS: 640={small}; 1280={large}",
+            {{"{small}", targets.millennium_dos_title_640x400 ? "Y" : "N"},
+             {"{large}", targets.millennium_dos_title_1280x800 ? "Y" : "N"}}));
     }
     if (targets.deuteros_amiga_opening_640x400_frames
         || targets.deuteros_amiga_opening_1280x800_frames) {
-        entries.push_back("OPENING 640/1280="
-            + std::to_string(targets.deuteros_amiga_opening_640x400_frames) + "/"
-            + std::to_string(eon::deuteros_amiga_held_opening_frame_count) + ","
-            + std::to_string(targets.deuteros_amiga_opening_1280x800_frames) + "/"
-            + std::to_string(eon::deuteros_amiga_held_opening_frame_count));
+        entries.push_back(eon::format_translation(translator,
+            "OPENING TARGETS: 640={small}/{total}; 1280={large}/{total}",
+            {{"{small}", std::to_string(targets.deuteros_amiga_opening_640x400_frames)},
+             {"{large}", std::to_string(targets.deuteros_amiga_opening_1280x800_frames)},
+             {"{total}", std::to_string(eon::deuteros_amiga_held_opening_frame_count)}}));
     }
     if (entries.empty()) return "—";
     std::string summary = entries.front();
@@ -4764,30 +4767,22 @@ int main(int argc, char** argv) {
         return tr("DATA SOURCE: UNSUPPORTED");
     };
     const auto scanner_rejections_text = [&](const eon::ReleaseScanSnapshot& snapshot) {
-        auto text = tr("REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}");
-        const auto replace = [&](const std::string_view token, const std::size_t value) {
-            const auto position = text.find(token);
-            if (position != std::string::npos) text.replace(position, token.size(), std::to_string(value));
-        };
-        replace("{size}", snapshot.report.size_rejected_candidates);
-        replace("{hash}", snapshot.report.hash_rejected_candidates);
-        replace("{unreadable}", snapshot.report.unreadable_candidates);
-        replace("{links}", snapshot.report.symlink_rejected_entries);
-        return text;
+        return eon::format_translation(translator,
+            "REJECTIONS: SIZE {size}; HASH {hash}; UNREADABLE {unreadable}; LINKS {links}",
+            {{"{size}", std::to_string(snapshot.report.size_rejected_candidates)},
+             {"{hash}", std::to_string(snapshot.report.hash_rejected_candidates)},
+             {"{unreadable}", std::to_string(snapshot.report.unreadable_candidates)},
+             {"{links}", std::to_string(snapshot.report.symlink_rejected_entries)}});
     };
     const auto scanner_admission_text = [&](const eon::ReleaseScanSnapshot& snapshot) {
         // This is the same aggregate-only recognition result that the CLI
         // inspection route reports. It deliberately exposes neither a
         // candidate filename nor a source path, so a rejected archive never
         // turns into a UI-visible alternate-media catalogue.
-        auto text = tr("VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}");
-        const auto replace = [&](const std::string_view token, const std::size_t value) {
-            const auto position = text.find(token);
-            if (position != std::string::npos) text.replace(position, token.size(), std::to_string(value));
-        };
-        replace("{unique}", snapshot.unique_release_count);
-        replace("{duplicates}", snapshot.report.duplicate_occurrences);
-        return text;
+        return eon::format_translation(translator,
+            "VERIFIED RELEASES: {unique}; DUPLICATES: {duplicates}",
+            {{"{unique}", std::to_string(snapshot.unique_release_count)},
+             {"{duplicates}", std::to_string(snapshot.report.duplicate_occurrences)}});
     };
     // It intentionally has room for the longest shipped translation, rather
     // than treating English text width as the launcher layout contract.
@@ -5290,7 +5285,7 @@ int main(int argc, char** argv) {
             diagnostics.modern_pack += " / " + truncated_diagnostic_value(selected_modern_pack_preflight->pack_id)
                 + " / " + truncated_diagnostic_value(selected_modern_pack_preflight->provenance);
             diagnostics.modern_pack_targets = modern_pack_renderer_targets_summary(
-                selected_modern_pack_preflight->targets);
+                selected_modern_pack_preflight->targets, translator);
         }
         // In the menu, show the currently focused game/platform/release
         // choice; after launch, show the fixed session selection. This is a
