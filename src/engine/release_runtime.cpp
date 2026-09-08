@@ -851,8 +851,9 @@ ReleaseRuntimeCoordinator::millennium_dos_startup_input() const {
 }
 
 MillenniumDosSoundDriverLoadObservationResult
-ReleaseRuntimeCoordinator::observe_millennium_dos_sound_driver_load(
-    const MillenniumDosSoundDriverLoadObservation observation) {
+ReleaseRuntimeCoordinator::begin_millennium_dos_sound_driver_load(
+    const std::uint64_t sequence, const std::uint16_t code_segment,
+    const MillenniumDosSoundDriverCodeSegmentProvenance provenance) {
     MillenniumDosSoundDriverLoadObservationResult rejected;
     if (!active_ || !session_snapshot_ || !millennium_dos_ || !native_runtime_memory_
         || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_sound_driver_boundary
@@ -860,18 +861,16 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_sound_driver_load(
         rejected.error = "Sound-driver loading requires the active selected-driver boundary";
         return rejected;
     }
-    const auto sequence = std::visit([](const auto& value) { return value.sequence; }, observation);
     if (sequence == 0 || sequence <= millennium_dos_sound_driver_load_last_sequence_) {
         rejected.error = "Sound-driver observation sequence is stale or duplicated";
         return rejected;
     }
-    if (const auto* entry = std::get_if<MillenniumDosSoundDriverLoadEntryObservation>(&observation)) {
-        if (sequence != 1 || millennium_dos_sound_driver_load_
-            || !millennium_dos_sound_selection_->selected_driver_is_admitted()) {
-            rejected.error = "Sound-driver entry was already admitted or has no exact selected leaf";
-            return rejected;
-        }
-        try {
+    if (sequence != 1 || code_segment == 0 || millennium_dos_sound_driver_load_
+        || !millennium_dos_sound_selection_->selected_driver_is_admitted()) {
+        rejected.error = "Sound-driver entry was already admitted or has no exact selected leaf";
+        return rejected;
+    }
+    try {
             const auto selected = millennium_dos_sound_selection_->selected_driver();
             if (!selected) throw std::runtime_error("Selected driver identity is unavailable");
             if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
@@ -882,7 +881,7 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_sound_driver_load(
             const char selected_character = selected->kind
                     == MillenniumDosSoundDriverKind::sound_blaster ? '1' : '2';
             MillenniumDosSoundDriverLoadSession next(launcher.view->bytes, *driver,
-                selected_character, entry->code_segment);
+                selected_character, code_segment);
             NativeRuntimeEffectBatch batch{
                 "millennium-dos-sound-driver-" + std::to_string(millennium_dos_sound_driver_load_generation_ + 1) + "-selection",
                 true, {}};
@@ -897,10 +896,31 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_sound_driver_load(
             *native_runtime_memory_=std::move(memory);
             ++millennium_dos_sound_driver_load_generation_;
             millennium_dos_sound_driver_load_last_sequence_=sequence;
+            millennium_dos_sound_driver_code_segment_provenance_=provenance;
             millennium_dos_compatibility_runner_.emplace(
-                millennium_dos_sound_driver_load_generation_, sequence, entry->code_segment);
+                millennium_dos_sound_driver_load_generation_, sequence, code_segment);
             return {true,{}};
-        } catch(const std::exception& e) { rejected.error=e.what(); return rejected; }
+    } catch(const std::exception& e) { rejected.error=e.what(); return rejected; }
+}
+
+MillenniumDosSoundDriverLoadObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_sound_driver_load(
+    const MillenniumDosSoundDriverLoadObservation observation) {
+    if (const auto* entry = std::get_if<MillenniumDosSoundDriverLoadEntryObservation>(&observation)) {
+        return begin_millennium_dos_sound_driver_load(entry->sequence, entry->code_segment,
+            MillenniumDosSoundDriverCodeSegmentProvenance::external_observation);
+    }
+    MillenniumDosSoundDriverLoadObservationResult rejected;
+    if (!active_ || !session_snapshot_ || !millennium_dos_ || !native_runtime_memory_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_sound_driver_boundary
+        || !millennium_dos_sound_selection_) {
+        rejected.error = "Sound-driver loading requires the active selected-driver boundary";
+        return rejected;
+    }
+    const auto sequence = std::visit([](const auto& value) { return value.sequence; }, observation);
+    if (sequence == 0 || sequence <= millennium_dos_sound_driver_load_last_sequence_) {
+        rejected.error = "Sound-driver observation sequence is stale or duplicated";
+        return rejected;
     }
     if (!millennium_dos_sound_driver_load_ || !millennium_dos_compatibility_runner_) {
         rejected.error="Sound-driver entry observation is required first"; return rejected;
@@ -973,7 +993,9 @@ std::optional<MillenniumDosSoundDriverLoadCheckpoint>
 ReleaseRuntimeCoordinator::millennium_dos_sound_driver_load_checkpoint()const{
     if(!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_sound_driver_boundary||!millennium_dos_sound_driver_load_)return std::nullopt;
     const auto&s=*millennium_dos_sound_driver_load_;
-    return MillenniumDosSoundDriverLoadCheckpoint{millennium_dos_sound_driver_load_generation_,millennium_dos_sound_driver_load_last_sequence_,s.state(),s.boundary(),s.driver().kind,s.memory_effects().size(),s.file_handle(),s.load_segment(),s.runtime_word_effects(),s.runtime_byte_effects()};
+    const auto code_segment = millennium_dos_compatibility_runner_
+        ? millennium_dos_compatibility_runner_->code_segment() : std::uint16_t{0};
+    return MillenniumDosSoundDriverLoadCheckpoint{millennium_dos_sound_driver_load_generation_,millennium_dos_sound_driver_load_last_sequence_,s.state(),s.boundary(),s.driver().kind,s.memory_effects().size(),s.file_handle(),s.load_segment(),code_segment,millennium_dos_sound_driver_code_segment_provenance_,s.runtime_word_effects(),s.runtime_byte_effects()};
 }
 
 std::optional<MillenniumDosCompatibilityRunnerCheckpoint>
@@ -3205,6 +3227,18 @@ RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(
         if (!active_) return RuntimeInputDisposition::rejected;
         session_snapshot_ = make_runtime_session_snapshot(*active_,
             RuntimeSessionKind::millennium_dos_sound_driver_boundary);
+        // The old route made the visible launcher wait for a test-only host
+        // injection of an arbitrary child CS.  This is now explicitly Eon's
+        // compatibility-process address, not an original allocation or a
+        // captured value.  Subsequent DOS, vector, stack and title results
+        // remain typed external boundaries and are never synthesized here.
+        constexpr std::uint16_t compatibility_process_code_segment = 0xe000;
+        if (!begin_millennium_dos_sound_driver_load(1,
+                compatibility_process_code_segment,
+                MillenniumDosSoundDriverCodeSegmentProvenance::eon_compatibility_process)
+                .accepted) {
+            return RuntimeInputDisposition::rejected;
+        }
         return RuntimeInputDisposition::boundary_reached;
     }
     if (!millennium_dos_title_) return RuntimeInputDisposition::rejected;

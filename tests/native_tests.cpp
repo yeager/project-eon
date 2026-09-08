@@ -4225,16 +4225,17 @@ int main() {
         && sound_driver_snapshot.input_contract == eon::RuntimeInputContract::none);
     assert(eon::runtime_session_kind_label(sound_driver_snapshot.kind)
         == "MILLENNIUM DOS SOUND DRIVER BOUNDARY");
-    assert(admitted_dos_runtime.observe_millennium_dos_sound_driver_load(
-        eon::MillenniumDosSoundDriverLoadEntryObservation{1,0x2222}).accepted);
     auto sound_load_checkpoint=admitted_dos_runtime.millennium_dos_sound_driver_load_checkpoint();
     assert(sound_load_checkpoint && sound_load_checkpoint->generation==1
         && sound_load_checkpoint->state==eon::MillenniumDosSoundDriverLoadState::awaiting_open_result
-        && sound_load_checkpoint->driver_kind==eon::MillenniumDosSoundDriverKind::sound_blaster);
+        && sound_load_checkpoint->driver_kind==eon::MillenniumDosSoundDriverKind::sound_blaster
+        && sound_load_checkpoint->code_segment==0xe000
+        && sound_load_checkpoint->code_segment_provenance
+            == eon::MillenniumDosSoundDriverCodeSegmentProvenance::eon_compatibility_process);
     auto compatibility_stop=admitted_dos_runtime.tick_millennium_dos_compatibility_runner();
     assert(compatibility_stop && compatibility_stop->generation==1
         && compatibility_stop->last_sequence==8
-        && compatibility_stop->code_segment==0x2222
+        && compatibility_stop->code_segment==0xe000
         && compatibility_stop->external_result_required
         && !compatibility_stop->title_exec_requested
         && compatibility_stop->boundary.instruction_address==0x032f

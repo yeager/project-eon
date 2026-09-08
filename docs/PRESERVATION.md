@@ -4693,6 +4693,16 @@ still-unobserved driver-initialisation return boundary. That makes the first
 `MILL.COM` menu semantics recoverable without presenting a fabricated sound
 result or a false continuation into `TITLES.EXE`.
 
+For the two hash-admitted external driver choices, the normal launcher route
+now creates one explicitly **Eon-owned compatibility process** at DOS code
+segment `$e000`. This segment is labelled `eon_compatibility_process` in the
+runtime checkpoint; it is neither an observed original process allocation nor
+parity evidence. Its only purpose is to let the native engine begin the
+already proven deterministic loader route after the user's literal original
+selection. The first original-dependent result (the parent stack value at
+`$032f/$05f7`) remains an external boundary, as do later DOS/BIOS/vector,
+private-interrupt, rendering, audio, and gameplay results.
+
 The selected external-driver continuation is now a separate hash-admitted
 native recomp session. `MillenniumDosSoundDriverLoadSession` requires the
 complete English `MILL.COM` identity and either exact `SSBL.DRV` or

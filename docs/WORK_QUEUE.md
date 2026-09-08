@@ -215,6 +215,14 @@ It still requires an observed result before executing either selected title
 callee beyond that request; no DOS PSP, parent `EXEC` return, display result,
 or game-state transition is inferred.
 
+The normal SDL and CLI startup route no longer depends on a test-only injected
+child code segment after the original sound selection. Choice `1` or `2`
+creates a labelled Eon compatibility process at `$e000`, then lets the
+existing deterministic loader consume only the selected hash-admitted leaf.
+That segment is engine-owned state, never an original allocation claim; the
+first original-dependent parent-stack result and every later ABI boundary
+remain blocked pending evidence.
+
 The clean Deuteros Amiga path now accumulates the zero/zero route and all three
 remaining deterministic non-negative `$1fbe6` planar routes into a sparse
 320x200 four-plane Original surface. SDL presents only pixels whose four source

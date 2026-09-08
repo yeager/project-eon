@@ -365,6 +365,13 @@ struct MillenniumDosStartupInputSnapshot {
     bool title_handed_off = false;
 };
 struct MillenniumDosSoundDriverLoadEntryObservation { std::uint64_t sequence=0; std::uint16_t code_segment=0; };
+// A code segment is either an externally observed original-process value or
+// an address reserved by Eon's native compatibility process.  The latter is
+// deliberately never evidence about an original DOS allocation.
+enum class MillenniumDosSoundDriverCodeSegmentProvenance {
+    external_observation,
+    eon_compatibility_process,
+};
 struct MillenniumDosSoundDriverOpenObservation { std::uint64_t sequence=0; std::uint16_t instruction=0; bool carry=false; std::uint16_t ax=0; };
 struct MillenniumDosSoundDriverSeekObservation { std::uint64_t sequence=0; std::uint16_t instruction=0; bool carry=false; std::uint16_t bx=0,ax=0,dx=0; };
 struct MillenniumDosSoundDriverAllocationObservation { std::uint64_t sequence=0; std::uint16_t instruction=0; bool carry=false; std::uint16_t ax=0; };
@@ -381,7 +388,9 @@ struct MillenniumDosSoundDriverLoadCheckpoint {
     MillenniumDosSoundDriverLoadBoundary boundary;
     MillenniumDosSoundDriverKind driver_kind=MillenniumDosSoundDriverKind::sound_blaster;
     std::size_t admitted_driver_byte_count=0;
-    std::uint16_t file_handle=0,load_segment=0;
+    std::uint16_t file_handle=0,load_segment=0,code_segment=0;
+    MillenniumDosSoundDriverCodeSegmentProvenance code_segment_provenance=
+        MillenniumDosSoundDriverCodeSegmentProvenance::external_observation;
     std::vector<MillenniumDosSoundDriverRuntimeWordEffect> runtime_word_effects;
     std::vector<MillenniumDosSoundDriverRuntimeByteEffect> runtime_byte_effects;
 };
@@ -1257,6 +1266,10 @@ public:
     millennium_dos_owned_function_diagnostics() const;
 
 private:
+    [[nodiscard]] MillenniumDosSoundDriverLoadObservationResult
+    begin_millennium_dos_sound_driver_load(std::uint64_t sequence,
+        std::uint16_t code_segment,
+        MillenniumDosSoundDriverCodeSegmentProvenance provenance);
     [[nodiscard]] bool advance_millennium_dos_title_local_continuation(
         std::string& error);
     // Central exact-media gate for the recovered title successor. Future
@@ -1275,6 +1288,9 @@ private:
     std::optional<MillenniumDosSoundDriverLoadSession> millennium_dos_sound_driver_load_;
     std::uint64_t millennium_dos_sound_driver_load_generation_=0;
     std::uint64_t millennium_dos_sound_driver_load_last_sequence_=0;
+    MillenniumDosSoundDriverCodeSegmentProvenance
+        millennium_dos_sound_driver_code_segment_provenance_=
+            MillenniumDosSoundDriverCodeSegmentProvenance::external_observation;
     std::optional<MillenniumDosCompatibilityRunner> millennium_dos_compatibility_runner_;
     std::optional<MillenniumDosTitleExecEntrySession> millennium_dos_title_exec_entry_;
     std::optional<MillenniumDosTitleChildCompatibilityService>

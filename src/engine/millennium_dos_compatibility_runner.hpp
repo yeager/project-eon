@@ -54,6 +54,7 @@ public:
   [[nodiscard]] MillenniumDosParagraphAllocationResult
   allocate_title_paragraphs(std::uint32_t paragraph_count);
   [[nodiscard]] std::uint16_t remaining_title_paragraphs() const;
+  [[nodiscard]] std::uint16_t code_segment() const { return code_segment_; }
   [[nodiscard]] MillenniumDosCompatibilityRunnerCheckpoint
   checkpoint(MillenniumDosSoundDriverLoadState state,
              MillenniumDosSoundDriverLoadBoundary boundary,
