@@ -1373,7 +1373,8 @@ void report_native_step_diagnostics_json(const eon::ResolvedLaunchRequest& launc
         write_json_string(std::cout, "$" + [&] { std::ostringstream value; value << std::hex
             << drive.stop_before_address; return value.str(); }());
         std::cout << ",\"waiting_for_external_observation\":"
-            << (drive.external_observation_requirement ? "true" : "false") << '}';
+            << (drive.stop_reason == eon::MillenniumDosSessionStopReason::external_observation
+                ? "true" : "false") << '}';
     } else if (result.deuteros_amiga) {
         const auto& drive = *result.deuteros_amiga;
         if (reported_error.empty()) reported_error = drive.error;
@@ -4483,6 +4484,17 @@ int main(int argc, char** argv) {
             return 4;
         }
         if (request.native_step_diagnostics_json) {
+            // This accepts only the literal, already recovered sound-choice
+            // byte. It is deliberately unavailable to normal diagnostics and
+            // cannot feed an ABI, register, memory, timing, or title result.
+            if (request.native_startup_input) {
+                const auto disposition = runtime.observe_input(
+                    eon::RuntimeInputObservation::ascii(*request.native_startup_input));
+                if (disposition != eon::RuntimeInputDisposition::boundary_reached) {
+                    std::cerr << "Native startup input did not reach an admitted boundary.\n";
+                    return 4;
+                }
+            }
             const auto result = runtime.drive_active_native_session();
             report_native_step_diagnostics_json(*active_launch(), result);
             return result.accepted() ? 0 : 4;

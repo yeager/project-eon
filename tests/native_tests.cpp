@@ -2285,6 +2285,17 @@ int main() {
             native_step_diagnostics_json_args);
         assert(native_step_diagnostics_json.request && native_step_diagnostics_json.request->launch_check
             && native_step_diagnostics_json.request->native_step_diagnostics_json);
+        char native_startup_input_option[] = "--native-startup-input";
+        char native_startup_input_value[] = "1";
+        char* native_startup_input_args[] = {program, game_option, millennium, platform_option, dos,
+            native_step_diagnostics_json_option, native_startup_input_option, native_startup_input_value};
+        const auto native_startup_input = eon::parse_command_line(8, native_startup_input_args);
+        assert(native_startup_input.request && native_startup_input.request->native_step_diagnostics_json
+            && native_startup_input.request->native_startup_input == '1');
+        char invalid_native_startup_input_value[] = "x";
+        char* invalid_native_startup_input_args[] = {program, game_option, millennium, platform_option, dos,
+            native_step_diagnostics_json_option, native_startup_input_option, invalid_native_startup_input_value};
+        assert(!eon::parse_command_line(8, invalid_native_startup_input_args).request);
         char* runtime_diagnostics_without_target_args[] = {program,
             runtime_diagnostics_json_option};
         assert(!eon::parse_command_line(2, runtime_diagnostics_without_target_args).request);

@@ -4703,6 +4703,13 @@ selection. The first original-dependent result (the parent stack value at
 `$032f/$05f7`) remains an external boundary, as do later DOS/BIOS/vector,
 private-interrupt, rendering, audio, and gameplay results.
 
+For reproducible native-boundary diagnosis, `--native-step-diagnostics-json`
+may be paired with `--native-startup-input 0|1|2`. The option accepts exactly
+one literal chooser byte and exits after the first bounded native pass; it is
+not a general input, capture, replay, emulator, or observation-injection
+interface. With exact English DOS media, choice `1` proves only that the
+native SSBL loader reaches the unresolved parent-stack boundary at `$032f`.
+
 The selected external-driver continuation is now a separate hash-admitted
 native recomp session. `MillenniumDosSoundDriverLoadSession` requires the
 complete English `MILL.COM` identity and either exact `SSBL.DRV` or

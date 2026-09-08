@@ -109,6 +109,10 @@ struct LaunchRequest {
     // for preservation diagnostics. It exits immediately afterwards and is
     // never a gameplay, emulator, input, or renderer route.
     bool native_step_diagnostics_json = false;
+    // A literal user-provided Millennium startup choice for the bounded
+    // native-step diagnostic only. It is not an emulator input channel and
+    // cannot supply any DOS/BIOS/driver/title result.
+    std::optional<char> native_startup_input;
     std::optional<Platform> platform;
     // Language of the immutable original release, distinct from the launcher
     // UI locale above.  A release selection must never infer this from the

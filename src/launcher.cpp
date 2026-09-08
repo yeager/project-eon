@@ -153,6 +153,7 @@ std::string usage() {
         "               [--launch-check]\n\n"
         "               [--launch-check-json]\n\n"
         "               [--runtime-diagnostics-json]\n\n"
+        "               [--native-step-diagnostics-json --native-startup-input 0|1|2]\n\n"
         "               [--resolution 1280x720|1600x900|1920x1080]\n"
         "               [--aspect original|square-pixels|widescreen]\n\n"
         "               [--language <language>]\n\n"
@@ -249,6 +250,11 @@ ParseResult parse_command_line(int argc, char** argv) {
                 return {{}, "--static-control-flow-sidecar must be an absolute external path", false};
             }
             request.static_control_flow_sidecar = path;
+        } else if (argument == "--native-startup-input") {
+            if (value.size() != 1 || (value[0] != '0' && value[0] != '1' && value[0] != '2')) {
+                return {{}, "--native-startup-input accepts exactly 0, 1, or 2", false};
+            }
+            request.native_startup_input = value[0];
         } else if (argument == "--modern-pack") {
             request.modern_pack_manifest = std::filesystem::path(value);
         } else if (argument == "--platform") {
@@ -303,6 +309,9 @@ ParseResult parse_command_line(int argc, char** argv) {
     }
     if (request.launch_check && (request.verify_game || request.inspect_data || request.reference_trace)) {
         return {{}, "--launch-check cannot be combined with inspection, verification, or reference traces", false};
+    }
+    if (request.native_startup_input && !request.native_step_diagnostics_json) {
+        return {{}, "--native-startup-input requires --native-step-diagnostics-json", false};
     }
     if (request.inventory_assets && !request.inspect_data) {
         return {{}, "--inventory requires --inspect; it is a read-only preservation report", false};
