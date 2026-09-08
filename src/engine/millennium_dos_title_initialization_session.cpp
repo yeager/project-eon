@@ -70,13 +70,25 @@ MillenniumDosTitleInitializationSession::drive_mode_two_from_owned_memory(
     NativeRuntimeMemory& runtime_memory,
     const MillenniumDosTitleModeTwoDriveRequest request) {
     MillenniumDosTitleModeTwoDriveResult result;
-    if (state_ != MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_source_byte_boundary
-        || continuation_address_ != 0x16b3 || last_sequence_ == std::numeric_limits<std::uint64_t>::max()
+    // This is deliberately resumable at each one-byte ownership boundary.
+    // A frame-budgeted caller must not need to either fabricate the next byte
+    // or discard an already verified observation just because its cap falls
+    // between the source and lookup halves of the mode-two pair.
+    const auto resumable_boundary =
+        (state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_source_byte_boundary
+            && continuation_address_ == 0x16b3)
+        || (state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_first_lookup_byte_boundary
+            && continuation_address_ == 0x16bb)
+        || (state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_source_byte_boundary
+            && continuation_address_ == 0x16c8)
+        || (state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_lookup_byte_boundary
+            && continuation_address_ == 0x16d0);
+    if (!resumable_boundary || last_sequence_ == std::numeric_limits<std::uint64_t>::max()
         || request.first_sequence != last_sequence_ + 1
         || request.maximum_observations == 0 || request.maximum_observations > 262144
         || request.first_sequence > std::numeric_limits<std::uint64_t>::max()
             - request.maximum_observations) {
-        result.error = "Mode-two owned-memory drive requires its exact boundary, next sequence, and finite observation cap";
+        result.error = "Mode-two owned-memory drive requires an exact resumable boundary, next sequence, and finite observation cap";
         return result;
     }
 
@@ -143,7 +155,15 @@ MillenniumDosTitleInitializationSession::drive_mode_two_from_owned_memory(
             return result;
         }
     }
-    result.error = "Mode-two owned-memory drive exhausted its observation cap before return";
+    // Like the TITLE.LIB stream driver, successful bounded progress is a
+    // native result in its own right.  `returned` distinguishes a completed
+    // caller invocation from a checkpoint that needs another explicit frame
+    // drive.  Both session and owned memory commit atomically only after all
+    // observations below were admitted.
+    result.accepted = true;
+    result.observation_count = request.maximum_observations;
+    *this = std::move(next);
+    runtime_memory = std::move(memory);
     return result;
 }
 
