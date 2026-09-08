@@ -5100,9 +5100,14 @@ The same transaction may resume only at its exact high-nibble `$1428` boundary,
 not at an arbitrary decoder program counter. The next genuine stream byte and
 its hash-admitted lookup produce one instruction-defined output byte and return
 to the ordinary `$1428` stream boundary at `$32a1:$0026`. The native runtime
-drives this four-observation prefix as one canonical TITLE.LIB continuation;
-each resumed call validates the full leaf hash, canonical segment, sequence,
-and finite observation cap before committing any state or memory effects.
+then completes the next admitted low/high lookup pairs and selected mode-two
+run through `$32a1:$002b`. The exact six-byte `TITLE.LIB+$2a34..+$2a39`
+continuation has SHA-256
+`f5e49eddff72cad076c01cc7d4b884404224ea78a24ebe659e320951bca14b29`.
+The native runtime drives this 16-observation prefix as one canonical TITLE.LIB
+continuation; each resumed call validates the full leaf hash, canonical segment,
+sequence, and finite observation cap before committing any state or memory
+effects.
 caller effects commit in the same transaction as the owned-memory loop. The
 private result and all presentation semantics remain explicit boundaries.
 Its raw value is retained as AX without assigning width or graphics meaning,

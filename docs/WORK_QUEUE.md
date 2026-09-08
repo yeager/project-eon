@@ -79,9 +79,13 @@ commits no partial transition on a contradictory leaf. That byte and its
 canonical little-endian word `$201e` now execute `$144a..$146b`, writing the
 three repeated bytes at `$4000:$02e3..$02e5` and returning to `$1428`, source
 `$32a1:$0025`. Its exact high-nibble continuation and lookup then return to
-the ordinary stream boundary `$32a1:$0026` in the same bounded, transactional
-native driver. Do not infer codec semantics or generalize this relocation into
-DOS-memory aliasing.
+the ordinary stream boundary `$32a1:$0026`. The same 16-observation bounded,
+transactional native continuation now validates the exact 6-byte
+`TITLE.LIB+$2a34..+$2a39` prefix (SHA-256
+`f5e49eddff72cad076c01cc7d4b884404224ea78a24ebe659e320951bca14b29`),
+executes its two low/high lookup pairs and the selected mode-two run, and
+returns to `$1428`, source `$32a1:$002b`. Do not infer codec semantics or
+generalize this relocation into DOS-memory aliasing.
 The other-value branch owns the second descriptor and first two raw words plus
 their product and subtraction; continue at `$13e9`, source `$3c80:$0001`. Do not assign
 graphics or codec semantics to these fields.
