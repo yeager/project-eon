@@ -287,6 +287,13 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertLess(reset_body.index("stop_millennium_title();"), reset_body.index("runtime.begin_source_revocation();"))
         self.assertLess(reset_body.index("discard_millennium_assets();"), reset_body.index("runtime.begin_source_revocation();"))
         self.assertLess(reset_body.index("reset_deuteros_runtime();"), reset_body.index("runtime.begin_source_revocation();"))
+        self.assertIn("sdl_resource_generation = runtime.generation();", reset_body)
+        generation_guard = SOURCE[SOURCE.index("const auto runtime_generation = runtime.snapshot().generation;"):
+                                  SOURCE.index("std::optional<OriginalDataSourceSelection>",
+                                               SOURCE.index("const auto runtime_generation = runtime.snapshot().generation;"))]
+        self.assertIn("*sdl_resource_generation != runtime_generation", generation_guard)
+        self.assertIn("discard_millennium_assets();", generation_guard)
+        self.assertIn("reset_deuteros_runtime();", generation_guard)
         navigation = SOURCE[SOURCE.index("const auto apply_launcher_navigation"):
                             SOURCE.index("const auto activate_launcher_card")]
         self.assertIn("runtime.requires_revocation_for(launcher_interaction.source_identity())", navigation)

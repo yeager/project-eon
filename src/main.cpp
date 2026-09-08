@@ -4948,6 +4948,11 @@ int main(int argc, char** argv) {
         deuteros_native_frame_memory_identity.reset();
         discard_deuteros_external_modern_sequence();
     };
+    // SDL textures, queued audio and IME state are all host-generation
+    // resources. The normal reset route records the new generation below,
+    // while this marker also gives the event loop a fail-closed guard if a
+    // future lifecycle route revokes the native runtime independently.
+    std::optional<std::uint64_t> sdl_resource_generation = runtime.generation();
     const auto reset_active_runtime = [&] {
         // Leaving a launch or changing its source is a hard preservation
         // boundary. Nothing derived from the former exact archive may remain
@@ -4963,6 +4968,7 @@ int main(int argc, char** argv) {
         // controller discards its coordinator-owned native session.
         runtime.begin_source_revocation();
         runtime.finish_source_revocation();
+        sdl_resource_generation = runtime.generation();
         launcher_runtime_admission = std::string(
             eon::release_runtime_admission_label(runtime.admission()));
         launcher_runtime_rejection = std::string(
@@ -5521,6 +5527,20 @@ int main(int argc, char** argv) {
     std::optional<std::uint64_t> last_capped_present_ns;
     bool running = true;
     while (running) {
+        // A copied RuntimeHost snapshot is the only lifecycle input here.
+        // If it names a new generation, discard every source-derived SDL
+        // object before processing input, scheduling, or rendering. This is
+        // cleanup only: it neither observes an original value nor changes
+        // the native engine state.
+        const auto runtime_generation = runtime.snapshot().generation;
+        if (!sdl_resource_generation || *sdl_resource_generation != runtime_generation) {
+            stop_millennium_title();
+            millennium_game_session.reset();
+            millennium_state_page = 0;
+            discard_millennium_assets();
+            reset_deuteros_runtime();
+            sdl_resource_generation = runtime_generation;
+        }
         std::optional<OriginalDataSourceSelection> selected_original_data_source;
         {
             auto& mailbox = original_data_source_dialog_mailbox();
