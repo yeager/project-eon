@@ -323,14 +323,16 @@ class ModernGraphicsPopupTests(unittest.TestCase):
 
     def test_active_native_driver_runs_once_per_launch_frame_outside_rendering(self) -> None:
         """Renderer visibility must never decide whether native code advances."""
-        frame_driver = SOURCE.index("runtime.drive_active_native_session()")
+        # The explicit CLI preservation probe may use the same typed facade
+        # before SDL exists. The last call is the sole per-frame SDL driver.
+        frame_driver = SOURCE.rindex("runtime.drive_active_native_session()")
         scanner = SOURCE.index("if (!scanner->done())", frame_driver)
         render_start = SOURCE.index("const bool modern", frame_driver)
         deuteros_preview = SOURCE.index("selected == eon::Game::deuteros && preview_texture")
         self.assertLess(frame_driver, scanner)
         self.assertLess(scanner, render_start)
         self.assertLess(render_start, deuteros_preview)
-        self.assertEqual(SOURCE.count("runtime.drive_active_native_session()"), 1)
+        self.assertEqual(SOURCE.count("runtime.drive_active_native_session()"), 2)
         self.assertIn("active_native_session_drive.emplace(runtime.snapshot().generation", SOURCE)
         self.assertIn("active_native_session_drive.reset();", SOURCE)
         self.assertNotIn("runtime.drive_millennium_dos_session()", SOURCE)

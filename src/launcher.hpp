@@ -105,6 +105,10 @@ struct LaunchRequest {
     // it also identifies the selected runtime adapter and all declarative
     // recovery facts for that exact active release.
     bool runtime_diagnostics_json = false;
+    // Explicitly advances one bounded, already admitted native-session pass
+    // for preservation diagnostics. It exits immediately afterwards and is
+    // never a gameplay, emulator, input, or renderer route.
+    bool native_step_diagnostics_json = false;
     std::optional<Platform> platform;
     // Language of the immutable original release, distinct from the launcher
     // UI locale above.  A release selection must never infer this from the

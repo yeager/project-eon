@@ -2278,6 +2278,13 @@ int main() {
         assert(runtime_diagnostics_json.request && runtime_diagnostics_json.request->launch_check
             && runtime_diagnostics_json.request->runtime_diagnostics_json
             && !runtime_diagnostics_json.request->launch_check_json);
+        char native_step_diagnostics_json_option[] = "--native-step-diagnostics-json";
+        char* native_step_diagnostics_json_args[] = {program, game_option, millennium,
+            platform_option, dos, native_step_diagnostics_json_option};
+        const auto native_step_diagnostics_json = eon::parse_command_line(6,
+            native_step_diagnostics_json_args);
+        assert(native_step_diagnostics_json.request && native_step_diagnostics_json.request->launch_check
+            && native_step_diagnostics_json.request->native_step_diagnostics_json);
         char* runtime_diagnostics_without_target_args[] = {program,
             runtime_diagnostics_json_option};
         assert(!eon::parse_command_line(2, runtime_diagnostics_without_target_args).request);

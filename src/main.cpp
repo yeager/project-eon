@@ -1342,6 +1342,46 @@ void report_runtime_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
     std::cout << "]}}\n";
 }
 
+// An explicit, finite continuation probe for preservation tooling. It is
+// intentionally separate from the static runtime report: callers must opt in
+// to executing already-proven local native transitions, and the process exits
+// before SDL, input, audio, timing, save, or another scheduler pass.
+void report_native_step_diagnostics_json(const eon::ResolvedLaunchRequest& launch,
+    const eon::ActiveNativeSessionDriveResult& result) {
+    std::cout << "{\"schema\":\"project-eon.native-step-diagnostics/v1\",\"release\":{\"game\":";
+    write_json_string(std::cout, eon::name(launch.release.game));
+    std::cout << ",\"platform\":"; write_json_string(std::cout, eon::name(launch.release.platform));
+    std::cout << ",\"language\":"; write_json_string(std::cout, launch.release.language);
+    std::cout << ",\"sha256\":"; write_json_string(std::cout, launch.release.sha256);
+    std::cout << "},\"driver\":";
+    const char* driver = result.driver == eon::ActiveNativeSessionDriver::millennium_dos ? "millennium-dos"
+        : result.driver == eon::ActiveNativeSessionDriver::deuteros_amiga ? "deuteros-amiga" : "unavailable";
+    write_json_string(std::cout, driver);
+    std::cout << ",\"result\":";
+    if (result.millennium_dos) {
+        const auto& drive = *result.millennium_dos;
+        std::cout << "{\"accepted\":" << (drive.accepted ? "true" : "false")
+            << ",\"steps\":" << drive.steps << ",\"stop_before\":";
+        write_json_string(std::cout, "$" + [&] { std::ostringstream value; value << std::hex
+            << drive.stop_before_address; return value.str(); }());
+        std::cout << ",\"waiting_for_external_observation\":"
+            << (drive.external_observation_requirement ? "true" : "false") << '}';
+    } else if (result.deuteros_amiga) {
+        const auto& drive = *result.deuteros_amiga;
+        std::cout << "{\"accepted\":" << (drive.accepted ? "true" : "false")
+            << ",\"steps\":" << drive.steps << ",\"stop_before\":";
+        write_json_string(std::cout, "$" + [&] { std::ostringstream value; value << std::hex
+            << drive.stop_before_address; return value.str(); }());
+        std::cout << ",\"waiting_for_external_observation\":"
+            << (drive.stop_reason == eon::DeuterosAmigaSessionStopReason::external_observation
+                ? "true" : "false") << '}';
+    } else {
+        std::cout << "null";
+    }
+    std::cout << ",\"error\":"; write_json_string(std::cout, result.error);
+    std::cout << "}\n";
+}
+
 // A validated capture is evidence, not a runtime input. This compact export
 // deliberately reports its admitted identity, boundaries and checkpoint
 // counts without serializing local paths, event bytes, media bytes, or
@@ -4426,6 +4466,11 @@ int main(int argc, char** argv) {
         if (!active_launch()) {
             std::cerr << "Launch check has no admitted original release.\n";
             return 4;
+        }
+        if (request.native_step_diagnostics_json) {
+            const auto result = runtime.drive_active_native_session();
+            report_native_step_diagnostics_json(*active_launch(), result);
+            return result.accepted() ? 0 : 4;
         }
         if (request.runtime_diagnostics_json) {
             report_runtime_diagnostics_json(*active_launch(), runtime.admission(), runtime.rejection(),

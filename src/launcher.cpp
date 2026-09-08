@@ -217,6 +217,11 @@ ParseResult parse_command_line(int argc, char** argv) {
             request.runtime_diagnostics_json = true;
             continue;
         }
+        if (argument == "--native-step-diagnostics-json") {
+            request.launch_check = true;
+            request.native_step_diagnostics_json = true;
+            continue;
+        }
         if (argument == "--reference-trace-json") {
             request.reference_trace_json = true;
             continue;
@@ -290,7 +295,7 @@ ParseResult parse_command_line(int argc, char** argv) {
         || request.static_control_flow_sidecar
         || request.platform || request.release_language || request.release_sha256
         || request.presentation_explicit || request.launch_check || request.launch_check_json
-        || request.runtime_diagnostics_json)) {
+        || request.runtime_diagnostics_json || request.native_step_diagnostics_json)) {
         return {{}, "--inspect-save is standalone; it never selects game data, a release, or runtime", false};
     }
     if (request.verify_game && request.inspect_data) {
