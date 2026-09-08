@@ -954,7 +954,8 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_sound_driver_load(
                 "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e";
             constexpr std::string_view titles_sha =
                 "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
-            const auto media=VerifiedReleaseMedia::open(active_->release);
+            if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
+            const auto& media=*active_media_;
             const auto mill=media.borrow(mill_sha);
             const auto titles=media.borrow(titles_sha);
             if(!mill||!titles)throw std::runtime_error("Exact TITLES.EXE process media is unavailable");
@@ -989,7 +990,8 @@ ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner() {
       runner.synchronize_external_sequence(next.checkpoint().last_sequence);
       constexpr std::string_view library_hash =
           "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
-      const auto media = VerifiedReleaseMedia::open(active_->release);
+      if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
+      const auto& media = *active_media_;
       const auto library = media.borrow(library_hash);
       if (!library)
         throw std::runtime_error(
@@ -1264,7 +1266,8 @@ ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner() {
       case MillenniumDosSoundDriverLoadState::title_exec_boundary: {
         if (!millennium_dos_ || !millennium_dos_->title_flow)
           throw std::runtime_error("English title flow is unavailable");
-        const auto media = VerifiedReleaseMedia::open(active_->release);
+        if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
+        const auto& media = *active_media_;
         const auto mill = media.borrow(
             "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e");
         const auto titles = media.borrow(
@@ -1290,7 +1293,8 @@ ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner() {
           constexpr std::string_view titles_sha =
               "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe"
               "6";
-          const auto media = VerifiedReleaseMedia::open(active_->release);
+          if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
+          const auto& media = *active_media_;
           const auto titles = media.borrow(titles_sha);
           if (!titles)
             throw std::runtime_error(
@@ -1412,7 +1416,8 @@ bool ReleaseRuntimeCoordinator::advance_millennium_dos_title_local_continuation(
       if (lookup_boundary && checkpoint.far_byte_boundary.source_segment == 0x5050
           && checkpoint.far_byte_boundary.source_offset == 0x409a && memory
           && !memory->read_byte({NativeRuntimeAddressSpace::dos_segmented, 0x5050, 0x409a})) {
-        const auto media = VerifiedReleaseMedia::open(active_->release);
+        if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
+        const auto& media = *active_media_;
         const auto library = media.borrow(library_sha);
         if (!library || library->size() <= 0x459a) return false;
         NativeRuntimeEffectBatch lookup_batch{
@@ -1693,7 +1698,8 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_private_interrupt_result
         if(next.checkpoint().state==MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary){
             constexpr std::string_view library_sha=
                 "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
-            const auto media=VerifiedReleaseMedia::open(active_->release);
+            if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
+            const auto& media=*active_media_;
             const auto library=media.borrow(library_sha);
             if(!library)throw std::runtime_error("Exact TITLE.LIB descriptor source is unavailable");
             const auto reached=next.checkpoint();
@@ -1810,7 +1816,8 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_bios_result(
     constexpr std::string_view titles_sha=
         "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
     try {
-        const auto media=VerifiedReleaseMedia::open(active_->release);
+        if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
+        const auto& media=*active_media_;
         const auto titles=media.borrow(titles_sha);
         if(!titles)throw std::runtime_error("Exact TITLES.EXE BIOS source is unavailable");
         auto next=*millennium_dos_title_initialization_;
@@ -1907,7 +1914,8 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_dos_file_result(
     try {
         constexpr std::string_view title_library_sha=
             "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
-        const auto media=VerifiedReleaseMedia::open(active_->release);
+        if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
+        const auto& media=*active_media_;
         const auto title_library=media.borrow(title_library_sha);
         if(!title_library)
             throw std::runtime_error("Exact TITLE.LIB file source is unavailable");
@@ -3221,7 +3229,8 @@ bool ReleaseRuntimeCoordinator::prepare_millennium_dos_title_to_game_after_hando
         || active_->release.sha256 != english_release
         || millennium_dos_title_to_game_) return false;
     try {
-        const auto media = VerifiedReleaseMedia::open(active_->release);
+        if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
+        const auto& media = *active_media_;
         const auto launcher = admit_native_code_image(media,
             "millennium-dos-mill-com-linear", "millennium-dos-launcher");
         const auto titles = admit_native_code_image(media,
