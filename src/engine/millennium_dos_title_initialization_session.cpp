@@ -298,6 +298,8 @@ constexpr auto descriptor_loop_tail_sha =
     "84ec36cbf00b01304cfbd75024c0ac7571a5776b4e364049f3b84ebfe3315612";
 constexpr auto next_descriptor_payload_prefix_sha =
     "912d067ef688829815594e9fdf4e2ae8f03051cd3be882dc482a02dae032d39b";
+constexpr auto descriptor_stream_decoder_sha =
+    "6486e029d2b5a8a720d7fab7c7e675fb56e267a3d7cfc9e328014a153b545a07";
 constexpr auto private_wrapper_epilogue_sha =
     "a6e3a351304f487a18bc22e460403bfcdb5e702831b037aa0a90a56bf3cf7baf";
 constexpr auto post_descriptor_return_sha =
@@ -438,6 +440,8 @@ MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession
             != descriptor_loop_tail_sha
         || to_hex(sha256(titles_executable.subspan(0x1319,15)))
             != next_descriptor_payload_prefix_sha
+        || to_hex(sha256(titles_executable.subspan(0x1328,96)))
+            != descriptor_stream_decoder_sha
         || to_hex(sha256(titles_executable.subspan(0x0029,6)))
             != private_wrapper_epilogue_sha
         || to_hex(sha256(titles_executable.subspan(0x0f14,1)))
@@ -1267,13 +1271,16 @@ void MillenniumDosTitleInitializationSession::consume_next_descriptor_pair(
     // Admit its complete fixed header before performing either the pair or
     // header mutation so a changed leaf cannot leave a partial transition.
     constexpr std::size_t record_offset=0x2a16;
-    if(record_offset+0x1dU>title_library.size()
+    if(record_offset+0x1eU>title_library.size()
         ||word(record_offset+0x18)!=0x0010
         ||word(record_offset+0x16)!=0x0017
         ||word(record_offset+0x14)!=0x0000
         ||title_library[record_offset+1]!=0x02
         ||title_library[record_offset+4]!=0x02
-        ||title_library[record_offset+0x1c]!=0x00)
+        ||title_library[record_offset+5]!=0x00
+        ||title_library[record_offset+6]!=0x01
+        ||title_library[record_offset+0x1c]!=0x00
+        ||title_library[record_offset+0x1d]!=0x10)
         throw std::runtime_error("Contradictory Millennium DOS next descriptor header");
     const auto output_offset=latest_local_word(memory_effects_,0x010c);
     const auto output_segment=latest_local_word(memory_effects_,0x010e);
@@ -1301,8 +1308,22 @@ void MillenniumDosTitleInitializationSession::consume_next_descriptor_pair(
     effects_.insert(effects_.end(),{{0x1419,"AL",0},{0x141a,"CH",0},
         {0x141c,"DI",static_cast<std::uint16_t>(*output_offset+1)},
         {0x141d,"DX",0x0170},{0x1422,"BX",0x000b},{0x1425,"DX",0x016f}});
-    far_byte_boundary_={0x1428,0x32a1,0x0023,
-        static_cast<std::uint16_t>(*output_offset+1)};
+    memory_effects_.insert(memory_effects_.end(),{
+        {0x1484,static_cast<std::uint16_t>(*output_offset+1),
+            MillenniumDosTitleInitializationEffectWidth::byte,0,*output_segment,true},
+        {0x1484,static_cast<std::uint16_t>(*output_offset+2),
+            MillenniumDosTitleInitializationEffectWidth::byte,1,*output_segment,true}});
+    effects_.insert(effects_.end(),{{0x1428,"AL",0x10},{0x1429,"AL",0x10},
+        {0x142b,"CL",4},{0x1430,"AL",0},{0x1432,"SI",0x0023},
+        {0x1470,"AL",0},{0x1472,"AL",0},{0x1482,"CH",0},
+        {0x1485,"DI",static_cast<std::uint16_t>(*output_offset+2)},
+        {0x1485,"DX",0x016e},{0x1428,"AL",0x10},{0x1429,"AL",1},
+        {0x142b,"CL",0},{0x1433,"SI",0x0024},{0x1470,"AL",1},
+        {0x1472,"AL",1},{0x1482,"CH",1},
+        {0x1485,"DI",static_cast<std::uint16_t>(*output_offset+3)},
+        {0x1485,"DX",0x016d}});
+    far_byte_boundary_={0x1428,0x32a1,0x0024,
+        static_cast<std::uint16_t>(*output_offset+3)};
     continuation_address_=0x1428;
     state_=MillenniumDosTitleInitializationState::post_descriptor_next_loop_stream_byte_boundary;
 }

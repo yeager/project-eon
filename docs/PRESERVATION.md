@@ -5077,7 +5077,14 @@ they copy that byte to `$4000:$02e0`, advance the source and destination,
 load loop count `$0170`, advance the normalized record offset to `$000b`,
 and take the proven non-zero loop edge. Execution stops before the next
 stream byte at `$1428`, source `$32a1:$0023`, output `$4000:$02e1`.
-Payload and codec meaning remain external.
+The next byte is also admitted by the same exact alias as
+`TITLE.LIB+$2a33 == $10`. The complete decoder loop `$1428..$1487` hashes to
+`6486e029d2b5a8a720d7fab7c7e675fb56e267a3d7cfc9e328014a153b545a07`.
+Its high and low nibbles index the exact admitted record bytes `$00/$01`;
+the two non-wrapping results are written to `$4000:$02e1..$02e2` and both
+non-zero loop edges are taken. Execution stops at `$1428`, source
+`$32a1:$0024`, output `$4000:$02e3`, with remaining count `$016d` and prior
+byte `$01`. Payload and codec meaning remain external.
 caller effects commit in the same transaction as the owned-memory loop. The
 private result and all presentation semantics remain explicit boundaries.
 Its raw value is retained as AX without assigning width or graphics meaning,

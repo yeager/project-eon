@@ -70,8 +70,11 @@ do not generalize this one proven alias into generic DOS memory semantics.
 The same leaf-relative proof now admits that record's complete fixed header
 atomically. It additionally admits the exact first payload byte at
 `TITLE.LIB+$2a32` and executes `$1419..$1427`, including the write to
-`$4000:$02e0` and the non-zero loop edge. Continue at `$1428`, source
-`$32a1:$0023`, output `$4000:$02e1`; do not infer codec semantics.
+`$4000:$02e0` and the non-zero loop edge. The exact next stream byte `$10`
+and its two admitted lookup bytes now execute both decoder nibbles, producing
+`$00/$01` at `$4000:$02e1..$02e2`. Continue at `$1428`, source
+`$32a1:$0024`, output `$4000:$02e3`, remaining count `$016d`; do not infer
+codec semantics.
 The other-value branch owns the second descriptor and first two raw words plus
 their product and subtraction; continue at `$13e9`, source `$3c80:$0001`. Do not assign
 graphics or codec semantics to these fields.

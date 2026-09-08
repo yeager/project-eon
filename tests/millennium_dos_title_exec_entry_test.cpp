@@ -1249,23 +1249,29 @@ int main(int argc, char** argv) {
             ==eon::MillenniumDosTitleInitializationState::post_descriptor_next_loop_stream_byte_boundary
             &&automatic_pair.far_word_observations.back().first_word==0x2a16
             &&automatic_pair.far_word_observations.back().second_word==0x0000
-            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-9].offset==0x138c
-            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-9].value==0x0006
-            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-8].offset==0x138e
-            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-8].value==0x32a1
-            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-7].value==0x0017
-            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-6].value==0x0010
-            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-2].offset==0x1388
-            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-2].value==0x02
-            &&automatic_pair.memory_effects.back().instruction_address==0x141c
-            &&automatic_pair.memory_effects.back().offset==0x02e0
-            &&automatic_pair.memory_effects.back().value==0x00
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-11].offset==0x138c
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-11].value==0x0006
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-10].offset==0x138e
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-10].value==0x32a1
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-9].value==0x0017
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-8].value==0x0010
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-4].offset==0x1388
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-4].value==0x02
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-3].instruction_address==0x141c
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-3].offset==0x02e0
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-3].value==0x00
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-2].instruction_address==0x1484
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-2].offset==0x02e1
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-2].value==0x00
+            &&automatic_pair.memory_effects.back().instruction_address==0x1484
+            &&automatic_pair.memory_effects.back().offset==0x02e2
+            &&automatic_pair.memory_effects.back().value==0x01
             &&automatic_pair.memory_effects.back().segment==0x4000
             &&automatic_pair.memory_effects.back().explicit_segment
             &&automatic_pair.far_byte_boundary.instruction_address==0x1428
             &&automatic_pair.far_byte_boundary.source_segment==0x32a1
-            &&automatic_pair.far_byte_boundary.source_offset==0x0023
-            &&automatic_pair.far_byte_boundary.destination_offset==0x02e1);
+            &&automatic_pair.far_byte_boundary.source_offset==0x0024
+            &&automatic_pair.far_byte_boundary.destination_offset==0x02e3);
 
         auto missing_mode_two=compact_owned_mode_two;
         eon::NativeRuntimeMemory missing_memory;
