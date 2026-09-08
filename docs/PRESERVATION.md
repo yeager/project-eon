@@ -5048,6 +5048,15 @@ introduced. On the terminal loop edge, the native session follows the actual
 consume the saved zero table displacement, load the genuine embedded words
 from `$170c/$170e`, copy raw `$1357/$1359` into `$133d/$133f`, and stop at
 the complete `$1764->$0122` private function-six request boundary. These
+later function-six returns now have a distinct state from the initial
+descriptor request. A typed raw AX/FLAGS result returns to `$1963`, restores
+the saved `$0170/$0025` loop registers, takes the next LOOP edge, atomically
+advances both output pointers from `$0170` to `$02e0`, derives descriptor
+index two, and re-enters `$1390`. Exact loop-tail bytes `$1963..$1966` hash to
+`84ec36cbf00b01304cfbd75024c0ac7571a5776b4e364049f3b84ebfe3315612`;
+the already hash-bound `$1947..$1962` loop body remains unchanged. Execution
+stops at the next two-word relocated `TITLE.LIB` boundary `$13aa`, source
+`$3481:$001b`. No function-six or descriptor meaning is inferred.
 caller effects commit in the same transaction as the owned-memory loop. The
 private result and all presentation semantics remain explicit boundaries.
 Its raw value is retained as AX without assigning width or graphics meaning,

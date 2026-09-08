@@ -60,7 +60,9 @@ physical-equivalent DOS segment aliases, under a finite transactional cap.
 Its `$16e8` return is caller-connected through exact `$1740..$1763`, genuine
 embedded `$170c/$170e` table words, raw callee-word copies, and the complete
 private function-six boundary at `$1764->$0122`. Continue from that typed
-private result; do not infer pixel or palette meaning.
+private result; do not infer pixel or palette meaning. The later function-six
+return is now state-distinct, advances the title loop's output pointers to
+`$02e0`, and stops at the next descriptor pair `$13aa`, source `$3481:$001b`.
 The other-value branch owns the second descriptor and first two raw words plus
 their product and subtraction; continue at `$13e9`, source `$3c80:$0001`. Do not assign
 graphics or codec semantics to these fields.

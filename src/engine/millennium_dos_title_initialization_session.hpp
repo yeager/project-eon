@@ -91,6 +91,8 @@ enum class MillenniumDosTitleInitializationState {
     post_descriptor_first_loop_mode_two_second_source_byte_boundary,
     post_descriptor_first_loop_mode_two_second_lookup_byte_boundary,
     post_descriptor_first_loop_mode_two_returned,
+    post_descriptor_loop_private_interrupt_result_boundary,
+    post_descriptor_next_loop_far_read_boundary,
     post_descriptor_second_loop_far_read_boundary,
     post_descriptor_second_loop_record_word_read_boundary,
     post_descriptor_second_loop_second_word_read_boundary,
@@ -375,6 +377,8 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::uint16_t post_descriptor_observed_ax = 0;
     std::uint16_t post_descriptor_observed_flags = 0;
     std::vector<std::uint8_t> post_descriptor_observed_record;
+    std::uint16_t descriptor_loop_observed_ax = 0;
+    std::uint16_t descriptor_loop_observed_flags = 0;
     std::uint32_t title_library_cursor = 0;
     std::uint16_t title_library_read_count = 0;
 };
@@ -499,6 +503,8 @@ private:
     std::uint16_t post_descriptor_observed_ax_ = 0;
     std::uint16_t post_descriptor_observed_flags_ = 0;
     std::vector<std::uint8_t> post_descriptor_observed_record_;
+    std::uint16_t descriptor_loop_observed_ax_ = 0;
+    std::uint16_t descriptor_loop_observed_flags_ = 0;
 };
 
 } // namespace eon

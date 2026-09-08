@@ -1185,7 +1185,7 @@ int main(int argc, char** argv) {
         assert(driven.accepted&&driven.returned&&driven.observation_count>0);
         const auto caller_connected=owned_mode_two.checkpoint();
         assert(caller_connected.state
-            ==eon::MillenniumDosTitleInitializationState::graphics_record_private_interrupt_result_boundary);
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_loop_private_interrupt_result_boundary);
         assert(caller_connected.continuation_address==0x0127);
         assert(caller_connected.boundary.call_address==0x1764
             &&caller_connected.boundary.wrapper_address==0x0122
@@ -1202,6 +1202,36 @@ int main(int argc, char** argv) {
         assert(caller_connected.memory_effects.back().offset==0x133f
             &&caller_connected.memory_effects.back().value==0x0002);
         assert(owned_memory.checkpoint().applied_batch_count>before.applied_batch_count);
+
+        const auto loop_sequence=caller_connected.last_sequence+1;
+        auto contradictory_loop_result=owned_mode_two;
+        bool contradictory_loop_result_rejected=false;
+        try {
+            contradictory_loop_result.observe_private_interrupt_result(
+                {loop_sequence,0x0127,0x0129,0x7777,0x0246,
+                    caller_connected.child_code_segment,0x1349,{0}});
+        } catch(const std::runtime_error&) { contradictory_loop_result_rejected=true; }
+        assert(contradictory_loop_result_rejected
+            &&contradictory_loop_result.checkpoint().state
+                ==eon::MillenniumDosTitleInitializationState::post_descriptor_loop_private_interrupt_result_boundary
+            &&contradictory_loop_result.checkpoint().memory_effects.size()
+                ==caller_connected.memory_effects.size());
+        owned_mode_two.observe_private_interrupt_result(
+            {loop_sequence,0x0127,0x0129,0x7777,0x0246});
+        const auto next_loop=owned_mode_two.checkpoint();
+        assert(next_loop.state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary
+            &&next_loop.continuation_address==0x13aa
+            &&next_loop.descriptor_loop_observed_ax==0x7777
+            &&next_loop.descriptor_loop_observed_flags==0x0246
+            &&next_loop.far_read_boundary.instruction_address==0x13aa
+            &&next_loop.far_read_boundary.source_segment==0x3481
+            &&next_loop.far_read_boundary.source_offset==0x001b
+            &&next_loop.far_read_boundary.word_count==2
+            &&next_loop.memory_effects[next_loop.memory_effects.size()-2].offset==0x010c
+            &&next_loop.memory_effects[next_loop.memory_effects.size()-2].value==0x02e0
+            &&next_loop.memory_effects.back().offset==0x0110
+            &&next_loop.memory_effects.back().value==0x02e0);
 
         auto missing_mode_two=compact_owned_mode_two;
         eon::NativeRuntimeMemory missing_memory;
