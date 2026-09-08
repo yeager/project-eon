@@ -1265,6 +1265,10 @@ private:
     // public bypass around the missing driver ABI.
     [[nodiscard]] bool prepare_millennium_dos_title_to_game_after_handoff();
     std::optional<ResolvedLaunchRequest> active_;
+    // The exact archive/direct-media admission backing for this generation.
+    // It is published only after every adapter succeeds and is cleared after
+    // all span-based sessions during reset/revocation.
+    std::optional<VerifiedReleaseMedia> active_media_;
     std::optional<MillenniumDosRuntimeAssets> millennium_dos_;
     std::unique_ptr<MillenniumDosSoundSelectionSession> millennium_dos_sound_selection_;
     std::unique_ptr<MillenniumDosTitleSession> millennium_dos_title_;

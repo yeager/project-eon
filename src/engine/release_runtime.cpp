@@ -291,6 +291,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     deuteros_atari_ = std::move(deuteros_atari);
     session_snapshot_ = std::move(session_snapshot);
     active_ = launch;
+    active_media_ = std::move(media);
     native_runtime_memory_=std::move(runtime_memory);
     admission_ = ReleaseRuntimeAdmission::active;
     rejection_ = ReleaseRuntimeRejection::none;
@@ -396,6 +397,7 @@ void ReleaseRuntimeCoordinator::reset() {
     deuteros_amiga_opening_input_held_ = false;
     deuteros_atari_.reset();
     session_snapshot_.reset();
+    active_media_.reset();
     active_.reset();
     admission_ = ReleaseRuntimeAdmission::unselected;
     rejection_ = ReleaseRuntimeRejection::none;
@@ -872,10 +874,10 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_sound_driver_load(
         try {
             const auto selected = millennium_dos_sound_selection_->selected_driver();
             if (!selected) throw std::runtime_error("Selected driver identity is unavailable");
-            const auto media = VerifiedReleaseMedia::open(active_->release);
-            const auto launcher = admit_native_code_image(media,
+            if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
+            const auto launcher = admit_native_code_image(*active_media_,
                 "millennium-dos-mill-com-linear", "millennium-dos-launcher");
-            const auto driver = media.borrow(selected->sha256);
+            const auto driver = active_media_->borrow(selected->sha256);
             if (!launcher.accepted() || !driver) throw std::runtime_error("Selected driver bytes are unavailable");
             const char selected_character = selected->kind
                     == MillenniumDosSoundDriverKind::sound_blaster ? '1' : '2';

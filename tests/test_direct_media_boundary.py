@@ -47,6 +47,17 @@ class DirectMediaBoundaryTests(unittest.TestCase):
         self.assertIn("archives_.front().inventory(archive_inventory_prefix_)", body)
         self.assertNotIn("inventory_verified_zip(release_", body)
 
+    def test_runtime_publishes_and_revokes_admitted_media_before_callbacks(self):
+        source = (ROOT / "src" / "engine" / "release_runtime.cpp").read_text(encoding="utf-8")
+        header = (ROOT / "src" / "engine" / "release_runtime.hpp").read_text(encoding="utf-8")
+        self.assertIn("std::optional<VerifiedReleaseMedia> active_media_", header)
+        self.assertIn("active_media_ = std::move(media);", source)
+        self.assertIn("active_media_.reset();\n    active_.reset();", source)
+        callback = source.index("MillenniumDosSoundDriverLoadObservationResult")
+        callback_body = source[callback:source.index("if (!millennium_dos_sound_driver_load_", callback)]
+        self.assertIn("admit_native_code_image(*active_media_", callback_body)
+        self.assertNotIn("VerifiedReleaseMedia::open(active_->release)", callback_body)
+
 
 if __name__ == "__main__":
     unittest.main()
