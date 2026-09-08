@@ -39,7 +39,7 @@ class DesktopPackagingTests(unittest.TestCase):
             with self.subTest(extension=extension):
                 self.assertIn(extension, source)
         self.assertIn("share/project-eon/assets/cards/millennium.png", source)
-        self.assertIn("share/project-eon/assets/branding/project-eon-logo-v1.png", source)
+        self.assertIn("share/project-eon/assets/branding/project-eon-logo-v2.png", source)
         self.assertIn("Icon=project-eon", source)
         self.assertIn("NotoSansSC-Regular.otf", source)
         self.assertIn("OFL-1.1.txt", source)
@@ -199,7 +199,7 @@ class DesktopPackagingTests(unittest.TestCase):
                 "project-eon.desktop",
                 "project-eon.png",
                 "usr/share/project-eon/assets/cards/millennium.png",
-                "usr/share/project-eon/assets/branding/project-eon-logo-v1.png",
+                "usr/share/project-eon/assets/branding/project-eon-logo-v2.png",
                 "usr/share/project-eon/assets/fonts/NotoSans-Regular.ttf",
                 "usr/share/project-eon/po/sv.po",
             ):
@@ -294,7 +294,7 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn('macOS bundle architecture mismatch: expected ${{ matrix.arch }}', workflow)
         self.assertIn('unzip -t "project-eon-macos-${{ matrix.arch }}.zip"', workflow)
         self.assertIn('cp -R assets/fonts "$APP/Contents/MacOS/assets/fonts"', workflow)
-        self.assertIn('cp assets/branding/project-eon.icns "$APP/Contents/Resources/project-eon.icns"', workflow)
+        self.assertIn('cp assets/branding/project-eon-v2.icns "$APP/Contents/Resources/project-eon.icns"', workflow)
         self.assertIn('CFBundleIconFile', workflow)
         self.assertIn('Copy-Item assets/fonts dist/assets/fonts -Recurse', workflow)
         self.assertIn('Copy-Item assets/branding/* dist/assets/branding/', workflow)

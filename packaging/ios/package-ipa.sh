@@ -32,7 +32,7 @@ for required in \
     exit 1
   fi
 done
-if [ ! -f "$app/Resources/assets/branding/project-eon-logo-v1.png" ]; then
+if [ ! -f "$app/Resources/assets/branding/project-eon-logo-v2.png" ]; then
   echo "refusing to package incomplete iPad application: missing launcher branding" >&2
   exit 1
 fi

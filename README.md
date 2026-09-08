@@ -1,5 +1,7 @@
 # Project Eon
 
+![Project Eon logo](assets/branding/project-eon-logo-v2.png)
+
 Project Eon is an open-source, cross-platform reimplementation of Ian Bird's
 science-fiction strategy games **Millennium 2.2: Return to Earth** (1989) and
 **Deuteros: The Next Millennium** (1991).

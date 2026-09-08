@@ -81,12 +81,12 @@ mkdir -p "$appdir"
 cmake --install "$build_dir" --prefix "$appdir/usr"
 install -m 0755 "$script_dir/AppRun" "$appdir/AppRun"
 install -m 0644 "$repository_root/packaging/project-eon.desktop" "$appdir/project-eon.desktop"
-install -m 0644 "$repository_root/assets/branding/project-eon-logo-v1.png" "$appdir/project-eon.png"
+install -m 0644 "$repository_root/assets/branding/project-eon-logo-v2.png" "$appdir/project-eon.png"
 
 for required in \
     "$appdir/usr/bin/project-eon" \
     "$appdir/usr/share/project-eon/assets/cards/millennium.png" \
-    "$appdir/usr/share/project-eon/assets/branding/project-eon-logo-v1.png" \
+    "$appdir/usr/share/project-eon/assets/branding/project-eon-logo-v2.png" \
     "$appdir/usr/share/project-eon/po/sv.po" \
     "$appdir/AppRun" "$appdir/project-eon.desktop" "$appdir/project-eon.png"; do
   if [ ! -e "$required" ]; then

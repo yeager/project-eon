@@ -19,7 +19,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 Compression=lzma2
 SolidCompression=yes
-SetupIconFile={#StagingDir}\assets\branding\project-eon.ico
+SetupIconFile={#StagingDir}\assets\branding\project-eon-v2.ico
 UninstallDisplayIcon={app}\project-eon.exe
 
 [Files]

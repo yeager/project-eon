@@ -287,8 +287,8 @@ jobs:
           mkdir -p "$APP/Contents/Frameworks"
           cp build/project-eon "$APP/Contents/MacOS/ProjectEon"
           cp assets/cards/*.png "$APP/Contents/MacOS/assets/cards/"
-          cp assets/branding/project-eon-logo-v1.png "$APP/Contents/MacOS/assets/branding/"
-          cp assets/branding/project-eon.icns "$APP/Contents/Resources/project-eon.icns"
+          cp assets/branding/project-eon-logo-v2.png "$APP/Contents/MacOS/assets/branding/"
+          cp assets/branding/project-eon-v2.icns "$APP/Contents/Resources/project-eon.icns"
           cp -R assets/fonts "$APP/Contents/MacOS/assets/fonts"
           cp po/*.po "$APP/Contents/Resources/po/"
           cp README.md LICENSE "$APP/Contents/Resources/"
@@ -406,7 +406,7 @@ jobs:
             "$APP/Contents/MacOS/assets/cards/original-profile-v1.png" \
             "$APP/Contents/MacOS/assets/cards/modern-profile-v1.png" \
             "$APP/Contents/MacOS/assets/cards/custom-profile-v1.png" \
-            "$APP/Contents/MacOS/assets/branding/project-eon-logo-v1.png" \
+            "$APP/Contents/MacOS/assets/branding/project-eon-logo-v2.png" \
             "$APP/Contents/Resources/project-eon.icns"; do
             test -f "$required"
           done
@@ -462,7 +462,7 @@ jobs:
             "ProjectEon.app/Contents/MacOS/assets/cards/original-profile-v1.png" \
             "ProjectEon.app/Contents/MacOS/assets/cards/modern-profile-v1.png" \
             "ProjectEon.app/Contents/MacOS/assets/cards/custom-profile-v1.png" \
-            "ProjectEon.app/Contents/MacOS/assets/branding/project-eon-logo-v1.png" \
+            "ProjectEon.app/Contents/MacOS/assets/branding/project-eon-logo-v2.png" \
             "ProjectEon.app/Contents/Resources/project-eon.icns"; do
             printf '%s\n' "$listing" | grep -Fxq "$required"
           done
@@ -552,7 +552,7 @@ jobs:
           # Validate the exact staging tree supplied to Inno Setup. In
           # particular, SDL3_image is linked against the shared libpng built
           # above, so that DLL must reach the installer as well.
-          $required = @("project-eon.exe", "SDL3.dll", "SDL3_image.dll", "SDL3_ttf.dll", "assets/cards/millennium.png", "assets/cards/deuteros.png", "assets/cards/dos-platform-v1.png", "assets/cards/amiga-platform-v1.png", "assets/cards/atari-st-platform-v1.png", "assets/cards/original-profile-v1.png", "assets/cards/modern-profile-v1.png", "assets/cards/custom-profile-v1.png", "assets/branding/project-eon-logo-v1.png", "assets/branding/project-eon.ico", "assets/branding/project-eon.icns", "assets/branding/README.md")
+          $required = @("project-eon.exe", "SDL3.dll", "SDL3_image.dll", "SDL3_ttf.dll", "assets/cards/millennium.png", "assets/cards/deuteros.png", "assets/cards/dos-platform-v1.png", "assets/cards/amiga-platform-v1.png", "assets/cards/atari-st-platform-v1.png", "assets/cards/original-profile-v1.png", "assets/cards/modern-profile-v1.png", "assets/cards/custom-profile-v1.png", "assets/branding/project-eon-logo-v2.png", "assets/branding/project-eon-v2.ico", "assets/branding/project-eon-v2.icns", "assets/branding/README.md")
           # Keep this an exact manifest rather than allowing assets/fonts/*.
           # README.md carries the reviewed per-file hashes and provenance and
           # is intentionally shipped alongside the OFL and font binaries.
@@ -757,7 +757,7 @@ jobs:
           # selected, copied, or created here.
           mkdir -p "$APP/Resources/assets/cards" "$APP/Resources/assets/branding" "$APP/Resources/assets/fonts" "$APP/Resources/po"
           cp assets/cards/*.png "$APP/Resources/assets/cards/"
-          cp assets/branding/project-eon-logo-v1.png "$APP/Resources/assets/branding/"
+          cp assets/branding/project-eon-logo-v2.png "$APP/Resources/assets/branding/"
           cp assets/fonts/NotoSans-Regular.ttf assets/fonts/NotoSansArabic-Regular.ttf \
             assets/fonts/NotoSansDevanagari-Regular.ttf assets/fonts/NotoSansJP-Regular.otf \
             assets/fonts/NotoSansKR-Regular.otf assets/fonts/NotoSansSC-Regular.otf \

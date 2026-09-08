@@ -41,7 +41,7 @@ for required in \
     "$appdir/AppRun" "$appdir/project-eon.desktop" "$appdir/project-eon.png" \
     "$appdir/usr/bin/project-eon" \
     "$appdir/usr/share/project-eon/assets/cards/millennium.png" \
-    "$appdir/usr/share/project-eon/assets/branding/project-eon-logo-v1.png" \
+    "$appdir/usr/share/project-eon/assets/branding/project-eon-logo-v2.png" \
     "$appdir/usr/share/project-eon/assets/fonts/NotoSans-Regular.ttf" \
     "$appdir/usr/share/project-eon/po/sv.po"; do
   if [ ! -e "$required" ]; then

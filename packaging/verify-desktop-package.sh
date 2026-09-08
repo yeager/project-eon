@@ -188,7 +188,7 @@ for package in "$@"; do
       exit 1
     fi
   done
-  if ! printf '%s\n' "$contents" | grep -Fq 'share/project-eon/assets/branding/project-eon-logo-v1.png'; then
+  if ! printf '%s\n' "$contents" | grep -Fq 'share/project-eon/assets/branding/project-eon-logo-v2.png'; then
     echo "$package lacks the launcher branding resource" >&2
     exit 1
   fi

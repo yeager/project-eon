@@ -87,10 +87,10 @@ class RuntimeLayoutTests(unittest.TestCase):
         self.assertIn('Copy-Item $sdlTtf.FullName dist/SDL3_ttf.dll', WORKFLOW)
         self.assertIn('Source: "{#StagingDir}\\SDL3_ttf.dll"', INNO)
         self.assertIn('Source: "{#StagingDir}\\po\\*"; DestDir: "{app}\\po"', INNO)
-        self.assertIn('SetupIconFile={#StagingDir}\\assets\\branding\\project-eon.ico', INNO)
+        self.assertIn('SetupIconFile={#StagingDir}\\assets\\branding\\project-eon-v2.ico', INNO)
         self.assertIn('target_sources(project-eon PRIVATE packaging/windows/project-eon.rc)', CMAKE)
         self.assertIn('IDI_PROJECT_EON ICON', WINDOWS_RESOURCE)
-        self.assertIn('assets\\\\branding\\\\project-eon.ico', WINDOWS_RESOURCE)
+        self.assertIn('assets\\\\branding\\\\project-eon-v2.ico', WINDOWS_RESOURCE)
         self.assertNotIn('DestDir: "{app}\\data', INNO)
 
 

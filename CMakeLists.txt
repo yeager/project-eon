@@ -273,9 +273,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
             MACOSX_PACKAGE_LOCATION "Resources/assets/cards")
         target_sources(project-eon PRIVATE "${resource}")
     endforeach()
-    set_source_files_properties("assets/branding/project-eon-logo-v1.png" PROPERTIES
+    set_source_files_properties("assets/branding/project-eon-logo-v2.png" PROPERTIES
         MACOSX_PACKAGE_LOCATION "Resources/assets/branding")
-    target_sources(project-eon PRIVATE "assets/branding/project-eon-logo-v1.png")
+    target_sources(project-eon PRIVATE "assets/branding/project-eon-logo-v2.png")
     # The UI bundle is licensed separately from original game media. Keep the
     # exact reviewed font files in the app resource directory so iPadOS never
     # resolves text through a host font installation.
@@ -564,7 +564,7 @@ file(MAKE_DIRECTORY
   "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/256x256/apps")
 execute_process(
   COMMAND "${CMAKE_COMMAND}" -E create_symlink
-    "../../../../project-eon/assets/branding/project-eon-logo-v1.png"
+    "../../../../project-eon/assets/branding/project-eon-logo-v2.png"
     "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/256x256/apps/project-eon.png"
   RESULT_VARIABLE eon_icon_link_result)
 if(NOT eon_icon_link_result EQUAL 0)
@@ -577,7 +577,7 @@ if(UNIX AND NOT APPLE)
     install(DIRECTORY assets/cards
         DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets"
         DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-    install(FILES assets/branding/project-eon-logo-v1.png
+    install(FILES assets/branding/project-eon-logo-v2.png
         DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets/branding")
     install(DIRECTORY assets/fonts
         DESTINATION "${CMAKE_INSTALL_DATADIR}/project-eon/assets"
@@ -585,7 +585,7 @@ if(UNIX AND NOT APPLE)
 else()
     install(DIRECTORY assets/cards DESTINATION "${CMAKE_INSTALL_BINDIR}/assets"
         DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-    install(FILES assets/branding/project-eon-logo-v1.png
+    install(FILES assets/branding/project-eon-logo-v2.png
         DESTINATION "${CMAKE_INSTALL_BINDIR}/assets/branding")
     install(DIRECTORY assets/fonts DESTINATION "${CMAKE_INSTALL_BINDIR}/assets"
         DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
