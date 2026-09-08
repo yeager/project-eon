@@ -1425,6 +1425,39 @@ int main() {
         assert(!eon::runtime_presentation_for(eon::NativeSessionState::menu,
             eon::ReleaseRuntimeAdmission::active, snapshot));
     }
+    // Presentation diagnostics name the actual recovered handler.  A shared
+    // generic label would make the F10 provenance page describe a different
+    // native boundary than the one currently active.
+    assert(eon::runtime_presentation_kind_label(
+        eon::RuntimePresentationKind::millennium_dos_sixth_function)
+        == "MILLENNIUM DOS SIXTH-FUNCTION HANDLER");
+    assert(eon::runtime_presentation_kind_label(
+        eon::RuntimePresentationKind::millennium_dos_eighth_function)
+        == "MILLENNIUM DOS EIGHTH-FUNCTION HANDLER");
+    assert(eon::runtime_presentation_kind_label(
+        eon::RuntimePresentationKind::millennium_dos_ninth_function)
+        == "MILLENNIUM DOS NINTH-FUNCTION HANDLER");
+    assert(eon::runtime_presentation_kind_label(
+        eon::RuntimePresentationKind::millennium_dos_ninth_function_handoff)
+        == "MILLENNIUM DOS NINTH-FUNCTION HANDOFF");
+    assert(eon::runtime_presentation_kind_label(
+        eon::RuntimePresentationKind::millennium_dos_fourth_function)
+        == "MILLENNIUM DOS FOURTH-FUNCTION HANDLER");
+    assert(eon::runtime_presentation_kind_label(
+        eon::RuntimePresentationKind::millennium_dos_fifth_function)
+        == "MILLENNIUM DOS FIFTH-FUNCTION HANDLER");
+    assert(eon::runtime_presentation_kind_label(
+        eon::RuntimePresentationKind::millennium_dos_third_function)
+        == "MILLENNIUM DOS THIRD-FUNCTION HANDLER");
+    assert(eon::runtime_presentation_kind_label(
+        eon::RuntimePresentationKind::millennium_dos_first_function)
+        == "MILLENNIUM DOS FIRST-FUNCTION HANDLER");
+    assert(eon::runtime_presentation_kind_label(
+        eon::RuntimePresentationKind::millennium_dos_second_function)
+        == "MILLENNIUM DOS SECOND-FUNCTION HANDLER");
+    assert(eon::runtime_presentation_kind_label(
+        eon::RuntimePresentationKind::millennium_dos_second_function_callback)
+        == "MILLENNIUM DOS SECOND-FUNCTION CALLBACK");
     assert(!eon::runtime_presentation_for(eon::NativeSessionState::menu,
         eon::ReleaseRuntimeAdmission::unselected, {}));
     auto invalid_presentation_snapshot = eon::make_runtime_session_snapshot(
@@ -5252,11 +5285,12 @@ int main() {
             eon::RuntimeHost hosted_opening;
             assert(hosted_opening.launch_direct(opening_request, releases).accepted());
             const auto hosted_admission = hosted_opening.snapshot();
-            assert(hosted_admission.session
-                && hosted_admission.session->release_sha256 == release.sha256
-                && hosted_admission.presentation
-                && hosted_admission.presentation->kind
-                    == eon::RuntimePresentationKind::deuteros_amiga_opening
+        assert(hosted_admission.session
+            && hosted_admission.session->release_sha256 == release.sha256
+            && hosted_admission.presentation
+            && hosted_admission.presentation->generation == hosted_admission.generation
+            && hosted_admission.presentation->kind
+                == eon::RuntimePresentationKind::deuteros_amiga_opening
                 && hosted_admission.presentation->input_contract
                     == eon::RuntimeInputContract::deuteros_amiga_opening_held_signal);
             const auto hosted_start = hosted_opening.advance(1'000);

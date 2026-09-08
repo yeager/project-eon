@@ -14,6 +14,10 @@ struct RuntimeHostAdvance {
 };
 
 struct RuntimeHostPresentationSnapshot {
+    // This is the host lifecycle generation, not an original-game tick. A
+    // renderer must key any cached SDL object to it so a copied descriptor
+    // from a revoked release cannot be reused by the next native session.
+    std::uint64_t generation = 0;
     RuntimePresentationKind kind = RuntimePresentationKind::millennium_dos_title;
     RuntimeSessionBoundary boundary = RuntimeSessionBoundary::bootstrap_boundary;
     RuntimeSessionCapabilities capabilities;

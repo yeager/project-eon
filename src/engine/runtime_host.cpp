@@ -716,7 +716,7 @@ RuntimeHostSnapshot RuntimeHost::snapshot() const {
     if (result.revoking) return result;
     result.session = session_snapshot();
     if (const auto presentation = presentation_snapshot()) {
-        result.presentation = {presentation->kind, presentation->boundary,
+        result.presentation = {result.generation, presentation->kind, presentation->boundary,
             presentation->capabilities, presentation->input_contract};
     }
     return result;

@@ -70,17 +70,27 @@ std::string_view runtime_presentation_kind_label(const RuntimePresentationKind k
     case RuntimePresentationKind::millennium_dos_post_overlay_loop:
         return "MILLENNIUM DOS POST-OVERLAY LOOP";
     case RuntimePresentationKind::millennium_dos_seventh_function:
-    case RuntimePresentationKind::millennium_dos_sixth_function:
-    case RuntimePresentationKind::millennium_dos_eighth_function:
-    case RuntimePresentationKind::millennium_dos_ninth_function:
-    case RuntimePresentationKind::millennium_dos_ninth_function_handoff:
-    case RuntimePresentationKind::millennium_dos_fourth_function:
-    case RuntimePresentationKind::millennium_dos_fifth_function:
-    case RuntimePresentationKind::millennium_dos_third_function:
-    case RuntimePresentationKind::millennium_dos_first_function:
-    case RuntimePresentationKind::millennium_dos_second_function:
-    case RuntimePresentationKind::millennium_dos_second_function_callback:
         return "MILLENNIUM DOS SEVENTH-FUNCTION HANDLER";
+    case RuntimePresentationKind::millennium_dos_sixth_function:
+        return "MILLENNIUM DOS SIXTH-FUNCTION HANDLER";
+    case RuntimePresentationKind::millennium_dos_eighth_function:
+        return "MILLENNIUM DOS EIGHTH-FUNCTION HANDLER";
+    case RuntimePresentationKind::millennium_dos_ninth_function:
+        return "MILLENNIUM DOS NINTH-FUNCTION HANDLER";
+    case RuntimePresentationKind::millennium_dos_ninth_function_handoff:
+        return "MILLENNIUM DOS NINTH-FUNCTION HANDOFF";
+    case RuntimePresentationKind::millennium_dos_fourth_function:
+        return "MILLENNIUM DOS FOURTH-FUNCTION HANDLER";
+    case RuntimePresentationKind::millennium_dos_fifth_function:
+        return "MILLENNIUM DOS FIFTH-FUNCTION HANDLER";
+    case RuntimePresentationKind::millennium_dos_third_function:
+        return "MILLENNIUM DOS THIRD-FUNCTION HANDLER";
+    case RuntimePresentationKind::millennium_dos_first_function:
+        return "MILLENNIUM DOS FIRST-FUNCTION HANDLER";
+    case RuntimePresentationKind::millennium_dos_second_function:
+        return "MILLENNIUM DOS SECOND-FUNCTION HANDLER";
+    case RuntimePresentationKind::millennium_dos_second_function_callback:
+        return "MILLENNIUM DOS SECOND-FUNCTION CALLBACK";
     case RuntimePresentationKind::millennium_dos_tenth_function:
         return "MILLENNIUM DOS TENTH-FUNCTION HANDLER";
     case RuntimePresentationKind::millennium_amiga_bootstrap: return "MILLENNIUM AMIGA BOOTSTRAP";
