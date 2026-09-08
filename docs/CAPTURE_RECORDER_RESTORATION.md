@@ -431,6 +431,24 @@ recursive Autotools build is not recorded because interrupted tool execution
 left competing make children; this is an implementation foundation only,
 below `OBSERVER_FIX_REQUIRED`, never a recorder, pin, trace or capture target.
 
+### 2026-09-08 V24 callback-grounding rebuild
+
+An independent external development copy of the documented DOSBox-X revision
+`234797680781567e18c374c9e62da24de5423db0` was rebuilt sequentially after the
+unarmed POD receiver was tightened. The external executable SHA-256 is
+`14aed260f8761b816575c3ec7b7c8cc1fc820b675b1bd55d19184cdf73e2e3ab`.
+The callback predicate requires the exact default INT-6 callback index and
+stub, and the POD now retains the canonical callback CS/IP/stub fields plus
+16-bit-wrapped exception-frame word offsets. It performs no output,
+allocation, logging, host lookup, guest write, register/vector mutation,
+input handling, scheduling, or stop request while guest execution is active.
+
+Both recorder arms remain false: no configuration identity, loaded-image
+fingerprint, title-prefix predicate, serializer, capture output, pin, or
+admission exists. This is `OBSERVER_FIX_REQUIRED`; the binary and its source
+delta remain only under `/home/yeager/.cache/project-eon-tools/` and must not
+be passed to the locator or capture runner.
+
 ### Experimental observer runs
 
 The reviewed v3 candidate may be run only with the explicit
