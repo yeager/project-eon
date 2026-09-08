@@ -195,8 +195,12 @@ Admission is transactional. After either the outer archive rehash or complete
 direct-set revalidation succeeds, the coordinator constructs one bounded
 read-only `VerifiedReleaseMedia` view and uses that exact verified snapshot for
 every leaf requested by the selected platform adapter. It is destroyed when
-admission finishes; no archive is unpacked, written, cached, or retained as a
-replacement data source. The
+admission fails, or retained as the active generation's immutable media owner
+after a successful admission. Runtime callbacks reuse that owner rather than
+reopening the release path; it is revoked after dependent span-based sessions
+and before the active launch identity is cleared. ZIP inventory likewise walks
+only the admitted in-memory archive bytes. No archive is unpacked, written,
+cached, or retained as a replacement data source. The
 coordinator then publishes exactly one platform-appropriate engine adapter and
 its launch identity together. A failed parser/leaf admission leaves no active
 identity or prior adapter. SDL owns only renderer, audio-device, and host-input
