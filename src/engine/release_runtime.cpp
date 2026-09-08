@@ -1608,6 +1608,14 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_private_interrupt_result
             if(!library)throw std::runtime_error("Exact TITLE.LIB descriptor source is unavailable");
             const auto reached=next.checkpoint();
             next.consume_next_descriptor_pair(reached.last_sequence+1,*library);
+            const auto stream=next.checkpoint();
+            const auto driven=next.drive_next_descriptor_stream_from_title_library(
+                *library,{stream.last_sequence+1,2});
+            if(!driven.accepted || !driven.stopped_at_boundary
+                || driven.observation_count!=1)
+                throw std::runtime_error(driven.error.empty()
+                    ? "TITLE.LIB descriptor stream did not reach its verified byte boundary"
+                    : driven.error);
         }
         if(next.checkpoint().state==MillenniumDosTitleInitializationState::post_video_followup_call_boundary){
             const auto reached=next.checkpoint();

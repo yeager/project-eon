@@ -5085,6 +5085,15 @@ the two non-wrapping results are written to `$4000:$02e1..$02e2` and both
 non-zero loop edges are taken. Execution stops at `$1428`, source
 `$32a1:$0024`, output `$4000:$02e3`, with remaining count `$016d` and prior
 byte `$01`. Payload and codec meaning remain external.
+The following one-byte continuation is batch-driven only through the canonical
+relocation established above: the source must be exactly `$32a1:$0024`, not a
+physical-equivalent DOS alias, and it maps to `TITLE.LIB+$2a34 == $1e` under
+the complete admitted leaf hash. It is transactional and capped: an invalid
+hash, non-canonical segment, out-of-record source, or decoder boundary before
+the first byte commits nothing. This byte takes the selected mode-two branch
+and stops at the next typed word read `$144a`, source `$32a1:$0024`; word,
+escape, run, lookup, pixel, and codec interpretation remain outside the batch
+driver.
 caller effects commit in the same transaction as the owned-memory loop. The
 private result and all presentation semantics remain explicit boundaries.
 Its raw value is retained as AX without assigning width or graphics meaning,

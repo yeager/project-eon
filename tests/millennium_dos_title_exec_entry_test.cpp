@@ -1272,6 +1272,23 @@ int main(int argc, char** argv) {
             &&automatic_pair.far_byte_boundary.source_segment==0x32a1
             &&automatic_pair.far_byte_boundary.source_offset==0x0024
             &&automatic_pair.far_byte_boundary.destination_offset==0x02e3);
+        auto rejected_stream=owned_mode_two;
+        const auto stream_before=rejected_stream.checkpoint();
+        const auto rejected_stream_result=rejected_stream.drive_next_descriptor_stream_from_title_library(
+            {},{stream_before.last_sequence+1,2});
+        assert(!rejected_stream_result.accepted
+            &&rejected_stream.checkpoint().last_sequence==stream_before.last_sequence
+            &&rejected_stream.checkpoint().memory_effects.size()==stream_before.memory_effects.size());
+        const auto driven_stream=owned_mode_two.drive_next_descriptor_stream_from_title_library(
+            title_library,{automatic_pair.last_sequence+1,2});
+        assert(driven_stream.accepted && driven_stream.stopped_at_boundary
+            &&driven_stream.observation_count==1);
+        const auto after_stream=owned_mode_two.checkpoint();
+        assert(after_stream.state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_mode_two_word_boundary
+            &&after_stream.continuation_address==0x144a
+            &&after_stream.far_read_boundary.source_segment==0x32a1
+            &&after_stream.far_read_boundary.source_offset==0x0024);
 
         auto missing_mode_two=compact_owned_mode_two;
         eon::NativeRuntimeMemory missing_memory;

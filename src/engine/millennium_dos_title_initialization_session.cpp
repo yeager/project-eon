@@ -157,6 +157,81 @@ MillenniumDosTitleInitializationSession::drive_mode_two_from_owned_memory(
     return result;
 }
 
+MillenniumDosTitleDescriptorStreamDriveResult
+MillenniumDosTitleInitializationSession::drive_next_descriptor_stream_from_title_library(
+    const std::span<const std::uint8_t> title_library,
+    const MillenniumDosTitleDescriptorStreamDriveRequest request) {
+    MillenniumDosTitleDescriptorStreamDriveResult result;
+    constexpr std::string_view expected_title_library_sha =
+        "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
+    constexpr std::uint16_t relocated_stream_segment = 0x32a1;
+    constexpr std::uint16_t expected_library_segment = 0x3000;
+    if ((state_ != MillenniumDosTitleInitializationState::post_descriptor_next_loop_stream_byte_boundary
+            && state_ != MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary)
+        || continuation_address_ != 0x1428 || title_library_segment_ != expected_library_segment
+        || title_library.size() != 18907 || to_hex(sha256(title_library)) != expected_title_library_sha
+        || last_sequence_ == std::numeric_limits<std::uint64_t>::max()
+        || request.first_sequence != last_sequence_ + 1 || request.maximum_observations == 0
+        || request.maximum_observations > 256
+        || request.first_sequence > std::numeric_limits<std::uint64_t>::max()
+            - request.maximum_observations) {
+        result.error = "TITLE.LIB stream drive requires the exact relocated second-descriptor byte boundary";
+        return result;
+    }
+
+    auto next = *this;
+    const auto title_library_base = static_cast<std::uint32_t>(expected_library_segment) * 16U;
+    for (std::size_t count = 0; count < request.maximum_observations; ++count) {
+        const auto byte_boundary = next.state_ == MillenniumDosTitleInitializationState::post_descriptor_next_loop_stream_byte_boundary
+            || next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary
+            || next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_nibble_byte_boundary
+            || next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_xlat_byte_boundary
+            || next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_xlat_byte_boundary;
+        if (!byte_boundary) {
+            // The next decoder operation is deliberately left typed.  In
+            // particular, this driver does not turn a word/escape/mode-two
+            // boundary into a general DOS-memory read.
+            result.accepted = count != 0;
+            result.stopped_at_boundary = count != 0;
+            result.observation_count = count;
+            if (result.accepted) *this = std::move(next);
+            else result.error = "TITLE.LIB stream drive reached an unadmitted decoder boundary";
+            return result;
+        }
+        const auto boundary = next.far_byte_boundary_;
+        // This is the single relocation established by the preceding verified
+        // TITLE.LIB descriptor: $3000:0000 -> $32a1:0000 at file +$2a10.
+        // Do not accept physical-equivalent segment aliases here.
+        if (boundary.source_segment != relocated_stream_segment) {
+            result.error = "TITLE.LIB stream drive rejected a non-canonical source segment";
+            return result;
+        }
+        const auto physical = static_cast<std::uint32_t>(boundary.source_segment) * 16U
+            + boundary.source_offset;
+        if (physical < title_library_base) {
+            result.error = "TITLE.LIB stream drive source precedes the admitted library";
+            return result;
+        }
+        const auto file_offset = physical - title_library_base;
+        if (file_offset < 0x2a16U || file_offset >= title_library.size()) {
+            result.error = "TITLE.LIB stream drive source is outside the admitted second descriptor";
+            return result;
+        }
+        try {
+            next.observe_far_byte({request.first_sequence + count,
+                boundary.instruction_address, boundary.source_segment,
+                boundary.source_offset, title_library[file_offset]});
+        } catch (const std::exception& error) {
+            result.error = error.what();
+            return result;
+        }
+    }
+    result.accepted = true;
+    result.observation_count = request.maximum_observations;
+    *this = std::move(next);
+    return result;
+}
+
 void MillenniumDosTitleInitializationSession::advance_encoded_record_complete(){
     if(state_!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_record_complete
         ||continuation_address_!=0x1488)
@@ -1686,6 +1761,7 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_byte_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_byte_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_payload_byte_boundary
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_next_loop_stream_byte_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_nibble_byte_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_xlat_byte_boundary
@@ -1703,6 +1779,7 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
         ||(boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_byte_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_byte_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_payload_byte_boundary
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_next_loop_stream_byte_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_nibble_byte_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_xlat_byte_boundary
@@ -1855,7 +1932,8 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
         else {far_byte_boundary_={0x1428,dispatch.source_segment,static_cast<std::uint16_t>(dispatch.source_offset+1U),0};continuation_address_=0x1428;state_=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary;}
         return;
     }
-    if(boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary){
+    if(boundary_state==MillenniumDosTitleInitializationState::post_descriptor_next_loop_stream_byte_boundary
+        ||boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary){
         const auto nibble=static_cast<std::uint8_t>(observation.byte&0x0fU);
         effects_.insert(effects_.end(),{{0x1428,"AL",observation.byte},
             {0x142b,"CL",4},{0x1430,"AL",nibble},
