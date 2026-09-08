@@ -1201,6 +1201,8 @@ public:
     millennium_dos_owned_function_diagnostics() const;
 
 private:
+    [[nodiscard]] bool advance_millennium_dos_title_local_continuation(
+        std::string& error);
     // Central exact-media gate for the recovered title successor. Future
     // sound-driver ownership may call this only after it has advanced the
     // same owned title session to handed_off; it is intentionally not a

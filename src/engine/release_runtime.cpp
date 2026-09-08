@@ -1368,6 +1368,83 @@ ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner() {
   }
 }
 
+bool ReleaseRuntimeCoordinator::advance_millennium_dos_title_local_continuation(
+    std::string& error) {
+  if (!session_snapshot_ ||
+      session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title ||
+      !millennium_dos_title_initialization_) {
+    return false;
+  }
+  auto next = *millennium_dos_title_initialization_;
+  auto memory = native_runtime_memory_ ? std::optional{*native_runtime_memory_}
+                                       : std::nullopt;
+  const auto prior_effects = next.checkpoint().memory_effects.size();
+  try {
+    const auto checkpoint = next.checkpoint();
+    switch (checkpoint.state) {
+    case MillenniumDosTitleInitializationState::selected_local_call_boundary:
+      next.execute_selected_callee_start(
+          checkpoint.last_sequence + 1, checkpoint.selected_call_address,
+          checkpoint.selected_call_target);
+      break;
+    case MillenniumDosTitleInitializationState::selected_followup_call_boundary:
+      next.execute_selected_followup_start(
+          checkpoint.last_sequence + 1,
+          checkpoint.selected_followup_call_address,
+          checkpoint.selected_followup_call_target);
+      break;
+    case MillenniumDosTitleInitializationState::title_main_allocation_call_boundary:
+      next.execute_title_main_allocation_start(
+          checkpoint.last_sequence + 1, checkpoint.title_main_call_address,
+          checkpoint.title_main_call_target);
+      break;
+    default:
+      return false;
+    }
+  } catch (const std::exception& exception) {
+    error = exception.what();
+    return false;
+  }
+  const auto checkpoint = next.checkpoint();
+  if (checkpoint.memory_effects.size() > prior_effects) {
+    if (!memory) {
+      error = "Millennium title local continuation requires native memory";
+      return false;
+    }
+    NativeRuntimeEffectBatch batch{
+        "millennium-dos-title-local-" +
+            std::to_string(millennium_dos_sound_driver_load_generation_) + "-" +
+            std::to_string(checkpoint.last_sequence),
+        true,
+        {}};
+    for (std::size_t i = prior_effects; i < checkpoint.memory_effects.size();
+         ++i) {
+      const auto& effect = checkpoint.memory_effects[i];
+      batch.effects.push_back(
+          {batch.effects.size() + 1,
+           {NativeRuntimeAddressSpace::dos_segmented,
+            (effect.explicit_segment || effect.segment != 0)
+                ? effect.segment
+                : checkpoint.child_code_segment,
+            effect.offset},
+           effect.width == MillenniumDosTitleInitializationEffectWidth::byte
+               ? MemoryTransferElementWidth::byte
+               : MemoryTransferElementWidth::word,
+           NativeRuntimeByteOrder::little_endian,
+           effect.value});
+    }
+    const auto applied = memory->apply(batch);
+    if (!applied.accepted) {
+      error = applied.error;
+      return false;
+    }
+  }
+  millennium_dos_title_initialization_ = std::move(next);
+  if (memory)
+    *native_runtime_memory_ = std::move(*memory);
+  return true;
+}
+
 MillenniumDosSessionDriveResult
 ReleaseRuntimeCoordinator::drive_millennium_dos_session(
     const std::uint32_t step_limit) {
@@ -1409,6 +1486,16 @@ ReleaseRuntimeCoordinator::drive_millennium_dos_session(
   };
   result.accepted = true;
   for (; result.steps < step_limit; ++result.steps) {
+    std::string local_error;
+    if (advance_millennium_dos_title_local_continuation(local_error))
+      continue;
+    if (!local_error.empty()) {
+      result.accepted = false;
+      result.stop_reason = MillenniumDosSessionStopReason::failed;
+      result.stop_before_address = boundary();
+      result.error = std::move(local_error);
+      return result;
+    }
     const auto before_sequence = millennium_dos_title_initialization_
         ? millennium_dos_title_initialization_->checkpoint().last_sequence
         : millennium_dos_sound_driver_load_last_sequence_;
@@ -1510,15 +1597,9 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_private_interrupt_result
     }
     auto next=*millennium_dos_title_initialization_;
     auto memory=*native_runtime_memory_;
-    const auto initial_state=next.checkpoint().state;
     const auto prior_effect_count=next.checkpoint().memory_effects.size();
     try {
         next.observe_private_interrupt_result(observation);
-        if(initial_state==MillenniumDosTitleInitializationState::private_interrupt_result_boundary){
-            const auto selected=next.checkpoint();
-            next.execute_selected_callee_start(selected.last_sequence+1,
-                selected.selected_call_address,selected.selected_call_target);
-        }
         if(next.checkpoint().state==MillenniumDosTitleInitializationState::post_video_followup_call_boundary){
             const auto reached=next.checkpoint();
             next.execute_post_video_followup(reached.last_sequence+1,0x1c17,0x1725);
@@ -1565,10 +1646,6 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_selected_callee_result(
     const auto prior_effect_count=next.checkpoint().memory_effects.size();
     try {
         next.observe_selected_callee_private_interrupt_result(observation);
-        const auto selected=next.checkpoint();
-        next.execute_selected_followup_start(selected.last_sequence+1,
-            selected.selected_followup_call_address,
-            selected.selected_followup_call_target);
     } catch(const std::exception& e){result.error=e.what();return result;}
     const auto checkpoint=next.checkpoint();
     if(checkpoint.memory_effects.size()>prior_effect_count){
@@ -1614,12 +1691,6 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_bios_result(
         auto memory=*native_runtime_memory_;
         const auto prior_effect_count=next.checkpoint().memory_effects.size();
         next.observe_bios_palette_result(observation,*titles);
-        if(next.checkpoint().state
-            ==MillenniumDosTitleInitializationState::title_main_allocation_call_boundary){
-            const auto reached=next.checkpoint();
-            next.execute_title_main_allocation_start(reached.last_sequence+1,
-                reached.title_main_call_address,reached.title_main_call_target);
-        }
         if(next.checkpoint().state
             ==MillenniumDosTitleInitializationState::post_video_setup_call_boundary){
             const auto reached=next.checkpoint();

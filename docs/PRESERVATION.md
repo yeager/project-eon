@@ -4789,6 +4789,13 @@ already-accepted external session sequence and rejects stale handoffs.
 Private interrupts, BIOS, vectors and far-memory reads remain external. These
 engine results are never described as captured DOS observations.
 
+The public Millennium DOS session driver owns only recovered local calls and
+the hash-admitted compatibility service.  It reports `external_observation`,
+`step_limit`, `failed`, or `inactive` rather than fabricating a private ABI or
+BIOS return.  In particular, the admitted mode-1 title path reaches the
+external palette-copy boundary at `$0fc6`; it does not imply that the distinct
+post-library vector setup has executed.
+
 The next deterministic native continuation is documented in
 [Millennium DOS native title initialization](MILLENNIUM_DOS_TITLE_INITIALIZATION.md).
 It executes the exact `$1b80..$1b95` register setup and collapses the

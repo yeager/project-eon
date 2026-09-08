@@ -4263,6 +4263,10 @@ int main() {
         admitted_dos_runtime.native_runtime_memory_diagnostics();
     assert(admitted_dos_runtime.observe_millennium_dos_title_private_interrupt_result(
         {15,0x0127,0x0129,0x0101,0x7202}).accepted);
+    const auto private_result_drive=admitted_dos_runtime.drive_millennium_dos_session();
+    assert(private_result_drive.accepted&&private_result_drive.steps==1
+        &&private_result_drive.stop_reason
+            ==eon::MillenniumDosSessionStopReason::external_observation);
     title_entry=admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint();
     assert(title_entry&&title_entry->title_initialization
         &&title_entry->title_initialization->state
@@ -4319,6 +4323,10 @@ int main() {
         admitted_dos_runtime.native_runtime_memory_diagnostics();
     assert(admitted_dos_runtime.observe_millennium_dos_title_selected_callee_result(
         {17,0x0127,0x0129,0x1ad1,0xabcd,0x0202}).accepted);
+    const auto selected_result_drive=admitted_dos_runtime.drive_millennium_dos_session();
+    assert(selected_result_drive.accepted&&selected_result_drive.steps==1
+        &&selected_result_drive.stop_reason
+            ==eon::MillenniumDosSessionStopReason::external_observation);
     title_entry=admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint();
     assert(title_entry&&title_entry->title_initialization
         &&title_entry->title_initialization->state
@@ -4371,6 +4379,10 @@ int main() {
                     ==0x014c+(index+1)*3);
         }
     }
+    const auto title_main_drive=admitted_dos_runtime.drive_millennium_dos_session(1);
+    assert(title_main_drive.accepted&&title_main_drive.steps==1
+        &&title_main_drive.stop_reason
+            ==eon::MillenniumDosSessionStopReason::step_limit);
     title_entry=admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint();
     assert(title_entry&&title_entry->title_initialization
         &&title_entry->title_initialization->state
