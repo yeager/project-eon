@@ -235,6 +235,7 @@ target_compile_definitions(project-eon PRIVATE
     EON_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
     EON_FONT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts"
     EON_LOCALE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/po"
+    EON_PROJECT_VERSION="${PROJECT_VERSION}"
     EON_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(project-eon PRIVATE SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf ZLIB::ZLIB)
 

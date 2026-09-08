@@ -126,9 +126,22 @@ struct LaunchRequest {
     // Keep diagnostics-only inputs from quietly accepting an otherwise
     // meaningless presentation switch.
     bool presentation_explicit = false;
+    // `custom` is a Modern launch with an explicitly user-tuned renderer
+    // configuration.  It never denotes a third game-data or simulation mode.
+    bool presentation_custom = false;
     DisplayPreferences display;
     bool display_resolution_explicit = false;
     bool display_aspect_explicit = false;
+    // Command-line overrides for the exact renderer controls exposed by the
+    // F10 panel.  These use the same bounded preference values as that panel;
+    // they do not describe original media, game state, input, or saves.
+    std::optional<std::size_t> modern_preset_index;
+    std::optional<std::size_t> render_pacing_index;
+    std::optional<std::size_t> pixel_reconstruction_index;
+    std::optional<bool> smooth_scaling;
+    std::optional<bool> scanlines;
+    std::optional<bool> modern_frame;
+    std::optional<bool> reduced_motion;
     // `--language` is an explicit launcher-chrome choice.  It must take
     // precedence over a persisted menu preference, while an omitted option
     // can restore the last deliberate menu choice.

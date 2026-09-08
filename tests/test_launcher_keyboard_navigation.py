@@ -15,6 +15,30 @@ MENU_RUNTIME_SOURCE = (ROOT / "src" / "engine" / "menu_runtime_launch.cpp").read
 OPENING_RUNNER_HEADER = (ROOT / "src" / "engine" / "deuteros_amiga_opening_runner.hpp").read_text(encoding="utf-8")
 OPENING_RUNNER_SOURCE = (ROOT / "src" / "engine" / "deuteros_amiga_opening_runner.cpp").read_text(encoding="utf-8")
 class LauncherKeyboardNavigationTests(unittest.TestCase):
+    def test_menu_footer_uses_the_build_version_and_project_credit(self) -> None:
+        cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        self.assertIn('EON_PROJECT_VERSION="${PROJECT_VERSION}"', cmake)
+        self.assertIn('if (screen == Screen::menu)', SOURCE)
+        self.assertIn('std::string("v") + EON_PROJECT_VERSION', SOURCE)
+        self.assertIn('draw_text(renderer, 1110, 696, "Daniel Nylander")', SOURCE)
+
+    def test_launcher_window_reasserts_its_resizable_contract(self) -> None:
+        self.assertIn("SDL_WINDOW_RESIZABLE", SOURCE)
+        self.assertIn("SDL_SetWindowResizable(window, true)", SOURCE)
+        self.assertIn("SDL_GetWindowFlags(window) & SDL_WINDOW_RESIZABLE", SOURCE)
+
+    def test_cli_maps_every_f10_renderer_control_to_the_shared_request_model(self) -> None:
+        for option in (
+            "--resolution", "--aspect", "--graphics-preset", "--render-pacing",
+            "--pixel-reconstruction", "--smooth-scaling", "--scanlines",
+            "--modern-frame", "--reduced-motion",
+        ):
+            self.assertIn(option, ROUTE_SOURCE)
+        self.assertIn("presentation_custom", ROUTE_HEADER)
+        self.assertIn("Modern renderer options require --presentation modern", ROUTE_SOURCE)
+        self.assertIn("apply_modern_graphics_preset(modern_graphics_settings", SOURCE)
+        self.assertIn("mark_modern_graphics_custom(modern_graphics_settings)", SOURCE)
+
     def test_menu_has_explicit_game_platform_release_and_profile_pages(self) -> None:
         self.assertIn("enum class LauncherPage { games, platforms, releases, profiles }", ROUTE_HEADER)
         self.assertIn("struct LauncherRouteState", ROUTE_HEADER)

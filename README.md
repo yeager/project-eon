@@ -267,6 +267,10 @@ Or select a game directly from the CLI:
   --platform amiga --presentation original --resolution 1600x900 --aspect original
 ./build/project-eon --data "$HOME/Downloads" --game deuteros \
   --platform amiga --presentation modern --resolution 1920x1080 --aspect widescreen
+./build/project-eon --data "$HOME/Downloads" --game millennium --platform dos \
+  --presentation custom --graphics-preset cinematic --render-pacing 120fps \
+  --pixel-reconstruction scale4x --smooth-scaling on --scanlines off \
+  --modern-frame off --reduced-motion on
 ```
 
 `--resolution` accepts the same 1280x720, 1600x900, and 1920x1080 presets as
@@ -275,6 +279,22 @@ F10. `--aspect` accepts `original` (4:3), `square-pixels` (8:5), or
 launch always requires `--platform`: Project Eon will not select a different
 platform's release when the choice is omitted. Use the card menu or
 `--inspect --game <game>` to see the hash-verified choices first.
+
+Every selectable card-menu and F10 renderer setting also has an explicit CLI
+form. Use `--game`, `--platform`, `--release-language`, and
+`--release-sha256` for the game/platform/release cards; `--data` or
+`--data-dir` for the original-data picker; `--presentation original|modern|custom`
+for profile cards; and `--language` for the launcher locale. The F10 controls
+map one-to-one to `--resolution`, `--aspect`, `--graphics-preset`
+(`clean`, `crt`, `cinematic`, `high-contrast`, or `custom`),
+`--render-pacing` (`vsync`, `120fps`, or `uncapped`),
+`--pixel-reconstruction` (`off`, `scale2x`, or `scale4x`),
+`--smooth-scaling on|off`, `--scanlines on|off`, `--modern-frame on|off`, and
+`--reduced-motion on|off`. Modern renderer options require `--presentation modern`
+or `--presentation custom`; `custom` is still Modern renderer state, never a
+third game-data or simulation mode. `--modern-pack` is the corresponding
+explicit Modern asset-pack selector, and `--runtime-diagnostics-json` exposes
+the F10 developer diagnostic data without opening an SDL window.
 
 To validate the complete hash-bound startup route without creating an SDL
 window, add `--launch-check`. It resolves one exact release, rehashes the
@@ -363,8 +383,9 @@ filter, pacing, and selected launcher-chrome language. Its current structured
 format is read backward-compatibly from the prior renderer-only schema; a
 missing or malformed file falls back to English/default renderer settings. It
 is never created while merely reading game data, never stored in the data
-directory, and never changes original media or saves. Explicit `--resolution`,
-`--aspect`, and `--language` options override its values.
+directory, and never changes original media or saves. Every renderer CLI
+option listed above, plus `--language`, overrides its corresponding saved
+value for that invocation.
 
 Verify genuine release archives by SHA-256 without opening SDL:
 

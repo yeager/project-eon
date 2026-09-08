@@ -4601,6 +4601,18 @@ int main(int argc, char** argv) {
         SDL_Quit();
         return 1;
     }
+    // Some desktop backends apply the initial creation flags before they
+    // attach shell decorations. Reassert and verify this public SDL contract
+    // so the card launcher is never silently published as fixed-size.
+    if (!SDL_SetWindowResizable(window, true)
+        || !(SDL_GetWindowFlags(window) & SDL_WINDOW_RESIZABLE)) {
+        std::cerr << "SDL window manager rejected a resizable Project Eon window: "
+                  << SDL_GetError() << '\n';
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
     SDL_SetRenderLogicalPresentation(renderer, 1280, 720, SDL_LOGICAL_PRESENTATION_LETTERBOX);
     SDL_SetRenderVSync(renderer, 1);
     if (const auto font_directory = find_font_directory()) {
@@ -5354,6 +5366,26 @@ int main(int argc, char** argv) {
         modern_graphics_settings.scanlines = saved.scanlines;
         modern_graphics_settings.frame = saved.frame;
         modern_graphics_settings.reduced_motion = saved.reduced_motion;
+    }
+    // CLI and F10 operate on the same bounded renderer settings.  Apply these
+    // last so an explicit invocation is deterministic over saved Eon chrome
+    // preferences, while leaving Original's decoded pixels and all game data
+    // outside this host-only configuration path.
+    if (request.modern_preset_index) {
+        apply_modern_graphics_preset(modern_graphics_settings,
+            static_cast<ModernGraphicsPreset>(*request.modern_preset_index));
+    }
+    if (request.render_pacing_index) modern_graphics_settings.render_pacing =
+        static_cast<RenderPacing>(*request.render_pacing_index);
+    if (request.pixel_reconstruction_index) modern_graphics_settings.pixel_reconstruction =
+        static_cast<PixelReconstruction>(*request.pixel_reconstruction_index);
+    if (request.smooth_scaling) modern_graphics_settings.smooth_scaling = *request.smooth_scaling;
+    if (request.scanlines) modern_graphics_settings.scanlines = *request.scanlines;
+    if (request.modern_frame) modern_graphics_settings.frame = *request.modern_frame;
+    if (request.reduced_motion) modern_graphics_settings.reduced_motion = *request.reduced_motion;
+    if (request.presentation_custom || request.render_pacing_index || request.pixel_reconstruction_index
+        || request.smooth_scaling || request.scanlines || request.modern_frame || request.reduced_motion) {
+        mark_modern_graphics_custom(modern_graphics_settings);
     }
     const auto current_modern_runtime_diagnostics = [&] {
         ModernRuntimeDiagnostics diagnostics;
@@ -6897,6 +6929,13 @@ int main(int argc, char** argv) {
             } else {
                 draw_text(renderer, 64, 220, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
             }
+        }
+        // These are Project Eon launcher credits, not original game text.
+        // They remain outside every media, mode, and runtime-state boundary.
+        if (screen == Screen::menu) {
+            SDL_SetRenderDrawColor(renderer, 150, 185, 210, 255);
+            draw_text(renderer, 64, 696, std::string("v") + EON_PROJECT_VERSION);
+            draw_text(renderer, 1110, 696, "Daniel Nylander");
         }
         if (show_modern_graphics_settings) {
             if (show_modern_runtime_diagnostics) {

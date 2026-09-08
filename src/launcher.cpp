@@ -50,6 +50,35 @@ bool parse_display_aspect(const std::string_view value, DisplayPreferences& disp
     return true;
 }
 
+std::optional<bool> parse_on_off(const std::string_view value) {
+    if (value == "on") return true;
+    if (value == "off") return false;
+    return std::nullopt;
+}
+
+std::optional<std::size_t> parse_graphics_preset(const std::string_view value) {
+    if (value == "clean") return 0;
+    if (value == "crt") return 1;
+    if (value == "cinematic") return 2;
+    if (value == "high-contrast") return 3;
+    if (value == "custom") return 4;
+    return std::nullopt;
+}
+
+std::optional<std::size_t> parse_render_pacing(const std::string_view value) {
+    if (value == "vsync") return 0;
+    if (value == "120fps") return 1;
+    if (value == "uncapped") return 2;
+    return std::nullopt;
+}
+
+std::optional<std::size_t> parse_pixel_reconstruction(const std::string_view value) {
+    if (value == "off") return 0;
+    if (value == "scale2x") return 1;
+    if (value == "scale4x") return 2;
+    return std::nullopt;
+}
+
 std::filesystem::path default_data_directory(const char* executable_path) {
 #ifdef _WIN32
     std::error_code error;
@@ -149,7 +178,12 @@ std::string usage() {
         "  project-eon [--data|--data-dir <directory-or-archive>] --game millennium|deuteros\n"
         "               --platform dos|amiga|atari-st\n"
         "               [--release-language en|es] [--release-sha256 <64-lowercase-hex>]\n"
-        "               [--presentation original|modern] [--modern-pack <pack.eonmodern>]\n\n"
+        "               [--presentation original|modern|custom] [--modern-pack <pack.eonmodern>]\n"
+        "               [--graphics-preset clean|crt|cinematic|high-contrast|custom]\n"
+        "               [--render-pacing vsync|120fps|uncapped]\n"
+        "               [--pixel-reconstruction off|scale2x|scale4x]\n"
+        "               [--smooth-scaling on|off] [--scanlines on|off]\n"
+        "               [--modern-frame on|off] [--reduced-motion on|off]\n\n"
         "               [--launch-check]\n\n"
         "               [--launch-check-json]\n\n"
         "               [--runtime-diagnostics-json]\n\n"
@@ -273,6 +307,10 @@ ParseResult parse_command_line(int argc, char** argv) {
         } else if (argument == "--presentation") {
             if (value == "original") request.presentation = Presentation::original;
             else if (value == "modern") request.presentation = Presentation::modern;
+            else if (value == "custom") {
+                request.presentation = Presentation::modern;
+                request.presentation_custom = true;
+            }
             else return {{}, "Unknown presentation: " + std::string(value), false};
             request.presentation_explicit = true;
         } else if (argument == "--resolution") {
@@ -285,6 +323,27 @@ ParseResult parse_command_line(int argc, char** argv) {
                 return {{}, "Unknown aspect ratio: " + std::string(value), false};
             }
             request.display_aspect_explicit = true;
+        } else if (argument == "--graphics-preset") {
+            request.modern_preset_index = parse_graphics_preset(value);
+            if (!request.modern_preset_index) return {{}, "Unknown graphics preset: " + std::string(value), false};
+        } else if (argument == "--render-pacing") {
+            request.render_pacing_index = parse_render_pacing(value);
+            if (!request.render_pacing_index) return {{}, "Unknown render pacing: " + std::string(value), false};
+        } else if (argument == "--pixel-reconstruction") {
+            request.pixel_reconstruction_index = parse_pixel_reconstruction(value);
+            if (!request.pixel_reconstruction_index) return {{}, "Unknown pixel reconstruction: " + std::string(value), false};
+        } else if (argument == "--smooth-scaling") {
+            request.smooth_scaling = parse_on_off(value);
+            if (!request.smooth_scaling) return {{}, "--smooth-scaling accepts on or off", false};
+        } else if (argument == "--scanlines") {
+            request.scanlines = parse_on_off(value);
+            if (!request.scanlines) return {{}, "--scanlines accepts on or off", false};
+        } else if (argument == "--modern-frame") {
+            request.modern_frame = parse_on_off(value);
+            if (!request.modern_frame) return {{}, "--modern-frame accepts on or off", false};
+        } else if (argument == "--reduced-motion") {
+            request.reduced_motion = parse_on_off(value);
+            if (!request.reduced_motion) return {{}, "--reduced-motion accepts on or off", false};
         } else if (argument == "--language" || argument == "-l") {
             request.language = normalize_language(value);
             if (request.language.empty()) return {{}, "Unknown language: " + std::string(value), false};
@@ -362,6 +421,12 @@ ParseResult parse_command_line(int argc, char** argv) {
     }
     if (request.launch_check && (!request.game || !request.platform)) {
         return {{}, "--launch-check requires both --game and --platform", false};
+    }
+    const bool has_modern_renderer_override = request.modern_preset_index || request.render_pacing_index
+        || request.pixel_reconstruction_index || request.smooth_scaling || request.scanlines
+        || request.modern_frame || request.reduced_motion;
+    if (has_modern_renderer_override && request.presentation == Presentation::original) {
+        return {{}, "Modern renderer options require --presentation modern or --presentation custom", false};
     }
     return {request, {}, false};
 }

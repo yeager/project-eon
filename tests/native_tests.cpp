@@ -2398,6 +2398,39 @@ int main() {
         char unknown_aspect[] = "squished";
         char* unknown_aspect_args[] = {program, aspect_option, unknown_aspect};
         assert(!eon::parse_command_line(3, unknown_aspect_args).request);
+        char custom_presentation[] = "custom";
+        char graphics_preset_option[] = "--graphics-preset";
+        char cinematic[] = "cinematic";
+        char render_pacing_option[] = "--render-pacing";
+        char capped_120[] = "120fps";
+        char pixel_reconstruction_option[] = "--pixel-reconstruction";
+        char scale4x[] = "scale4x";
+        char smooth_scaling_option[] = "--smooth-scaling";
+        char on[] = "on";
+        char scanlines_option[] = "--scanlines";
+        char off[] = "off";
+        char modern_frame_option[] = "--modern-frame";
+        char reduced_motion_option[] = "--reduced-motion";
+        char* custom_renderer_args[] = {program, presentation_option, custom_presentation,
+            graphics_preset_option, cinematic, render_pacing_option, capped_120,
+            pixel_reconstruction_option, scale4x, smooth_scaling_option, on,
+            scanlines_option, off, modern_frame_option, on, reduced_motion_option, on};
+        const auto custom_renderer = eon::parse_command_line(17, custom_renderer_args);
+        assert(custom_renderer.request && custom_renderer.request->presentation == eon::Presentation::modern
+            && custom_renderer.request->presentation_custom
+            && custom_renderer.request->modern_preset_index == 2
+            && custom_renderer.request->render_pacing_index == 1
+            && custom_renderer.request->pixel_reconstruction_index == 2
+            && custom_renderer.request->smooth_scaling == true
+            && custom_renderer.request->scanlines == false
+            && custom_renderer.request->modern_frame == true
+            && custom_renderer.request->reduced_motion == true);
+        char* original_renderer_args[] = {program, graphics_preset_option, cinematic};
+        assert(!eon::parse_command_line(3, original_renderer_args).request);
+        char invalid_on_off[] = "yes";
+        char* invalid_scaling_args[] = {program, presentation_option, modern,
+            smooth_scaling_option, invalid_on_off};
+        assert(!eon::parse_command_line(5, invalid_scaling_args).request);
 
         const std::vector<eon::ReleaseArchive> menu_releases{
             {eon::Game::millennium, eon::Platform::dos, "en", {}, {}},
