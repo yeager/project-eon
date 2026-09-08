@@ -278,7 +278,12 @@ std::optional<std::vector<std::uint8_t>> VerifiedReleaseMedia::extract(
 std::optional<std::span<const std::uint8_t>> VerifiedReleaseMedia::borrow(
     const std::string_view expected_asset_sha256) const {
     const auto cached = borrowed_assets_.find(std::string(expected_asset_sha256));
-    if (cached != borrowed_assets_.end()) {
+    // An archive is held by this admission's verified in-memory container.
+    // Direct media remains a host file, so rehash it before returning even an
+    // already-borrowed backing view. This closes a later file replacement
+    // from being hidden by the session cache while preserving existing spans'
+    // lifetime for callers that already parsed an admitted leaf.
+    if (cached != borrowed_assets_.end() && !archives_.empty()) {
         return std::span<const std::uint8_t>(cached->second);
     }
     std::vector<std::uint8_t> bytes;
@@ -291,14 +296,17 @@ std::optional<std::span<const std::uint8_t>> VerifiedReleaseMedia::borrow(
         }
         if (bytes.empty()) return std::nullopt;
     } else {
-    const auto found = direct_assets_.find(std::string(expected_asset_sha256));
-    if (found == direct_assets_.end()) return std::nullopt;
+        const auto found = direct_assets_.find(std::string(expected_asset_sha256));
+        if (found == direct_assets_.end()) return std::nullopt;
         bytes = read_exact_regular_file(found->second.path, found->second.size);
     }
     // `open()` verified the complete set; the second hash closes the interval
     // between that set admission and this individual parser read. The
     // session retains only this immutable, hash-addressed leaf backing.
     if (to_hex(sha256(bytes)) != expected_asset_sha256) return std::nullopt;
+    if (cached != borrowed_assets_.end()) {
+        return std::span<const std::uint8_t>(cached->second);
+    }
     const auto [inserted, added] = borrowed_assets_.emplace(
         std::string(expected_asset_sha256), std::move(bytes));
     if (!added) return std::nullopt;
