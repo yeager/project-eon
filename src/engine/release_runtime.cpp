@@ -1398,6 +1398,27 @@ bool ReleaseRuntimeCoordinator::advance_millennium_dos_title_local_continuation(
           checkpoint.last_sequence + 1, checkpoint.title_main_call_address,
           checkpoint.title_main_call_target);
       break;
+    case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_source_byte_boundary:
+    case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_first_lookup_byte_boundary:
+    case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_source_byte_boundary:
+    case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_lookup_byte_boundary: {
+      // The mode-two decoder is a native continuation only when its exact
+      // current segmented source byte is already owned by this runtime.  A
+      // missing byte is an external preservation boundary, not a reason to
+      // synthesize memory or make the session scheduler fail.
+      if (!memory || checkpoint.far_byte_boundary.source_segment == 0
+          || !memory->read_byte({NativeRuntimeAddressSpace::dos_segmented,
+              checkpoint.far_byte_boundary.source_segment,
+              checkpoint.far_byte_boundary.source_offset}))
+        return false;
+      const auto driven = next.drive_mode_two_from_owned_memory(*memory,
+          {checkpoint.last_sequence + 1, 4});
+      if (!driven.accepted) {
+        error = driven.error;
+        return false;
+      }
+      break;
+    }
     default:
       return false;
     }
