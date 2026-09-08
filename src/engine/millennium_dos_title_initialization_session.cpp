@@ -2203,7 +2203,7 @@ MillenniumDosTitleInitializationSession::checkpoint() const {
         continuation_address_,post_video_observed_ax_,post_video_observed_flags_,
         graphics_record_observed_ax_,graphics_record_observed_flags_,
         post_descriptor_observed_ax_,post_descriptor_observed_flags_,
-        post_descriptor_observed_record_};
+        post_descriptor_observed_record_,title_library_cursor_,title_library_read_index_};
 }
 
 } // namespace eon

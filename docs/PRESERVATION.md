@@ -4774,6 +4774,21 @@ parent return result. Diagnostics expose `psp_modeled=false`,
 of filling those gaps. The child segment is a deterministic Eon address-space
 key, not a claimed historical DOS allocation address.
 
+After external private-interrupt and BIOS results reach a typed DOS-memory
+boundary, the runner may also produce explicitly labelled compatibility
+results for the TITLE.LIB allocation/file chain. It reopens and rehashes the
+active English release on each tick, uses a separate non-overlapping
+`$3000..$cfff` title arena, and treats oversized `$fa00` probe/scratch
+requests as failed ephemeral requests. Exact reads are bounded by the
+remaining 18,907-byte TITLE.LIB leaf. Media admission, allocation and runtime
+memory failures roll back the copied session, arena and runtime memory.
+Failed allocation results report the deterministic largest remaining private
+arena block; the following invalid free reports DOS error 9 and never invents
+an allocation. Sequence synchronization accepts only the current or a newer
+already-accepted external session sequence and rejects stale handoffs.
+Private interrupts, BIOS, vectors and far-memory reads remain external. These
+engine results are never described as captured DOS observations.
+
 The next deterministic native continuation is documented in
 [Millennium DOS native title initialization](MILLENNIUM_DOS_TITLE_INITIALIZATION.md).
 It executes the exact `$1b80..$1b95` register setup and collapses the

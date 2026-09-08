@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <map>
 
 namespace eon {
 
@@ -973,188 +974,398 @@ ReleaseRuntimeCoordinator::millennium_dos_sound_driver_load_checkpoint()const{
 }
 
 std::optional<MillenniumDosCompatibilityRunnerCheckpoint>
-ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner(){
-    if(!active_||!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_sound_driver_boundary
-        ||!millennium_dos_sound_driver_load_||!millennium_dos_compatibility_runner_
-        ||!native_runtime_memory_)return std::nullopt;
-    auto next=*millennium_dos_sound_driver_load_;
-    auto runner=*millennium_dos_compatibility_runner_;
-    auto memory=*native_runtime_memory_;
-    auto pending_title_entry=millennium_dos_title_exec_entry_;
-    std::unique_ptr<MillenniumDosTitleSession> pending_title;
+ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner() {
+  if (active_ && session_snapshot_ &&
+      session_snapshot_->kind == RuntimeSessionKind::millennium_dos_title &&
+      millennium_dos_title_initialization_ &&
+      millennium_dos_compatibility_runner_ && native_runtime_memory_) {
+    auto next = *millennium_dos_title_initialization_;
+    auto runner = *millennium_dos_compatibility_runner_;
+    auto memory = *native_runtime_memory_;
+    const auto initial_effects = next.checkpoint().memory_effects.size();
     try {
-        // These results are properties of the admitted immutable leaf and of
-        // Eon's private one-leaf compatibility service. No guest DOS state is
-        // inferred. Run until the next operation needs external process state.
-        while (true) {
-            switch (next.state()) {
-            case MillenniumDosSoundDriverLoadState::awaiting_open_result:
-                next.observe_open_result(0x02d2,false,runner.compatibility_file_handle());
-                runner.record_automatic_operation();
-                continue;
-            case MillenniumDosSoundDriverLoadState::awaiting_seek_end_result:
-                next.observe_seek_end_result(0x02eb,false,
-                    runner.compatibility_file_handle(),
-                    static_cast<std::uint16_t>(next.driver().byte_size),0);
-                runner.record_automatic_operation();
-                continue;
-            case MillenniumDosSoundDriverLoadState::awaiting_allocation_result: {
-                const auto paragraphs=static_cast<std::uint32_t>(
-                    (next.driver().byte_size+15U)/16U);
-                const auto allocated=runner.allocate_paragraphs(paragraphs);
-                if(!allocated.allocation)throw std::runtime_error(allocated.error);
-                next.observe_allocation_result(0x02fa,false,
-                    allocated.allocation->segment);
-                continue;
+      runner.synchronize_external_sequence(next.checkpoint().last_sequence);
+      constexpr std::string_view library_hash =
+          "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
+      const auto media = VerifiedReleaseMedia::open(active_->release);
+      const auto library = media.borrow(library_hash);
+      if (!library)
+        throw std::runtime_error(
+            "Exact TITLE.LIB compatibility source is unavailable");
+      while (true) {
+        const auto c = next.checkpoint();
+        runner.synchronize_external_sequence(c.last_sequence);
+        const auto sequence = runner.next_sequence();
+        const auto memory_state =
+            c.state >= MillenniumDosTitleInitializationState::
+                           dos_resize_result_boundary &&
+            c.state <= MillenniumDosTitleInitializationState::
+                           dos_second_buffer_allocation_result_boundary;
+        const auto library_memory =
+            c.state == MillenniumDosTitleInitializationState::
+                           dos_file_sized_allocation_result_boundary ||
+            c.state == MillenniumDosTitleInitializationState::
+                           dos_single_paragraph_allocation_result_boundary ||
+            c.state == MillenniumDosTitleInitializationState::
+                           dos_scratch_allocation_result_boundary ||
+            c.state == MillenniumDosTitleInitializationState::
+                           dos_scratch_free_result_boundary;
+        if (memory_state || library_memory) {
+          const bool allocation = c.dos_boundary.service == 0x48;
+          bool carry = false;
+          std::uint16_t ax = 0, bx = c.dos_boundary.bx;
+          if (allocation) {
+            const auto allocated =
+                runner.allocate_title_paragraphs(c.dos_boundary.bx);
+            if (allocated.allocation)
+              ax = allocated.allocation->segment;
+            else {
+              carry = true;
+              ax = 8;
+              bx = runner.remaining_title_paragraphs();
+              runner.record_automatic_operation();
             }
-            case MillenniumDosSoundDriverLoadState::awaiting_seek_start_result:
-                next.observe_seek_start_result(0x0309,false,
-                    runner.compatibility_file_handle(),0,0);
-                runner.record_automatic_operation();
-                continue;
-            case MillenniumDosSoundDriverLoadState::awaiting_read_result: {
-                next.observe_read_result(0x0313,false,
-                    runner.compatibility_file_handle(),
-                    static_cast<std::uint16_t>(next.driver().byte_size));
-                NativeRuntimeEffectBatch batch{
-                    "millennium-dos-sound-driver-"
-                        + std::to_string(millennium_dos_sound_driver_load_generation_)
-                        + "-image",true,{}};
-                batch.effects.reserve(next.memory_effects().size());
-                for(std::size_t i=0;i<next.memory_effects().size();++i){
-                    const auto&e=next.memory_effects()[i];
-                    batch.effects.push_back({i+1,
-                        {NativeRuntimeAddressSpace::dos_segmented,e.segment,e.offset},
-                        MemoryTransferElementWidth::byte,
-                        NativeRuntimeByteOrder::little_endian,e.value});
-                }
-                const auto applied=memory.apply(batch);
-                if(!applied.accepted)throw std::runtime_error(applied.error);
-                runner.record_automatic_operation();
-                continue;
-            }
-            case MillenniumDosSoundDriverLoadState::awaiting_close_result:
-                next.observe_close_result(0x0319,false,
-                    runner.compatibility_file_handle());
-                runner.record_automatic_operation();
-                continue;
-            case MillenniumDosSoundDriverLoadState::awaiting_vector_install: {
-                // The exact loader leaves DS at its owned allocation segment.
-                // $0234 clears DX; $0236 selects DOS SetVect for INT $95.
-                // This is Eon's process-local vector table, not captured DOS
-                // state, and installing the pointer does not invoke the driver.
-                const auto allocation = runner.checkpoint(next.state(), next.boundary())
-                    .paragraph_arena.allocations;
-                const auto owned = std::find_if(allocation.begin(), allocation.end(),
-                    [&](const auto& entry) { return entry.segment == next.load_segment(); });
-                if (owned == allocation.end())
-                    throw std::runtime_error("Driver vector requires an owned allocation");
-                NativeRuntimeEffectBatch batch{
-                    "millennium-dos-sound-vector-"
-                        + std::to_string(millennium_dos_sound_driver_load_generation_), true, {
-                    {1, {NativeRuntimeAddressSpace::dos_segmented, std::uint16_t{0}, 0x254},
-                        MemoryTransferElementWidth::word, NativeRuntimeByteOrder::little_endian, 0},
-                    {2, {NativeRuntimeAddressSpace::dos_segmented, std::uint16_t{0}, 0x256},
-                        MemoryTransferElementWidth::word, NativeRuntimeByteOrder::little_endian,
-                        next.load_segment()}}};
-                const auto applied = memory.apply(batch);
-                if (!applied.accepted) throw std::runtime_error(applied.error);
-                next.observe_vector_install(0x0239, 0x2595, 0);
-                runner.record_automatic_operation();
-                continue;
-            }
-            case MillenniumDosSoundDriverLoadState::title_exec_boundary: {
-                if(!millennium_dos_||!millennium_dos_->title_flow)
-                    throw std::runtime_error("English title flow is unavailable");
-                const auto media=VerifiedReleaseMedia::open(active_->release);
-                const auto mill=media.borrow("4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e");
-                const auto titles=media.borrow("3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6");
-                if(!mill||!titles)
-                    throw std::runtime_error("Exact TITLES.EXE process media is unavailable");
-                pending_title_entry.emplace(*mill,*titles);
-                pending_title=std::make_unique<MillenniumDosTitleSession>(*millennium_dos_->title_flow);
-                // Exact literal request after the observed SP store. This does
-                // not claim that DOS returned or that the child has completed.
-                next.observe_title_exec_request(0x0336,0x4b00,0x068f,0x067a);
-                runner.record_automatic_operation();
-                continue;
-            }
-            default:
-                if(next.state()==MillenniumDosSoundDriverLoadState::title_exec_requested
-                    &&pending_title_entry
-                    &&pending_title_entry->state()
-                        ==MillenniumDosTitleExecEntryState::awaiting_child_process_entry) {
-                    constexpr std::string_view titles_sha =
-                        "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
-                    const auto media=VerifiedReleaseMedia::open(active_->release);
-                    const auto titles=media.borrow(titles_sha);
-                    if(!titles)throw std::runtime_error(
-                        "Exact TITLES.EXE compatibility child leaf is unavailable");
-                    const auto allocated=runner.allocate_paragraphs(
-                        MillenniumDosTitleChildCompatibilityService::required_paragraphs());
-                    if(!allocated.allocation)throw std::runtime_error(allocated.error);
-                    MillenniumDosTitleChildCompatibilityService child(
-                        *titles,*allocated.allocation);
-                    NativeRuntimeEffectBatch batch{
-                        "millennium-dos-title-child-"
-                            +std::to_string(millennium_dos_sound_driver_load_generation_)
-                            +"-image",true,{}};
-                    batch.effects.reserve(child.image_effects().size());
-                    for(const auto& effect:child.image_effects()) {
-                        batch.effects.push_back({batch.effects.size()+1,
-                            {NativeRuntimeAddressSpace::dos_segmented,
-                                allocated.allocation->segment,effect.offset},
-                            MemoryTransferElementWidth::byte,
-                            NativeRuntimeByteOrder::little_endian,effect.value});
-                    }
-                    const auto applied=memory.apply(batch);
-                    if(!applied.accepted)throw std::runtime_error(applied.error);
-                    auto entry=*pending_title_entry;
-                    const auto child_entry_sequence=runner.next_sequence();
-                    entry.observe_child_process_entry({child_entry_sequence,
-                        0x0336,0x4b00,0x068f,0x067a,0x0100,
-                        allocated.allocation->segment,
-                        MillenniumDosTitleExecEntryProvenance::
-                            eon_dos_compatibility_service});
-                    runner.record_automatic_operation();
-                    const auto prefix_sequence=runner.next_sequence();
-                    entry.execute_exact_entry_prefix(prefix_sequence,
-                        0x0100,0x0104,0x1b80);
-                    runner.record_automatic_operation();
-                    MillenniumDosTitleInitializationSession initialization(
-                        *titles,allocated.allocation->segment,prefix_sequence);
-                    const auto initialization_sequence=runner.next_sequence();
-                    initialization.execute_exact_startup(initialization_sequence,
-                        0x1b80,0x1b95,0x0122,0x91);
-                    runner.record_automatic_operation();
-                    pending_title_entry=std::move(entry);
-                    millennium_dos_title_child_compatibility_.emplace(std::move(child));
-                    millennium_dos_title_initialization_.emplace(
-                        std::move(initialization));
-                    session_snapshot_=make_runtime_session_snapshot(
-                        *active_,RuntimeSessionKind::millennium_dos_title);
-                }
-                millennium_dos_title_exec_entry_=std::move(pending_title_entry);
-                if(pending_title)millennium_dos_title_=std::move(pending_title);
-                millennium_dos_sound_driver_load_=std::move(next);
-                millennium_dos_compatibility_runner_=std::move(runner);
-                *native_runtime_memory_=std::move(memory);
-                auto checkpoint=millennium_dos_compatibility_runner_->checkpoint(
-                    millennium_dos_sound_driver_load_->state(),
-                    millennium_dos_sound_driver_load_->boundary());
-                if(millennium_dos_title_initialization_) {
-                    checkpoint.external_result_required=true;
-                }
-                millennium_dos_sound_driver_load_last_sequence_=
-                    checkpoint.last_sequence;
-                return checkpoint;
-            }
+          } else {
+            // Both recovered AH=49 calls release ES after the
+            // deliberately failed oversized request. There is no
+            // arena allocation to release.
+            carry = true;
+            ax = 9;
+            runner.record_automatic_operation();
+          }
+          next.observe_dos_memory_result(
+              {sequence, c.dos_boundary.interrupt_address,
+               c.dos_boundary.return_address, carry, ax, bx,
+               static_cast<std::uint16_t>(carry ? 0x0203 : 0x0202)});
+          continue;
         }
-    } catch(const std::exception& e) {
-        return millennium_dos_compatibility_runner_->checkpoint(
-            millennium_dos_sound_driver_load_->state(),
-            millennium_dos_sound_driver_load_->boundary(),e.what());
+        const bool file_state =
+            c.state == MillenniumDosTitleInitializationState::
+                           dos_file_open_result_boundary ||
+            c.state == MillenniumDosTitleInitializationState::
+                           dos_file_seek_result_boundary ||
+            c.state == MillenniumDosTitleInitializationState::
+                           dos_file_close_result_boundary ||
+            c.state == MillenniumDosTitleInitializationState::
+                           dos_library_open_result_boundary ||
+            c.state == MillenniumDosTitleInitializationState::
+                           dos_library_read_result_boundary ||
+            c.state == MillenniumDosTitleInitializationState::
+                           dos_library_close_result_boundary;
+        if (file_state) {
+          std::uint16_t ax = 0, cx = c.dos_boundary.cx, dx = c.dos_boundary.dx;
+          if (c.dos_boundary.service == 0x3d)
+            ax = runner.compatibility_file_handle();
+          else if (c.dos_boundary.service == 0x42) {
+            ax = static_cast<std::uint16_t>(library->size());
+            dx = 0;
+          } else if (c.dos_boundary.service == 0x3f) {
+            std::size_t consumed = 0;
+            for (const auto &receipt : c.dos_file_results)
+              if (receipt.interrupt_address == 0x057c && !receipt.carry)
+                consumed += receipt.ax;
+            ax = consumed >= library->size()
+                     ? 0
+                     : static_cast<std::uint16_t>(std::min<std::size_t>(
+                           cx, library->size() - consumed));
+          }
+          next.observe_dos_file_result({sequence,
+                                        c.dos_boundary.interrupt_address,
+                                        c.dos_boundary.return_address, false,
+                                        ax, c.dos_boundary.bx, cx, dx, 0x0202},
+                                       *library);
+          runner.record_automatic_operation();
+          const auto reached = next.checkpoint();
+          if (reached.state == MillenniumDosTitleInitializationState::
+                                   library_relocation_complete) {
+            next.execute_post_relocation(runner.next_sequence(), *library);
+            runner.record_automatic_operation();
+          }
+          const auto relocated = next.checkpoint();
+          if (relocated.state == MillenniumDosTitleInitializationState::
+                                     post_library_setup_call_boundary) {
+            next.execute_post_library_setup(runner.next_sequence(), 0x1bef,
+                                            0x1aac);
+            runner.record_automatic_operation();
+          }
+          continue;
+        }
+        break;
+      }
+      const auto completed = next.checkpoint();
+      // This is one atomic compatibility service, while recovered
+      // instructions may revisit a byte.  Normalize to its final byte state
+      // before admission: last writer wins exactly as the sequential
+      // instruction stream does, and the native-memory batch remains bounded
+      // and non-overlapping.
+      std::map<NativeRuntimeLocation, std::uint8_t> final_bytes;
+      for (std::size_t i = initial_effects; i < completed.memory_effects.size();
+           ++i) {
+        const auto &e = completed.memory_effects[i];
+        const auto location = NativeRuntimeLocation{
+            NativeRuntimeAddressSpace::dos_segmented,
+            (e.explicit_segment || e.segment != 0) ? e.segment
+                                                    : completed.child_code_segment,
+            e.offset};
+        final_bytes[location] = static_cast<std::uint8_t>(e.value & 0xffU);
+        if (e.width == MillenniumDosTitleInitializationEffectWidth::word) {
+          auto high = location;
+          ++high.offset;
+          final_bytes[high] = static_cast<std::uint8_t>(e.value >> 8U);
+        }
+      }
+      if (!final_bytes.empty()) {
+        NativeRuntimeEffectBatch batch{
+            "millennium-dos-title-compatibility-chain-" +
+                std::to_string(completed.last_sequence),
+            true,
+            {}};
+        batch.effects.reserve(final_bytes.size());
+        for (const auto &[location, value] : final_bytes) {
+          batch.effects.push_back(
+              {batch.effects.size() + 1, location,
+               MemoryTransferElementWidth::byte,
+               NativeRuntimeByteOrder::little_endian, value});
+        }
+        const auto applied = memory.apply(batch);
+        if (!applied.accepted)
+          throw std::runtime_error(applied.error);
+      }
+      millennium_dos_title_initialization_ = std::move(next);
+      millennium_dos_compatibility_runner_ = std::move(runner);
+      *native_runtime_memory_ = std::move(memory);
+      auto out = millennium_dos_compatibility_runner_->checkpoint(
+          MillenniumDosSoundDriverLoadState::title_exec_requested, {});
+      out.title_state = completed.state;
+      out.external_result_required = true;
+      return out;
+    } catch (const std::exception &e) {
+      auto out = millennium_dos_compatibility_runner_->checkpoint(
+          MillenniumDosSoundDriverLoadState::title_exec_requested, {},
+          e.what());
+      out.title_state =
+          millennium_dos_title_initialization_->checkpoint().state;
+      return out;
     }
+  }
+  if (!active_ || !session_snapshot_ ||
+      session_snapshot_->kind !=
+          RuntimeSessionKind::millennium_dos_sound_driver_boundary ||
+      !millennium_dos_sound_driver_load_ ||
+      !millennium_dos_compatibility_runner_ || !native_runtime_memory_)
+    return std::nullopt;
+  auto next = *millennium_dos_sound_driver_load_;
+  auto runner = *millennium_dos_compatibility_runner_;
+  auto memory = *native_runtime_memory_;
+  auto pending_title_entry = millennium_dos_title_exec_entry_;
+  std::unique_ptr<MillenniumDosTitleSession> pending_title;
+  try {
+    // These results are properties of the admitted immutable leaf and of
+    // Eon's private one-leaf compatibility service. No guest DOS state is
+    // inferred. Run until the next operation needs external process state.
+    while (true) {
+      switch (next.state()) {
+      case MillenniumDosSoundDriverLoadState::awaiting_open_result:
+        next.observe_open_result(0x02d2, false,
+                                 runner.compatibility_file_handle());
+        runner.record_automatic_operation();
+        continue;
+      case MillenniumDosSoundDriverLoadState::awaiting_seek_end_result:
+        next.observe_seek_end_result(
+            0x02eb, false, runner.compatibility_file_handle(),
+            static_cast<std::uint16_t>(next.driver().byte_size), 0);
+        runner.record_automatic_operation();
+        continue;
+      case MillenniumDosSoundDriverLoadState::awaiting_allocation_result: {
+        const auto paragraphs =
+            static_cast<std::uint32_t>((next.driver().byte_size + 15U) / 16U);
+        const auto allocated = runner.allocate_paragraphs(paragraphs);
+        if (!allocated.allocation)
+          throw std::runtime_error(allocated.error);
+        next.observe_allocation_result(0x02fa, false,
+                                       allocated.allocation->segment);
+        continue;
+      }
+      case MillenniumDosSoundDriverLoadState::awaiting_seek_start_result:
+        next.observe_seek_start_result(
+            0x0309, false, runner.compatibility_file_handle(), 0, 0);
+        runner.record_automatic_operation();
+        continue;
+      case MillenniumDosSoundDriverLoadState::awaiting_read_result: {
+        next.observe_read_result(
+            0x0313, false, runner.compatibility_file_handle(),
+            static_cast<std::uint16_t>(next.driver().byte_size));
+        NativeRuntimeEffectBatch batch{
+            "millennium-dos-sound-driver-" +
+                std::to_string(millennium_dos_sound_driver_load_generation_) +
+                "-image",
+            true,
+            {}};
+        batch.effects.reserve(next.memory_effects().size());
+        for (std::size_t i = 0; i < next.memory_effects().size(); ++i) {
+          const auto &e = next.memory_effects()[i];
+          batch.effects.push_back(
+              {i + 1,
+               {NativeRuntimeAddressSpace::dos_segmented, e.segment, e.offset},
+               MemoryTransferElementWidth::byte,
+               NativeRuntimeByteOrder::little_endian,
+               e.value});
+        }
+        const auto applied = memory.apply(batch);
+        if (!applied.accepted)
+          throw std::runtime_error(applied.error);
+        runner.record_automatic_operation();
+        continue;
+      }
+      case MillenniumDosSoundDriverLoadState::awaiting_close_result:
+        next.observe_close_result(0x0319, false,
+                                  runner.compatibility_file_handle());
+        runner.record_automatic_operation();
+        continue;
+      case MillenniumDosSoundDriverLoadState::awaiting_vector_install: {
+        // The exact loader leaves DS at its owned allocation segment.
+        // $0234 clears DX; $0236 selects DOS SetVect for INT $95.
+        // This is Eon's process-local vector table, not captured DOS
+        // state, and installing the pointer does not invoke the driver.
+        const auto allocation = runner.checkpoint(next.state(), next.boundary())
+                                    .paragraph_arena.allocations;
+        const auto owned = std::find_if(
+            allocation.begin(), allocation.end(), [&](const auto &entry) {
+              return entry.segment == next.load_segment();
+            });
+        if (owned == allocation.end())
+          throw std::runtime_error(
+              "Driver vector requires an owned allocation");
+        NativeRuntimeEffectBatch batch{
+            "millennium-dos-sound-vector-" +
+                std::to_string(millennium_dos_sound_driver_load_generation_),
+            true,
+            {{1,
+              {NativeRuntimeAddressSpace::dos_segmented, std::uint16_t{0},
+               0x254},
+              MemoryTransferElementWidth::word,
+              NativeRuntimeByteOrder::little_endian,
+              0},
+             {2,
+              {NativeRuntimeAddressSpace::dos_segmented, std::uint16_t{0},
+               0x256},
+              MemoryTransferElementWidth::word,
+              NativeRuntimeByteOrder::little_endian,
+              next.load_segment()}}};
+        const auto applied = memory.apply(batch);
+        if (!applied.accepted)
+          throw std::runtime_error(applied.error);
+        next.observe_vector_install(0x0239, 0x2595, 0);
+        runner.record_automatic_operation();
+        continue;
+      }
+      case MillenniumDosSoundDriverLoadState::title_exec_boundary: {
+        if (!millennium_dos_ || !millennium_dos_->title_flow)
+          throw std::runtime_error("English title flow is unavailable");
+        const auto media = VerifiedReleaseMedia::open(active_->release);
+        const auto mill = media.borrow(
+            "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e");
+        const auto titles = media.borrow(
+            "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6");
+        if (!mill || !titles)
+          throw std::runtime_error(
+              "Exact TITLES.EXE process media is unavailable");
+        pending_title_entry.emplace(*mill, *titles);
+        pending_title = std::make_unique<MillenniumDosTitleSession>(
+            *millennium_dos_->title_flow);
+        // Exact literal request after the observed SP store. This does
+        // not claim that DOS returned or that the child has completed.
+        next.observe_title_exec_request(0x0336, 0x4b00, 0x068f, 0x067a);
+        runner.record_automatic_operation();
+        continue;
+      }
+      default:
+        if (next.state() ==
+                MillenniumDosSoundDriverLoadState::title_exec_requested &&
+            pending_title_entry &&
+            pending_title_entry->state() == MillenniumDosTitleExecEntryState::
+                                                awaiting_child_process_entry) {
+          constexpr std::string_view titles_sha =
+              "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe"
+              "6";
+          const auto media = VerifiedReleaseMedia::open(active_->release);
+          const auto titles = media.borrow(titles_sha);
+          if (!titles)
+            throw std::runtime_error(
+                "Exact TITLES.EXE compatibility child leaf is unavailable");
+          const auto allocated = runner.allocate_paragraphs(
+              MillenniumDosTitleChildCompatibilityService::
+                  required_paragraphs());
+          if (!allocated.allocation)
+            throw std::runtime_error(allocated.error);
+          MillenniumDosTitleChildCompatibilityService child(
+              *titles, *allocated.allocation);
+          NativeRuntimeEffectBatch batch{
+              "millennium-dos-title-child-" +
+                  std::to_string(millennium_dos_sound_driver_load_generation_) +
+                  "-image",
+              true,
+              {}};
+          batch.effects.reserve(child.image_effects().size());
+          for (const auto &effect : child.image_effects()) {
+            batch.effects.push_back(
+                {batch.effects.size() + 1,
+                 {NativeRuntimeAddressSpace::dos_segmented,
+                  allocated.allocation->segment, effect.offset},
+                 MemoryTransferElementWidth::byte,
+                 NativeRuntimeByteOrder::little_endian,
+                 effect.value});
+          }
+          const auto applied = memory.apply(batch);
+          if (!applied.accepted)
+            throw std::runtime_error(applied.error);
+          auto entry = *pending_title_entry;
+          const auto child_entry_sequence = runner.next_sequence();
+          entry.observe_child_process_entry(
+              {child_entry_sequence, 0x0336, 0x4b00, 0x068f, 0x067a, 0x0100,
+               allocated.allocation->segment,
+               MillenniumDosTitleExecEntryProvenance::
+                   eon_dos_compatibility_service});
+          runner.record_automatic_operation();
+          const auto prefix_sequence = runner.next_sequence();
+          entry.execute_exact_entry_prefix(prefix_sequence, 0x0100, 0x0104,
+                                           0x1b80);
+          runner.record_automatic_operation();
+          MillenniumDosTitleInitializationSession initialization(
+              *titles, allocated.allocation->segment, prefix_sequence);
+          const auto initialization_sequence = runner.next_sequence();
+          initialization.execute_exact_startup(initialization_sequence, 0x1b80,
+                                               0x1b95, 0x0122, 0x91);
+          runner.record_automatic_operation();
+          pending_title_entry = std::move(entry);
+          millennium_dos_title_child_compatibility_.emplace(std::move(child));
+          millennium_dos_title_initialization_.emplace(
+              std::move(initialization));
+          session_snapshot_ = make_runtime_session_snapshot(
+              *active_, RuntimeSessionKind::millennium_dos_title);
+        }
+        millennium_dos_title_exec_entry_ = std::move(pending_title_entry);
+        if (pending_title)
+          millennium_dos_title_ = std::move(pending_title);
+        millennium_dos_sound_driver_load_ = std::move(next);
+        millennium_dos_compatibility_runner_ = std::move(runner);
+        *native_runtime_memory_ = std::move(memory);
+        auto checkpoint = millennium_dos_compatibility_runner_->checkpoint(
+            millennium_dos_sound_driver_load_->state(),
+            millennium_dos_sound_driver_load_->boundary());
+        if (millennium_dos_title_initialization_) {
+          checkpoint.external_result_required = true;
+        }
+        millennium_dos_sound_driver_load_last_sequence_ =
+            checkpoint.last_sequence;
+        return checkpoint;
+      }
+    }
+  } catch (const std::exception &e) {
+    return millennium_dos_compatibility_runner_->checkpoint(
+        millennium_dos_sound_driver_load_->state(),
+        millennium_dos_sound_driver_load_->boundary(), e.what());
+  }
 }
 
 MillenniumDosTitleExecEntryObservationResult

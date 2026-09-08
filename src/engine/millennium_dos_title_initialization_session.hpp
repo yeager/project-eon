@@ -375,6 +375,8 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::uint16_t post_descriptor_observed_ax = 0;
     std::uint16_t post_descriptor_observed_flags = 0;
     std::vector<std::uint8_t> post_descriptor_observed_record;
+    std::uint32_t title_library_cursor = 0;
+    std::uint16_t title_library_read_count = 0;
 };
 
 // Native execution of TITLES.EXE's deterministic $1b80 startup through the
