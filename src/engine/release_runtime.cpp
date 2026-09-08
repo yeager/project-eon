@@ -1627,6 +1627,14 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_private_interrupt_result
                 throw std::runtime_error(next_driven.error.empty()
                     ? "TITLE.LIB descriptor stream did not complete its second verified continuation"
                     : next_driven.error);
+            const auto final_stream=next.checkpoint();
+            const auto final_driven=next.drive_next_descriptor_stream_from_title_library(
+                *library,{final_stream.last_sequence+1,256});
+            if(!final_driven.accepted || !final_driven.stopped_at_boundary
+                || final_driven.observation_count!=106)
+                throw std::runtime_error(final_driven.error.empty()
+                    ? "TITLE.LIB descriptor stream did not stop at its verified header boundary"
+                    : final_driven.error);
         }
         if(next.checkpoint().state==MillenniumDosTitleInitializationState::post_video_followup_call_boundary){
             const auto reached=next.checkpoint();
