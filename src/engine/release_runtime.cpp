@@ -1589,7 +1589,7 @@ MillenniumDosTitleInitializationObservationResult
 ReleaseRuntimeCoordinator::observe_millennium_dos_title_private_interrupt_result(
     const MillenniumDosTitlePrivateInterruptResultObservation observation) {
     MillenniumDosTitleInitializationObservationResult result;
-    if(!session_snapshot_
+    if(!active_||!session_snapshot_
         ||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_title
         ||!millennium_dos_title_initialization_||!native_runtime_memory_){
         result.error="Title private-interrupt result requires the active native title boundary";
@@ -1600,6 +1600,15 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_private_interrupt_result
     const auto prior_effect_count=next.checkpoint().memory_effects.size();
     try {
         next.observe_private_interrupt_result(observation);
+        if(next.checkpoint().state==MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary){
+            constexpr std::string_view library_sha=
+                "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
+            const auto media=VerifiedReleaseMedia::open(active_->release);
+            const auto library=media.borrow(library_sha);
+            if(!library)throw std::runtime_error("Exact TITLE.LIB descriptor source is unavailable");
+            const auto reached=next.checkpoint();
+            next.consume_next_descriptor_pair(reached.last_sequence+1,*library);
+        }
         if(next.checkpoint().state==MillenniumDosTitleInitializationState::post_video_followup_call_boundary){
             const auto reached=next.checkpoint();
             next.execute_post_video_followup(reached.last_sequence+1,0x1c17,0x1725);

@@ -1232,6 +1232,29 @@ int main(int argc, char** argv) {
             &&next_loop.memory_effects[next_loop.memory_effects.size()-2].value==0x02e0
             &&next_loop.memory_effects.back().offset==0x0110
             &&next_loop.memory_effects.back().value==0x02e0);
+        auto rejected_automatic_pair=owned_mode_two;
+        bool automatic_pair_rejected=false;
+        try { rejected_automatic_pair.consume_next_descriptor_pair(
+            next_loop.last_sequence+1,{}); }
+        catch(const std::runtime_error&) { automatic_pair_rejected=true; }
+        assert(automatic_pair_rejected
+            &&rejected_automatic_pair.checkpoint().state
+                ==eon::MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary
+            &&rejected_automatic_pair.checkpoint().memory_effects.size()
+                ==next_loop.memory_effects.size());
+        owned_mode_two.consume_next_descriptor_pair(
+            next_loop.last_sequence+1,title_library);
+        const auto automatic_pair=owned_mode_two.checkpoint();
+        assert(automatic_pair.state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_next_loop_record_word_read_boundary
+            &&automatic_pair.far_word_observations.back().first_word==0x2a16
+            &&automatic_pair.far_word_observations.back().second_word==0x0000
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-2].offset==0x138c
+            &&automatic_pair.memory_effects[automatic_pair.memory_effects.size()-2].value==0x0006
+            &&automatic_pair.memory_effects.back().offset==0x138e
+            &&automatic_pair.memory_effects.back().value==0x32a1
+            &&automatic_pair.far_read_boundary.source_segment==0x32a1
+            &&automatic_pair.far_read_boundary.source_offset==0x001e);
 
         auto missing_mode_two=compact_owned_mode_two;
         eon::NativeRuntimeMemory missing_memory;

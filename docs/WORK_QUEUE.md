@@ -63,6 +63,10 @@ private function-six boundary at `$1764->$0122`. Continue from that typed
 private result; do not infer pixel or palette meaning. The later function-six
 return is now state-distinct, advances the title loop's output pointers to
 `$02e0`, and stops at the next descriptor pair `$13aa`, source `$3481:$001b`.
+That one pair is now automatically sourced from hash-admitted
+`TITLE.LIB+$482b` after an exact segment-to-physical proof and normalizes to
+`$32a1:$0006`. Continue only with the typed runtime word at `$32a1:$001e`;
+do not generalize this one proven alias into generic DOS memory semantics.
 The other-value branch owns the second descriptor and first two raw words plus
 their product and subtraction; continue at `$13e9`, source `$3c80:$0001`. Do not assign
 graphics or codec semantics to these fields.

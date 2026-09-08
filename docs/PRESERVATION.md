@@ -5057,6 +5057,13 @@ index two, and re-enters `$1390`. Exact loop-tail bytes `$1963..$1966` hash to
 the already hash-bound `$1947..$1962` loop body remains unchanged. Execution
 stops at the next two-word relocated `TITLE.LIB` boundary `$13aa`, source
 `$3481:$001b`. No function-six or descriptor meaning is inferred.
+That pair can now be consumed automatically, but only through the admitted
+`TITLE.LIB` leaf. DOS physical-address normalization proves
+`$3481:$001b == TITLE.LIB+$482b` relative to the owned `$3000` load segment;
+the bounded bytes are exactly words `$2a16/$0000`. The runtime rejects every
+other offset, hash, size, or absent leaf before mutation. The existing exact
+pointer suffix then atomically stores normalized `$32a1:$0006` and stops at
+the next external record word `$32a1:$001e`.
 caller effects commit in the same transaction as the owned-memory loop. The
 private result and all presentation semantics remain explicit boundaries.
 Its raw value is retained as AX without assigning width or graphics meaning,

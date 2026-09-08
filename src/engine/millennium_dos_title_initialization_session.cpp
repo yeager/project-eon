@@ -1134,6 +1134,7 @@ void MillenniumDosTitleInitializationSession::observe_far_words(
             &&boundary_state!=MillenniumDosTitleInitializationState::video_vector_far_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::graphics_descriptor_far_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_second_loop_far_read_boundary)
         ||observation.sequence!=last_sequence_+1
         ||observation.instruction_address!=far_read_boundary_.instruction_address
@@ -1144,16 +1145,19 @@ void MillenniumDosTitleInitializationSession::observe_far_words(
     const bool descriptor_read=
         boundary_state==MillenniumDosTitleInitializationState::graphics_descriptor_far_read_boundary
         ||boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary
+        ||boundary_state==MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary
         ||boundary_state==MillenniumDosTitleInitializationState::post_descriptor_second_loop_far_read_boundary;
     if(descriptor_read){
         const auto expected_first=static_cast<std::uint16_t>(
             boundary_state==MillenniumDosTitleInitializationState::graphics_descriptor_far_read_boundary
                 ?0x0006:boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary
-                    ?0x0503:0xc800);
+                    ?0x0503:boundary_state==MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary
+                        ?0x2a16:0xc800);
         const auto expected_second=static_cast<std::uint16_t>(
             boundary_state==MillenniumDosTitleInitializationState::graphics_descriptor_far_read_boundary
                 ?0x0000:boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary
-                    ?0x1f02:0x4000);
+                    ?0x1f02:boundary_state==MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary
+                        ?0x0000:0x4000);
         if(observation.first_word!=expected_first
             ||observation.second_word!=expected_second)
             throw std::runtime_error("Contradictory Millennium DOS TITLE.LIB descriptor words");
@@ -1196,7 +1200,9 @@ void MillenniumDosTitleInitializationSession::observe_far_words(
             ?MillenniumDosTitleInitializationState::graphics_record_word_read_boundary
             :boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary
                 ?MillenniumDosTitleInitializationState::post_descriptor_first_loop_record_word_read_boundary
-                :MillenniumDosTitleInitializationState::post_descriptor_second_loop_record_word_read_boundary;
+                :boundary_state==MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary
+                    ?MillenniumDosTitleInitializationState::post_descriptor_next_loop_record_word_read_boundary
+                    :MillenniumDosTitleInitializationState::post_descriptor_second_loop_record_word_read_boundary;
         return;
     }
     if(boundary_state==MillenniumDosTitleInitializationState::video_vector_far_read_boundary){
@@ -1233,6 +1239,28 @@ void MillenniumDosTitleInitializationSession::observe_far_words(
     last_sequence_=observation.sequence;
     continuation_address_=0x1bf8;
     state_=MillenniumDosTitleInitializationState::post_vector_hook_call_boundary;
+}
+
+void MillenniumDosTitleInitializationSession::consume_next_descriptor_pair(
+    const std::uint64_t sequence,const std::span<const std::uint8_t> title_library){
+    if(state_!=MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary
+        ||sequence!=last_sequence_+1||title_library.size()!=18907
+        ||to_hex(sha256(title_library))
+            !="6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678"
+        ||title_library_segment_==0)
+        throw std::runtime_error("Detached Millennium DOS automatic descriptor pair");
+    const auto source_physical=static_cast<std::uint32_t>(far_read_boundary_.source_segment)*16U
+        +far_read_boundary_.source_offset;
+    const auto base_physical=static_cast<std::uint32_t>(title_library_segment_)*16U;
+    if(source_physical<base_physical)
+        throw std::runtime_error("Millennium DOS descriptor precedes TITLE.LIB base");
+    const auto file_offset=source_physical-base_physical;
+    if(file_offset!=0x482bU||file_offset+4U>title_library.size())
+        throw std::runtime_error("Unproven Millennium DOS TITLE.LIB descriptor alias");
+    const auto word=[&](const std::size_t offset){return static_cast<std::uint16_t>(
+        title_library[offset]|static_cast<std::uint16_t>(title_library[offset+1])<<8U);};
+    observe_far_words({sequence,0x13aa,far_read_boundary_.source_segment,
+        far_read_boundary_.source_offset,word(file_offset),word(file_offset+2)});
 }
 
 void MillenniumDosTitleInitializationSession::execute_video_hook_setup(

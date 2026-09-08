@@ -93,6 +93,7 @@ enum class MillenniumDosTitleInitializationState {
     post_descriptor_first_loop_mode_two_returned,
     post_descriptor_loop_private_interrupt_result_boundary,
     post_descriptor_next_loop_far_read_boundary,
+    post_descriptor_next_loop_record_word_read_boundary,
     post_descriptor_second_loop_far_read_boundary,
     post_descriptor_second_loop_record_word_read_boundary,
     post_descriptor_second_loop_second_word_read_boundary,
@@ -429,6 +430,8 @@ public:
     void execute_followup_setup(std::uint64_t sequence,
         std::uint16_t call_address, std::uint16_t call_target);
     void observe_far_words(const MillenniumDosTitleFarWordsObservation&);
+    void consume_next_descriptor_pair(std::uint64_t sequence,
+        std::span<const std::uint8_t> title_library);
     void observe_far_word(const MillenniumDosTitleFarWordObservation&);
     void observe_far_byte(const MillenniumDosTitleFarByteObservation&);
     [[nodiscard]] MillenniumDosTitleModeTwoDriveResult drive_mode_two_from_owned_memory(
