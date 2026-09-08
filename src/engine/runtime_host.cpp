@@ -2,6 +2,19 @@
 
 namespace eon {
 
+namespace {
+
+struct RuntimeHostTitleContinuationDispatcher {
+    RuntimeHost& host;
+    MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleDosVectorResultObservation o) const { return host.observe_millennium_dos_title_dos_vector_result(o); }
+    MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleSetupBiosResultObservation o) const { return host.observe_millennium_dos_title_setup_bios_result(o); }
+    MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleFarWordsObservation o) const { return host.observe_millennium_dos_title_far_words(o); }
+    MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleFarWordObservation o) const { return host.observe_millennium_dos_title_far_word(o); }
+    MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleFarByteObservation o) const { return host.observe_millennium_dos_title_far_byte(o); }
+};
+
+} // namespace
+
 RuntimeCandidateLaunchResult RuntimeHost::launch_direct(const LaunchRequest& candidate,
     const std::vector<ReleaseArchive>& releases) {
     return NativeSessionController::launch_direct(candidate, releases);
@@ -75,6 +88,7 @@ MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millenniu
 MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_far_words(MillenniumDosTitleFarWordsObservation o){if(revoking())return {false,"Title far words rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_far_words(o);}
 MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_far_word(MillenniumDosTitleFarWordObservation o){if(revoking())return {false,"Title far word rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_far_word(o);}
 MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_far_byte(MillenniumDosTitleFarByteObservation o){if(revoking())return {false,"Title far byte rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_far_byte(o);}
+MillenniumDosTitleInitializationObservationResult RuntimeHost::observe_millennium_dos_title_continuation(MillenniumDosTitleContinuationObservation o){if(revoking())return {false,"Title continuation rejected during revocation"};return std::visit(RuntimeHostTitleContinuationDispatcher{*this},o);}
 MillenniumDosTitleModeTwoDriveResult RuntimeHost::drive_millennium_dos_title_mode_two(MillenniumDosTitleModeTwoDriveRequest r){if(revoking())return {false,false,0,"Mode-two drive rejected during revocation"};return NativeSessionController::drive_millennium_dos_title_mode_two(r);}
 
 MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_call_return(o);}

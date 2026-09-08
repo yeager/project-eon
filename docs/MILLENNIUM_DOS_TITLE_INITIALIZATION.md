@@ -573,15 +573,29 @@ bytes at `$4000:$0170/$0171` and genuine lookup byte zero at
 
 The runtime coordinator can now finish this loop without one host callback
 per byte when every requested source byte is already owned by native runtime
-memory. It resolves equivalent 8086 `segment:offset` aliases by their physical
-address, rejects contradictory aliases, preserves the exact typed state-machine
-transitions, and commits each instruction-defined output before it can feed a
+memory at its exact observed `segment:offset`. It does not accept equivalent
+8086 physical-address aliases: the segment is evidence, rather than a hint
+that can be normalised away. It preserves the exact typed state-machine
+transitions and commits each instruction-defined output before it can feed a
 later read. The drive is transactional: a missing byte, detached sequence,
 unadmitted state, or exhausted finite observation cap leaves both the session
 and runtime memory unchanged. The first admitted automatic test finishes a
 compact two-byte row at exactly `$16e8`; the lookup byte comes from the genuine
 `TITLE.LIB` leaf. This is native execution of the hash-bound loop, not an
 emulator or an inferred graphics decoder.
+
+## Public continuation boundary
+
+After the admitted `TITLE.LIB` file transaction, front ends submit a single
+tagged continuation observation instead of selecting an untyped runtime step.
+The tag admits only the already recovered DOS-vector result, setup-BIOS result,
+far-words, far-word, and far-byte observation forms. Dispatch is a direct
+route to the corresponding state-machine observer; it never creates runtime
+memory, supplies a value, advances a program counter, or converts a failed
+observation into a default result. RuntimeHost also rejects the entire tagged
+boundary during source revocation before dispatch. This makes the public
+SDL/CLI route explicit while retaining every per-observation sequence, address,
+media-hash, and state check below it.
 
 The terminal `$16e8` RET is now caller-connected without another runtime
 observation. The exact 36 bytes at `$1740..$1763` (file

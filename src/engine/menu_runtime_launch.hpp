@@ -68,6 +68,8 @@ public:
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_far_words(MillenniumDosTitleFarWordsObservation);
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_far_word(MillenniumDosTitleFarWordObservation);
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_far_byte(MillenniumDosTitleFarByteObservation);
+    [[nodiscard]] MillenniumDosTitleInitializationObservationResult
+    observe_millennium_dos_title_continuation(MillenniumDosTitleContinuationObservation);
     [[nodiscard]] MillenniumDosTitleModeTwoDriveResult drive_millennium_dos_title_mode_two(MillenniumDosTitleModeTwoDriveRequest);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation);

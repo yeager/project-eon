@@ -380,6 +380,17 @@ struct MillenniumDosTitleInitializationObservationResult {
     bool accepted = false;
     std::string error;
 };
+// The only externally observed continuation facts after the initial title
+// file transaction.  This tagged boundary keeps UI/CLI integrations from
+// inventing a state-machine step or treating an unrelated observation as a
+// title continuation.  It carries observations only; it neither seeds native
+// memory nor drives the recovered machine.
+using MillenniumDosTitleContinuationObservation = std::variant<
+    MillenniumDosTitleDosVectorResultObservation,
+    MillenniumDosTitleSetupBiosResultObservation,
+    MillenniumDosTitleFarWordsObservation,
+    MillenniumDosTitleFarWordObservation,
+    MillenniumDosTitleFarByteObservation>;
 struct MillenniumDosTitleExecEntryRuntimeCheckpoint {
     std::uint64_t generation = 0;
     MillenniumDosTitleExecEntryCheckpoint entry;

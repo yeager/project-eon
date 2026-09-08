@@ -1494,6 +1494,10 @@ int main() {
     assert(!runtime_host.tick_millennium_dos_compatibility_runner());
     assert(!runtime_host.observe_millennium_dos_sound_driver_load(
         eon::MillenniumDosSoundDriverLoadEntryObservation{1,0x2222}).accepted);
+    const auto rejected_tagged_continuation = runtime_host.observe_millennium_dos_title_continuation(
+        eon::MillenniumDosTitleFarByteObservation{1,0x1428,0x5050,0x0023,0xd7});
+    assert(!rejected_tagged_continuation.accepted
+        && rejected_tagged_continuation.error == "Title continuation rejected during revocation");
     const auto revoking_host_snapshot = runtime_host.snapshot();
     assert(revoking_host_snapshot.revoking && !revoking_host_snapshot.input_suppressed
         && !revoking_host_snapshot.session
@@ -8031,6 +8035,8 @@ int main() {
             {1,0x1458,0x5050,0x0022,0x0010}).accepted);
         assert(!revocation_host.observe_millennium_dos_title_far_byte(
             {2,0x1428,0x5050,0x0023,0xd7}).accepted);
+        assert(!revocation_host.observe_millennium_dos_title_continuation(
+            eon::MillenniumDosTitleFarWordObservation{3,0x1458,0x5050,0x0022,0x0010}).accepted);
         assert(!revocation_host.drive_millennium_dos_title_mode_two({3,4}).accepted);
         assert(!revocation_host.observe_millennium_amiga_bootstrap_relocator_overread(
             {1,0x70036,0x70400,0}).accepted);

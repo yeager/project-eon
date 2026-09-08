@@ -90,6 +90,10 @@ public:
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_far_words(MillenniumDosTitleFarWordsObservation);
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_far_word(MillenniumDosTitleFarWordObservation);
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_far_byte(MillenniumDosTitleFarByteObservation);
+    // A tagged, observation-only facade for the recovered post-file title
+    // continuation. It preserves the individual state and revocation gates.
+    [[nodiscard]] MillenniumDosTitleInitializationObservationResult
+    observe_millennium_dos_title_continuation(MillenniumDosTitleContinuationObservation);
     [[nodiscard]] MillenniumDosTitleModeTwoDriveResult drive_millennium_dos_title_mode_two(MillenniumDosTitleModeTwoDriveRequest);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_call_return(MillenniumDosTitleToGameCallReturnObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_stack_word(MillenniumDosTitleToGameStackWordObservation);
