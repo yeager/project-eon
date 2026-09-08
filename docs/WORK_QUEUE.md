@@ -68,8 +68,10 @@ That one pair is now automatically sourced from hash-admitted
 `$32a1:$0006`. Continue only with the typed runtime word at `$32a1:$001e`;
 do not generalize this one proven alias into generic DOS memory semantics.
 The same leaf-relative proof now admits that record's complete fixed header
-atomically and stops at payload byte `$1419`, source `$32a1:$0022`, output
-`$4000:$02e0`. Continue only with typed payload data.
+atomically. It additionally admits the exact first payload byte at
+`TITLE.LIB+$2a32` and executes `$1419..$1427`, including the write to
+`$4000:$02e0` and the non-zero loop edge. Continue at `$1428`, source
+`$32a1:$0023`, output `$4000:$02e1`; do not infer codec semantics.
 The other-value branch owns the second descriptor and first two raw words plus
 their product and subtraction; continue at `$13e9`, source `$3c80:$0001`. Do not assign
 graphics or codec semantics to these fields.

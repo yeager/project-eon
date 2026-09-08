@@ -95,6 +95,7 @@ enum class MillenniumDosTitleInitializationState {
     post_descriptor_next_loop_far_read_boundary,
     post_descriptor_next_loop_record_word_read_boundary,
     post_descriptor_next_loop_payload_byte_boundary,
+    post_descriptor_next_loop_stream_byte_boundary,
     post_descriptor_second_loop_far_read_boundary,
     post_descriptor_second_loop_record_word_read_boundary,
     post_descriptor_second_loop_second_word_read_boundary,

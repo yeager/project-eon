@@ -296,6 +296,8 @@ constexpr auto descriptor_request_caller_sha =
     "d095399b2a968131f10112f1895b1449f6d1572052c032e48289218e5d07355b";
 constexpr auto descriptor_loop_tail_sha =
     "84ec36cbf00b01304cfbd75024c0ac7571a5776b4e364049f3b84ebfe3315612";
+constexpr auto next_descriptor_payload_prefix_sha =
+    "912d067ef688829815594e9fdf4e2ae8f03051cd3be882dc482a02dae032d39b";
 constexpr auto private_wrapper_epilogue_sha =
     "a6e3a351304f487a18bc22e460403bfcdb5e702831b037aa0a90a56bf3cf7baf";
 constexpr auto post_descriptor_return_sha =
@@ -434,6 +436,8 @@ MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession
             != descriptor_request_caller_sha
         || to_hex(sha256(titles_executable.subspan(0x1863,4)))
             != descriptor_loop_tail_sha
+        || to_hex(sha256(titles_executable.subspan(0x1319,15)))
+            != next_descriptor_payload_prefix_sha
         || to_hex(sha256(titles_executable.subspan(0x0029,6)))
             != private_wrapper_epilogue_sha
         || to_hex(sha256(titles_executable.subspan(0x0f14,1)))
@@ -1268,7 +1272,8 @@ void MillenniumDosTitleInitializationSession::consume_next_descriptor_pair(
         ||word(record_offset+0x16)!=0x0017
         ||word(record_offset+0x14)!=0x0000
         ||title_library[record_offset+1]!=0x02
-        ||title_library[record_offset+4]!=0x02)
+        ||title_library[record_offset+4]!=0x02
+        ||title_library[record_offset+0x1c]!=0x00)
         throw std::runtime_error("Contradictory Millennium DOS next descriptor header");
     const auto output_offset=latest_local_word(memory_effects_,0x010c);
     const auto output_segment=latest_local_word(memory_effects_,0x010e);
@@ -1291,9 +1296,15 @@ void MillenniumDosTitleInitializationSession::consume_next_descriptor_pair(
         {0x1407,"DI",*output_offset},{0x1407,"ES",*output_segment},
         {0x140c,"AH",0},{0x140e,"SI",0x0022},{0x140e,"DS",0x32a1},
         {0x1417,"CL",0}});
-    far_byte_boundary_={0x1419,0x32a1,0x0022,*output_offset};
-    continuation_address_=0x1419;
-    state_=MillenniumDosTitleInitializationState::post_descriptor_next_loop_payload_byte_boundary;
+    memory_effects_.push_back({0x141c,*output_offset,
+        MillenniumDosTitleInitializationEffectWidth::byte,0,*output_segment,true});
+    effects_.insert(effects_.end(),{{0x1419,"AL",0},{0x141a,"CH",0},
+        {0x141c,"DI",static_cast<std::uint16_t>(*output_offset+1)},
+        {0x141d,"DX",0x0170},{0x1422,"BX",0x000b},{0x1425,"DX",0x016f}});
+    far_byte_boundary_={0x1428,0x32a1,0x0023,
+        static_cast<std::uint16_t>(*output_offset+1)};
+    continuation_address_=0x1428;
+    state_=MillenniumDosTitleInitializationState::post_descriptor_next_loop_stream_byte_boundary;
 }
 
 void MillenniumDosTitleInitializationSession::execute_video_hook_setup(

@@ -5069,8 +5069,15 @@ The same bounded alias also proves the complete five-field header at
 are validated before the automatic pair transition mutates state. The shared
 hash-bound descriptor instructions atomically store dimensions `$0017/$0010`,
 product/adjustment `$0170`, incremented byte `$03`, and mode byte `$02`, then
-select output `$4000:$02e0`. Execution stops before the first payload byte at
-`$1419`, source `$32a1:$0022`; payload data and codec meaning remain external.
+select output `$4000:$02e0`. The exact physical alias also maps
+`$32a1:$0022` to `TITLE.LIB+$2a32`, whose admitted byte is `$00`. Exact
+`$1419..$1427` bytes hash to
+`912d067ef688829815594e9fdf4e2ae8f03051cd3be882dc482a02dae032d39b`;
+they copy that byte to `$4000:$02e0`, advance the source and destination,
+load loop count `$0170`, advance the normalized record offset to `$000b`,
+and take the proven non-zero loop edge. Execution stops before the next
+stream byte at `$1428`, source `$32a1:$0023`, output `$4000:$02e1`.
+Payload and codec meaning remain external.
 caller effects commit in the same transaction as the owned-memory loop. The
 private result and all presentation semantics remain explicit boundaries.
 Its raw value is retained as AX without assigning width or graphics meaning,
