@@ -1652,7 +1652,7 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_private_interrupt_result
         const auto& effect=checkpoint.memory_effects[i];
         batch.effects.push_back({batch.effects.size()+1,
             {NativeRuntimeAddressSpace::dos_segmented,
-                checkpoint.child_code_segment,effect.offset},
+                effect.explicit_segment?effect.segment:checkpoint.child_code_segment,effect.offset},
             effect.width==MillenniumDosTitleInitializationEffectWidth::byte
                 ?MemoryTransferElementWidth::byte:MemoryTransferElementWidth::word,
             NativeRuntimeByteOrder::little_endian,effect.value});
@@ -1693,7 +1693,7 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_selected_callee_result(
             const auto& effect=checkpoint.memory_effects[i];
             batch.effects.push_back({batch.effects.size()+1,
                 {NativeRuntimeAddressSpace::dos_segmented,
-                    checkpoint.child_code_segment,effect.offset},
+                    effect.explicit_segment?effect.segment:checkpoint.child_code_segment,effect.offset},
                 effect.width==MillenniumDosTitleInitializationEffectWidth::byte
                     ?MemoryTransferElementWidth::byte:MemoryTransferElementWidth::word,
                 NativeRuntimeByteOrder::little_endian,effect.value});
@@ -1747,7 +1747,7 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_bios_result(
                 const auto& effect=checkpoint.memory_effects[i];
                 batch.effects.push_back({batch.effects.size()+1,
                     {NativeRuntimeAddressSpace::dos_segmented,
-                        checkpoint.child_code_segment,effect.offset},
+                        effect.explicit_segment?effect.segment:checkpoint.child_code_segment,effect.offset},
                     effect.width==MillenniumDosTitleInitializationEffectWidth::byte
                         ?MemoryTransferElementWidth::byte:MemoryTransferElementWidth::word,
                     NativeRuntimeByteOrder::little_endian,effect.value});
@@ -1787,7 +1787,7 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_dos_memory_result(
             const auto& effect=checkpoint.memory_effects[i];
             batch.effects.push_back({batch.effects.size()+1,
                 {NativeRuntimeAddressSpace::dos_segmented,
-                    checkpoint.child_code_segment,effect.offset},
+                    effect.explicit_segment?effect.segment:checkpoint.child_code_segment,effect.offset},
                 effect.width==MillenniumDosTitleInitializationEffectWidth::byte
                     ?MemoryTransferElementWidth::byte:MemoryTransferElementWidth::word,
                 NativeRuntimeByteOrder::little_endian,effect.value});
@@ -1841,7 +1841,7 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_dos_file_result(
             const auto& effect=checkpoint.memory_effects[i];
             batch.effects.push_back({batch.effects.size()+1,
                 {NativeRuntimeAddressSpace::dos_segmented,
-                    effect.segment==0?checkpoint.child_code_segment:effect.segment,
+                    effect.explicit_segment?effect.segment:checkpoint.child_code_segment,
                     effect.offset},
                 effect.width==MillenniumDosTitleInitializationEffectWidth::byte
                     ?MemoryTransferElementWidth::byte:MemoryTransferElementWidth::word,
