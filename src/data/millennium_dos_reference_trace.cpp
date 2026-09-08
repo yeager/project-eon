@@ -229,6 +229,55 @@ bool parse_title_init_event_line(const std::string_view line, const std::size_t 
     return true;
 }
 
+bool title_handoff_schema_matches(const std::size_t index, const std::string_view type,
+                                  const std::map<std::string_view, std::string_view>& fields) {
+    // These sites are the existing native title-to-game session boundaries.
+    // The grammar binds observed control flow; it does not turn a DOS result
+    // into an emulated service or grant a game-state capability.
+    constexpr std::array<std::pair<std::string_view, std::string_view>, 4> local_returns{{
+        {"0x1c54", "0x1c57"}, {"0x1c57", "0x1c5a"},
+        {"0x1c64", "0x1c67"}, {"0x1a0f", "0x1a12"},
+    }};
+    if (index < local_returns.size()) {
+        const auto [call_pc, return_pc] = local_returns[index];
+        return type == "local-return" && fields_equal(fields,
+            {{"image", "titles.exe"}, {"call_pc", call_pc}, {"return_pc", return_pc}});
+    }
+    if (index == 4) {
+        const auto value = fields.find("value");
+        return value != fields.end() && fixed_lowercase_hex(value->second, 4)
+            && type == "stack-word" && fields_equal(fields,
+                {{"image", "titles.exe"}, {"pc", "0x1c60"}, {"address", "0x1aa0"},
+                 {"value", value->second}});
+    }
+    if (index == 5) return type == "title-termination" && fields_equal(fields,
+        {{"image", "titles.exe"}, {"pc", "0x1a18"}, {"int", "0x21"}, {"ax", "0x4c00"}});
+    if (index == 6) return type == "parent-exec-return" && fields_equal(fields,
+        {{"image", "mill.com"}, {"pc", "0x0337"}, {"int", "0x21"}, {"ax", "0x4b00"}, {"carry", "0"}});
+    if (index == 7) return type == "child-status" && fields_equal(fields,
+        {{"image", "mill.com"}, {"pc", "0x0348"}, {"int", "0x21"}, {"ax", "0x4d00"}, {"al", "0x00"}, {"carry", "0"}});
+    return false;
+}
+
+bool parse_title_handoff_event_line(const std::string_view line, const std::size_t index,
+                                    std::uint64_t& sequence, std::uint64_t& tick,
+                                    std::string& error) {
+    const auto tab = line.find('\t');
+    if (line.size() > 4096 || line.empty() || line.find('\r') != std::string_view::npos
+        || tab == std::string_view::npos || tab != line.rfind('\t') || line.substr(0, tab) != "event") {
+        error = "Millennium DOS title-handoff event is not event<TAB>sequence tick type fields";
+        return false;
+    }
+    std::string_view type;
+    std::map<std::string_view, std::string_view> fields;
+    if (!parse_fields(line.substr(tab + 1), sequence, tick, type, fields)
+        || !title_handoff_schema_matches(index, type, fields)) {
+        error = "Millennium DOS title-handoff event is outside the ordered native-boundary schema";
+        return false;
+    }
+    return true;
+}
+
 } // namespace
 
 bool validate_millennium_dos_english_reference_events(
@@ -373,6 +422,43 @@ bool validate_millennium_dos_title_init_reference_events(
     diagnostics.interrupt_count = 2;
     diagnostics.file_count = 1;
     diagnostics.private_return_count = 2;
+    return true;
+}
+
+bool validate_millennium_dos_title_handoff_reference_events(
+    const std::string_view events, MillenniumDosTitleHandoffReferenceTraceDiagnostics& diagnostics,
+    std::string& error) {
+    diagnostics = {};
+    if (events.empty() || events.back() != '\n') {
+        error = "Millennium DOS title-handoff events must use LF-terminated records";
+        return false;
+    }
+    std::uint64_t previous_sequence = 0;
+    std::uint64_t previous_tick = 0;
+    std::size_t cursor = 0;
+    for (std::size_t index = 0; index < 8; ++index) {
+        const auto end = events.find('\n', cursor);
+        if (end == std::string_view::npos) {
+            error = "Millennium DOS title-handoff trace ended before its documented boundary";
+            return false;
+        }
+        std::uint64_t sequence = 0;
+        std::uint64_t tick = 0;
+        if (!parse_title_handoff_event_line(events.substr(cursor, end - cursor), index,
+                sequence, tick, error)
+            || (index != 0 && (sequence <= previous_sequence || tick <= previous_tick))) {
+            if (error.empty()) error = "Millennium DOS title-handoff events have invalid ordering";
+            return false;
+        }
+        previous_sequence = sequence;
+        previous_tick = tick;
+        cursor = end + 1;
+    }
+    if (cursor != events.size()) {
+        error = "Millennium DOS title-handoff trace must contain exactly its documented boundary records";
+        return false;
+    }
+    diagnostics = {8, 4, 1, 3};
     return true;
 }
 

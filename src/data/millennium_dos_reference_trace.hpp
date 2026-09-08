@@ -50,6 +50,16 @@ struct MillenniumDosTitleInitReferenceTraceDiagnostics {
     std::size_t private_return_count = 0;
 };
 
+// The title-handoff adapter is intentionally finite. It records the exact
+// raw boundaries consumed by MillenniumDosTitleToGameSession, but no event
+// text survives validation and no DOS result is inferred by this parser.
+struct MillenniumDosTitleHandoffReferenceTraceDiagnostics {
+    std::size_t event_count = 0;
+    std::size_t local_return_count = 0;
+    std::size_t stack_word_count = 0;
+    std::size_t interrupt_count = 0;
+};
+
 // Parse the v2 event grammar after the generic trace validator has pinned its
 // external file by size and SHA-256. The caller provides the whole UTF-8/ASCII
 // text only for this bounded, diagnostics-only validation; no event returns
@@ -75,6 +85,15 @@ parse_millennium_dos_gx_startup_reference_observations(std::string_view events,
 [[nodiscard]] bool validate_millennium_dos_title_init_reference_events(
     std::string_view events,
     MillenniumDosTitleInitReferenceTraceDiagnostics& diagnostics,
+    std::string& error);
+
+// Validate the complete v3 title-exit/parent-EXEC sequence. It is deliberately
+// not a generic DOS-event grammar: an extra event, a reordered event, a
+// different site, or a different observed branch fails before any native
+// session can be offered the observation.
+[[nodiscard]] bool validate_millennium_dos_title_handoff_reference_events(
+    std::string_view events,
+    MillenniumDosTitleHandoffReferenceTraceDiagnostics& diagnostics,
     std::string& error);
 
 } // namespace eon

@@ -1732,6 +1732,28 @@ int main() {
             "event\t1 10 interrupt image=2200ad.exe pc=0x0124 int=0x91 ax=0x001f es=cs bx=0xd19f\n",
             diagnostics, trace_error));
     }
+    // The title-handoff grammar is a complete, ordered bridge contract for
+    // the existing native state machine. The invented values below exercise
+    // only parser safety; no fixture is a capture or runtime input.
+    {
+        constexpr std::string_view valid_events =
+            "event\t1 1 local-return image=titles.exe call_pc=0x1c54 return_pc=0x1c57\n"
+            "event\t2 2 local-return image=titles.exe call_pc=0x1c57 return_pc=0x1c5a\n"
+            "event\t3 3 local-return image=titles.exe call_pc=0x1c64 return_pc=0x1c67\n"
+            "event\t4 4 local-return image=titles.exe call_pc=0x1a0f return_pc=0x1a12\n"
+            "event\t5 5 stack-word image=titles.exe pc=0x1c60 address=0x1aa0 value=0xbeef\n"
+            "event\t6 6 title-termination image=titles.exe pc=0x1a18 int=0x21 ax=0x4c00\n"
+            "event\t7 7 parent-exec-return image=mill.com pc=0x0337 int=0x21 ax=0x4b00 carry=0\n"
+            "event\t8 8 child-status image=mill.com pc=0x0348 int=0x21 ax=0x4d00 al=0x00 carry=0\n";
+        eon::MillenniumDosTitleHandoffReferenceTraceDiagnostics diagnostics;
+        std::string trace_error;
+        assert(eon::validate_millennium_dos_title_handoff_reference_events(
+            valid_events, diagnostics, trace_error));
+        assert(diagnostics.event_count == 8 && diagnostics.local_return_count == 4
+            && diagnostics.stack_word_count == 1 && diagnostics.interrupt_count == 3);
+        assert(!eon::validate_millennium_dos_title_handoff_reference_events(
+            valid_events.substr(0, valid_events.size() - 1), diagnostics, trace_error));
+    }
     // This exact five-record schema retains a real title-wrapper return
     // observation as diagnostics only. It never turns either AX word into a
     // title-session input or a private-driver ABI implementation.

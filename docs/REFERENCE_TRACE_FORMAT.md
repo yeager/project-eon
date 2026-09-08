@@ -92,6 +92,7 @@ capture tooling must choose the row below before it writes a manifest.
 | `millennium-dos-en-startup-v1` | `millennium`/`dos`/`en`, 328383, `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | None | Clean English DOS startup sites only. |
 | `millennium-dos-en-gx-startup-v2` | `millennium`/`dos`/`en`, 328383, `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | None | Ten ordered private-return, original-byte-read, overlay-return and local-return observations through the GX startup continuation. |
 | `millennium-dos-en-title-init-v2` | `millennium`/`dos`/`en`, 328383, `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | None | One exact launcher/title request prefix and two ordered `TITLES.EXE` private-vector return observations. |
+| `millennium-dos-en-title-handoff-v3` | `millennium`/`dos`/`en`, 328383, `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | None | Eight ordered title-exit, stack-word, title-termination, parent-EXEC and child-status observations at the existing native title-to-game boundaries. |
 | `deuteros-atari-st-boot-v1` | `deuteros`/`atari-st`/`en`, 3021682, `c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653` | `source_media_sha256=aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee`; `source_stage_sha256=2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7` | Replicants Disk 1 and its copied second-stage interval. |
 | `millennium-amiga-en-defjam-bootstrap-v1` | `millennium`/`amiga`/`en`, 2558009, `2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400` | None | Two caller-side Defjam bootstrap handoffs. |
 | `deuteros-amiga-en-title-stage-v1` | `deuteros`/`amiga`/`en`, 4066771, `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | `source_media_sha256=6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`; `source_stage_sha256=48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03` | Clean system ADF and `ADF +0x6e000`, 0x6ca00-byte title stage. |
@@ -131,6 +132,7 @@ similar platform's evidence.
 | `millennium-dos-en-startup-v1` | `millennium-dos-launcher`, `millennium-dos-title-flow`, `millennium-dos-game-flow` |
 | `millennium-dos-en-gx-startup-v2` | `millennium-dos-game-flow`, `millennium-dos-gx-overlay` |
 | `millennium-dos-en-title-init-v2` | `millennium-dos-launcher`, `millennium-dos-title-flow` |
+| `millennium-dos-en-title-handoff-v3` | `millennium-dos-title-flow`, `millennium-dos-game-flow` |
 | `deuteros-atari-st-boot-v1` | `deuteros-atari-protected-boot`, `deuteros-atari-first-stage` |
 | `millennium-amiga-en-defjam-bootstrap-v1` | `millennium-amiga-defjam-bootstrap`, `millennium-amiga-defjam-first-stage-entry` |
 | `deuteros-amiga-en-title-stage-v1` | `deuteros-amiga-main-stage`, `deuteros-amiga-title-handoff` |
@@ -382,6 +384,18 @@ v2 grammar. The records must remain outside the repository and are not
 runtime inputs. A future adapter must first define bounded field encodings,
 source-site ordering, frame lengths and hash checks, then independently prove
 the external service and caller ABIs before it can consume any observation.
+
+### Millennium DOS title handoff v3 capture profile
+
+`millennium-dos-en-title-handoff-v3` accepts exactly eight ordered records:
+four `TITLES.EXE` local returns (`$1c54->$1c57`, `$1c57->$1c5a`,
+`$1c64->$1c67`, and `$1a0f->$1a12`), the raw four-digit stack word at
+`$1c60/$1aa0`, title termination at `$1a18` with `INT $21 AX=$4c00`, the
+non-carry parent `MILL.COM` EXEC return at `$0337`, and zero child status at
+`$0348`. These are only the boundary facts accepted by the native
+`MillenniumDosTitleToGameSession`; they do not establish input, rendering,
+audio, a successful `2200AD.EXE` startup, or gameplay. Any extra record,
+changed site/value, or non-monotonic sequence/tick is rejected.
 
 ### Millennium DOS GX startup v2 capture profile
 

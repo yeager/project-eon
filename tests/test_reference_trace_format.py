@@ -27,6 +27,10 @@ class ReferenceTraceFormatTests(unittest.TestCase):
             "game": "millennium", "platform": "dos", "language": "en", "size": 328383,
             "release": "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
         },
+        "millennium-dos-en-title-handoff-v3": {
+            "game": "millennium", "platform": "dos", "language": "en", "size": 328383,
+            "release": "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+        },
         "deuteros-atari-st-boot-v1": {
             "game": "deuteros", "platform": "atari-st", "language": "en", "size": 3021682,
             "release": "c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653",
@@ -78,6 +82,9 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         ),
         "millennium-dos-en-title-init-v2": (
             "millennium-dos-launcher", "millennium-dos-title-flow",
+        ),
+        "millennium-dos-en-title-handoff-v3": (
+            "millennium-dos-title-flow", "millennium-dos-game-flow",
         ),
         "deuteros-atari-st-boot-v1": (
             "deuteros-atari-protected-boot", "deuteros-atari-first-stage",
@@ -142,7 +149,7 @@ class ReferenceTraceFormatTests(unittest.TestCase):
         self.assertEqual(sum("ReferenceTraceRuntimePolicy::transient_call_free_gx_startup" in row
                              for row in registry_rows), 1)
         self.assertEqual(sum("ReferenceTraceRuntimePolicy::diagnostics_only" in row
-                             for row in registry_rows), 7)
+                             for row in registry_rows), 8)
         self.assertEqual(sum(
             "ReferenceTraceRuntimePolicy::immutable_deuteros_title_display_checkpoint" in row
             for row in registry_rows), 2)
