@@ -5035,13 +5035,15 @@ lookup resolves `$4000:$0170` value `$7a` through `$5050:$409a` value zero;
 no lookup-table, palette, planar, or pixel semantics are claimed.
 When all requested bytes are present in owned native memory, the coordinator
 can now drive this same typed loop through `$16e8` without external byte
-callbacks. DOS aliases are compared by the exact 20-bit physical address;
-contradictory aliases are rejected. The operation uses a caller-supplied finite
-cap and is atomic across session and memory state on missing input, detached
-sequence, unexpected boundary, or cap exhaustion. Decoder output effects now
-carry the recovered destination segment explicitly instead of being attributed
-to the child code segment. No additional executable span or semantic claim is
-introduced. On the terminal loop edge, the native session follows the actual
+callbacks. Each input is read only from the current typed DOS
+`segment:offset` boundary in `NativeRuntimeMemory`; physical-address aliasing
+is neither resolved nor accepted as a substitute source. The operation uses a
+caller-supplied finite cap and is atomic across session and memory state on
+missing input, detached sequence, unexpected boundary, or cap exhaustion.
+Decoder output effects now carry the recovered destination segment explicitly
+instead of being attributed to the child code segment. No additional
+executable span or semantic claim is introduced. On the terminal loop edge,
+the native session follows the actual
 `$16e8` RET into its first caller. Exact `$1740..$1763` bytes (file offset
 `$1640`, SHA-256
 `d1e04fba870ff3677e495d131b994bfdc1dc6f95af7ea9f7cc4316d48568f115`)

@@ -1331,6 +1331,26 @@ int main(int argc, char** argv) {
         assert(missing_mode_two.checkpoint().last_sequence==missing_before.last_sequence
             &&missing_mode_two.checkpoint().memory_effects.size()==missing_before.memory_effects.size());
         assert(missing_memory.diagnostics().initialized_byte_count==0);
+
+        // A physically equivalent DOS location is not an owned runtime
+        // source. The native continuation reads the exact current
+        // segment:offset boundary and must not reintroduce a DOS alias table.
+        auto physical_alias_mode_two=compact_owned_mode_two;
+        eon::NativeRuntimeMemory physical_alias_memory;
+        eon::NativeRuntimeEffectBatch physical_alias_seed{
+            "millennium-dos-mode-two-physical-alias-rejection",true,{
+                {1,{eon::NativeRuntimeAddressSpace::dos_segmented,0x3fff,0x0180},
+                    eon::MemoryTransferElementWidth::byte,
+                    eon::NativeRuntimeByteOrder::little_endian,0x7a}}};
+        assert(physical_alias_memory.apply(physical_alias_seed).accepted);
+        const auto physical_alias_before=physical_alias_mode_two.checkpoint();
+        const auto rejected_physical_alias=physical_alias_mode_two.drive_mode_two_from_owned_memory(
+            physical_alias_memory,{102,4});
+        assert(!rejected_physical_alias.accepted&&!rejected_physical_alias.returned
+            &&rejected_physical_alias.observation_count==0);
+        assert(physical_alias_mode_two.checkpoint().last_sequence==physical_alias_before.last_sequence
+            &&physical_alias_mode_two.checkpoint().memory_effects.size()
+                ==physical_alias_before.memory_effects.size());
     }
     mode_two_extension.observe_far_byte({106,0x16b3,0x4000,0x0170,0x7a});
     assert(mode_two_extension.checkpoint().state

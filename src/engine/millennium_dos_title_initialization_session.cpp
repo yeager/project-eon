@@ -5,7 +5,6 @@
 
 #include <array>
 #include <limits>
-#include <map>
 #include <stdexcept>
 
 namespace eon {
@@ -83,18 +82,6 @@ MillenniumDosTitleInitializationSession::drive_mode_two_from_owned_memory(
 
     auto next = *this;
     auto memory = runtime_memory;
-    std::map<std::uint32_t,std::uint8_t> physical_bytes;
-    for (const auto& cell : memory.checkpoint().initialized_bytes) {
-        if (cell.location.address_space != NativeRuntimeAddressSpace::dos_segmented
-            || !cell.location.segment) continue;
-        const auto physical=static_cast<std::uint32_t>(*cell.location.segment)*16U
-            + static_cast<std::uint32_t>(cell.location.offset);
-        const auto [found,inserted]=physical_bytes.emplace(physical,cell.value);
-        if (!inserted && found->second!=cell.value) {
-            result.error = "Mode-two owned-memory drive found contradictory DOS segment aliases";
-            return result;
-        }
-    }
     for (std::size_t count = 0; count < request.maximum_observations; ++count) {
         if (next.state_ == MillenniumDosTitleInitializationState::post_descriptor_loop_private_interrupt_result_boundary
             && next.boundary_.call_address == 0x1764) {
@@ -115,10 +102,9 @@ MillenniumDosTitleInitializationSession::drive_mode_two_from_owned_memory(
             return result;
         }
         const auto boundary = next.far_byte_boundary_;
-        const auto physical=static_cast<std::uint32_t>(boundary.source_segment)*16U
-            + boundary.source_offset;
-        const auto value=physical_bytes.find(physical);
-        if (value==physical_bytes.end()) {
+        const auto value=memory.read_byte({NativeRuntimeAddressSpace::dos_segmented,
+            boundary.source_segment,boundary.source_offset});
+        if (!value) {
             result.error = "Mode-two owned-memory drive requires initialized source byte at segment "
                 + std::to_string(boundary.source_segment) + " offset "
                 + std::to_string(boundary.source_offset);
@@ -127,7 +113,7 @@ MillenniumDosTitleInitializationSession::drive_mode_two_from_owned_memory(
         const auto prior_effect_count = next.memory_effects_.size();
         try {
             next.observe_far_byte({request.first_sequence + count,boundary.instruction_address,
-                boundary.source_segment,boundary.source_offset,value->second});
+                boundary.source_segment,boundary.source_offset,*value});
         } catch (const std::exception& error) {
             result.error = error.what();
             return result;
@@ -146,11 +132,6 @@ MillenniumDosTitleInitializationSession::drive_mode_two_from_owned_memory(
             }
             const auto applied=memory.apply(batch);
             if(!applied.accepted){result.error=applied.error;return result;}
-            for(const auto& effect:batch.effects) {
-                const auto effect_physical=static_cast<std::uint32_t>(*effect.location.segment)*16U
-                    + static_cast<std::uint32_t>(effect.location.offset);
-                physical_bytes[effect_physical]=static_cast<std::uint8_t>(effect.value);
-            }
         }
         if (next.state_ == MillenniumDosTitleInitializationState::post_descriptor_loop_private_interrupt_result_boundary
             && next.boundary_.call_address == 0x1764) {
