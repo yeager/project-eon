@@ -598,6 +598,10 @@ struct ModernRuntimeDiagnostics {
     // in this frame.  It names the next fact that must be observed, but it
     // deliberately has no field for supplying that fact back to the engine.
     std::string millennium_dos_external_requirement;
+    // Deuteros does not expose a value shape at this layer, but its driver
+    // still reports the exact source address at which native execution has
+    // stopped for an external observation.
+    std::string deuteros_amiga_external_requirement;
     std::string deuteros_amiga_title_dependency_chain;
     std::string native_code_images;
     // This comes only from the launcher preflight object. It does not expose
@@ -651,6 +655,17 @@ struct ModernRuntimeDiagnostics {
         summary << " SRC=$" << requirement.source_segment << ':' << requirement.source_offset;
     }
     if (requirement.element_width) summary << " WIDTH=" << std::dec << requirement.element_width;
+    return summary.str();
+}
+
+[[nodiscard]] std::string deuteros_amiga_external_requirement_summary(
+    const eon::DeuterosAmigaSessionDriveResult& drive) {
+    if (drive.stop_reason != eon::DeuterosAmigaSessionStopReason::external_observation
+        || drive.stop_before_address == 0U) {
+        return {};
+    }
+    std::ostringstream summary;
+    summary << "WAIT=EXTERNAL @$" << std::hex << drive.stop_before_address;
     return summary.str();
 }
 
@@ -1571,7 +1586,9 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
             + (diagnostics.native_code_images.empty() ? ""
                 : " / " + diagnostics.native_code_images)
             + (diagnostics.millennium_dos_external_requirement.empty() ? ""
-                : " / " + diagnostics.millennium_dos_external_requirement)},
+                : " / " + diagnostics.millennium_dos_external_requirement)
+            + (diagnostics.deuteros_amiga_external_requirement.empty() ? ""
+                : " / " + diagnostics.deuteros_amiga_external_requirement)},
         {"MODERN PACK", diagnostics.modern_pack},
         {"PACK RENDER TARGETS", diagnostics.modern_pack_targets},
         {"GRAPHICS PRESET", tr(modern_graphics_preset_names.at(static_cast<std::size_t>(settings.preset)))},
@@ -5310,6 +5327,13 @@ int main(int argc, char** argv) {
                     millennium_dos_external_requirement_summary(
                         *drive.external_observation_requirement);
             }
+        }
+        if (active_native_session_drive
+            && active_native_session_drive->first == runtime_view.generation
+            && active_native_session_drive->second.deuteros_amiga) {
+            diagnostics.deuteros_amiga_external_requirement =
+                deuteros_amiga_external_requirement_summary(
+                    *active_native_session_drive->second.deuteros_amiga);
         }
         if (const auto chain = runtime.deuteros_amiga_title_dependency_chain_checkpoint()) {
             std::ostringstream summary;
