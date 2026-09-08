@@ -22,6 +22,7 @@
 #include "engine/millennium_amiga_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_relocator_session.hpp"
 #include "engine/millennium_dos_title_to_game_session.hpp"
+#include "engine/millennium_dos_title_handoff_trace_admission.hpp"
 #include "engine/millennium_dos_sound_driver_load_session.hpp"
 #include "data/zip_archive.hpp"
 #include "data/native_code_image_admission.hpp"
@@ -10251,6 +10252,32 @@ int main() {
         assert(title_display_v5);
         assert(title_display_v5->source_media_sha256
             == "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38");
+    }
+    {
+        constexpr std::string_view valid_title_handoff_trace =
+            "event\t1 10 local-return image=titles.exe call_pc=0x1c54 return_pc=0x1c57\n"
+            "event\t2 20 local-return image=titles.exe call_pc=0x1c57 return_pc=0x1c5a\n"
+            "event\t3 30 local-return image=titles.exe call_pc=0x1c64 return_pc=0x1c67\n"
+            "event\t4 40 local-return image=titles.exe call_pc=0x1a0f return_pc=0x1a12\n"
+            "event\t5 50 stack-word image=titles.exe pc=0x1c60 address=0x1aa0 value=0xbeef\n"
+            "event\t6 60 title-termination image=titles.exe pc=0x1a18 int=0x21 ax=0x4c00\n"
+            "event\t7 70 parent-exec-return image=mill.com pc=0x0337 int=0x21 ax=0x4b00 carry=0\n"
+            "event\t8 80 child-status image=mill.com pc=0x0348 int=0x21 ax=0x4d00 al=0x00 carry=0\n";
+        const auto title_handoff_admission = eon::admit_millennium_dos_title_handoff_trace(
+            *mill_bytes, *titles_bytes, valid_title_handoff_trace);
+        assert(title_handoff_admission.session && title_handoff_admission.error.empty());
+        assert(title_handoff_admission.session->state()
+            == eon::MillenniumDosTitleToGameState::game_exec_boundary);
+        assert(title_handoff_admission.session->restored_stack_pointer() == 0xbeef);
+        constexpr eon::MillenniumDosTitleToGameByteEffect expected_title_flag{
+            0x1c5a, 0x1a0e, 0};
+        assert(title_handoff_admission.session->effects().size() == 1
+            && title_handoff_admission.session->effects().front() == expected_title_flag);
+        const auto malformed_title_handoff_admission =
+            eon::admit_millennium_dos_title_handoff_trace(*mill_bytes, *titles_bytes,
+                valid_title_handoff_trace.substr(0, valid_title_handoff_trace.size() - 1));
+        assert(!malformed_title_handoff_admission.session
+            && !malformed_title_handoff_admission.error.empty());
     }
     {
         constexpr std::string_view valid_gx_trace =

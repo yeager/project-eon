@@ -397,6 +397,12 @@ non-carry parent `MILL.COM` EXEC return at `$0337`, and zero child status at
 audio, a successful `2200AD.EXE` startup, or gameplay. Any extra record,
 changed site/value, or non-monotonic sequence/tick is rejected.
 
+After manifest, event, and original-media rehashing, a caller may replay this
+finite sequence into a fresh native state machine and inspect its terminal
+`2200AD.EXE` EXEC boundary. The replay retains neither the event text nor a
+DOS process, and it never launches the child executable or publishes a game
+runtime.
+
 ### Millennium DOS GX startup v2 capture profile
 
 `millennium-dos-en-gx-startup-v2` accepts exactly ten ordered records from

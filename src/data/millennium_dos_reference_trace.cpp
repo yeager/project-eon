@@ -462,4 +462,35 @@ bool validate_millennium_dos_title_handoff_reference_events(
     return true;
 }
 
+std::optional<MillenniumDosTitleHandoffReferenceTraceObservations>
+parse_millennium_dos_title_handoff_reference_observations(const std::string_view events,
+    std::string& error) {
+    MillenniumDosTitleHandoffReferenceTraceDiagnostics diagnostics;
+    if (!validate_millennium_dos_title_handoff_reference_events(events, diagnostics, error)) {
+        return std::nullopt;
+    }
+    MillenniumDosTitleHandoffReferenceTraceObservations observations;
+    std::size_t cursor = 0;
+    for (std::size_t index = 0; index < observations.sequence.size(); ++index) {
+        const auto end = events.find('\n', cursor);
+        const auto line = events.substr(cursor, end - cursor);
+        const auto tab = line.find('\t');
+        std::uint64_t tick = 0;
+        std::string_view type;
+        std::map<std::string_view, std::string_view> fields;
+        if (tab == std::string_view::npos
+            || !parse_fields(line.substr(tab + 1), observations.sequence[index], tick, type, fields)) {
+            error = "Millennium DOS title-handoff events changed after schema validation";
+            return std::nullopt;
+        }
+        if (index == 4 && !parse_fixed_hex(fields.at("value"), 4,
+                observations.restored_stack_pointer)) {
+            error = "Millennium DOS title-handoff stack observation is invalid";
+            return std::nullopt;
+        }
+        cursor = end + 1;
+    }
+    return observations;
+}
+
 } // namespace eon

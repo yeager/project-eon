@@ -165,6 +165,7 @@ add_executable(project-eon
     src/engine/millennium_dos_gx_overlay_adapter_session.cpp
     src/engine/millennium_dos_gx_startup_session.cpp
     src/engine/millennium_dos_gx_startup_trace_admission.cpp
+    src/engine/millennium_dos_title_handoff_trace_admission.cpp
     src/engine/millennium_dos_save_session.cpp
     src/engine/millennium_atari_bootstrap_session.cpp
     src/engine/atari_st_prg_load_session.cpp

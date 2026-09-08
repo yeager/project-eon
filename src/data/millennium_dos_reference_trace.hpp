@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstddef>
+#include <array>
 #include <cstdint>
+#include <optional>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -60,6 +62,14 @@ struct MillenniumDosTitleHandoffReferenceTraceDiagnostics {
     std::size_t interrupt_count = 0;
 };
 
+// Decoded only after the complete eight-record grammar validates. These are
+// transient observations for the native title-to-game state machine, never a
+// retained event log or a substitute DOS process state.
+struct MillenniumDosTitleHandoffReferenceTraceObservations {
+    std::array<std::uint64_t, 8> sequence{};
+    std::uint16_t restored_stack_pointer = 0;
+};
+
 // Parse the v2 event grammar after the generic trace validator has pinned its
 // external file by size and SHA-256. The caller provides the whole UTF-8/ASCII
 // text only for this bounded, diagnostics-only validation; no event returns
@@ -94,6 +104,10 @@ parse_millennium_dos_gx_startup_reference_observations(std::string_view events,
 [[nodiscard]] bool validate_millennium_dos_title_handoff_reference_events(
     std::string_view events,
     MillenniumDosTitleHandoffReferenceTraceDiagnostics& diagnostics,
+    std::string& error);
+
+[[nodiscard]] std::optional<MillenniumDosTitleHandoffReferenceTraceObservations>
+parse_millennium_dos_title_handoff_reference_observations(std::string_view events,
     std::string& error);
 
 } // namespace eon
