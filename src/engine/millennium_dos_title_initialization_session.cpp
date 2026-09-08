@@ -175,8 +175,11 @@ MillenniumDosTitleInitializationSession::drive_next_descriptor_stream_from_title
         "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
     constexpr std::uint16_t relocated_stream_segment = 0x32a1;
     constexpr std::uint16_t expected_library_segment = 0x3000;
-    if ((state_ != MillenniumDosTitleInitializationState::post_descriptor_next_loop_stream_byte_boundary
-            && state_ != MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary)
+    const auto admitted_entry =
+        state_ == MillenniumDosTitleInitializationState::post_descriptor_next_loop_stream_byte_boundary
+        || state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary
+        || state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_nibble_byte_boundary;
+    if (!admitted_entry
         || continuation_address_ != 0x1428 || title_library_segment_ != expected_library_segment
         || title_library.size() != 18907 || to_hex(sha256(title_library)) != expected_title_library_sha
         || last_sequence_ == std::numeric_limits<std::uint64_t>::max()

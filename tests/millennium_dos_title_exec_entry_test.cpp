@@ -1294,6 +1294,19 @@ int main(int argc, char** argv) {
             &&after_stream.memory_effects.back().instruction_address==0x146b
             &&after_stream.memory_effects.back().offset==0x02e5
             &&after_stream.memory_effects.back().value==0x01);
+        const auto extended_stream=owned_mode_two.drive_next_descriptor_stream_from_title_library(
+            title_library,{after_stream.last_sequence+1,2});
+        assert(extended_stream.accepted && !extended_stream.stopped_at_boundary
+            &&extended_stream.observation_count==2);
+        const auto after_extended_stream=owned_mode_two.checkpoint();
+        assert(after_extended_stream.state
+            ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary
+            &&after_extended_stream.continuation_address==0x1428
+            &&after_extended_stream.far_byte_boundary.source_segment==0x32a1
+            &&after_extended_stream.far_byte_boundary.source_offset==0x0026
+            &&after_extended_stream.memory_effects.back().instruction_address==0x1484
+            &&after_extended_stream.memory_effects.back().offset==0x02e6
+            &&after_extended_stream.memory_effects.back().value==0x02);
 
         auto missing_mode_two=compact_owned_mode_two;
         eon::NativeRuntimeMemory missing_memory;

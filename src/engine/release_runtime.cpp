@@ -1610,11 +1610,11 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_private_interrupt_result
             next.consume_next_descriptor_pair(reached.last_sequence+1,*library);
             const auto stream=next.checkpoint();
             const auto driven=next.drive_next_descriptor_stream_from_title_library(
-                *library,{stream.last_sequence+1,2});
-            if(!driven.accepted || !driven.stopped_at_boundary
-                || driven.observation_count!=1)
+                *library,{stream.last_sequence+1,4});
+            if(!driven.accepted || driven.stopped_at_boundary
+                || driven.observation_count!=4)
                 throw std::runtime_error(driven.error.empty()
-                    ? "TITLE.LIB descriptor stream did not reach its verified byte boundary"
+                    ? "TITLE.LIB descriptor stream did not complete its verified continuation"
                     : driven.error);
         }
         if(next.checkpoint().state==MillenniumDosTitleInitializationState::post_video_followup_call_boundary){
