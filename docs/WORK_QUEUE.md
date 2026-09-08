@@ -19,6 +19,11 @@ from the reported relocated source before continuing.
 The genuine `$0006/$0000` words are now provenance-checked and the normalized
 pointer is committed. Continue with the typed record word at `$13cd`, source
 `$3000:$001e`; do not infer loaded record contents.
+An attempted automatic continuation from the admitted `TITLE.LIB` allocation
+was rejected during focused native testing: later record-byte values cannot yet
+be established solely from that allocation in this caller route. They remain
+typed external observations until a hash-bound provenance mapping proves their
+source; do not use generic DOS physical aliasing as a substitute.
 The first record word `$0140` is now admitted through the dedicated
 single-word facade. Continue at `$13d0` with genuine word `$00c8` from
 `TITLE.LIB+$001c`.
