@@ -287,6 +287,43 @@ def main() -> int:
             "--inspect-json did not retain the complete release/coverage inventory:\n"
             f"{inspect_json.stdout}\n{inspect_json.stderr}"
         )
+
+    # This integration test asserts exact launch contracts below, not merely
+    # platform recognition.  A workstation may legitimately keep alternate
+    # releases beside the canonical preservation corpus, but it must not make
+    # this test silently substitute one.  Detect a missing exact container
+    # before the first JSON launch assertion so its failure names the actual
+    # provisioning issue rather than an incidental JSON decode error.
+    required_launch_releases = {
+        ("Millennium 2.2", "DOS", "en"):
+            "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+        ("Millennium 2.2", "Amiga", "en"):
+            "2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400",
+        ("Millennium 2.2", "Atari ST", "en"):
+            "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
+        ("Deuteros", "Amiga", "en"):
+            "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+        ("Deuteros", "Atari ST", "en"):
+            "c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653",
+    }
+    observed_launch_releases = {
+        (release["game"], release["platform"], release["language"]): release["sha256"]
+        for release in inspect_payload["releases"]
+    }
+    missing_launch_releases = {
+        release: sha256 for release, sha256 in required_launch_releases.items()
+        if observed_launch_releases.get(release) != sha256
+    }
+    if missing_launch_releases:
+        missing = ", ".join(
+            f"{' / '.join(release)} ({sha256})"
+            for release, sha256 in sorted(missing_launch_releases.items())
+        )
+        raise SystemExit(
+            "EON_REAL_DATA_DIR requires the canonical hash-bound launch corpus; "
+            f"missing or substituted: {missing}. "
+            "Use EON_DIRECT_DATA_DIR for alternate recognised installed media."
+        )
     for release in inspect_payload["releases"]:
         for boundary in release["recovery_boundaries"]:
             required_boundary_fields = {
@@ -316,7 +353,9 @@ def main() -> int:
 
     launch_check_json = subprocess.run(
         (str(executable), "--data", str(data_directory), "--game", "millennium",
-            "--platform", "dos", "--presentation", "original", "--launch-check-json"),
+            "--platform", "dos", "--release-language", "en", "--release-sha256",
+            "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+            "--presentation", "original", "--launch-check-json"),
         env=environment, check=False, capture_output=True, text=True,
     )
     try:
@@ -363,7 +402,9 @@ def main() -> int:
     # stays clear of paths, source bytes, and emulator state.
     deuteros_opening = subprocess.run(
         (str(executable), "--data", str(data_directory), "--game", "deuteros",
-            "--platform", "amiga", "--native-step-diagnostics-json",
+            "--platform", "amiga", "--release-language", "en", "--release-sha256",
+            "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+            "--native-step-diagnostics-json",
             "--opening-ticks", "3", "--opening-input-held", "0"),
         env=environment, check=False, capture_output=True, text=True,
     )
@@ -410,7 +451,9 @@ def main() -> int:
     # fabricating an Exec or graphics service result.
     deuteros_continuation = subprocess.run(
         (str(executable), "--data", str(data_directory), "--game", "deuteros",
-            "--platform", "amiga", "--native-step-diagnostics-json",
+            "--platform", "amiga", "--release-language", "en", "--release-sha256",
+            "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+            "--native-step-diagnostics-json",
             "--opening-ticks", "128", "--opening-input-held", "1",
             "--opening-continue"),
         env=environment, check=False, capture_output=True, text=True,
@@ -451,7 +494,9 @@ def main() -> int:
     # useful to preservation tooling.
     runtime_diagnostics = subprocess.run(
         (str(executable), "--data", str(data_directory), "--game", "millennium",
-            "--platform", "dos", "--presentation", "original",
+            "--platform", "dos", "--release-language", "en", "--release-sha256",
+            "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+            "--presentation", "original",
             "--runtime-diagnostics-json"),
         env=environment, check=False, capture_output=True, text=True,
     )
