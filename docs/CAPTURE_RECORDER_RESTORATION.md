@@ -41,6 +41,20 @@ python3 tools/locate_capture_recorder.py \
   --root /home/yeager/.cache/project-eon-tools
 ```
 
+For recorder-restoration work, append `--diagnose` to report only aggregate
+scan facts (`roots`, `hashes-checked`, and `reviewed-matches`). This can show
+that an external cache was actually searched without exposing unmatched binary
+paths, contents, or digests. It is operational troubleshooting data, not
+capture evidence and never changes admission:
+
+```sh
+python3 tools/locate_capture_recorder.py \
+  --kind millennium-dos \
+  --recorder-protocol v21-int93-installation \
+  --root /home/yeager/.cache/project-eon-tools \
+  --diagnose
+```
+
 An empty result is a hard preservation boundary. It is not permission to use
 `/usr/bin/dosbox-x`, `/usr/bin/fs-uae`, AUTOTYPE, debugger input, guest-memory
 injection, a screenshot, or a hand-transcribed CPU window as a replacement.
