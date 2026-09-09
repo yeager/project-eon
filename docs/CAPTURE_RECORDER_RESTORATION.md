@@ -451,6 +451,24 @@ be passed to the locator or capture runner.
 
 ### Experimental observer runs
 
+### 2026-09-09 V24 configuration-gate rebuild
+
+The external V24 development copy was extended with a dedicated
+`[project-eon-recorder]` section and an `OnlyAtStart` `development arm` flag.
+Its configuration callback resets the retained POD on every application and
+can control only the first development gate. The independently required
+release/image/title-prefix gate is private, hard-coded false, and cannot be
+changed through configuration. Therefore `development arm=true` still cannot
+record, serialize, emit, pin, locate, validate, or admit a capture.
+
+The full `make -C src -j4` rebuild completed outside the repository at
+`/home/yeager/.cache/project-eon-tools/recorder-recovery/dosbox-x-v24/`; its
+external executable SHA-256 is
+`1d68e2f04a6569242bb15adf82e21c3508a48e8ab60fc868b332339ebbbe78dd`.
+This is an `OBSERVER_FIX_REQUIRED` development baseline, not a recorder
+candidate. Its source, binary, and any future build output remain external and
+must not be passed to a capture helper.
+
 The reviewed v3 candidate may be run only with the explicit
 `--experimental-observer` capture-runner switch and the
 `v21-int93-installation` protocol. This is a visible, read-only emulator
