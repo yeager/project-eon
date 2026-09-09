@@ -338,6 +338,18 @@ step count, stop address, and whether it needs an external observation. It
 then exits. It never initializes SDL, an emulator, input, audio, timing, or
 saves, and it cannot submit the observation it reports.
 
+For the recovered Deuteros Amiga opening, add `--opening-ticks 1..1024` to
+run that exact number of bounded native opening ticks. The optional
+`--opening-input-held 0|1` supplies the one documented held-input signal to
+that probe; it is accepted only with `--opening-ticks`. This is diagnostic
+evidence for the recovered opening state machine, not a general game-input
+interface. For example:
+
+```sh
+project-eon --data ~/.projecteon --game deuteros --platform amiga \
+  --native-step-diagnostics-json --opening-ticks 3 --opening-input-held 0
+```
+
 Before it reports preservation provenance, this diagnostics path validates
 the compiled declarative maps: recovery rows cover parser profiles one-to-one,
 startup rows cover recognised releases one-to-one, and function rows have

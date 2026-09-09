@@ -64,6 +64,9 @@ public:
     [[nodiscard]] ReleaseRuntimeAdmission admission() const;
     [[nodiscard]] ReleaseRuntimeRejection rejection() const;
     [[nodiscard]] std::optional<RuntimeSessionSnapshot> session_snapshot() const;
+    // Bounded opening-only progression for the explicit preservation probe.
+    // Front ends receive event copies, never controller or media access.
+    [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
     [[nodiscard]] DeuterosAmigaMainStageDriveResult
     drive_deuteros_amiga_main_stage(std::uint32_t step_limit = 64);
     [[nodiscard]] DeuterosAmigaSessionDriveResult

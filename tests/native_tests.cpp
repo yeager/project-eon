@@ -2315,6 +2315,35 @@ int main() {
         const auto native_startup_input = eon::parse_command_line(8, native_startup_input_args);
         assert(native_startup_input.request && native_startup_input.request->native_step_diagnostics_json
             && native_startup_input.request->native_startup_input == '1');
+        char opening_ticks_option[] = "--opening-ticks";
+        char opening_ticks_value[] = "3";
+        char opening_input_held_option[] = "--opening-input-held";
+        char opening_input_held_value[] = "1";
+        char* deuteros_opening_args[] = {program, game_option, deuteros, platform_option, deuteros_amiga,
+            native_step_diagnostics_json_option, opening_ticks_option, opening_ticks_value,
+            opening_input_held_option, opening_input_held_value};
+        const auto deuteros_opening = eon::parse_command_line(10, deuteros_opening_args);
+        assert(deuteros_opening.request && deuteros_opening.request->native_step_diagnostics_json
+            && deuteros_opening.request->native_opening_ticks == 3U
+            && deuteros_opening.request->native_opening_input_held == true);
+        char zero_opening_ticks[] = "0";
+        char* zero_opening_args[] = {program, game_option, deuteros, platform_option, deuteros_amiga,
+            native_step_diagnostics_json_option, opening_ticks_option, zero_opening_ticks};
+        assert(!eon::parse_command_line(8, zero_opening_args).request);
+        char too_many_opening_ticks[] = "1025";
+        char* too_many_opening_args[] = {program, game_option, deuteros, platform_option, deuteros_amiga,
+            native_step_diagnostics_json_option, opening_ticks_option, too_many_opening_ticks};
+        assert(!eon::parse_command_line(8, too_many_opening_args).request);
+        char* opening_without_native_diagnostics_args[] = {program, game_option, deuteros,
+            platform_option, deuteros_amiga, opening_ticks_option, opening_ticks_value};
+        assert(!eon::parse_command_line(7, opening_without_native_diagnostics_args).request);
+        char* held_without_opening_ticks_args[] = {program, game_option, deuteros,
+            platform_option, deuteros_amiga, native_step_diagnostics_json_option,
+            opening_input_held_option, opening_input_held_value};
+        assert(!eon::parse_command_line(8, held_without_opening_ticks_args).request);
+        char* millennium_opening_args[] = {program, game_option, millennium, platform_option, dos,
+            native_step_diagnostics_json_option, opening_ticks_option, opening_ticks_value};
+        assert(!eon::parse_command_line(8, millennium_opening_args).request);
         char invalid_native_startup_input_value[] = "x";
         char* invalid_native_startup_input_args[] = {program, game_option, millennium, platform_option, dos,
             native_step_diagnostics_json_option, native_startup_input_option, invalid_native_startup_input_value};

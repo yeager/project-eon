@@ -79,6 +79,17 @@ std::optional<std::size_t> parse_pixel_reconstruction(const std::string_view val
     return std::nullopt;
 }
 
+std::optional<std::uint32_t> parse_native_opening_ticks(const std::string_view value) {
+    if (value.empty()) return std::nullopt;
+    std::uint32_t parsed = 0;
+    for (const auto character : value) {
+        if (character < '0' || character > '9' || parsed > 102U) return std::nullopt;
+        parsed = parsed * 10U + static_cast<std::uint32_t>(character - '0');
+        if (parsed > 1024U) return std::nullopt;
+    }
+    return parsed == 0 ? std::nullopt : std::optional<std::uint32_t>(parsed);
+}
+
 std::filesystem::path default_data_directory(const char* executable_path) {
 #ifdef _WIN32
     std::error_code error;
@@ -187,7 +198,9 @@ std::string usage() {
         "               [--launch-check]\n\n"
         "               [--launch-check-json]\n\n"
         "               [--runtime-diagnostics-json]\n\n"
-        "               [--native-step-diagnostics-json --native-startup-input 0|1|2]\n\n"
+        "               [--native-step-diagnostics-json --native-startup-input 0|1|2]\n"
+        "               [--native-step-diagnostics-json --opening-ticks 1..1024]\n"
+        "               [--opening-input-held 0|1]\n\n"
         "               [--resolution 1280x720|1600x900|1920x1080]\n"
         "               [--aspect original|square-pixels|widescreen]\n\n"
         "               [--language <language>]\n\n"
@@ -289,6 +302,15 @@ ParseResult parse_command_line(int argc, char** argv) {
                 return {{}, "--native-startup-input accepts exactly 0, 1, or 2", false};
             }
             request.native_startup_input = value[0];
+        } else if (argument == "--opening-ticks") {
+            request.native_opening_ticks = parse_native_opening_ticks(value);
+            if (!request.native_opening_ticks) {
+                return {{}, "--opening-ticks accepts an integer from 1 through 1024", false};
+            }
+        } else if (argument == "--opening-input-held") {
+            if (value == "0") request.native_opening_input_held = false;
+            else if (value == "1") request.native_opening_input_held = true;
+            else return {{}, "--opening-input-held accepts exactly 0 or 1", false};
         } else if (argument == "--modern-pack") {
             request.modern_pack_manifest = std::filesystem::path(value);
         } else if (argument == "--platform") {
@@ -372,6 +394,16 @@ ParseResult parse_command_line(int argc, char** argv) {
     if (request.native_startup_input && !request.native_step_diagnostics_json) {
         return {{}, "--native-startup-input requires --native-step-diagnostics-json", false};
     }
+    if ((request.native_opening_ticks || request.native_opening_input_held)
+        && !request.native_step_diagnostics_json) {
+        return {{}, "--opening-ticks and --opening-input-held require --native-step-diagnostics-json", false};
+    }
+    if (request.native_opening_input_held && !request.native_opening_ticks) {
+        return {{}, "--opening-input-held requires --opening-ticks", false};
+    }
+    if (request.native_startup_input && request.native_opening_ticks) {
+        return {{}, "--native-startup-input and --opening-ticks select different native diagnostics", false};
+    }
     if (request.inventory_assets && !request.inspect_data) {
         return {{}, "--inventory requires --inspect; it is a read-only preservation report", false};
     }
@@ -421,6 +453,10 @@ ParseResult parse_command_line(int argc, char** argv) {
     }
     if (request.launch_check && (!request.game || !request.platform)) {
         return {{}, "--launch-check requires both --game and --platform", false};
+    }
+    if (request.native_opening_ticks && (*request.game != Game::deuteros
+            || *request.platform != Platform::amiga)) {
+        return {{}, "--opening-ticks supports only the recovered Deuteros Amiga opening", false};
     }
     const auto& renderer = request.renderer_overrides;
     const bool has_modern_renderer_override = renderer.modern_preset_index || renderer.render_pacing_index

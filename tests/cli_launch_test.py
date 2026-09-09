@@ -351,6 +351,46 @@ def main() -> int:
             f"{launch_check_json.stdout}\n{launch_check_json.stderr}"
         )
 
+    # The recovered Amiga opening can be advanced only through its explicit,
+    # bounded native diagnostic route. This tests actual hash-bound media
+    # admission rather than a synthetic VM fixture, while the emitted record
+    # stays clear of paths, source bytes, and emulator state.
+    deuteros_opening = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "deuteros",
+            "--platform", "amiga", "--native-step-diagnostics-json",
+            "--opening-ticks", "3", "--opening-input-held", "0"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    try:
+        deuteros_opening_payload = json.loads(deuteros_opening.stdout)
+    except json.JSONDecodeError as error:
+        raise SystemExit(
+            f"Deuteros opening diagnostic did not emit JSON: {error}"
+        ) from error
+    if (deuteros_opening.returncode != 0
+            or deuteros_opening_payload != {
+                "schema": "project-eon.native-step-diagnostics/v1",
+                "release": {
+                    "game": "Deuteros", "platform": "Amiga", "language": "en",
+                    "sha256": "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
+                },
+                "driver": "deuteros-amiga-opening",
+                "result": {
+                    "accepted": True, "requested_ticks": 3, "steps": 3,
+                    "stop_reason": "tick-limit", "opening_input_held": False,
+                    "title_handoff": False, "palette_events": 1,
+                    "sound_events": 2, "alternate_resource_events": 0,
+                    "transition_requested": False,
+                },
+                "error": "",
+            }
+            or any(token in deuteros_opening.stdout
+                   for token in (str(data_directory), "Hämtningar", "Downloads"))):
+        raise SystemExit(
+            "Deuteros Amiga opening diagnostic did not report the bounded native path:\n"
+            f"{deuteros_opening.stdout}\n{deuteros_opening.stderr}"
+        )
+
     # The fuller native diagnostic must cross the same hash-bound gate as the
     # compact launch check while retaining all declarative recovery provenance.
     # It remains a no-SDL, no-emulator report: paths and original bytes must

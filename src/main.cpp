@@ -1423,6 +1423,37 @@ void report_native_step_diagnostics_json(const eon::ResolvedLaunchRequest& launc
     std::cout << "}\n";
 }
 
+// This is the one headless driver for the already recovered Deuteros opening.
+// It advances only the exact finite channel VM and its recorded held-signal
+// input contract; it never creates an Exec/graphics result, host audio,
+// renderer object, title input, save, emulator, or generic gameplay loop.
+void report_deuteros_amiga_opening_step_diagnostics_json(
+    const eon::ResolvedLaunchRequest& launch, const std::uint32_t requested_ticks,
+    const bool input_held, const std::uint32_t completed_ticks,
+    const std::size_t palette_events, const std::size_t sound_events,
+    const std::size_t alternate_resource_events, const bool transition_requested,
+    const bool title_handoff, const std::string_view error) {
+    std::cout << "{\"schema\":\"project-eon.native-step-diagnostics/v1\",\"release\":{\"game\":";
+    write_json_string(std::cout, eon::name(launch.release.game));
+    std::cout << ",\"platform\":"; write_json_string(std::cout, eon::name(launch.release.platform));
+    std::cout << ",\"language\":"; write_json_string(std::cout, launch.release.language);
+    std::cout << ",\"sha256\":"; write_json_string(std::cout, launch.release.sha256);
+    std::cout << "},\"driver\":\"deuteros-amiga-opening\",\"result\":{\"accepted\":"
+        << (error.empty() ? "true" : "false") << ",\"requested_ticks\":" << requested_ticks
+        << ",\"steps\":" << completed_ticks << ",\"stop_reason\":";
+    write_json_string(std::cout, !error.empty() ? "runtime-stopped"
+        : (title_handoff ? "title-handoff" : "tick-limit"));
+    std::cout << ",\"opening_input_held\":" << (input_held ? "true" : "false")
+        << ",\"title_handoff\":" << (title_handoff ? "true" : "false")
+        << ",\"palette_events\":" << palette_events
+        << ",\"sound_events\":" << sound_events
+        << ",\"alternate_resource_events\":" << alternate_resource_events
+        << ",\"transition_requested\":" << (transition_requested ? "true" : "false")
+        << "},\"error\":";
+    write_json_string(std::cout, error);
+    std::cout << "}\n";
+}
+
 // A validated capture is evidence, not a runtime input. This compact export
 // deliberately reports its admitted identity, boundaries and checkpoint
 // counts without serializing local paths, event bytes, media bytes, or
@@ -4534,6 +4565,39 @@ int main(int argc, char** argv) {
             return 4;
         }
         if (request.native_step_diagnostics_json) {
+            if (request.native_opening_ticks) {
+                const bool input_held = request.native_opening_input_held.value_or(false);
+                if (runtime.observe_input(eon::RuntimeInputObservation::opening_input_held(input_held))
+                    != eon::RuntimeInputDisposition::observed) {
+                    std::cerr << "Deuteros opening input observation was rejected.\n";
+                    return 4;
+                }
+                std::uint32_t completed_ticks = 0;
+                std::size_t palette_events = 0;
+                std::size_t sound_events = 0;
+                std::size_t alternate_resource_events = 0;
+                bool transition_requested = false;
+                bool title_handoff = false;
+                std::string error;
+                while (completed_ticks < *request.native_opening_ticks) {
+                    const auto events = runtime.tick_deuteros_amiga_opening();
+                    if (!events) {
+                        error = "Deuteros opening session stopped before the requested tick boundary";
+                        break;
+                    }
+                    palette_events += events->palette ? 1U : 0U;
+                    sound_events += events->sounds.size();
+                    alternate_resource_events += events->alternate_resources.size();
+                    transition_requested = transition_requested || events->transition_requested;
+                    title_handoff = title_handoff || events->title_handoff;
+                    ++completed_ticks;
+                    if (title_handoff) break;
+                }
+                report_deuteros_amiga_opening_step_diagnostics_json(*active_launch(),
+                    *request.native_opening_ticks, input_held, completed_ticks, palette_events,
+                    sound_events, alternate_resource_events, transition_requested, title_handoff, error);
+                return error.empty() ? 0 : 4;
+            }
             // This accepts only the literal, already recovered sound-choice
             // byte. It is deliberately unavailable to normal diagnostics and
             // cannot feed an ABI, register, memory, timing, or title result.

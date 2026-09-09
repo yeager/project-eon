@@ -114,6 +114,12 @@ struct LaunchRequest {
     // native-step diagnostic only. It is not an emulator input channel and
     // cannot supply any DOS/BIOS/driver/title result.
     std::optional<char> native_startup_input;
+    // Explicit, bounded headless drive of the already recovered Deuteros
+    // Amiga opening VM.  It is not a generic game-loop, emulator input, or
+    // gameplay action channel; the sole optional value is the exact held
+    // signal admitted by that opening's immutable input contract.
+    std::optional<std::uint32_t> native_opening_ticks;
+    std::optional<bool> native_opening_input_held;
     std::optional<Platform> platform;
     // Language of the immutable original release, distinct from the launcher
     // UI locale above.  A release selection must never infer this from the

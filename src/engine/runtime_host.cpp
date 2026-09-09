@@ -312,6 +312,10 @@ std::optional<std::vector<float>> RuntimeHost::render_deuteros_amiga_opening_aud
     if (revoking()) return std::nullopt;
     return NativeSessionController::render_deuteros_amiga_opening_audio(frames);
 }
+std::optional<DeuterosAmigaVmEvents> RuntimeHost::tick_deuteros_amiga_opening() {
+    if (revoking()) return std::nullopt;
+    return NativeSessionController::tick_deuteros_amiga_opening();
+}
 DeuterosAmigaMainStageDriveResult
 RuntimeHost::drive_deuteros_amiga_main_stage(const std::uint32_t step_limit) {
     if (revoking()) return {false, 0, false, false, "Runtime source is being revoked"};
