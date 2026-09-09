@@ -343,7 +343,11 @@ run that exact number of bounded native opening ticks. The optional
 `--opening-input-held 0|1` supplies the one documented held-input signal to
 that probe; it is accepted only with `--opening-ticks`. This is diagnostic
 evidence for the recovered opening state machine, not a general game-input
-interface. For example:
+interface. While the opening remains active, the JSON also includes a
+value-only checkpoint: ADF identities, tick/VBL counters, input-gate state and
+indexed/RGBA frame hashes. It never includes frame pixels or media bytes. At a
+title handoff that checkpoint is `null`, because the opening owner has been
+revoked. For example:
 
 ```sh
 project-eon --data ~/.projecteon --game deuteros --platform amiga \

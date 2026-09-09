@@ -316,6 +316,11 @@ std::optional<DeuterosAmigaVmEvents> RuntimeHost::tick_deuteros_amiga_opening() 
     if (revoking()) return std::nullopt;
     return NativeSessionController::tick_deuteros_amiga_opening();
 }
+std::optional<DeuterosAmigaOpeningCheckpoint>
+RuntimeHost::deuteros_amiga_opening_checkpoint() const {
+    if (revoking()) return std::nullopt;
+    return NativeSessionController::deuteros_amiga_opening_checkpoint();
+}
 DeuterosAmigaMainStageDriveResult
 RuntimeHost::drive_deuteros_amiga_main_stage(const std::uint32_t step_limit) {
     if (revoking()) return {false, 0, false, false, "Runtime source is being revoked"};

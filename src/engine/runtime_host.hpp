@@ -67,6 +67,10 @@ public:
     // Bounded opening-only progression for the explicit preservation probe.
     // Front ends receive event copies, never controller or media access.
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
+    // A value-only checkpoint for the bounded opening diagnostic.  Unlike the
+    // presentation snapshot it cannot expose a decoded frame buffer.
+    [[nodiscard]] std::optional<DeuterosAmigaOpeningCheckpoint>
+    deuteros_amiga_opening_checkpoint() const;
     [[nodiscard]] DeuterosAmigaMainStageDriveResult
     drive_deuteros_amiga_main_stage(std::uint32_t step_limit = 64);
     [[nodiscard]] DeuterosAmigaSessionDriveResult

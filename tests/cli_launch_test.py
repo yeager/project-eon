@@ -382,6 +382,13 @@ def main() -> int:
                     "sound_events": 2, "alternate_resource_events": 0,
                     "transition_requested": False,
                 },
+                "checkpoint": {
+                    "system_adf_sha256": "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38",
+                    "data_adf_sha256": "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a",
+                    "tick": 3, "vblank_counter": 12, "input_gate": True,
+                    "indexed_frame_sha256": "d841fd0e6e01c09f7dc8ce6cd2bda1828a0eb62c5f198750403aa996cd7d48d4",
+                    "rgba_frame_sha256": "61806921c859c5e1031cb2471ce3f9b006bd78efc9038630fa58050015e31c8c",
+                },
                 "error": "",
             }
             or any(token in deuteros_opening.stdout
@@ -417,6 +424,7 @@ def main() -> int:
                 "title_handoff": True, "palette_events": 4, "sound_events": 6,
                 "alternate_resource_events": 1, "transition_requested": False,
             }
+            or deuteros_continuation_payload.get("checkpoint") is not None
             or continuation != {
                 "accepted": True, "steps": 1,
                 "stop_reason": "external-observation", "stop_before": "$40456",

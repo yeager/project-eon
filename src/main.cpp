@@ -1433,6 +1433,7 @@ void report_deuteros_amiga_opening_step_diagnostics_json(
     const std::size_t palette_events, const std::size_t sound_events,
     const std::size_t alternate_resource_events, const bool transition_requested,
     const bool title_handoff,
+    const std::optional<eon::DeuterosAmigaOpeningCheckpoint>& checkpoint,
     const std::optional<eon::ActiveNativeSessionDriveResult>& title_continuation,
     const std::string_view error) {
     std::cout << "{\"schema\":\"project-eon.native-step-diagnostics/v1\",\"release\":{\"game\":";
@@ -1452,6 +1453,28 @@ void report_deuteros_amiga_opening_step_diagnostics_json(
         << ",\"alternate_resource_events\":" << alternate_resource_events
         << ",\"transition_requested\":" << (transition_requested ? "true" : "false")
         << '}';
+    std::cout << ",\"checkpoint\":";
+    if (checkpoint) {
+        // This is deliberately a value-only checkpoint. It binds diagnostic
+        // counters and frame identities to the two immutable ADF identities,
+        // but neither reads nor serializes original frame or media bytes.
+        std::cout << "{\"system_adf_sha256\":";
+        write_json_string(std::cout, checkpoint->system_adf_sha256);
+        std::cout << ",\"data_adf_sha256\":";
+        write_json_string(std::cout, checkpoint->data_adf_sha256);
+        std::cout << ",\"tick\":" << checkpoint->tick
+            << ",\"vblank_counter\":" << checkpoint->vblank_counter
+            << ",\"input_gate\":" << (checkpoint->input_gate ? "true" : "false")
+            << ",\"indexed_frame_sha256\":";
+        write_json_string(std::cout, checkpoint->indexed_frame_sha256);
+        std::cout << ",\"rgba_frame_sha256\":";
+        write_json_string(std::cout, checkpoint->rgba_frame_sha256);
+        std::cout << '}';
+    } else {
+        // A title handoff revokes the opening owner. Do not retain its former
+        // checkpoint merely to make a later diagnostic look more complete.
+        std::cout << "null";
+    }
     if (title_continuation) {
         const auto& result = *title_continuation;
         std::string_view continuation_error = result.error;
@@ -4611,6 +4634,7 @@ int main(int argc, char** argv) {
                 std::size_t alternate_resource_events = 0;
                 bool transition_requested = false;
                 bool title_handoff = false;
+                std::optional<eon::DeuterosAmigaOpeningCheckpoint> checkpoint;
                 std::optional<eon::ActiveNativeSessionDriveResult> title_continuation;
                 std::string error;
                 while (completed_ticks < *request.native_opening_ticks) {
@@ -4625,7 +4649,13 @@ int main(int argc, char** argv) {
                     transition_requested = transition_requested || events->transition_requested;
                     title_handoff = title_handoff || events->title_handoff;
                     ++completed_ticks;
-                    if (title_handoff) break;
+                    // A handoff revokes this opening-specific readout. Query
+                    // only while it remains the active native session.
+                    if (!title_handoff) checkpoint = runtime.deuteros_amiga_opening_checkpoint();
+                    if (title_handoff) {
+                        checkpoint.reset();
+                        break;
+                    }
                 }
                 if (error.empty() && request.native_opening_continue) {
                     if (!title_handoff) {
@@ -4642,7 +4672,7 @@ int main(int argc, char** argv) {
                 report_deuteros_amiga_opening_step_diagnostics_json(*active_launch(),
                     *request.native_opening_ticks, input_held, completed_ticks, palette_events,
                     sound_events, alternate_resource_events, transition_requested, title_handoff,
-                    title_continuation, error);
+                    checkpoint, title_continuation, error);
                 return error.empty() ? 0 : 4;
             }
             // This accepts only the literal, already recovered sound-choice
