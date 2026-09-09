@@ -348,6 +348,7 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_amiga_allocation_sequence_.reset();
     millennium_amiga_graphics_initialization_sequence_.reset();
     millennium_amiga_view_service_sequence_.reset();
+    millennium_amiga_interrupt_control_sequence_.reset();
     deuteros_amiga_title_load_copy_.reset();
     deuteros_amiga_title_load_copy_generation_ = 0;
     deuteros_amiga_title_command_generation_ = 0;
@@ -562,6 +563,28 @@ ReleaseRuntimeCoordinator::observe_millennium_amiga_view_services(
         *millennium_amiga_relocator_=std::move(next);*native_runtime_memory_=std::move(memory);
         millennium_amiga_view_service_sequence_=o.sequence;result.accepted=true;
     }catch(const std::exception& error){result.error=error.what();}
+    return result;
+}
+
+MillenniumAmigaBootstrapRelocatorObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_amiga_interrupt_control(
+    const MillenniumAmigaInterruptControlRuntimeObservation o) {
+    MillenniumAmigaBootstrapRelocatorObservationResult result;
+    if (!millennium_amiga_relocator_ || !millennium_amiga_view_service_sequence_
+        || millennium_amiga_interrupt_control_sequence_
+        || o.sequence <= *millennium_amiga_view_service_sequence_) {
+        result.error = "Interrupt control requires the owned view-service continuation";
+        return result;
+    }
+    try {
+        auto next = *millennium_amiga_relocator_;
+        static_cast<void>(next.execute_interrupt_control(o.control));
+        *millennium_amiga_relocator_ = std::move(next);
+        millennium_amiga_interrupt_control_sequence_ = o.sequence;
+        result.accepted = true;
+    } catch (const std::exception& error) {
+        result.error = error.what();
+    }
     return result;
 }
 

@@ -258,6 +258,7 @@ struct MillenniumAmigaOpenGraphicsRuntimeObservation {std::uint64_t sequence=0;M
 struct MillenniumAmigaAllocationRuntimeObservation {std::uint64_t sequence=0;MillenniumAmigaAllocationObservation allocation;};
 struct MillenniumAmigaGraphicsInitializationRuntimeObservation {std::uint64_t sequence=0;MillenniumAmigaGraphicsInitializationObservation services;};
 struct MillenniumAmigaViewServiceRuntimeObservation {std::uint64_t sequence=0;MillenniumAmigaViewServiceObservation services;};
+struct MillenniumAmigaInterruptControlRuntimeObservation {std::uint64_t sequence=0;MillenniumAmigaInterruptControlObservation control;};
 struct MillenniumAmigaBootstrapRelocatorCheckpoint {
     std::uint64_t generation=0;
     MillenniumAmigaBootstrapRelocatorState state=MillenniumAmigaBootstrapRelocatorState::awaiting_overread_byte;
@@ -1064,6 +1065,7 @@ public:
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_allocation(MillenniumAmigaAllocationRuntimeObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_graphics_initialization(MillenniumAmigaGraphicsInitializationRuntimeObservation);
     [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_view_services(MillenniumAmigaViewServiceRuntimeObservation);
+    [[nodiscard]] MillenniumAmigaBootstrapRelocatorObservationResult observe_millennium_amiga_interrupt_control(MillenniumAmigaInterruptControlRuntimeObservation);
     [[nodiscard]] std::optional<MillenniumAmigaBootstrapRelocatorCheckpoint> millennium_amiga_bootstrap_relocator_checkpoint() const;
 
     [[nodiscard]] std::optional<MillenniumAtariBootstrapPresentationSnapshot>
@@ -1362,6 +1364,7 @@ private:
     std::optional<std::uint64_t> millennium_amiga_allocation_sequence_;
     std::optional<std::uint64_t> millennium_amiga_graphics_initialization_sequence_;
     std::optional<std::uint64_t> millennium_amiga_view_service_sequence_;
+    std::optional<std::uint64_t> millennium_amiga_interrupt_control_sequence_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::optional<MillenniumAtariConfigConsumerSession> millennium_atari_config_consumer_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;
