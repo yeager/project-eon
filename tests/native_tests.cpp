@@ -2319,13 +2319,15 @@ int main() {
         char opening_ticks_value[] = "3";
         char opening_input_held_option[] = "--opening-input-held";
         char opening_input_held_value[] = "1";
+        char opening_continue_option[] = "--opening-continue";
         char* deuteros_opening_args[] = {program, game_option, deuteros, platform_option, deuteros_amiga,
             native_step_diagnostics_json_option, opening_ticks_option, opening_ticks_value,
-            opening_input_held_option, opening_input_held_value};
-        const auto deuteros_opening = eon::parse_command_line(10, deuteros_opening_args);
+            opening_input_held_option, opening_input_held_value, opening_continue_option};
+        const auto deuteros_opening = eon::parse_command_line(11, deuteros_opening_args);
         assert(deuteros_opening.request && deuteros_opening.request->native_step_diagnostics_json
             && deuteros_opening.request->native_opening_ticks == 3U
-            && deuteros_opening.request->native_opening_input_held == true);
+            && deuteros_opening.request->native_opening_input_held == true
+            && deuteros_opening.request->native_opening_continue);
         char zero_opening_ticks[] = "0";
         char* zero_opening_args[] = {program, game_option, deuteros, platform_option, deuteros_amiga,
             native_step_diagnostics_json_option, opening_ticks_option, zero_opening_ticks};
@@ -2341,6 +2343,10 @@ int main() {
             platform_option, deuteros_amiga, native_step_diagnostics_json_option,
             opening_input_held_option, opening_input_held_value};
         assert(!eon::parse_command_line(8, held_without_opening_ticks_args).request);
+        char* opening_continue_without_held_args[] = {program, game_option, deuteros,
+            platform_option, deuteros_amiga, native_step_diagnostics_json_option,
+            opening_ticks_option, opening_ticks_value, opening_continue_option};
+        assert(!eon::parse_command_line(9, opening_continue_without_held_args).request);
         char* millennium_opening_args[] = {program, game_option, millennium, platform_option, dos,
             native_step_diagnostics_json_option, opening_ticks_option, opening_ticks_value};
         assert(!eon::parse_command_line(8, millennium_opening_args).request);

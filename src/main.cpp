@@ -1432,7 +1432,9 @@ void report_deuteros_amiga_opening_step_diagnostics_json(
     const bool input_held, const std::uint32_t completed_ticks,
     const std::size_t palette_events, const std::size_t sound_events,
     const std::size_t alternate_resource_events, const bool transition_requested,
-    const bool title_handoff, const std::string_view error) {
+    const bool title_handoff,
+    const std::optional<eon::ActiveNativeSessionDriveResult>& title_continuation,
+    const std::string_view error) {
     std::cout << "{\"schema\":\"project-eon.native-step-diagnostics/v1\",\"release\":{\"game\":";
     write_json_string(std::cout, eon::name(launch.release.game));
     std::cout << ",\"platform\":"; write_json_string(std::cout, eon::name(launch.release.platform));
@@ -1449,7 +1451,38 @@ void report_deuteros_amiga_opening_step_diagnostics_json(
         << ",\"sound_events\":" << sound_events
         << ",\"alternate_resource_events\":" << alternate_resource_events
         << ",\"transition_requested\":" << (transition_requested ? "true" : "false")
-        << "},\"error\":";
+        << '}';
+    if (title_continuation) {
+        const auto& result = *title_continuation;
+        std::string_view continuation_error = result.error;
+        std::cout << ",\"title_continuation\":{";
+        if (result.deuteros_amiga) {
+            const auto& drive = *result.deuteros_amiga;
+            if (continuation_error.empty()) continuation_error = drive.error;
+            const char* stop_reason = drive.stop_reason
+                == eon::DeuterosAmigaSessionStopReason::external_observation ? "external-observation"
+                : drive.stop_reason == eon::DeuterosAmigaSessionStopReason::step_limit ? "step-limit"
+                : drive.stop_reason == eon::DeuterosAmigaSessionStopReason::failed ? "failed" : "inactive";
+            std::cout << "\"accepted\":" << (drive.accepted ? "true" : "false")
+                << ",\"steps\":" << drive.steps << ",\"stop_reason\":";
+            write_json_string(std::cout, stop_reason);
+            std::cout << ",\"stop_before\":";
+            write_json_string(std::cout, "$" + [&] { std::ostringstream value; value << std::hex
+                << drive.stop_before_address; return value.str(); }());
+            std::cout << ",\"waiting_for_external_observation\":"
+                << (drive.stop_reason == eon::DeuterosAmigaSessionStopReason::external_observation
+                    ? "true" : "false");
+        } else {
+            continuation_error = continuation_error.empty()
+                ? "Title continuation did not select the Deuteros driver" : continuation_error;
+            std::cout << "\"accepted\":false,\"steps\":0,\"stop_reason\":\"inactive\""
+                << ",\"stop_before\":\"\",\"waiting_for_external_observation\":false";
+        }
+        std::cout << ",\"error\":";
+        write_json_string(std::cout, continuation_error);
+        std::cout << '}';
+    }
+    std::cout << ",\"error\":";
     write_json_string(std::cout, error);
     std::cout << "}\n";
 }
@@ -4578,6 +4611,7 @@ int main(int argc, char** argv) {
                 std::size_t alternate_resource_events = 0;
                 bool transition_requested = false;
                 bool title_handoff = false;
+                std::optional<eon::ActiveNativeSessionDriveResult> title_continuation;
                 std::string error;
                 while (completed_ticks < *request.native_opening_ticks) {
                     const auto events = runtime.tick_deuteros_amiga_opening();
@@ -4593,9 +4627,22 @@ int main(int argc, char** argv) {
                     ++completed_ticks;
                     if (title_handoff) break;
                 }
+                if (error.empty() && request.native_opening_continue) {
+                    if (!title_handoff) {
+                        error = "Deuteros opening did not reach the title handoff before the requested tick boundary";
+                    } else {
+                        title_continuation = runtime.drive_active_native_session();
+                        if (!title_continuation->accepted()) {
+                            error = title_continuation->error.empty()
+                                ? "Deuteros title continuation was not accepted"
+                                : title_continuation->error;
+                        }
+                    }
+                }
                 report_deuteros_amiga_opening_step_diagnostics_json(*active_launch(),
                     *request.native_opening_ticks, input_held, completed_ticks, palette_events,
-                    sound_events, alternate_resource_events, transition_requested, title_handoff, error);
+                    sound_events, alternate_resource_events, transition_requested, title_handoff,
+                    title_continuation, error);
                 return error.empty() ? 0 : 4;
             }
             // This accepts only the literal, already recovered sound-choice

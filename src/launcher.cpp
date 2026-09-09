@@ -200,7 +200,7 @@ std::string usage() {
         "               [--runtime-diagnostics-json]\n\n"
         "               [--native-step-diagnostics-json --native-startup-input 0|1|2]\n"
         "               [--native-step-diagnostics-json --opening-ticks 1..1024]\n"
-        "               [--opening-input-held 0|1]\n\n"
+        "               [--opening-input-held 0|1 --opening-continue]\n\n"
         "               [--resolution 1280x720|1600x900|1920x1080]\n"
         "               [--aspect original|square-pixels|widescreen]\n\n"
         "               [--language <language>]\n\n"
@@ -268,6 +268,10 @@ ParseResult parse_command_line(int argc, char** argv) {
         if (argument == "--native-step-diagnostics-json") {
             request.launch_check = true;
             request.native_step_diagnostics_json = true;
+            continue;
+        }
+        if (argument == "--opening-continue") {
+            request.native_opening_continue = true;
             continue;
         }
         if (argument == "--reference-trace-json") {
@@ -400,6 +404,10 @@ ParseResult parse_command_line(int argc, char** argv) {
     }
     if (request.native_opening_input_held && !request.native_opening_ticks) {
         return {{}, "--opening-input-held requires --opening-ticks", false};
+    }
+    if (request.native_opening_continue
+        && (!request.native_opening_ticks || request.native_opening_input_held != true)) {
+        return {{}, "--opening-continue requires --opening-ticks and --opening-input-held 1", false};
     }
     if (request.native_startup_input && request.native_opening_ticks) {
         return {{}, "--native-startup-input and --opening-ticks select different native diagnostics", false};

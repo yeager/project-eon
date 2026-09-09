@@ -391,6 +391,45 @@ def main() -> int:
             f"{deuteros_opening.stdout}\n{deuteros_opening.stderr}"
         )
 
+    # A held signal reaches the independently recovered title boundary after
+    # 82 opening ticks. The optional continuation is one bounded title-stage
+    # pass and must stop at the documented external observation rather than
+    # fabricating an Exec or graphics service result.
+    deuteros_continuation = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "deuteros",
+            "--platform", "amiga", "--native-step-diagnostics-json",
+            "--opening-ticks", "128", "--opening-input-held", "1",
+            "--opening-continue"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    try:
+        deuteros_continuation_payload = json.loads(deuteros_continuation.stdout)
+    except json.JSONDecodeError as error:
+        raise SystemExit(
+            f"Deuteros continuation did not emit JSON: {error}"
+        ) from error
+    continuation = deuteros_continuation_payload.get("title_continuation")
+    if (deuteros_continuation.returncode != 0
+            or deuteros_continuation_payload.get("driver") != "deuteros-amiga-opening"
+            or deuteros_continuation_payload.get("result") != {
+                "accepted": True, "requested_ticks": 128, "steps": 82,
+                "stop_reason": "title-handoff", "opening_input_held": True,
+                "title_handoff": True, "palette_events": 4, "sound_events": 6,
+                "alternate_resource_events": 1, "transition_requested": False,
+            }
+            or continuation != {
+                "accepted": True, "steps": 1,
+                "stop_reason": "external-observation", "stop_before": "$40456",
+                "waiting_for_external_observation": True, "error": "",
+            }
+            or deuteros_continuation_payload.get("error")
+            or any(token in deuteros_continuation.stdout
+                   for token in (str(data_directory), "Hämtningar", "Downloads"))):
+        raise SystemExit(
+            "Deuteros title continuation lost its bounded native boundary:\n"
+            f"{deuteros_continuation.stdout}\n{deuteros_continuation.stderr}"
+        )
+
     # The fuller native diagnostic must cross the same hash-bound gate as the
     # compact launch check while retaining all declarative recovery provenance.
     # It remains a no-SDL, no-emulator report: paths and original bytes must

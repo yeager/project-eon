@@ -350,6 +350,11 @@ project-eon --data ~/.projecteon --game deuteros --platform amiga \
   --native-step-diagnostics-json --opening-ticks 3 --opening-input-held 0
 ```
 
+`--opening-continue` is a further explicit opt-in. It requires
+`--opening-input-held 1`; after the proven opening handoff it runs the existing
+bounded title-stage driver once and reports its next boundary. It does not
+invent an Exec/graphics return or make the title stage interactive.
+
 Before it reports preservation provenance, this diagnostics path validates
 the compiled declarative maps: recovery rows cover parser profiles one-to-one,
 startup rows cover recognised releases one-to-one, and function rows have

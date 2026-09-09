@@ -120,6 +120,9 @@ struct LaunchRequest {
     // signal admitted by that opening's immutable input contract.
     std::optional<std::uint32_t> native_opening_ticks;
     std::optional<bool> native_opening_input_held;
+    // Continue once, and only after the proven opening-to-title handoff, into
+    // the existing bounded title-stage driver.
+    bool native_opening_continue = false;
     std::optional<Platform> platform;
     // Language of the immutable original release, distinct from the launcher
     // UI locale above.  A release selection must never infer this from the
