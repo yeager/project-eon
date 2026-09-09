@@ -611,6 +611,9 @@ struct ModernRuntimeDiagnostics {
     // still reports the exact source address at which native execution has
     // stopped for an external observation.
     std::string deuteros_amiga_external_requirement;
+    // A compact value-only reflection of the live opening checkpoint. It is
+    // absent at title handoff/revocation and never carries decoded pixels.
+    std::string deuteros_amiga_opening_checkpoint;
     std::string deuteros_amiga_title_dependency_chain;
     std::string native_code_images;
     // This comes only from the launcher preflight object. It does not expose
@@ -1751,6 +1754,8 @@ void draw_modern_runtime_diagnostics_popup(SDL_Renderer* renderer,
                 : " / " + diagnostics.millennium_dos_owned_function)
             + (diagnostics.deuteros_amiga_title_dependency_chain.empty() ? ""
                 : " / " + diagnostics.deuteros_amiga_title_dependency_chain)
+            + (diagnostics.deuteros_amiga_opening_checkpoint.empty() ? ""
+                : " / " + diagnostics.deuteros_amiga_opening_checkpoint)
             + (diagnostics.native_code_images.empty() ? ""
                 : " / " + diagnostics.native_code_images)
             + (diagnostics.millennium_dos_external_requirement.empty() ? ""
@@ -5625,6 +5630,15 @@ int main(int argc, char** argv) {
             diagnostics.deuteros_amiga_external_requirement =
                 deuteros_amiga_external_requirement_summary(
                     *active_native_session_drive->second.deuteros_amiga);
+        }
+        if (const auto opening = runtime.deuteros_amiga_opening_checkpoint()) {
+            std::ostringstream summary;
+            summary << "OPENING T=" << opening->tick
+                << " VBL=" << opening->vblank_counter
+                << " GATE=" << (opening->input_gate ? "Y" : "N")
+                << " INDEXED=" << truncated_identity_hash(opening->indexed_frame_sha256)
+                << " RGBA=" << truncated_identity_hash(opening->rgba_frame_sha256);
+            diagnostics.deuteros_amiga_opening_checkpoint = summary.str();
         }
         if (const auto chain = runtime.deuteros_amiga_title_dependency_chain_checkpoint()) {
             std::ostringstream summary;
