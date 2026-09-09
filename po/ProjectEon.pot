@@ -356,6 +356,9 @@ msgstr ""
 msgid "BOOTSTRAP ONLY"
 msgstr ""
 
+msgid "PRESERVATION ONLY"
+msgstr ""
+
 #: src/main.cpp
 msgid "RECOVERY COVERAGE"
 msgstr ""
