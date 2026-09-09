@@ -11,16 +11,20 @@ bool append_rgba(const std::vector<std::uint8_t>& color_indices,
     std::vector<std::uint8_t>& rgba) {
     for (const auto color : palette_rgb4)
         if ((color & 0xf000U) != 0) return false;
-    rgba.clear();
-    rgba.reserve(color_indices.size() * 4U);
-    for (const auto index : color_indices) {
+    // Compose into a temporary surface.  A rejected runtime palette/index
+    // must not leave a partly updated renderer DTO visible to a caller.
+    std::vector<std::uint8_t> next_rgba(color_indices.size() * 4U);
+    for (std::size_t pixel = 0; pixel < color_indices.size(); ++pixel) {
+        const auto index = color_indices[pixel];
         if (index >= palette_rgb4.size()) return false;
         const auto rgb4 = palette_rgb4[index];
-        rgba.insert(rgba.end(), {
-            static_cast<std::uint8_t>(((rgb4 >> 8U) & 0xfU) * 17U),
-            static_cast<std::uint8_t>(((rgb4 >> 4U) & 0xfU) * 17U),
-            static_cast<std::uint8_t>((rgb4 & 0xfU) * 17U), 0xff});
+        const auto offset = pixel * 4U;
+        next_rgba[offset] = static_cast<std::uint8_t>(((rgb4 >> 8U) & 0xfU) * 17U);
+        next_rgba[offset + 1U] = static_cast<std::uint8_t>(((rgb4 >> 4U) & 0xfU) * 17U);
+        next_rgba[offset + 2U] = static_cast<std::uint8_t>((rgb4 & 0xfU) * 17U);
+        next_rgba[offset + 3U] = 0xff;
     }
+    rgba = std::move(next_rgba);
     return true;
 }
 
