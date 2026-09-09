@@ -1600,12 +1600,20 @@ void report_platform_admission(const std::vector<eon::ReleaseArchive>& releases)
             const auto status = eon::platform_card_status(releases, game, platform);
             if (status == eon::PlatformCardStatus::unavailable) continue;
             const auto languages = eon::available_release_languages(releases, game, platform);
-            const char* admission = status == eon::PlatformCardStatus::ready
-                ? "READY" : "RELEASE SELECTION REQUIRED";
+            const char* admission = status == eon::PlatformCardStatus::ready ? "READY"
+                : status == eon::PlatformCardStatus::preservation_only ? "PRESERVATION ONLY"
+                : "RELEASE SELECTION REQUIRED";
             // Admission says whether the card can proceed. Coverage is a
             // separate preservation fact: Atari's verified route is a
             // bootstrap, never a synonym for complete native runtime parity.
-            const auto coverage = eon::name(eon::platform_coverage(game, platform));
+            const auto exact_coverage = std::find_if(releases.begin(), releases.end(),
+                [game, platform](const auto& release) {
+                    return release.game == game && release.platform == platform;
+                });
+            const auto coverage = status == eon::PlatformCardStatus::preservation_only
+                && exact_coverage != releases.end()
+                ? eon::name(eon::platform_coverage(*exact_coverage))
+                : eon::name(eon::platform_coverage(game, platform));
             std::cout << "PLATFORM ADMISSION  " << eon::name(game) << " / "
                 << eon::name(platform) << " / " << admission << " / " << coverage << " / "
                 << languages.size() << " verified original "
@@ -6422,11 +6430,16 @@ int main(int argc, char** argv) {
                     // installed release, or a present archive for parity.
                     draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 68,
                         tr(card.title));
+                    const auto card_coverage = status == eon::PlatformCardStatus::preservation_only
+                        ? eon::PlatformCoverage::preservation_only
+                        : eon::platform_coverage(game, card.platform);
                     draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 44,
-                        tr(eon::name(eon::platform_coverage(game, card.platform))));
+                        tr(eon::name(card_coverage)));
                     draw_text(renderer, card.bounds.x + 18, card.bounds.y + card.bounds.h - 20,
                         status == eon::PlatformCardStatus::release_selection_required
-                        ? tr("RELEASE SELECTION REQUIRED") : selectable ? tr("VERIFIED ORIGINAL DATA") : scanner->done()
+                        ? tr("RELEASE SELECTION REQUIRED")
+                        : status == eon::PlatformCardStatus::preservation_only
+                        ? tr("PRESERVATION ONLY") : selectable ? tr("VERIFIED ORIGINAL DATA") : scanner->done()
                         ? tr("ORIGINAL DATA NOT FOUND") : tr("SCANNING ORIGINAL DATA..."));
                 }
             } else if (launcher_page == LauncherPage::releases) {
@@ -6456,8 +6469,20 @@ int main(int argc, char** argv) {
                     SDL_SetRenderDrawColor(renderer, 3, 10, 20, card.texture ? 142 : 255);
                     SDL_RenderFillRect(renderer, &card.bounds);
                     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+                    const auto card_coverage = active_platform
+                        ? eon::platform_coverage(eon::ReleaseArchive{
+                            launcher_route.game, *active_platform, card.language, card.sha256, {},
+                            eon::ReleaseMediaLayout::zip_archive, {}})
+                        : eon::PlatformCoverage::bootstrap_only;
+                    const bool selectable = card_coverage != eon::PlatformCoverage::preservation_only;
+                    if (!selectable) {
+                        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+                        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 155);
+                        SDL_RenderFillRect(renderer, &card.bounds);
+                        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+                    }
                     draw_card_border(card.bounds,
-                        card.identity_index == static_cast<std::size_t>(focused_release_card), true);
+                        card.identity_index == static_cast<std::size_t>(focused_release_card), selectable);
                     // Language is part of the hash-bound original identity.
                     // Only the two currently catalogued labels are localized;
                     // a future recognised language must remain visibly its
@@ -6469,14 +6494,11 @@ int main(int argc, char** argv) {
                         active_platform ? tr(launcher_platform_label(*active_platform)) : tr("UNKNOWN PLATFORM"));
                     draw_text(renderer, card.bounds.x + 24, card.bounds.y + 126, label);
                     draw_text(renderer, card.bounds.x + 24, card.bounds.y + 150,
-                        std::string(tr("VERIFIED ORIGINAL DATA")) + " / "
+                        std::string(selectable ? tr("VERIFIED ORIGINAL DATA") : tr("PRESERVATION ONLY")) + " / "
                             + truncated_identity_hash(card.sha256));
                     draw_text(renderer, card.bounds.x + 24, card.bounds.y + 184,
-                        active_platform
-                        ? tr(eon::name(eon::platform_coverage(eon::ReleaseArchive{
-                            launcher_route.game, *active_platform, card.language, card.sha256, {},
-                            eon::ReleaseMediaLayout::zip_archive, {}})))
-                        : tr("RELEASE IDENTITY IS FIXED AT LAUNCH"));
+                        active_platform ? tr(eon::name(card_coverage))
+                                        : tr("RELEASE IDENTITY IS FIXED AT LAUNCH"));
                 }
             } else {
                 draw_text(renderer, 64, 82, tr("SELECT A PRESENTATION PROFILE"));

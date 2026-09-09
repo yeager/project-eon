@@ -63,7 +63,8 @@ class LauncherKeyboardNavigationTests(unittest.TestCase):
         self.assertIn("if (!platform_card_selectable(platform_card_status", ROUTE_SOURCE)
         self.assertIn("RELEASE SELECTION REQUIRED", SOURCE)
         self.assertIn("platform_coverage(game, card.platform)", SOURCE)
-        self.assertIn("tr(eon::name(eon::platform_coverage(game, card.platform)))", SOURCE)
+        self.assertIn("tr(eon::name(card_coverage))", SOURCE)
+        self.assertIn("PlatformCardStatus::preservation_only", SOURCE)
         self.assertIn("VERIFIED ORIGINAL DATA", SOURCE)
         self.assertIn("session.choose_platform(releases, platforms[focus.platform])", ROUTE_SOURCE)
 

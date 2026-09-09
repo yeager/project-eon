@@ -468,6 +468,9 @@ msgstr "ΜΟΝΟ ΕΚΚΙΝΗΣΗ ATARI"
 msgid "BOOTSTRAP ONLY"
 msgstr "ΜΟΝΟ ΕΚΚΙΝΗΣΗ"
 
+msgid "PRESERVATION ONLY"
+msgstr "ΜΟΝΟ ΔΙΑΤΗΡΗΣΗ"
+
 msgid "RECOVERY COVERAGE"
 msgstr "ΕΥΡΟΣ ΑΝΑΚΤΗΣΗΣ"
 

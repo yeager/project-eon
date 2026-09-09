@@ -507,6 +507,9 @@ msgstr "ATARI 부트스트랩 전용"
 msgid "BOOTSTRAP ONLY"
 msgstr "부트스트랩 전용"
 
+msgid "PRESERVATION ONLY"
+msgstr "보존 전용"
+
 msgid "RECOVERY COVERAGE"
 msgstr "복구 범위"
 

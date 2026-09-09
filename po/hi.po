@@ -468,6 +468,9 @@ msgstr "केवल अटारी बूटस्ट्रैप"
 msgid "BOOTSTRAP ONLY"
 msgstr "केवल बूटस्ट्रैप"
 
+msgid "PRESERVATION ONLY"
+msgstr "केवल संरक्षण"
+
 msgid "RECOVERY COVERAGE"
 msgstr "पुनर्प्राप्ति दायरा"
 

@@ -468,6 +468,9 @@ msgstr "إقلاع أتاري فقط"
 msgid "BOOTSTRAP ONLY"
 msgstr "الإقلاع فقط"
 
+msgid "PRESERVATION ONLY"
+msgstr "للحفظ فقط"
+
 msgid "RECOVERY COVERAGE"
 msgstr "نطاق الاسترداد"
 

@@ -507,6 +507,9 @@ msgstr "ЛИШЕ ЗАВАНТАЖЕННЯ ATARI"
 msgid "BOOTSTRAP ONLY"
 msgstr "ЛИШЕ ЗАВАНТАЖЕННЯ"
 
+msgid "PRESERVATION ONLY"
+msgstr "ЛИШЕ ЗБЕРЕЖЕННЯ"
+
 msgid "RECOVERY COVERAGE"
 msgstr "ОХОПЛЕННЯ ВІДНОВЛЕННЯ"
 

@@ -468,6 +468,9 @@ msgstr "ATARI ブートストラップのみ"
 msgid "BOOTSTRAP ONLY"
 msgstr "ブートストラップのみ"
 
+msgid "PRESERVATION ONLY"
+msgstr "保存専用"
+
 msgid "RECOVERY COVERAGE"
 msgstr "復元範囲"
 

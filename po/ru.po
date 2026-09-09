@@ -507,6 +507,9 @@ msgstr "ТОЛЬКО ЗАГРУЗКА ATARI"
 msgid "BOOTSTRAP ONLY"
 msgstr "ТОЛЬКО ЗАГРУЗКА"
 
+msgid "PRESERVATION ONLY"
+msgstr "ТОЛЬКО СОХРАНЕНИЕ"
+
 msgid "RECOVERY COVERAGE"
 msgstr "ОХВАТ ВОССТАНОВЛЕНИЯ"
 
