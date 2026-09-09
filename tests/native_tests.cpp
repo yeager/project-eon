@@ -4756,6 +4756,24 @@ int main() {
         launch.request.release_language = release.language;
         launch.request.release_sha256 = release.sha256;
         const auto acquired = all_release_runtime.acquire(launch);
+        // Recognised preservation-only releases deliberately have scanner and
+        // parser coverage without an executable runtime adapter.  They are
+        // tested above as explicit rejected launch candidates; do not let the
+        // all-release engine-admission loop contradict that contract.
+        const auto capability = eon::release_runtime_capability_for(release);
+        assert(capability);
+        if (capability->adapter == eon::ReleaseRuntimeAdapter::preservation_only) {
+            // Test this in a fresh coordinator: the shared one intentionally
+            // still owns the preceding runnable adapter, so it correctly
+            // refuses a second acquisition before it could reach the Spanish
+            // adapter gate.
+            eon::ReleaseRuntimeCoordinator preservation_runtime;
+            assert(!preservation_runtime.acquire(launch));
+            assert(eon::release_runtime_admission_label(preservation_runtime.admission())
+                == "REJECTED: ADAPTER");
+            assert(!preservation_runtime.session_snapshot());
+            continue;
+        }
         if (!acquired) {
             std::cerr << "All-release acquisition rejected " << release.sha256
                       << " (" << eon::release_runtime_rejection_label(
@@ -5707,12 +5725,12 @@ int main() {
             const auto second_graphics_memory=opening_controller.native_runtime_memory_checkpoint();
             assert(second_graphics_memory);
             assert(find_runtime_byte(*second_graphics_memory,0x20092)==0xd4);
-            assert(find_runtime_byte(*second_graphics_memory,0x1ffe6)==0x00);
-            assert(find_runtime_byte(*second_graphics_memory,0x1ffe7)==0x02);
-            assert(find_runtime_byte(*second_graphics_memory,0x1ffe8)==0x00);
-            assert(find_runtime_byte(*second_graphics_memory,0x1ffe9)==0x8e);
+            assert(find_runtime_byte(*second_graphics_memory,0x2008e)==0x00);
+            assert(find_runtime_byte(*second_graphics_memory,0x2008f)==0x01);
+            assert(find_runtime_byte(*second_graphics_memory,0x20090)==0xff);
+            assert(find_runtime_byte(*second_graphics_memory,0x20091)==0xe6);
             assert(find_runtime_byte(*second_graphics_memory,0x1ffde)==0x00);
-            assert(find_runtime_byte(*second_graphics_memory,0x1ffdf)==0x0a);
+            assert(find_runtime_byte(*second_graphics_memory,0x1ffdf)==0x0c);
             assert(opening_controller.observe_deuteros_amiga_title_graphics_service_third_return({28,0x12fec,0x00abcdef,0x200f4,-0x1a4,0x200f8,0x11223344,0x2008}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_tail_first_graphics_return({29,0x12fec,0x00abcdef,0x20112,-0x1a4,0x20116,0x55667788,0x2010}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_tail_copy_words({30,0x201e4,0x1f372,{{0x1111,0x2222,0x3333,0x4444}}}).accepted);
