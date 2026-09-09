@@ -4541,6 +4541,38 @@ int main(int argc, char** argv) {
     const auto active_launch = [&]() -> std::optional<eon::ResolvedLaunchRequest> {
         return runtime.active();
     };
+    // A CLI caller has no release-card view from which to copy an exact
+    // identity.  When a valid collection contains more than one matching
+    // original, offer only the already hash-verified, launchable identities.
+    // In particular, this must not expose local paths or make preservation-
+    // only media appear selectable.
+    const auto release_selection_hint = [&]() -> std::string {
+        if (!request.game || !active_platform) return {};
+        const auto identities = eon::available_release_identities(
+            releases, *request.game, *active_platform);
+        std::vector<eon::ReleaseArchive> selectable;
+        bool preservation_only_match = false;
+        for (const auto& identity : identities) {
+            if (active_release_language && identity.language != *active_release_language) continue;
+            if (eon::platform_coverage(identity) == eon::PlatformCoverage::preservation_only) {
+                preservation_only_match = true;
+                continue;
+            }
+            selectable.push_back(identity);
+        }
+        if (selectable.empty()) {
+            return preservation_only_match
+                ? " The selected verified release is preservation-only and cannot be started."
+                : std::string{};
+        }
+        std::ostringstream hint;
+        hint << " Verified launch candidates:";
+        for (const auto& identity : selectable) {
+            hint << "\n  --release-language " << identity.language
+                 << " --release-sha256 " << identity.sha256;
+        }
+        return hint.str();
+    };
     if (request.game && active_platform) {
         auto launch_candidate = request;
         launch_candidate.platform = active_platform;
@@ -4555,7 +4587,8 @@ int main(int argc, char** argv) {
             if (admission.rejection == eon::ReleaseRuntimeRejection::launch_identity) {
                 std::cerr << "The selected game and platform need one exact verified original release. "
                              "Use --release-sha256 when several outer containers share a language; "
-                             "no scan-order fallback was selected.\n";
+                             "no scan-order fallback was selected."
+                          << release_selection_hint() << '\n';
             } else {
                 // The common runtime gate intentionally keeps parser and
                 // source details private. Its stable rejection vocabulary is

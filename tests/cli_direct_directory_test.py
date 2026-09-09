@@ -41,11 +41,26 @@ def main() -> int:
     launch = run(executable, root, "--launch-check")
     inspection = run(executable, root, "--inspect", "--inventory")
     inspection_json = run(executable, root, "--inspect-json")
+    # A mistyped exact identity must not silently select the only installed
+    # release.  The CLI may name the verified replacement arguments, but must
+    # not leak the user's direct-media path while doing so.
+    rejected = subprocess.run(
+        [executable, "--data", str(root), "--game", "millennium", "--platform", "dos",
+         "--release-language", "en", "--release-sha256", "0" * 64,
+         "--launch-check-json"],
+        check=False, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
     after = snapshot(root)
     if before != after:
         raise SystemExit("Project Eon changed direct original media")
     if "LAUNCH CHECK  Millennium 2.2 / DOS / en / READY" not in launch:
         raise SystemExit("direct Millennium DOS set did not reach parser-only READY admission")
+    if (rejected.returncode != 4
+            or rejected.stdout
+            or "no scan-order fallback was selected" not in rejected.stderr
+            or f"--release-language en --release-sha256 {EXPECTED_RELEASE}" not in rejected.stderr
+            or str(root) in rejected.stderr):
+        raise SystemExit("wrong direct-media release hash did not produce a safe candidate hint")
     if EXPECTED_RELEASE not in inspection:
         raise SystemExit("direct Millennium DOS logical release identity was not inspected")
     parsed = json.loads(inspection_json)
