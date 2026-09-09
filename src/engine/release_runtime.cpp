@@ -3543,6 +3543,7 @@ ReleaseRuntimeCoordinator::drive_deuteros_amiga_session(const std::uint32_t step
     for (; result.steps < step_limit; ++result.steps) {
         DeuterosAmigaTitleDependencyObservationResult advanced;
         bool deterministic = true;
+        std::uint32_t external_stop_override = 0;
         if (session_snapshot_->kind == RuntimeSessionKind::deuteros_amiga_title_program_entry) {
             advanced = advance_deuteros_amiga_title_program_entry();
         } else if (session_snapshot_->kind == RuntimeSessionKind::deuteros_amiga_title_stage
@@ -3597,13 +3598,21 @@ ReleaseRuntimeCoordinator::drive_deuteros_amiga_session(const std::uint32_t step
                 if (main.steps == 1 && main.accepted) continue;
                 if (!main.accepted && !main.error.empty()) {
                     advanced.error = main.error;
-                } else deterministic = false;
+                } else {
+                    // The coarse title checkpoint is intentionally sparse at
+                    // early main-stage service waits. Preserve the native
+                    // driver's exact instruction boundary for the outward
+                    // diagnostics instead of reporting an ambiguous zero.
+                    external_stop_override = main.stop_before_address;
+                    deterministic = false;
+                }
                 break;
             }}
         } else deterministic = false;
         if (!deterministic) {
             result.stop_reason = DeuterosAmigaSessionStopReason::external_observation;
-            if (const auto checkpoint=deuteros_amiga_title_dependency_chain_checkpoint())
+            if (external_stop_override != 0) result.stop_before_address = external_stop_override;
+            else if (const auto checkpoint=deuteros_amiga_title_dependency_chain_checkpoint())
                 result.stop_before_address=checkpoint->stop_before_address;
             return result;
         }

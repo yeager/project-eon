@@ -6587,6 +6587,12 @@ int main() {
             assert(blocked_2099e_again.accepted && blocked_2099e_again.steps == 0
                 && blocked_2099e_again.awaiting_external_observation
                 && blocked_2099e_again.stop_before_address == 0x2099e);
+            const auto session_blocked_2099e =
+                opening_controller.drive_deuteros_amiga_session();
+            assert(session_blocked_2099e.accepted && session_blocked_2099e.steps == 0
+                && session_blocked_2099e.stop_reason
+                    == eon::DeuterosAmigaSessionStopReason::external_observation
+                && session_blocked_2099e.stop_before_address == 0x2099e);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum
                 == before_blocked_drive->checksum);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_20994_exec_entry().accepted);
