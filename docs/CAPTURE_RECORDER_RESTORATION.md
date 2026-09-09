@@ -469,6 +469,32 @@ This is an `OBSERVER_FIX_REQUIRED` development baseline, not a recorder
 candidate. Its source, binary, and any future build output remain external and
 must not be passed to a capture helper.
 
+### 2026-09-09 V24 loaded-image grounding rebuild
+
+The same external V24 development tree now binds its first development gate to
+the image tuple that DOSBox-X itself records while loading a DOS process:
+`RunningProgramHash[1]` (loaded byte count) and `RunningProgramHash[2]`
+(CRC-32). The comparison is fail-closed: enabling the development flag without
+both non-zero expected values cannot enable the first gate, and an INT-6
+candidate whose current DOS image tuple differs cannot pass the site predicate.
+This is a loaded-image check, not a substitute for the capture runner's
+outer-archive SHA-256 verification.
+
+For the recognised English DOS corpus, the future reviewed configuration may
+identify the observed `2200AD.EXE` image only by the exact tuple `54391` bytes
+and CRC-32 `440994f9`. These values were independently derived from the
+supplied, hash-verified leaf; no media was copied, altered, or placed in the
+repository. The title-prefix gate remains private and hard false, and there is
+still no serializer, output path, pin, locator result, capture, or admission.
+
+The external source and binary remain at
+`/home/yeager/.cache/project-eon-tools/recorder-recovery/dosbox-x-v24/`.
+A sequential `make -C src -j1` followed by `make -C src -q` completed on the
+configured host. Its external executable SHA-256 is
+`67954bc31e054f435d00c43bbaa26471bcf3117e71f6a3cd5330f5238caa7e38`.
+This remains `OBSERVER_FIX_REQUIRED` and must never be supplied to a locator
+or capture helper.
+
 The reviewed v3 candidate may be run only with the explicit
 `--experimental-observer` capture-runner switch and the
 `v21-int93-installation` protocol. This is a visible, read-only emulator
