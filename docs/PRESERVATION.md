@@ -2828,6 +2828,16 @@ destination `$13000`, entry `$40426`) and hash-validates whole-stage SHA-256
 verified clean system ADF; altered stage bytes fail closed. It never creates a title bitmap, inferred registers,
 global work memory, or replacement menu: its next execution requirements still
 cross unrecovered Exec and graphics-library vector boundaries.
+
+The explicit no-SDL preservation probe can prove this handoff without creating
+an emulator session: `--opening-ticks 128 --opening-input-held 1
+--opening-continue` reaches the handoff on native opening tick 82, then runs
+one already-proven title-stage local transition. On the admitted English Amiga
+release it stops before the unresolved external observation at `$40456`.
+Its JSON contains only release identity, event counts, the tick count, and the
+next boundary; it never serializes ADF paths, bytes, registers, or service
+returns. A non-held probe is intentionally not equivalent: after 1,024 ticks
+it remains in the opening and does not cross the handoff.
 The root title-stage parser enforces that same complete stage identity before
 it accepts any opcode window, so a matching entry or palette prefix cannot
 substitute altered bytes elsewhere in the original `ADF +0x6e000`,
