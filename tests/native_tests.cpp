@@ -6571,7 +6571,8 @@ int main() {
                 opening_controller.drive_deuteros_amiga_main_stage(1);
             assert(driven_20994.accepted && driven_20994.steps == 1
                 && driven_20994.step_limit_reached
-                && !driven_20994.awaiting_external_observation);
+                && !driven_20994.awaiting_external_observation
+                && driven_20994.stop_before_address == 0x2099e);
             assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_2099e_exec_return);
             const auto before_blocked_drive =
                 opening_controller.native_runtime_memory_checkpoint();
@@ -6579,11 +6580,13 @@ int main() {
                 opening_controller.drive_deuteros_amiga_main_stage();
             assert(blocked_2099e.accepted && blocked_2099e.steps == 0
                 && blocked_2099e.awaiting_external_observation
-                && !blocked_2099e.step_limit_reached);
+                && !blocked_2099e.step_limit_reached
+                && blocked_2099e.stop_before_address == 0x2099e);
             const auto blocked_2099e_again =
                 opening_controller.drive_deuteros_amiga_main_stage();
             assert(blocked_2099e_again.accepted && blocked_2099e_again.steps == 0
-                && blocked_2099e_again.awaiting_external_observation);
+                && blocked_2099e_again.awaiting_external_observation
+                && blocked_2099e_again.stop_before_address == 0x2099e);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum
                 == before_blocked_drive->checksum);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_20994_exec_entry().accepted);

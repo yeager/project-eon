@@ -132,6 +132,10 @@ struct DeuterosAmigaMainStageDriveResult {
     std::uint32_t steps = 0;
     bool awaiting_external_observation = false;
     bool step_limit_reached = false;
+    // A native driver never fabricates the next ABI/input/device result.
+    // Report the exact recovered instruction boundary so callers can surface
+    // useful diagnostics without inspecting mutable coordinator internals.
+    std::uint32_t stop_before_address = 0;
     std::string error;
 };
 enum class DeuterosAmigaSessionStopReason {

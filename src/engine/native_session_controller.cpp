@@ -477,7 +477,7 @@ std::optional<DeuterosAmigaVmEvents> NativeSessionController::tick_deuteros_amig
 DeuterosAmigaMainStageDriveResult
 NativeSessionController::drive_deuteros_amiga_main_stage(const std::uint32_t step_limit) {
     if (state_ != NativeSessionState::deuteros_amiga_title_stage_boundary) {
-        return {false, 0, false, false,
+        return {false, 0, false, false, 0,
             "Deuteros main-stage drive requires the title-stage boundary"};
     }
     auto result = runtime_.drive_deuteros_amiga_main_stage(step_limit);

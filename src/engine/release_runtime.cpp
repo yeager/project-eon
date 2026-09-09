@@ -47,6 +47,36 @@ std::string_view release_runtime_rejection_label(const ReleaseRuntimeRejection r
     return "ADAPTER CONSTRUCTION";
 }
 
+namespace {
+
+// Some native main-stage waits are represented by lifecycle state before a
+// detailed dependency checkpoint receives its next externally observed call.
+// Keep their instruction addresses in one audited map so the SDL/front-end
+// diagnostic reports a useful boundary without turning it into an emulated
+// service or an inferred input event.
+[[nodiscard]] std::uint32_t main_stage_external_stop_address(
+    const DeuterosAmigaMainStageState state) {
+    switch (state) {
+    case DeuterosAmigaMainStageState::awaiting_2099e_exec_return: return 0x2099e;
+    case DeuterosAmigaMainStageState::awaiting_209ca_exec_return: return 0x209ca;
+    case DeuterosAmigaMainStageState::awaiting_209f0_exec_return: return 0x209f0;
+    case DeuterosAmigaMainStageState::terminal_209fa_spin: return 0x209fa;
+    case DeuterosAmigaMainStageState::awaiting_cia_a_bit_set: return 0x217e4;
+    case DeuterosAmigaMainStageState::awaiting_initial_resource_load: return 0x21276;
+    case DeuterosAmigaMainStageState::awaiting_initial_loop_service_return: return 0x21310;
+    default: return 0;
+    }
+}
+
+[[nodiscard]] std::uint32_t main_stage_stop_address(
+    const DeuterosAmigaTitleDependencyChainCheckpoint& checkpoint) {
+    return checkpoint.stop_before_address != 0
+        ? checkpoint.stop_before_address
+        : main_stage_external_stop_address(checkpoint.main_stage_state);
+}
+
+} // namespace
+
 bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     reset();
     // A launcher card can produce this object only through exact hash
@@ -3476,6 +3506,7 @@ ReleaseRuntimeCoordinator::drive_deuteros_amiga_main_stage(const std::uint32_t s
         }
         if (!deterministic) {
             result.awaiting_external_observation = true;
+            result.stop_before_address = main_stage_stop_address(*checkpoint);
             return result;
         }
         if (!advanced.accepted) {
@@ -3488,6 +3519,9 @@ ReleaseRuntimeCoordinator::drive_deuteros_amiga_main_stage(const std::uint32_t s
         ++result.steps;
     }
     result.step_limit_reached = true;
+    if (const auto checkpoint = deuteros_amiga_title_dependency_chain_checkpoint()) {
+        result.stop_before_address = main_stage_stop_address(*checkpoint);
+    }
     return result;
 }
 
