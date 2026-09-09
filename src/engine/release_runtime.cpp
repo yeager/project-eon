@@ -64,6 +64,10 @@ namespace {
     case DeuterosAmigaMainStageState::awaiting_cia_a_bit_set: return 0x217e4;
     case DeuterosAmigaMainStageState::awaiting_initial_resource_load: return 0x21276;
     case DeuterosAmigaMainStageState::awaiting_initial_loop_service_return: return 0x21310;
+    case DeuterosAmigaMainStageState::awaiting_first_loop_graphics_return: return 0x21310;
+    case DeuterosAmigaMainStageState::awaiting_second_loop_graphics_return: return 0x2132a;
+    case DeuterosAmigaMainStageState::awaiting_loop_request_service: return 0x208b4;
+    case DeuterosAmigaMainStageState::awaiting_optional_resource_cia: return 0x22330;
     default: return 0;
     }
 }
