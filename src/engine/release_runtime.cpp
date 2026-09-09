@@ -6626,7 +6626,7 @@ ReleaseRuntimeCoordinator::millennium_amiga_bootstrap_relocator_checkpoint()cons
         session.first_stage_sha256(),session.first_stage_entry_execution(),
         session.first_stage_illegal_execution(),session.second_illegal_execution(),
         session.first_trace_execution(),session.trace_branch_chain_execution(),session.trace_register_prefix_execution(),
-        session.bus_error_prefix_execution(),session.custom_chip_exec_prefix_execution(),session.exec_transition_execution(),session.open_graphics_execution(),session.allocation_consumer_execution(),session.graphics_initialization_execution(),session.view_service_execution()};
+        session.bus_error_prefix_execution(),session.custom_chip_exec_prefix_execution(),session.exec_transition_execution(),session.open_graphics_execution(),session.allocation_consumer_execution(),session.graphics_initialization_execution(),session.view_service_execution(),session.interrupt_control_execution()};
 }
 
 std::optional<MillenniumAtariBootstrapPresentationSnapshot>

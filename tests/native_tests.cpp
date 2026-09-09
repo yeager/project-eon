@@ -5063,7 +5063,9 @@ int main() {
                 assert(all_release_runtime.observe_millennium_amiga_interrupt_control(control_observation).accepted);
                 const auto control_boundary=all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint();
                 assert(control_boundary&&control_boundary->boundary.instruction_address==0x42552
-                    &&control_boundary->boundary.target_address==0x41d4a);
+                    &&control_boundary->boundary.target_address==0x41d4a
+                    &&control_boundary->interrupt_control_execution
+                    &&control_boundary->interrupt_control_execution->effects[1].address==0xdff096);
                 assert(all_release_runtime.native_runtime_memory_diagnostics()->applied_batch_count==16);
             }else{
                 assert(!all_release_runtime.millennium_amiga_bootstrap_relocator_checkpoint());

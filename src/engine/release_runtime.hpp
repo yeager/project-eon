@@ -281,6 +281,7 @@ struct MillenniumAmigaBootstrapRelocatorCheckpoint {
     std::optional<MillenniumAmigaAllocationConsumerExecution> allocation_consumer_execution;
     std::optional<MillenniumAmigaGraphicsInitializationExecution> graphics_initialization_execution;
     std::optional<MillenniumAmigaViewServiceExecution> view_service_execution;
+    std::optional<MillenniumAmigaInterruptControlExecution> interrupt_control_execution;
 };
 
 // Immutable Millennium Atari ST bootstrap provenance.  It reports only the
