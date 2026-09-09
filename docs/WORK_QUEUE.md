@@ -243,8 +243,7 @@ unconditional branch steps through `$411d8`, then the deterministic LEA,
 MOVEQ, table-word and ADD register prefix. A typed group-0 frame admits the
 24-bit bus-error route, and a typed custom-chip/ExecBase observation advances
 the deterministic setup. Continue at the custom-chip write at
-`$42546`; retain only the exact register and value as an observation, without
-enacting the hardware effect.
+`$42546`; admit only the exact register and value.
 
 | Rank | Work package | Exact current evidence | Required acceptance evidence | Status / boundary |
 | --- | --- | --- | --- | --- |

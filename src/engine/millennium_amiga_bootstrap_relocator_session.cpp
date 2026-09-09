@@ -95,9 +95,7 @@ MillenniumAmigaBootstrapRelocatorSession::boundary() const {
     case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_interrupt_control:
         return {0x42546,0,view_service_execution_->pending_custom_effect.address};
     case MillenniumAmigaBootstrapRelocatorState::observed_first_stage_interrupt_control:
-        // The next original instruction is not yet caller-connected.  Keep
-        // the proven hardware write as a terminal preservation boundary.
-        return {0x42546,0,0};
+        return {0x42552,0,0x41d4a};
     }
     throw std::runtime_error("Invalid Millennium Amiga bootstrap relocator state");
 }
@@ -136,12 +134,17 @@ MillenniumAmigaBootstrapRelocatorSession::execute_view_services(
 MillenniumAmigaInterruptControlExecution
 MillenniumAmigaBootstrapRelocatorSession::execute_interrupt_control(
     const MillenniumAmigaInterruptControlObservation& observation) {
+    constexpr MillenniumAmigaBootstrapCustomChipEffect disable_display_interrupts{
+        0x42546, 0xdff09a, 0xc000};
+    constexpr MillenniumAmigaBootstrapCustomChipEffect enable_dma{
+        0x4254c, 0xdff096, 0x83ff};
     if (state_ != MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_interrupt_control
-        || !view_service_execution_
+        || !view_service_execution_ || observation.effect != disable_display_interrupts
         || observation.effect != view_service_execution_->pending_custom_effect) {
         throw std::runtime_error("Detached Millennium Amiga interrupt-control observation");
     }
-    MillenniumAmigaInterruptControlExecution execution{observation.effect};
+    MillenniumAmigaInterruptControlExecution execution{{disable_display_interrupts, enable_dma},
+                                                         0x42552, 0x41d4a};
     interrupt_control_execution_ = execution;
     state_ = MillenniumAmigaBootstrapRelocatorState::observed_first_stage_interrupt_control;
     return execution;

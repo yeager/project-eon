@@ -141,7 +141,7 @@ class RecoveryMapTests(unittest.TestCase):
                 if entry["parser_profile_id"] == "deuteros-amiga-clean-main-stage"
                 else "native bounded ByteKiller decode, four-plane transfer and typed palette return"
                 if entry["parser_profile_id"] == "deuteros-amiga-clean-bootstrap-auxiliary"
-                else "native typed view services through $42546"
+                else "native typed view services and interrupt control through $42552"
                 if entry["parser_profile_id"] in {
                     "millennium-amiga-defjam-first-stage-entry",
                     "millennium-amiga-defjam-direct-first-stage-entry",

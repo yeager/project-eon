@@ -1807,8 +1807,8 @@ interpretation would overwrite the reader while it was executing.
 
 After a typed successful trackdisk return, the native runtime atomically maps
 the exact `0x24200` source bytes to `$41000..$651ff`. The stage begins
-`BRA.W $410bc`. Its first `0x151e` bytes hash to
-`4bb8745ffe13392e729ab9529306c793af0cf5b1887027acde2831028e72e6c3`
+`BRA.W $410bc`. Its first `0x1550` bytes hash to
+`7d2149f414d292415adc8aa5193463fad43a62d311a5ab86bf552adb5bfd68f2`
 and statically establish the register-save/vector setup through `ILLEGAL` at
 `$410de`, which uses exception vector address `$10`. A typed register/vector
 observation now advances the native session through the exact `BRA.W`, saved
@@ -1917,16 +1917,17 @@ The next bounded continuation accepts four typed graphics.library returns at
 and -222. It validates the local stack progression (S, S-8, S-4, S), then
 atomically stores the bitmap reference, local setup fields and saved pointers,
 and clears the owned `$7d00`-byte allocation. Library-internal writes are not
-synthesized. The exact `$42546` custom-chip transaction (`$c000` to
-`$dff09a`) is retained only as a caller-connected typed observation; Eon does
-not enact that hardware effect and claims no visible display.
+synthesized. The exact `$42546` write of `$c000` to `$dff09a` and immediate
+`$4254c` write of `$83ff` to `$dff096` are retained as typed original effects,
+never host hardware writes. Execution stops before JSR `$42552->$41d4a`; no
+device-call result or visible display is claimed.
 Frame materialization and
 the A1 save are one atomic batch; the later D0/ExecBase materialization is a
 second atomic batch, and an invalid hardware or ExecBase observation commits
 neither.
 The reproducible disassembly report has SHA-256
-`79cde8ff33a54727687b141630dde11612177e46eb3eaca303dee30545b7943c`
-and 1,589 lines. FS-UAE source revision
+`df257ab7e2eb2abbe5a9fcad32cedc4cc11a1bd0a515dd4fc8a850b11378941e`
+and 1,595 lines. FS-UAE source revision
 `f362278ccd4c60991caac3b4d240d4a3f751bea2` was retained externally as a
 cross-check for its explicit 24-bit address-space model; it is not embedded
 or treated as a substitute runtime.

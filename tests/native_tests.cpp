@@ -4092,9 +4092,12 @@ int main() {
         {0x42546,0xdff09a,0xc000}};
     {auto bad=interrupt_control;bad.effect.value=0xc001;bool rejected=false;try{static_cast<void>(defjam_relocator.execute_interrupt_control(bad));}catch(const std::runtime_error&){rejected=true;}assert(rejected);}
     const auto interrupt_control_execution=defjam_relocator.execute_interrupt_control(interrupt_control);
-    assert(interrupt_control_execution.effect==interrupt_control.effect);
+    const std::array<eon::MillenniumAmigaBootstrapCustomChipEffect,2> expected_interrupt_effects{{
+        {0x42546,0xdff09a,0xc000},{0x4254c,0xdff096,0x83ff}}};
+    assert(interrupt_control_execution.effects==expected_interrupt_effects);
+    assert(interrupt_control_execution.next_call_address==0x42552&&interrupt_control_execution.next_call_target==0x41d4a);
     assert(defjam_relocator.state()==eon::MillenniumAmigaBootstrapRelocatorState::observed_first_stage_interrupt_control);
-    assert((defjam_relocator.boundary()==eon::MillenniumAmigaBootstrapRelocatorBoundary{0x42546,0,0}));
+    assert((defjam_relocator.boundary()==eon::MillenniumAmigaBootstrapRelocatorBoundary{0x42552,0,0x41d4a}));
     {bool rejected=false;try{static_cast<void>(defjam_relocator.execute_interrupt_control(interrupt_control));}catch(const std::runtime_error&){rejected=true;}assert(rejected);}
     {
         bool rejected = false;

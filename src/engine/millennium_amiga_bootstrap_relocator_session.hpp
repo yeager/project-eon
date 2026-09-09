@@ -295,14 +295,15 @@ struct MillenniumAmigaViewServiceExecution {
     MillenniumAmigaBootstrapCustomChipEffect pending_custom_effect;
 };
 
-// This is an observed original custom-chip transaction, not an instruction
-// for a host Amiga implementation.  The native session retains it only after
-// its exact caller-connected boundary has been reached.
+// This captures an already-proven custom-chip transaction as a typed original
+// effect. It does not issue a host hardware write.
 struct MillenniumAmigaInterruptControlObservation {
     MillenniumAmigaBootstrapCustomChipEffect effect;
 };
 struct MillenniumAmigaInterruptControlExecution {
-    MillenniumAmigaBootstrapCustomChipEffect effect;
+    std::array<MillenniumAmigaBootstrapCustomChipEffect, 2> effects{};
+    std::uint32_t next_call_address = 0;
+    std::uint32_t next_call_target = 0;
 };
 
 // Manual recompilation of the exact, direct Defjam bootstrap relocator at
