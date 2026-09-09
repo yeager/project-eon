@@ -16,15 +16,15 @@ update a required digest or claim a recovered runtime path.
 | Candidate binary bytes | `128754232` |
 | Required pinned v21 SHA-256 | `18ec0ead7d08deeca694fbbe8155d5f5e6a99562adaea22fe914a691961fe1f1` |
 
-The source tree, patch and binary remain external under
-`/home/yeager/.cache/project-eon-tools/`. Neither the candidate nor its source
+The source tree, patch and binary remain in the scoped external cache. Neither
+the candidate nor its source
 is distributed, packaged or committed here.
 
 ## Rebuild record
 
 The candidate was built on 2026-09-02 from the stated source revision with
 `g++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0`. `TMPDIR`, `TEMP` and `TMP` were scoped
-under `/home/yeager/.cache/project-eon-tools/recorder-recovery/build-tmp`.
+under the scoped external cache's recorder-recovery build directory.
 The static-SDL link used the configured DOSBox-X libraries plus a trailing
 `-lGL`. A no-media `dosbox-x -version` smoke test with the observer output
 variable set produced no sidecar.
@@ -51,7 +51,7 @@ At the maintainer's direction, the candidate was run in the explicit
 `--experimental-observer` no-input mode against the recognised, read-only
 English Millennium DOS archive. This run is intentionally not recovery
 admissible. Its external receipt directory is
-`/home/yeager/.cache/project-eon-tools/millennium-dos-experimental-observer-20260902-02`.
+the scoped external cache.
 It retains the exact candidate identity and archive identity, then stops at
 the console safety cap: `exit_status=125`,
 `termination_reason=console-safety-cap`, and 67,189,702 console bytes with

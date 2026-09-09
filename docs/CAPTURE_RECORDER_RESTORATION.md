@@ -20,8 +20,8 @@ cache before asking Project Eon to run an evidence capture:
 | Deuteros Amiga | reviewed FS-UAE v10 | `0e0bfb1fe73a6f37dc38992b39e34e355564adc516106c399c8be86fb38232ec` | Raw PC, host-delivery and title-armed display-write observer |
 
 The default restoration location is a new directory under
-`/home/yeager/.cache/project-eon-tools/`, for example
-`/home/yeager/.cache/project-eon-tools/recorders/`. Do not place a recorder in
+`$HOME/.cache/project-eon-tools/`, for example
+`$HOME/.cache/project-eon-tools/recorders/`. Do not place a recorder in
 the checkout, `~/.projecteon`, an original-media directory, `/tmp`, or a
 package staging tree.
 
@@ -34,11 +34,11 @@ binary by its pinned digest:
 python3 tools/locate_capture_recorder.py \
   --kind millennium-dos \
   --recorder-protocol v21-int93-installation \
-  --root /home/yeager/.cache/project-eon-tools
+  --root "$HOME/.cache/project-eon-tools"
 
 python3 tools/locate_capture_recorder.py \
   --kind deuteros-amiga \
-  --root /home/yeager/.cache/project-eon-tools
+  --root "$HOME/.cache/project-eon-tools"
 ```
 
 For recorder-restoration work, append `--diagnose` to report only aggregate
@@ -51,7 +51,7 @@ capture evidence and never changes admission:
 python3 tools/locate_capture_recorder.py \
   --kind millennium-dos \
   --recorder-protocol v21-int93-installation \
-  --root /home/yeager/.cache/project-eon-tools \
+  --root "$HOME/.cache/project-eon-tools" \
   --diagnose
 ```
 
@@ -69,7 +69,7 @@ python3 tools/run_millennium_dos_capture.py \
   --recorder /absolute/path/reported/by/locator/dosbox-x \
   --machine-profile svga_s3 \
   --capture-intent physical-input \
-  --output /home/yeager/.cache/project-eon-tools/millennium-dos-capture-YYYYMMDD-NN
+  --output "$HOME/.cache/project-eon-tools/millennium-dos-capture-YYYYMMDD-NN"
 ```
 
 The output directory must be new and must not already exist. The helper mounts
@@ -82,7 +82,7 @@ Verify the completed evidence before any recovery work:
 ```sh
 python3 tools/verify_capture_receipt.py \
   --kind millennium-dos \
-  --capture /home/yeager/.cache/project-eon-tools/millennium-dos-capture-YYYYMMDD-NN
+  --capture "$HOME/.cache/project-eon-tools/millennium-dos-capture-YYYYMMDD-NN"
 ```
 
 ## Deuteros Amiga capture once restored
@@ -142,7 +142,7 @@ SHA-256 was
 The upstream static-SDL link required an explicit trailing `-lGL`; no source
 file was changed. This digest deliberately does not match an approved recorder
 digest, so the locator must continue to reject it. All source, build and
-temporary paths were under `/home/yeager/.cache/project-eon-tools/`; no
+temporary paths were under the scoped external cache; no
 original media, project file, package, or `/tmp` path participated.
 
 ### 2026-09-03 FS-UAE baseline provenance
@@ -159,9 +159,8 @@ reported version `3.2.35`.
 This is a `BASELINE_VERIFY` result only.  It establishes a reproducible source
 and host-toolchain boundary for the separately approved recorder work; it does
 not replace the reviewed v10 observer binary, whose hash, bounded observer
-patch and independent review remain the admission contract.  The source and
-all build outputs remain outside the repository at
-`/home/yeager/.cache/project-eon-tools/recorder-recovery/fs-uae-source/`.
+patch and independent review remain the admission contract. The source and
+all build outputs remain outside the repository in the scoped external cache.
 No game data, capture output or `/tmp` path participated.
 
 Maintainer decision, 2026-09-03: this exact external FS-UAE executable is
@@ -179,8 +178,7 @@ reviewed, and pinned for that protocol.
 The first candidate reached `OBSERVER_FIX_REQUIRED` (not `INDEPENDENT_REVIEW`
 and not `PINNED_RECORDER`). A first minimal V21 observer reconstruction was applied
 only to the external source tree named above. Its patch is retained outside the
-checkout at
-`/home/yeager/.cache/project-eon-tools/recorder-recovery/observer-smoke-20260902/recorder-v21-experimental.patch`
+checkout in the scoped external cache.
 with SHA-256
 `479c043171fe9c5351340723a034bd2a80019d38e947fd1002d1b6b0775b0574`.
 The first locally built experimental executable SHA-256 was
@@ -191,8 +189,7 @@ its opcode literals and record newline were escaped incorrectly, its preimage
 start was one byte too early, and its output handling needed stricter path and
 short-write handling. It must never be used.
 
-A corrected follow-up candidate is retained at
-`/home/yeager/.cache/project-eon-tools/recorder-recovery/observer-smoke-20260902/recorder-v21-experimental-v2.patch`
+A corrected follow-up candidate is retained in the scoped external cache
 with SHA-256
 `72e0e931cfda96f1a5cf786cd59f761975b5b71a1a6021b8f64c18e594282679`.
 Its experimental executable SHA-256 is
@@ -202,8 +199,8 @@ The follow-up review also rejected v2 before admission: it read `DS:DX`
 before exact candidate identity had been established and removed a failed
 output by pathname after closing it. A third candidate moves that read behind
 the exact mapped CS:PC and opcode checks, and fail-closes on a write failure
-without pathname removal. Its external patch is
-`/home/yeager/.cache/project-eon-tools/recorder-recovery/observer-smoke-20260902/recorder-v21-experimental-v3.patch`
+without pathname removal. Its external patch is retained in the scoped
+external cache
 with SHA-256
 `eb9f21bd22b6d7105137b1c0495d87b02a894d4a5a2d8533d1dce81ba6aa793c`;
 its experimental executable SHA-256 is
@@ -236,7 +233,7 @@ DOSBox-X, not the older recorder's normal-core/default-callback hooks. It
 therefore reproduced the documented unhandled `INT 6` console loop and
 generated neither legacy result streams nor an installer sidecar before the
 64 MiB console safety cap. The run is retained at
-`/home/yeager/.cache/project-eon-tools/millennium-dos-experimental-observer-20260902-02`;
+the scoped external cache;
 its receipt explicitly says `experimental-observer-not-for-recovery` and is
 not admissible. The current state is consequently `OBSERVER_FIX_REQUIRED`
 (not `PINNED_RECORDER`). The candidate is not the approved `18ec0e…`
@@ -422,8 +419,7 @@ regular, mode-0600 output sink validated outside guest execution.
 
 ### 2026-09-03 V23 POD callback foundation
 
-An external clean DOSBox-X source copy at
-`/home/yeager/.cache/project-eon-tools/recorder-recovery/dosbox-x-v23-pod-observer/`
+An external clean DOSBox-X source copy in the scoped external cache
 was created from revision `234797680781567e18c374c9e62da24de5423db0` for the
 next recorder implementation. It contains a zero-initialised, fixed-size
 `ProjectEonInt6Slot` in `src/cpu/callback.cpp`. At the literal callback site,
@@ -432,8 +428,7 @@ publishes its captured state last. It performs no output, environment lookup,
 allocation, logging, guest write, register/vector change, input handling or
 scheduling.
 
-The exact external source delta is retained as
-`/home/yeager/.cache/project-eon-tools/recorder-recovery/recorder-v23-pod-foundation-20260903.patch`
+The exact external source delta is retained in the scoped external cache
 with SHA-256
 `71ee7d92bd6ff25f7f16dd5e6218b79629f7efcbb8c48f41d904c9b7c53b8419`.
 
@@ -460,7 +455,7 @@ input handling, scheduling, or stop request while guest execution is active.
 Both recorder arms remain false: no configuration identity, loaded-image
 fingerprint, title-prefix predicate, serializer, capture output, pin, or
 admission exists. This is `OBSERVER_FIX_REQUIRED`; the binary and its source
-delta remain only under `/home/yeager/.cache/project-eon-tools/` and must not
+delta remain only in the scoped external cache and must not
 be passed to the locator or capture runner.
 
 ### Experimental observer runs
@@ -475,8 +470,7 @@ release/image/title-prefix gate is private, hard-coded false, and cannot be
 changed through configuration. Therefore `development arm=true` still cannot
 record, serialize, emit, pin, locate, validate, or admit a capture.
 
-The full `make -C src -j4` rebuild completed outside the repository at
-`/home/yeager/.cache/project-eon-tools/recorder-recovery/dosbox-x-v24/`; its
+The full `make -C src -j4` rebuild completed in the scoped external cache; its
 external executable SHA-256 is
 `1d68e2f04a6569242bb15adf82e21c3508a48e8ab60fc868b332339ebbbe78dd`.
 This is an `OBSERVER_FIX_REQUIRED` development baseline, not a recorder
@@ -501,8 +495,7 @@ supplied, hash-verified leaf; no media was copied, altered, or placed in the
 repository. The title-prefix gate remains private and hard false, and there is
 still no serializer, output path, pin, locator result, capture, or admission.
 
-The external source and binary remain at
-`/home/yeager/.cache/project-eon-tools/recorder-recovery/dosbox-x-v24/`.
+The external source and binary remain in the scoped external cache.
 A sequential `make -C src -j1` followed by `make -C src -q` completed on the
 configured host. Its external executable SHA-256 is
 `67954bc31e054f435d00c43bbaa26471bcf3117e71f6a3cd5330f5238caa7e38`.

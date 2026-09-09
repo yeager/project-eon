@@ -27,6 +27,7 @@ enum class MillenniumAmigaBootstrapRelocatorState {
     awaiting_first_stage_graphics_init,
     awaiting_first_stage_view_init,
     awaiting_first_stage_interrupt_control,
+    observed_first_stage_interrupt_control,
 };
 
 struct MillenniumAmigaBootstrapRelocatorBoundary {
@@ -294,6 +295,16 @@ struct MillenniumAmigaViewServiceExecution {
     MillenniumAmigaBootstrapCustomChipEffect pending_custom_effect;
 };
 
+// This is an observed original custom-chip transaction, not an instruction
+// for a host Amiga implementation.  The native session retains it only after
+// its exact caller-connected boundary has been reached.
+struct MillenniumAmigaInterruptControlObservation {
+    MillenniumAmigaBootstrapCustomChipEffect effect;
+};
+struct MillenniumAmigaInterruptControlExecution {
+    MillenniumAmigaBootstrapCustomChipEffect effect;
+};
+
 // Manual recompilation of the exact, direct Defjam bootstrap relocator at
 // $70000..$70041. The original DBRA reads one byte beyond the authenticated
 // $400-byte load. That byte remains an explicit observation boundary.
@@ -368,6 +379,10 @@ public:
     [[nodiscard]] const std::optional<MillenniumAmigaGraphicsInitializationExecution>& graphics_initialization_execution() const { return graphics_initialization_execution_; }
     [[nodiscard]] MillenniumAmigaViewServiceExecution execute_view_services(const MillenniumAmigaViewServiceObservation&);
     [[nodiscard]] const std::optional<MillenniumAmigaViewServiceExecution>& view_service_execution() const { return view_service_execution_; }
+    [[nodiscard]] MillenniumAmigaInterruptControlExecution execute_interrupt_control(
+        const MillenniumAmigaInterruptControlObservation&);
+    [[nodiscard]] const std::optional<MillenniumAmigaInterruptControlExecution>&
+    interrupt_control_execution() const { return interrupt_control_execution_; }
 
 private:
     MillenniumAmigaBootstrapRelocatorState state_ =
@@ -392,6 +407,7 @@ private:
     std::optional<MillenniumAmigaAllocationConsumerExecution> allocation_consumer_execution_;
     std::optional<MillenniumAmigaGraphicsInitializationExecution> graphics_initialization_execution_;
     std::optional<MillenniumAmigaViewServiceExecution> view_service_execution_;
+    std::optional<MillenniumAmigaInterruptControlExecution> interrupt_control_execution_;
 };
 
 } // namespace eon

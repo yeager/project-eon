@@ -372,8 +372,8 @@ ABI, or gameplay boundary recorded above.
 
 ### 2026-09-03 whole-program re-verification
 
-The retained external report directory
-`/home/yeager/.cache/project-eon-tools/whole-disassembly-20260901-02` was
+The retained external report directory in an external, untracked cache
+directory was
 re-verified against the committed v2 inventory. The verifier accepted all
 **14 static spans** represented by **7 unique reports**. The corresponding
 retained static-control-flow set was also verified: **13 control-flow spans**

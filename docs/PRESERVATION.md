@@ -1917,8 +1917,9 @@ The next bounded continuation accepts four typed graphics.library returns at
 and -222. It validates the local stack progression (S, S-8, S-4, S), then
 atomically stores the bitmap reference, local setup fields and saved pointers,
 and clears the owned `$7d00`-byte allocation. Library-internal writes are not
-synthesized. Execution stops before `$42546` writes `$c000` to `$dff09a`;
-neither that hardware effect nor a visible display is claimed.
+synthesized. The exact `$42546` custom-chip transaction (`$c000` to
+`$dff09a`) is retained only as a caller-connected typed observation; Eon does
+not enact that hardware effect and claims no visible display.
 Frame materialization and
 the A1 save are one atomic batch; the later D0/ExecBase materialization is a
 second atomic batch, and an invalid hardware or ExecBase observation commits

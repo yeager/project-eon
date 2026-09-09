@@ -94,6 +94,10 @@ MillenniumAmigaBootstrapRelocatorSession::boundary() const {
         return {0x41780,0x41844,graphics_initialization_execution_->pending_vector_address};
     case MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_interrupt_control:
         return {0x42546,0,view_service_execution_->pending_custom_effect.address};
+    case MillenniumAmigaBootstrapRelocatorState::observed_first_stage_interrupt_control:
+        // The next original instruction is not yet caller-connected.  Keep
+        // the proven hardware write as a terminal preservation boundary.
+        return {0x42546,0,0};
     }
     throw std::runtime_error("Invalid Millennium Amiga bootstrap relocator state");
 }
@@ -127,6 +131,20 @@ MillenniumAmigaBootstrapRelocatorSession::execute_view_services(
     view_service_execution_=r;
     state_=MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_interrupt_control;
     return r;
+}
+
+MillenniumAmigaInterruptControlExecution
+MillenniumAmigaBootstrapRelocatorSession::execute_interrupt_control(
+    const MillenniumAmigaInterruptControlObservation& observation) {
+    if (state_ != MillenniumAmigaBootstrapRelocatorState::awaiting_first_stage_interrupt_control
+        || !view_service_execution_
+        || observation.effect != view_service_execution_->pending_custom_effect) {
+        throw std::runtime_error("Detached Millennium Amiga interrupt-control observation");
+    }
+    MillenniumAmigaInterruptControlExecution execution{observation.effect};
+    interrupt_control_execution_ = execution;
+    state_ = MillenniumAmigaBootstrapRelocatorState::observed_first_stage_interrupt_control;
+    return execution;
 }
 
 MillenniumAmigaGraphicsInitializationExecution

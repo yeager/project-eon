@@ -332,7 +332,7 @@ The external source is clean at the reviewed tag before the local probe patch.
 Its Linux configuration needs the normal FS-UAE development dependencies. On
 the current host, the reviewed source now configures and builds out of tree
 with `--without-libmpeg2 --disable-cdtv` using OpenAL Soft 1.24.2 and gettext
-tools built/extracted only beneath `/home/yeager/.cache/project-eon-tools/`.
+tools built/extracted only in the scoped external cache.
 No system package was installed, and neither dependency is part of Project
 Eon or a release artifact. This clears the build prerequisite only: no raw
 capture has yet been created or admitted.

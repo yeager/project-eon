@@ -4088,6 +4088,14 @@ int main() {
         &&view_exec.setup_flag_address==0x41ad6&&view_exec.setup_flag_value==0
         &&view_exec.pending_custom_effect==eon::MillenniumAmigaBootstrapCustomChipEffect{0x42546,0xdff09a,0xc000}));
     assert((defjam_relocator.boundary()==eon::MillenniumAmigaBootstrapRelocatorBoundary{0x42546,0,0xdff09a}));
+    eon::MillenniumAmigaInterruptControlObservation interrupt_control{
+        {0x42546,0xdff09a,0xc000}};
+    {auto bad=interrupt_control;bad.effect.value=0xc001;bool rejected=false;try{static_cast<void>(defjam_relocator.execute_interrupt_control(bad));}catch(const std::runtime_error&){rejected=true;}assert(rejected);}
+    const auto interrupt_control_execution=defjam_relocator.execute_interrupt_control(interrupt_control);
+    assert(interrupt_control_execution.effect==interrupt_control.effect);
+    assert(defjam_relocator.state()==eon::MillenniumAmigaBootstrapRelocatorState::observed_first_stage_interrupt_control);
+    assert((defjam_relocator.boundary()==eon::MillenniumAmigaBootstrapRelocatorBoundary{0x42546,0,0}));
+    {bool rejected=false;try{static_cast<void>(defjam_relocator.execute_interrupt_control(interrupt_control));}catch(const std::runtime_error&){rejected=true;}assert(rejected);}
     {
         bool rejected = false;
         try {

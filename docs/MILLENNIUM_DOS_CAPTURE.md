@@ -945,8 +945,8 @@ can consume it.  Do not add guessed return values to the current adapter.
 ## Safe capture procedure
 
 All capture material remains outside the repository and outside the
-user-supplied media tree.  Use a new, scoped path such as
-`/home/yeager/.cache/project-eon-tools/millennium-dos-capture-<UTC>`; never
+user-supplied media tree. Use the scoped external cache with a unique
+`millennium-dos-capture-<UTC>` name; never
 use `/tmp`.
 
 For the reviewed external DOSBox-X recorder, the repository includes a
@@ -1005,7 +1005,7 @@ and review before any new adapter or runtime route can exist.
 
 The output directory is a new evidence boundary and must not already exist.
 If preflight reports `output directory must not exist`, choose a fresh,
-descriptive suffix below `/home/yeager/.cache/project-eon-tools/`; do not
+descriptive suffix below the scoped external cache; do not
 reuse, clear, or overwrite a prior capture directory.
 
 The v6 receipt binds one finite machine profile: `svga_s3` (the default) or

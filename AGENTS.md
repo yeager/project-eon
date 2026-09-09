@@ -18,7 +18,7 @@ never claim parity or invent behaviour that evidence does not support.
   offsets, runtime addresses, hashes, and uncertainty in `docs/PRESERVATION.md`.
 - Never commit or push raw/generated disassembly listings, decompiler projects,
   extracted executable bytes, emulator dumps, or original-derived report
-  bodies. Keep them under `/home/yeager/.cache/project-eon-tools/`, outside
+  bodies. Keep them under a scoped external cache directory, outside
   both the repository and original media. Git may contain only the tools and
   tests needed to reproduce them plus preservation metadata such as hashes,
   offsets, address ranges, line counts, uncertainty, and function maps.
@@ -67,7 +67,7 @@ never claim parity or invent behaviour that evidence does not support.
   `git diff --check` for relevant changes. Configure `EON_REAL_DATA_DIR` for
   genuine-media tests when available.
 - Do not use `/tmp` for builds, tools, mounts, traces, or temporary work.
-  Use a scoped path beneath `/home/yeager/.cache/project-eon-tools/` instead;
+  Use a scoped path beneath the external cache directory instead;
   it must remain outside the repository and user-supplied game media.
 - Set `TMPDIR` to an existing directory under that cache for local compiler
   and tool invocations; an external build directory alone does not redirect
