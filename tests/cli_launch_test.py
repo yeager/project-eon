@@ -275,7 +275,9 @@ def main() -> int:
         ("Deuteros", "Atari ST", "en"): "BOOTSTRAP ONLY",
     }
     if spanish_in_corpus:
-        expected_json_coverage[("Millennium 2.2", "DOS", "es")] = "BOOTSTRAP ONLY"
+        # This release is intentionally indexed for preservation while being
+        # excluded from active native-runtime/parity scope.
+        expected_json_coverage[("Millennium 2.2", "DOS", "es")] = "PRESERVATION ONLY"
     reported_json_coverage = {
         (release["game"], release["platform"], release["language"]): release["coverage"]
         for release in inspect_payload.get("releases", [])

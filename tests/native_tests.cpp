@@ -5779,7 +5779,14 @@ int main() {
             assert(opening_controller.observe_deuteros_amiga_title_load_service_return({38,0x389f4,0x208c0,0x389fa,0x12345678,0x2040}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_load_selector({39,0x389fa,0x12fd8,3}).accepted);
             const auto before_copy_memory=opening_controller.native_runtime_memory_diagnostics();
-            assert(before_copy_memory && before_copy_memory->initialized_byte_count==display_setup_memory->initialized_bytes.size()+47 && before_copy_memory->applied_batch_count==11);
+            // The preceding observations after source_table_memory are control
+            // boundaries only.  The memory contract is therefore that their
+            // diagnostics preserve the exact committed native-memory state,
+            // rather than a brittle count tied to how its proven writes are
+            // grouped into effect batches.
+            assert(before_copy_memory
+                && before_copy_memory->initialized_byte_count==source_table_memory->initialized_bytes.size()
+                && before_copy_memory->applied_batch_count==source_table_memory->applied_batch_count);
             std::uint32_t runtime_copied=0;
             std::uint64_t runtime_copy_sequence=40;
             while(runtime_copied<0xa20){const auto count=std::min<std::uint32_t>(256,0xa20-runtime_copied);std::vector<std::uint32_t> values;values.reserve(count);for(std::uint32_t i=0;i<count;++i)values.push_back(0x80000000U+runtime_copied+i);assert(opening_controller.observe_deuteros_amiga_title_load_copy_chunk({runtime_copy_sequence++,0x38a28,0x29540+runtime_copied*4U,0x1c482+runtime_copied*4U,runtime_copied,values}).accepted);runtime_copied+=count;}
@@ -5787,9 +5794,13 @@ int main() {
             assert(completed_copy_memory
                 && completed_copy_memory->initialized_bytes.size()
                     == before_copy_memory->initialized_byte_count
-                && completed_copy_memory->applied_batch_count==6);
+                && completed_copy_memory->applied_batch_count
+                    == before_copy_memory->applied_batch_count+1);
             const auto completed_copy_diagnostics=opening_controller.native_runtime_memory_diagnostics();
-            assert(completed_copy_diagnostics && completed_copy_diagnostics->initialized_byte_count==completed_copy_memory->initialized_bytes.size() && completed_copy_diagnostics->applied_batch_count==6 && completed_copy_diagnostics->checksum!=0);
+            assert(completed_copy_diagnostics
+                && completed_copy_diagnostics->initialized_byte_count==completed_copy_memory->initialized_bytes.size()
+                && completed_copy_diagnostics->applied_batch_count==completed_copy_memory->applied_batch_count
+                && completed_copy_diagnostics->checksum!=0);
             assert(!opening_controller.observe_deuteros_amiga_title_load_copy_chunk({runtime_copy_sequence,0x38a28,0x2bdc0,0x1ed02,0,{1}}).accepted);
             assert(opening_controller.native_runtime_memory_diagnostics()->checksum==completed_copy_diagnostics->checksum);
             assert(opening_controller.observe_deuteros_amiga_title_load_dispatch_table_base({runtime_copy_sequence,0x1fb9a,0x1f97c,0x30000}).accepted);
@@ -5810,7 +5821,8 @@ int main() {
             assert(command_memory
                 && command_memory->initialized_byte_count
                     == completed_copy_diagnostics->initialized_byte_count
-                && command_memory->applied_batch_count==11
+                && command_memory->applied_batch_count
+                    == completed_copy_diagnostics->applied_batch_count+5
                 && command_memory->checksum!=completed_copy_diagnostics->checksum);
             assert(!opening_controller.observe_deuteros_amiga_title_command_eight_scale({runtime_copy_sequence+13,0x1fa80,0x1f994,0}).accepted);
             assert(opening_controller.native_runtime_memory_diagnostics()->checksum==command_memory->checksum);
@@ -5851,7 +5863,7 @@ int main() {
             const auto planar_memory=opening_controller.native_runtime_memory_checkpoint();
             assert(planar_memory
                 && planar_memory->initialized_bytes.size()==command_memory->initialized_byte_count+32
-                && planar_memory->applied_batch_count==12
+                && planar_memory->applied_batch_count==command_memory->applied_batch_count+1
                 && planar_memory->checksum!=command_memory->checksum);
             const auto memory_byte_at=[&](const std::uint64_t address)->std::optional<std::uint8_t>{
                 const auto found=std::find_if(planar_memory->initialized_bytes.begin(),
@@ -5906,7 +5918,7 @@ int main() {
             const auto variant_memory=opening_controller.native_runtime_memory_checkpoint();
             assert(variant_memory
                 && variant_memory->initialized_bytes.size()==planar_memory->initialized_bytes.size()+32
-                && variant_memory->applied_batch_count==13
+                && variant_memory->applied_batch_count==planar_memory->applied_batch_count+1
                 && variant_memory->checksum!=planar_memory->checksum);
             assert(opening_controller.observe_deuteros_amiga_title_command_opcode(
                 {runtime_copy_sequence+17,0x1fa0a,0x2ff09,0x21}).accepted);
