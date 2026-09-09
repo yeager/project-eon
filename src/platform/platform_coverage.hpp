@@ -9,7 +9,14 @@ namespace eon {
 // This is deliberately distinct from media admission. It states the furthest
 // verified native path for a game/platform pair, never a parity claim and
 // never permission to substitute a different release.
-enum class PlatformCoverage { recovered_startup, recovered_opening, bootstrap_only };
+enum class PlatformCoverage {
+    recovered_startup,
+    recovered_opening,
+    bootstrap_only,
+    // The scanner may recognise and inspect this immutable release, but it
+    // has intentionally no runtime adapter or launcher route.
+    preservation_only,
+};
 
 [[nodiscard]] PlatformCoverage platform_coverage(Game game, Platform platform);
 // Use this after an exact manifest identity is selected. A sibling language

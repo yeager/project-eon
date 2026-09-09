@@ -490,12 +490,18 @@ PlatformCardStatus platform_card_status(
     const std::vector<ReleaseArchive>& releases, const Game game, const Platform platform) {
     const auto identities = available_release_identities(releases, game, platform);
     if (identities.empty()) return PlatformCardStatus::unavailable;
+    const auto has_runtime_target = std::any_of(identities.begin(), identities.end(),
+        [](const auto& release) {
+            return platform_coverage(release) != PlatformCoverage::preservation_only;
+        });
+    if (!has_runtime_target) return PlatformCardStatus::preservation_only;
     return select_available_release_sha256(releases, game, platform, std::nullopt)
         ? PlatformCardStatus::ready : PlatformCardStatus::release_selection_required;
 }
 
 bool platform_card_selectable(const PlatformCardStatus status) {
-    return status != PlatformCardStatus::unavailable;
+    return status != PlatformCardStatus::unavailable
+        && status != PlatformCardStatus::preservation_only;
 }
 
 bool platform_card_startable(const PlatformCardStatus status) {
@@ -612,6 +618,7 @@ std::optional<ReleaseArchive> resolve_release_identity(
     if (match == identities.end() || (requested_language && match->language != *requested_language)) {
         return std::nullopt;
     }
+    if (platform_coverage(*match) == PlatformCoverage::preservation_only) return std::nullopt;
     return *match;
 }
 

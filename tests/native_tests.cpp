@@ -2512,7 +2512,16 @@ int main() {
         assert(eon::name(eon::PlatformCoverage::bootstrap_only) == "BOOTSTRAP ONLY");
         const eon::ReleaseArchive spanish_dos{eon::Game::millennium, eon::Platform::dos, "es",
             "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4", {}};
-        assert(eon::platform_coverage(spanish_dos) == eon::PlatformCoverage::bootstrap_only);
+        assert(eon::platform_coverage(spanish_dos) == eon::PlatformCoverage::preservation_only);
+        assert(eon::name(eon::PlatformCoverage::preservation_only) == "PRESERVATION ONLY");
+        const std::vector<eon::ReleaseArchive> preservation_only_menu{spanish_dos};
+        assert(eon::platform_card_status(preservation_only_menu,
+            eon::Game::millennium, eon::Platform::dos)
+            == eon::PlatformCardStatus::preservation_only);
+        assert(!eon::platform_card_selectable(eon::PlatformCardStatus::preservation_only));
+        assert(!eon::platform_card_startable(eon::PlatformCardStatus::preservation_only));
+        assert(!eon::resolve_release_identity(preservation_only_menu,
+            eon::Game::millennium, eon::Platform::dos, std::nullopt, "es"));
         const auto deuteros_supported = eon::supported_platforms(eon::Game::deuteros);
         assert((deuteros_supported
             == std::vector<eon::Platform>{eon::Platform::amiga, eon::Platform::atari_st}));
@@ -4705,9 +4714,8 @@ int main() {
     assert(!admitted_dos_runtime.tick_millennium_dos_compatibility_runner());
     assert(!admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint());
     assert(eon::release_runtime_admission_label(admitted_dos_runtime.admission()) == "NOT SELECTED");
-    // The Spanish release has no recovered sound-driver route. Its one
-    // availability observation must instead become the explicit TITLES.EXE
-    // return boundary and refuse further host input.
+    // Spanish Millennium DOS is scanner/inspection-only. Its recognised
+    // release identity must never construct a native session.
     eon::ResolvedLaunchRequest admitted_spanish_launch;
     admitted_spanish_launch.release = *spanish_dos;
     admitted_spanish_launch.request.game = eon::Game::millennium;
@@ -4715,31 +4723,14 @@ int main() {
     admitted_spanish_launch.request.release_language = "es";
     admitted_spanish_launch.request.release_sha256 = spanish_dos->sha256;
     eon::ReleaseRuntimeCoordinator admitted_spanish_runtime;
-    assert(admitted_spanish_runtime.acquire(admitted_spanish_launch));
-    assert(admitted_spanish_runtime.observe_input(eon::RuntimeInputObservation::available_character())
-        == eon::RuntimeInputDisposition::boundary_reached);
-    assert(admitted_spanish_runtime.session_snapshot());
-    const auto& spanish_handoff_snapshot = *admitted_spanish_runtime.session_snapshot();
-    assert(spanish_handoff_snapshot.kind
-            == eon::RuntimeSessionKind::millennium_dos_title_handoff_boundary
-        && spanish_handoff_snapshot.boundary == eon::RuntimeSessionBoundary::bootstrap_boundary
-        && !spanish_handoff_snapshot.capabilities.decoded_presentation
-        && !spanish_handoff_snapshot.capabilities.audio_observations
-        && !spanish_handoff_snapshot.capabilities.admitted_input
-        && spanish_handoff_snapshot.input_contract == eon::RuntimeInputContract::none);
-    assert(eon::runtime_session_kind_label(spanish_handoff_snapshot.kind)
-        == "MILLENNIUM DOS TITLE HANDOFF BOUNDARY");
-    // Spanish reaches its own genuine title handoff, but must never borrow
-    // the English MILL.COM/TITLES.EXE continuation merely because addresses
-    // happen to resemble it.
+    assert(!admitted_spanish_runtime.acquire(admitted_spanish_launch));
+    assert(eon::release_runtime_admission_label(admitted_spanish_runtime.admission())
+        == "REJECTED: ADAPTER");
+    assert(!admitted_spanish_runtime.session_snapshot());
     assert(!admitted_spanish_runtime.millennium_dos_title_to_game_checkpoint());
     assert(!admitted_spanish_runtime.observe_millennium_dos_title_to_game_call_return(
         {1, 0x1c54, 0x1c57}).accepted);
-    const auto spanish_title_memory = admitted_spanish_runtime.native_runtime_memory_diagnostics();
-    assert(spanish_title_memory && spanish_title_memory->applied_batch_count == 0
-        && spanish_title_memory->initialized_byte_count == 0);
-    assert(admitted_spanish_runtime.observe_input(eon::RuntimeInputObservation::available_character())
-        == eon::RuntimeInputDisposition::rejected);
+    assert(!admitted_spanish_runtime.native_runtime_memory_diagnostics());
     // Every recognised outer identity admits exactly one engine-owned startup
     // adapter. Reusing the coordinator also proves a prior platform's object
     // is destroyed before the next hash-checked release can become active.

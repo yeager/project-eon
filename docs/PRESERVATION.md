@@ -178,14 +178,15 @@ source bytes, reconstructed archive, or
 capture evidence. A partial installation, altered leaf, unknown release, or
 requested non-member remains a preservation boundary.
 
-The five current native bootstrap/opening adapters—Millennium DOS/Amiga/Atari
+The five current native bootstrap/opening adapters—English Millennium DOS/Amiga/Atari
 ST and Deuteros Amiga/Atari ST—are SDL-free engine factories behind that
 boundary. They select only their named hash-verified leaf and return no
-substitute if the selected release, language, or leaf is absent. The DOS
+substitute if the selected release, language, or leaf is absent. The English DOS
 factory also retains the original `2200AD4.BIN` celestial-label table and
-pointer-table topology as immutable source data for the selected English or
-Spanish edition; it neither translates those bytes nor presents them as a
-recovered game UI. It otherwise returns parser-only title and startup evidence;
+pointer-table topology as immutable source data; it neither translates those
+bytes nor presents them as a recovered game UI. The Spanish image is
+inspection-only and has no runtime factory. The English factory otherwise
+returns parser-only title and startup evidence;
 it neither executes
 an unproven handoff nor changes source bytes. Their resulting objects remain
 bounded bootstrap/opening evidence; moving them out of the SDL layer does not
@@ -283,9 +284,9 @@ must pass both `--release-language` and `--release-sha256`.  They are one
 four-field identity with game and platform, not independent display filters:
 a language/hash mismatch is rejected before SDL initialization and produces no
 launch-check JSON.  The genuine-media launch test exercises this contract for
-each recognised archive, including the co-installed Millennium DOS English
-and Spanish releases; a default English selection is never evidence that an
-explicit Spanish container was admitted.
+each active-runtime archive. The co-installed Spanish Millennium DOS release
+may be selected only for inspection; a default English selection is never
+evidence that an explicit Spanish container was admitted.
 
 The launcher carries the same provenance boundary before admission. Its
 source identity is exactly game, platform, original-release language, and
@@ -660,7 +661,9 @@ ST GEMDOS/XBIOS services, callbacks, or guest code.
 The adjacent coverage field is independent of admission and comes from one
 explicit game/platform table: `RECOVERED STARTUP` for Millennium DOS,
 `RECOVERED OPENING` for Deuteros Amiga, and `BOOTSTRAP ONLY` for Millennium
-Amiga and both Atari ST releases. It makes a successful card visible but does
+Amiga and both Atari ST releases. The exact Spanish Millennium DOS identity is
+instead `PRESERVATION ONLY`: it remains visible to inspection but cannot be
+selected as a runtime target. The other labels make a successful card visible but do
 not claim full native runtime parity. Each label identifies only the current
 bounded startup/opening evidence; it does not mean a full game loop, all
 assets, input, audio, state, or save parity.

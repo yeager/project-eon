@@ -98,6 +98,15 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         rejection_ = ReleaseRuntimeRejection::runtime_capability;
         return false;
     }
+    // A recognised original is not automatically a runnable target.  This
+    // explicit gate retains Spanish Millennium DOS for preservation scans
+    // while ensuring no parser, title pixels, input path, or session can be
+    // reached through the native runtime by accident.
+    if (capability->adapter == ReleaseRuntimeAdapter::preservation_only) {
+        admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+        rejection_ = ReleaseRuntimeRejection::runtime_capability;
+        return false;
+    }
     // Construct one typed adapter into local storage before publishing the
     // new identity. A failed leaf/parser admission must not leave a previous
     // adapter or a half-built replacement observable to SDL.
@@ -130,6 +139,10 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     case ReleaseRuntimeAdapter::deuteros_atari:
             deuteros_atari = load_deuteros_atari_runtime(*media);
             break;
+    case ReleaseRuntimeAdapter::preservation_only:
+        // Kept for exhaustiveness. The gate above must reject before media
+        // adapters are constructed.
+        return false;
     }
     if (millennium_dos || millennium_amiga || millennium_atari || deuteros_amiga || deuteros_atari) {
         session_snapshot = make_runtime_session_snapshot(launch, capability->initial_kind);

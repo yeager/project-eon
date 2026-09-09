@@ -149,8 +149,8 @@ The start menu is a three-card journey: click a game card, then choose one of
 that game's supported platform cards, then choose a presentation card.
 Millennium offers DOS, Amiga, and Atari ST; Deuteros offers Amiga and Atari
 ST. Every supported platform card visibly reports whether hash-verified
-original media is currently available; unavailable cards are dimmed and cannot
-proceed or start a game. Unsupported targets are never shown as if their media
+original media is currently available; unavailable and preservation-only cards
+are dimmed and cannot proceed or start a game. Unsupported targets are never shown as if their media
 were merely missing. Before either profile starts, the selected game, platform,
 release language, and full outer SHA-256 are resolved together into one
 immutable launch request, so the menu never substitutes another platform's or

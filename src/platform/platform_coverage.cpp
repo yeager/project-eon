@@ -35,6 +35,7 @@ std::string_view name(const PlatformCoverage coverage) {
     case PlatformCoverage::recovered_startup: return "RECOVERED STARTUP";
     case PlatformCoverage::recovered_opening: return "RECOVERED OPENING";
     case PlatformCoverage::bootstrap_only: return "BOOTSTRAP ONLY";
+    case PlatformCoverage::preservation_only: return "PRESERVATION ONLY";
     }
     return "BOOTSTRAP ONLY";
 }

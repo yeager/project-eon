@@ -12,7 +12,7 @@ namespace eon {
 // A capability is a hash-bound statement of what Eon may construct for one
 // original release. It is not an emulator configuration or parity claim.
 enum class ReleaseRuntimeAdapter { millennium_dos, millennium_amiga, millennium_atari,
-    deuteros_amiga, deuteros_atari };
+    deuteros_amiga, deuteros_atari, preservation_only };
 
 struct ReleaseRuntimeCapability {
     std::string_view release_sha256;

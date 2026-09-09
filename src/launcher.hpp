@@ -287,7 +287,12 @@ struct ParseResult {
 // ReleaseArchive entries here.  A card with several verified language
 // identities may be entered to choose one, but it must never start a game
 // until that choice is recorded.
-enum class PlatformCardStatus { unavailable, release_selection_required, ready };
+enum class PlatformCardStatus {
+    unavailable,
+    preservation_only,
+    release_selection_required,
+    ready,
+};
 
 [[nodiscard]] PlatformCardStatus platform_card_status(
     const std::vector<ReleaseArchive>& releases, Game game, Platform platform);

@@ -596,26 +596,20 @@ def main() -> int:
             f"{atari_runtime_diagnostics.stdout}\n{atari_runtime_diagnostics.stderr}"
         )
 
-    # Spanish has its own optional-preservation checks when its archive is
-    # available; the in-scope corpus must remain independently runnable.
+    # Spanish Millennium DOS remains independently inspectable, but is
+    # preservation-only and must fail before any launch admission or SDL use.
     if spanish_in_corpus:
         spanish_language_launch = subprocess.run(
             (str(executable), "--data", str(data_directory), "--game", "millennium",
                 "--platform", "dos", "--release-language", "es", "--launch-check-json"),
             env=environment, check=False, capture_output=True, text=True,
         )
-        try:
-            spanish_language_payload = json.loads(spanish_language_launch.stdout)
-        except json.JSONDecodeError as error:
+        if (spanish_language_launch.returncode != 4
+                or spanish_language_launch.stdout
+                or "one exact verified original release" not in spanish_language_launch.stderr
+                or "SDL_Init" in spanish_language_launch.stderr):
             raise SystemExit(
-                f"Spanish language-scoped launch check did not emit JSON: {error}"
-            ) from error
-        if (spanish_language_launch.returncode != 0
-                or spanish_language_payload.get("release", {}).get("language") != "es"
-                or spanish_language_payload.get("release", {}).get("sha256")
-                    != "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4"):
-            raise SystemExit(
-                "an explicit Spanish original-language selection did not resolve its unique release:\n"
+                "an out-of-scope Spanish original-language launch was not rejected before SDL:\n"
                 f"{spanish_language_launch.stdout}\n{spanish_language_launch.stderr}"
             )
 
@@ -631,11 +625,6 @@ def main() -> int:
         ("millennium", "dos", "en",
             "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
             "Millennium 2.2", "DOS", "RECOVERED STARTUP", "MILLENNIUM DOS TITLE",
-            "RECOVERED PRESENTATION BOUNDARY",
-            {"decoded_presentation": True, "audio_observations": False, "admitted_input": True}),
-        ("millennium", "dos", "es",
-            "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4",
-            "Millennium 2.2", "DOS", "BOOTSTRAP ONLY", "MILLENNIUM DOS TITLE",
             "RECOVERED PRESENTATION BOUNDARY",
             {"decoded_presentation": True, "audio_observations": False, "admitted_input": True}),
         ("millennium", "amiga", "en",
@@ -659,9 +648,6 @@ def main() -> int:
             "BOOTSTRAP BOUNDARY",
             {"decoded_presentation": False, "audio_observations": False, "admitted_input": False}),
     )
-    if not spanish_in_corpus:
-        exact_release_contracts = tuple(contract for contract in exact_release_contracts
-            if contract[2] != "es")
     for (game, platform, language, sha256, display_game, display_platform,
             coverage, session_kind, session_boundary, capabilities) in exact_release_contracts:
         exact_launch = subprocess.run(
