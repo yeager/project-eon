@@ -38,6 +38,11 @@ never claim parity or invent behaviour that evidence does not support.
 
 - Support every recognised DOS, Amiga, and Atari ST release without silently
   substituting another platform or language.
+- The Spanish Millennium DOS edition is preservation-only and out of active
+  runtime/parity scope. Keep its scanner identity and hash-addressed
+  preservation records distinct, but do not prioritize new execution,
+  launcher, rendering, localization, or gameplay work for it, and never use
+  English media or observations as a substitute.
 - The SDL3 app must start from CLI and the card menu. Original mode uses
   recovered pixels and is the preservation contract. Modern mode may add
   explicitly labelled opt-in graphics (including regenerated or upscaled
