@@ -179,9 +179,10 @@ def main() -> int:
             "--data-dir did not inspect the supplied original media:\n"
             f"{data_dir_inspection.stderr}"
         )
-    # This all-platform test intentionally requires the complete canonical
-    # archive corpus. An installed direct-media set has a different identity
-    # shape and belongs to cli_direct_directory_test.py, not this test.
+    # This all-platform test requires the in-scope five-release archive
+    # corpus. The recognised Spanish Millennium DOS archive remains an
+    # optional preservation target: when supplied it is tested separately,
+    # but its absence must not block the primary project corpus.
     corpus_inspection = subprocess.run(
         (str(executable), "--data", str(data_directory), "--inspect-json"),
         env=environment, check=False, capture_output=True, text=True,
@@ -192,7 +193,6 @@ def main() -> int:
         raise SystemExit(f"archive-corpus preflight did not emit JSON: {error}") from error
     expected_corpus_releases = {
         ("Millennium 2.2", "DOS", "en"),
-        ("Millennium 2.2", "DOS", "es"),
         ("Millennium 2.2", "Amiga", "en"),
         ("Millennium 2.2", "Atari ST", "en"),
         ("Deuteros", "Amiga", "en"),
@@ -202,25 +202,30 @@ def main() -> int:
         (release.get("game"), release.get("platform"), release.get("language"))
         for release in corpus_payload.get("releases", [])
     }
+    optional_spanish_release = ("Millennium 2.2", "DOS", "es")
+    spanish_in_corpus = optional_spanish_release in observed_corpus_releases
     if (corpus_inspection.returncode != 0
             or corpus_payload.get("schema") != "project-eon.inspect/v1"
-            or observed_corpus_releases != expected_corpus_releases):
+            or not expected_corpus_releases <= observed_corpus_releases
+            or observed_corpus_releases - expected_corpus_releases - {optional_spanish_release}):
         raise SystemExit(
-            "EON_REAL_DATA_DIR requires the complete six-release canonical archive corpus; "
+            "EON_REAL_DATA_DIR requires the complete five-release in-scope archive corpus; "
             "use EON_DIRECT_DATA_DIR for recognised installed direct media.\n"
             f"expected {sorted(expected_corpus_releases)}, got {sorted(observed_corpus_releases)}"
         )
-    # Both hash-recognised DOS editions expose their own immutable 2200AD4.BIN
-    # topology and original-text provenance. The report must not omit Spanish
-    # diagnostics or silently reuse the English offsets/hashes.
-    required_static_data_reports = (
+    # English DOS is required. When the out-of-scope Spanish preservation
+    # archive is supplied, retain its separate provenance checks too.
+    required_static_data_reports = [
         "2200AD4.BIN static text: 435 original pointers to 434 raw records; source SHA-256 "
         "1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d",
+        "Control-text provenance: pointers 0x12a7/0x12ac",
+    ]
+    if spanish_in_corpus:
+        required_static_data_reports.extend((
         "Spanish 2200AD4.BIN static text: 435 original pointers to 434 raw records; source SHA-256 "
         "8865ba3c9e6ed535c7f9a97a725629d850bc1a765666d40db6a1b81e3e181e31",
-        "Control-text provenance: pointers 0x12a7/0x12ac",
         "Spanish control-text provenance: pointers 0x1351/0x1359",
-    )
+        ))
     if any(report not in data_dir_inspection.stdout for report in required_static_data_reports):
         raise SystemExit(
             "DOS static-data inspection did not retain distinct English/Spanish provenance:\n"
@@ -236,7 +241,7 @@ def main() -> int:
             "--modern-pack", "pack.eonmodern"),
         env=environment, check=False, capture_output=True, text=True,
     )
-    if (cross_edition_pack.returncode != 2
+    if spanish_in_corpus and (cross_edition_pack.returncode != 2
             or "no cross-edition art fallback is permitted" not in cross_edition_pack.stderr):
         raise SystemExit(
             "Spanish media selection did not reject an English-only Modern pack:\n"
@@ -264,12 +269,13 @@ def main() -> int:
         raise SystemExit(f"--inspect-json did not emit JSON: {error}") from error
     expected_json_coverage = {
         ("Millennium 2.2", "DOS", "en"): "RECOVERED STARTUP",
-        ("Millennium 2.2", "DOS", "es"): "BOOTSTRAP ONLY",
         ("Millennium 2.2", "Amiga", "en"): "BOOTSTRAP ONLY",
         ("Millennium 2.2", "Atari ST", "en"): "BOOTSTRAP ONLY",
         ("Deuteros", "Amiga", "en"): "RECOVERED OPENING",
         ("Deuteros", "Atari ST", "en"): "BOOTSTRAP ONLY",
     }
+    if spanish_in_corpus:
+        expected_json_coverage[("Millennium 2.2", "DOS", "es")] = "BOOTSTRAP ONLY"
     reported_json_coverage = {
         (release["game"], release["platform"], release["language"]): release["coverage"]
         for release in inspect_payload.get("releases", [])
@@ -590,30 +596,28 @@ def main() -> int:
             f"{atari_runtime_diagnostics.stdout}\n{atari_runtime_diagnostics.stderr}"
         )
 
-    # An explicit original-language selection narrows the release universe
-    # before choosing a default outer hash.  Spanish is unique in this real
-    # data set even though English remains the no-language default, so it
-    # must start without an unnecessary hash flag and without selecting its
-    # English sibling first.
-    spanish_language_launch = subprocess.run(
-        (str(executable), "--data", str(data_directory), "--game", "millennium",
-            "--platform", "dos", "--release-language", "es", "--launch-check-json"),
-        env=environment, check=False, capture_output=True, text=True,
-    )
-    try:
-        spanish_language_payload = json.loads(spanish_language_launch.stdout)
-    except json.JSONDecodeError as error:
-        raise SystemExit(
-            f"Spanish language-scoped launch check did not emit JSON: {error}"
-        ) from error
-    if (spanish_language_launch.returncode != 0
-            or spanish_language_payload.get("release", {}).get("language") != "es"
-            or spanish_language_payload.get("release", {}).get("sha256")
-                != "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4"):
-        raise SystemExit(
-            "an explicit Spanish original-language selection did not resolve its unique release:\n"
-            f"{spanish_language_launch.stdout}\n{spanish_language_launch.stderr}"
+    # Spanish has its own optional-preservation checks when its archive is
+    # available; the in-scope corpus must remain independently runnable.
+    if spanish_in_corpus:
+        spanish_language_launch = subprocess.run(
+            (str(executable), "--data", str(data_directory), "--game", "millennium",
+                "--platform", "dos", "--release-language", "es", "--launch-check-json"),
+            env=environment, check=False, capture_output=True, text=True,
         )
+        try:
+            spanish_language_payload = json.loads(spanish_language_launch.stdout)
+        except json.JSONDecodeError as error:
+            raise SystemExit(
+                f"Spanish language-scoped launch check did not emit JSON: {error}"
+            ) from error
+        if (spanish_language_launch.returncode != 0
+                or spanish_language_payload.get("release", {}).get("language") != "es"
+                or spanish_language_payload.get("release", {}).get("sha256")
+                    != "b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4"):
+            raise SystemExit(
+                "an explicit Spanish original-language selection did not resolve its unique release:\n"
+                f"{spanish_language_launch.stdout}\n{spanish_language_launch.stderr}"
+            )
 
     # A platform card is not itself a release identity.  Exercise every
     # recognised archive through the directory scanner with both immutable
@@ -655,6 +659,9 @@ def main() -> int:
             "BOOTSTRAP BOUNDARY",
             {"decoded_presentation": False, "audio_observations": False, "admitted_input": False}),
     )
+    if not spanish_in_corpus:
+        exact_release_contracts = tuple(contract for contract in exact_release_contracts
+            if contract[2] != "es")
     for (game, platform, language, sha256, display_game, display_platform,
             coverage, session_kind, session_boundary, capabilities) in exact_release_contracts:
         exact_launch = subprocess.run(
@@ -812,7 +819,7 @@ def main() -> int:
             "--launch-check-json"),
         env=environment, check=False, capture_output=True, text=True,
     )
-    if (crossed_identity.returncode != 4 or crossed_identity.stdout
+    if spanish_in_corpus and (crossed_identity.returncode != 4 or crossed_identity.stdout
             or "one exact verified original release" not in crossed_identity.stderr
             or "SDL_Init" in crossed_identity.stderr):
         raise SystemExit(
@@ -842,19 +849,21 @@ def main() -> int:
     }
     expected_reported_releases = {
         "Millennium 2.2 / DOS / en",
-        "Millennium 2.2 / DOS / es",
         "Millennium 2.2 / Amiga / en",
         "Millennium 2.2 / Atari ST / en",
         "Deuteros / Amiga / en",
         "Deuteros / Atari ST / en",
     }
+    if spanish_in_corpus:
+        expected_reported_releases.add("Millennium 2.2 / DOS / es")
     if reported_releases != expected_reported_releases:
         raise SystemExit(
             "full --inspect report did not cover exactly the supported releases:\n"
             f"expected {sorted(expected_reported_releases)}, got {sorted(reported_releases)}"
         )
     expected_platform_admission = {
-        "PLATFORM ADMISSION  Millennium 2.2 / DOS / READY / RECOVERED STARTUP / 2 verified original languages; English default",
+        "PLATFORM ADMISSION  Millennium 2.2 / DOS / READY / RECOVERED STARTUP / "
+        f"{2 if spanish_in_corpus else 1} verified original languages; English default",
         "PLATFORM ADMISSION  Millennium 2.2 / Amiga / READY / BOOTSTRAP ONLY / 1 verified original language",
         "PLATFORM ADMISSION  Millennium 2.2 / Atari ST / READY / BOOTSTRAP ONLY / 1 verified original language",
         "PLATFORM ADMISSION  Deuteros / Amiga / READY / RECOVERED OPENING / 1 verified original language",
@@ -894,7 +903,7 @@ def main() -> int:
     )
     spanish_lines = [line for line in spanish_inspection.stdout.splitlines()
         if line.startswith("VERIFIED  ")]
-    if (spanish_inspection.returncode != 0
+    if spanish_in_corpus and (spanish_inspection.returncode != 0
             or spanish_lines != ["VERIFIED  Millennium 2.2 / DOS / es"]):
         raise SystemExit(
             "release-language inspection did not select exactly the Spanish original:\n"
@@ -1675,12 +1684,13 @@ def main() -> int:
         ))
     expected_releases = {
         ("millennium", "dos", "en"),
-        ("millennium", "dos", "es"),
         ("millennium", "amiga", "en"),
         ("millennium", "atari-st", "en"),
         ("deuteros", "amiga", "en"),
         ("deuteros", "atari-st", "en"),
     }
+    if spanish_in_corpus:
+        expected_releases.add(("millennium", "dos", "es"))
     if detected_releases != expected_releases:
         raise SystemExit(
             "Did not find every supplied supported release as a direct --data input:\n"

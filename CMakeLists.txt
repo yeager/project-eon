@@ -356,11 +356,11 @@ if(BUILD_TESTING)
     # tests and is never copied into the build tree or a package.
     set(EON_REPLAY_FIXTURE_DIR "" CACHE PATH
         "Absolute external Project Eon replay-fixture directory to verify with CTest")
-    # This corpus test deliberately requires every canonical archive-layout
-    # release, including both Millennium DOS languages. Installed direct data
-    # is a distinct input shape with its own focused test below.
+    # This corpus test deliberately requires every in-scope archive-layout
+    # release. The Spanish Millennium DOS archive remains optional
+    # preservation media; installed direct data is a distinct input shape.
     set(EON_REAL_DATA_DIR "" CACHE PATH
-        "Absolute original-media root containing the complete six-release canonical archive corpus")
+        "Absolute original-media root containing the complete five-release in-scope archive corpus")
     set(EON_DIRECT_DATA_DIR "" CACHE PATH
         "Absolute original-media root containing recognised installed direct media")
     add_executable(eon-native-tests
@@ -466,7 +466,7 @@ if(BUILD_TESTING)
                 --fixture "${EON_REPLAY_FIXTURE_DIR}")
     endif()
     # Commercial game data is never available in CI. A developer build that
-    # supplies the complete canonical archive corpus receives a separate
+    # supplies the complete in-scope archive corpus receives a separate
     # black-box launch test for every supported platform path. Do not point
     # this at an installed direct-data directory: that has a focused test.
     if(EON_REAL_DATA_DIR)

@@ -132,9 +132,10 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-`EON_REAL_DATA_DIR` is optional and, when set, must contain the complete six
-canonical archive releases (both Millennium DOS languages plus every supported
-platform). `EON_DIRECT_DATA_DIR` is optional and independently tests installed
+`EON_REAL_DATA_DIR` is optional and, when set, must contain the complete five-
+release in-scope archive corpus (English Millennium DOS plus every supported
+platform). The recognised Spanish Millennium DOS archive is preservation-only
+and optional. `EON_DIRECT_DATA_DIR` is optional and independently tests installed
 direct media such as `~/.projecteon`; it must not be substituted for the full
 archive corpus. Both test inputs are read in place.
 
