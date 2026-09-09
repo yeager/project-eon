@@ -3991,9 +3991,7 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_title_controller_pointer_seed(
     try{if(!deuteros_amiga_->advance_title_controller_pointer_seed()){result.error="Deuteros controller seed did not match the next owned boundary";return result;}result.accepted=true;}catch(const std::exception&e){result.error=std::string("Deuteros controller seed rejected: ")+e.what();}return result;
 }
 EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_service_batch_graphics_return,observe_title_service_batch_graphics_return,DeuterosAmigaObservedGraphicsVectorReturn)
-EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_service_batch_runtime_word,observe_title_service_batch_runtime_word,DeuterosAmigaObservedServiceWordRead)
 EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_graphics_service_first_return,observe_title_graphics_service_first_return,DeuterosAmigaObservedGraphicsVectorReturn)
-EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_graphics_service_second_return,observe_title_graphics_service_second_return,DeuterosAmigaObservedGraphicsVectorReturn)
 EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_graphics_service_third_return,observe_title_graphics_service_third_return,DeuterosAmigaObservedGraphicsVectorReturn)
 EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_first_graphics_return,observe_title_tail_first_graphics_return,DeuterosAmigaObservedGraphicsVectorReturn)
 EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_copy_words,observe_title_tail_copy_words,DeuterosAmigaObservedTailCopyWords)
@@ -4006,6 +4004,79 @@ EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_source_table,observ
 EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_exec_return,observe_title_tail_exec_return,DeuterosAmigaObservedTailExecReturn)
 EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_load_service_return,observe_title_load_service_return,DeuterosAmigaObservedLocalCallReturn)
 #undef EON_DEUTEROS_BATCH_FORWARD
+
+// These two observations expose values which the original code immediately
+// commits into its own address space.  Keep the observation itself external,
+// but commit only those proven local effects to Eon's native memory.  Planning
+// against a copied session preserves atomicity: a rejected owned-memory batch
+// cannot consume an emulator observation or advance the recovered state.
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_service_batch_runtime_word(
+    const DeuterosAmigaObservedServiceWordRead observation) {
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_title_stage
+        || !deuteros_amiga_ || !native_runtime_memory_ || !deuteros_amiga_title_fifth_service_plan_) {
+        result.error = "Deuteros service word requires the active fifth-service boundary";
+        return result;
+    }
+    try {
+        auto pending = *deuteros_amiga_->title_stage_session();
+        const auto plan = pending.observe_service_batch_runtime_word(observation);
+        if (!plan) { result.error = "Deuteros service word did not match the next owned boundary"; return result; }
+        auto memory = *native_runtime_memory_;
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-title-service-word-" + std::to_string(observation.trace_sequence), true,
+            {{1, {NativeRuntimeAddressSpace::linear, std::nullopt, plan->destination_address},
+                MemoryTransferElementWidth::word, NativeRuntimeByteOrder::big_endian,
+                plan->destination_value}}};
+        const auto applied = memory.apply(batch);
+        if (!applied.accepted) { result.error = "Runtime-memory application rejected: " + applied.error; return result; }
+        if (!deuteros_amiga_->observe_title_service_batch_runtime_word(observation)) {
+            result.error = "Deuteros service word disappeared before commit";
+            return result;
+        }
+        *native_runtime_memory_ = std::move(memory);
+        result.accepted = true;
+    } catch (const std::exception& error) { result.error = std::string("Deuteros service word rejected: ") + error.what(); }
+    return result;
+}
+
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_graphics_service_second_return(
+    const DeuterosAmigaObservedGraphicsVectorReturn observation) {
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_title_stage
+        || !deuteros_amiga_ || !native_runtime_memory_ || !deuteros_amiga_title_fifth_service_plan_) {
+        result.error = "Deuteros second graphics-service return requires the active fifth-service boundary";
+        return result;
+    }
+    try {
+        auto pending = *deuteros_amiga_->title_stage_session();
+        const auto plan = pending.observe_graphics_service_second_return(observation);
+        if (!plan) { result.error = "Deuteros second graphics-service return did not match the next owned boundary"; return result; }
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-title-graphics-service-second-" + std::to_string(observation.trace_sequence), true, {
+            {1, {NativeRuntimeAddressSpace::linear, std::nullopt, plan->result_byte_destination},
+                MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian, plan->result_low_byte},
+            {2, {NativeRuntimeAddressSpace::linear, std::nullopt, plan->pointer_destination},
+                MemoryTransferElementWidth::longword, NativeRuntimeByteOrder::big_endian, plan->pointer_value},
+            {3, {NativeRuntimeAddressSpace::linear, std::nullopt, plan->descriptor_address + plan->descriptor_offsets[0]},
+                MemoryTransferElementWidth::word, NativeRuntimeByteOrder::big_endian, plan->descriptor_values[0]},
+            {4, {NativeRuntimeAddressSpace::linear, std::nullopt, plan->descriptor_address + plan->descriptor_offsets[1]},
+                MemoryTransferElementWidth::word, NativeRuntimeByteOrder::big_endian, plan->descriptor_values[1]},
+            {5, {NativeRuntimeAddressSpace::linear, std::nullopt, plan->descriptor_address + plan->descriptor_offsets[2]},
+                MemoryTransferElementWidth::word, NativeRuntimeByteOrder::big_endian, plan->descriptor_values[2]},
+        }};
+        auto memory = *native_runtime_memory_;
+        const auto applied = memory.apply(batch);
+        if (!applied.accepted) { result.error = "Runtime-memory application rejected: " + applied.error; return result; }
+        if (!deuteros_amiga_->observe_title_graphics_service_second_return(observation)) {
+            result.error = "Deuteros second graphics-service return disappeared before commit";
+            return result;
+        }
+        *native_runtime_memory_ = std::move(memory);
+        result.accepted = true;
+    } catch (const std::exception& error) { result.error = std::string("Deuteros second graphics-service return rejected: ") + error.what(); }
+    return result;
+}
 
 DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_load_selector(const DeuterosAmigaObservedLoadSelector observation){
     DeuterosAmigaTitleDependencyObservationResult result;

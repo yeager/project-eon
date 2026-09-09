@@ -3039,7 +3039,10 @@ runtime word value is fabricated.
 
 The `$2052a` boundary now admits only a strictly later 16-bit observation from
 exact source `$20276`. That value is retained unchanged for the original
-`$2027c` destination; the hash-proven routine then reaches RTS `$20534`.
+`$2027c` destination and atomically published into Eon's private native-memory
+image; the hash-proven routine then reaches RTS `$20534`. A failed memory
+transaction cannot consume this observation. The value is still not assigned a
+timer, device, or gameplay meaning.
 The enclosing batch advances through direct call `$40400 -> $1f37a` and stops
 at `$1f37a` before its first unresolved nested call to `$20094`. The observed
 word is not assigned a timer, device, or gameplay meaning, and `$20094` is not
@@ -3056,9 +3059,11 @@ at `$200b0` before vector `-$198`; no graphics service effect is inferred.
 The second active `$20094` boundary requires the same `$12fec` library-base
 identity, a strictly later observation of call `$200b0`, vector `-$198`, and
 return `$200b4`. D0/SR remain raw; only D0's instruction-defined low byte is
-retained for sparse destination `$20092`. The hash-proven local continuation
+committed to private native-memory destination `$20092`. The hash-proven local continuation
 records literal pointer `$1ffe6` at `$2008e`, descriptor `$1ffda` words
-`10/10/12` at offsets `6/8/4`, and the exact A0/A1/A2 inputs for the next call.
+`10/10/12` at offsets `6/8/4`; those four literal local effects are committed
+with the result byte as one atomic private-memory transaction. The exact
+A0/A1/A2 inputs for the next call remain metadata only.
 It stops at `$200f4` before graphics vector `-$1a4`, without applying any
 graphics effect or dereferencing the destination pointer.
 
@@ -6987,7 +6992,10 @@ It clears D0 and calls graphics-library vectors `-$19e`, `-$198`, and
 `$000a/$000a/$000c` at offsets `$0006/$0008/$0004` from `$1ffda`, before RTS
 at `$200f8`. `DeuterosAmigaTitlePostExecThirdServiceProfile` hash-locks all
 three spans and these operands. It does not call any vector, supply a vector
-result, write any title-stage cell, or execute the tail jump. Reaching this
+result, or execute the tail jump. When the corresponding typed observations are
+admitted, Eon writes only the listed instruction-defined local cells to its
+private native-memory image atomically; it never writes original media or
+infers a graphics-library side effect. Reaching this
 third edge requires the earlier graphics vector, state-init routine, and all
 prior original calls to return.
 

@@ -5690,8 +5690,29 @@ int main() {
             assert(opening_controller.advance_deuteros_amiga_title_controller_pointer_seed().accepted);
             assert(opening_controller.observe_deuteros_amiga_title_service_batch_graphics_return({24,0x12fec,0x00abcdef,0x403e0,-0xc0,0x403e4,0x55667788,0x2004}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_service_batch_runtime_word({25,0x2052a,0x20276,0x3456}).accepted);
+            const auto service_word_memory=opening_controller.native_runtime_memory_checkpoint();
+            assert(service_word_memory);
+            const auto find_runtime_byte=[](const eon::NativeRuntimeMemoryCheckpoint& memory,
+                const std::uint64_t address)->std::optional<std::uint8_t>{
+                const auto found=std::find_if(memory.initialized_bytes.begin(),memory.initialized_bytes.end(),
+                    [address](const auto& cell){return cell.location.address_space==eon::NativeRuntimeAddressSpace::linear
+                        && !cell.location.segment && cell.location.offset==address;});
+                return found==memory.initialized_bytes.end()?std::nullopt
+                    :std::optional<std::uint8_t>{found->value};
+            };
+            assert(find_runtime_byte(*service_word_memory,0x2027c)==0x34);
+            assert(find_runtime_byte(*service_word_memory,0x2027d)==0x56);
             assert(opening_controller.observe_deuteros_amiga_title_graphics_service_first_return({26,0x12fec,0x00abcdef,0x2009c,-0x19e,0x200a0,0x01020304,0x2000}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_graphics_service_second_return({27,0x12fec,0x00abcdef,0x200b0,-0x198,0x200b4,0xa1b2c3d4,0x2004}).accepted);
+            const auto second_graphics_memory=opening_controller.native_runtime_memory_checkpoint();
+            assert(second_graphics_memory);
+            assert(find_runtime_byte(*second_graphics_memory,0x20092)==0xd4);
+            assert(find_runtime_byte(*second_graphics_memory,0x1ffe6)==0x00);
+            assert(find_runtime_byte(*second_graphics_memory,0x1ffe7)==0x02);
+            assert(find_runtime_byte(*second_graphics_memory,0x1ffe8)==0x00);
+            assert(find_runtime_byte(*second_graphics_memory,0x1ffe9)==0x8e);
+            assert(find_runtime_byte(*second_graphics_memory,0x1ffde)==0x00);
+            assert(find_runtime_byte(*second_graphics_memory,0x1ffdf)==0x0a);
             assert(opening_controller.observe_deuteros_amiga_title_graphics_service_third_return({28,0x12fec,0x00abcdef,0x200f4,-0x1a4,0x200f8,0x11223344,0x2008}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_tail_first_graphics_return({29,0x12fec,0x00abcdef,0x20112,-0x1a4,0x20116,0x55667788,0x2010}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_tail_copy_words({30,0x201e4,0x1f372,{{0x1111,0x2222,0x3333,0x4444}}}).accepted);
@@ -5706,7 +5727,7 @@ int main() {
             assert(opening_controller.observe_deuteros_amiga_title_load_service_return({38,0x389f4,0x208c0,0x389fa,0x12345678,0x2040}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_load_selector({39,0x389fa,0x12fd8,3}).accepted);
             const auto before_copy_memory=opening_controller.native_runtime_memory_diagnostics();
-            assert(before_copy_memory && before_copy_memory->initialized_byte_count==display_setup_memory->initialized_bytes.size() && before_copy_memory->applied_batch_count==5);
+            assert(before_copy_memory && before_copy_memory->initialized_byte_count==display_setup_memory->initialized_bytes.size()+13 && before_copy_memory->applied_batch_count==7);
             std::uint32_t runtime_copied=0;
             std::uint64_t runtime_copy_sequence=40;
             while(runtime_copied<0xa20){const auto count=std::min<std::uint32_t>(256,0xa20-runtime_copied);std::vector<std::uint32_t> values;values.reserve(count);for(std::uint32_t i=0;i<count;++i)values.push_back(0x80000000U+runtime_copied+i);assert(opening_controller.observe_deuteros_amiga_title_load_copy_chunk({runtime_copy_sequence++,0x38a28,0x29540+runtime_copied*4U,0x1c482+runtime_copied*4U,runtime_copied,values}).accepted);runtime_copied+=count;}
