@@ -124,15 +124,33 @@ def iter_candidates(roots: list[Path], max_files: int):
                 yield path, info.st_size
 
 
-def locate(kind: str, roots: list[Path], protocol: str | None, max_files: int) -> list[dict[str, object]]:
+def locate_with_diagnostics(kind: str, roots: list[Path], protocol: str | None,
+                            max_files: int) -> tuple[list[dict[str, object]], dict[str, int]]:
+    """Locate reviewed recorders while retaining only aggregate scan facts.
+
+    The diagnostic counts explain an empty lookup without exposing arbitrary
+    executable paths, bytes, or digests from an external developer machine.
+    They are operational recovery facts, never capture evidence.
+    """
     expected = reviewed_hashes(kind, protocol)
     matches: list[dict[str, object]] = []
+    hashed_candidates = 0
     for path, size in iter_candidates(roots, max_files):
+        hashed_candidates += 1
         digest = sha256_file(path)
         for name, reviewed_digest in expected.items():
             if digest == reviewed_digest:
                 matches.append({"protocol": name, "sha256": digest, "bytes": size, "path": str(path)})
-    return matches
+    return matches, {
+        "roots": len(roots),
+        "hashes_checked": hashed_candidates,
+        "reviewed_matches": len(matches),
+    }
+
+
+def locate(kind: str, roots: list[Path], protocol: str | None, max_files: int) -> list[dict[str, object]]:
+    """Compatibility wrapper for callers that require match records only."""
+    return locate_with_diagnostics(kind, roots, protocol, max_files)[0]
 
 
 def parse_arguments(argv: list[str]) -> argparse.Namespace:
@@ -144,6 +162,8 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--max-files", type=int, default=DEFAULT_MAX_FILES,
                         help=f"Maximum executable candidates to hash (1-{DEFAULT_MAX_FILES}; default: {DEFAULT_MAX_FILES})")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable match records")
+    parser.add_argument("--diagnose", action="store_true",
+                        help="Report aggregate scan counts; never exposes unmatched paths or digests")
     return parser.parse_args(argv)
 
 
@@ -153,18 +173,26 @@ def main(argv: list[str] | None = None) -> int:
         if not 1 <= args.max_files <= DEFAULT_MAX_FILES:
             raise LocatorError(f"max-files must be between 1 and {DEFAULT_MAX_FILES}")
         roots = [require_root(path) for path in args.root]
-        matches = locate(args.kind, roots, args.recorder_protocol, args.max_files)
+        matches, diagnostics = locate_with_diagnostics(
+            args.kind, roots, args.recorder_protocol, args.max_files)
     except LocatorError as error:
         print(f"RECORDER LOCATOR REJECTED  {error}", file=sys.stderr)
         return 2
     if args.json:
-        print(json.dumps({"schema": "project-eon.recorder-locator/v1", "kind": args.kind,
-                          "matches": matches}, sort_keys=True))
+        payload: dict[str, object] = {"schema": "project-eon.recorder-locator/v1",
+                                      "kind": args.kind, "matches": matches}
+        if args.diagnose:
+            payload["diagnostics"] = diagnostics
+        print(json.dumps(payload, sort_keys=True))
     elif matches:
         for match in matches:
             print(f"REVIEWED RECORDER FOUND  {match['protocol']}  {match['sha256']}  {match['path']}")
     else:
         print("REVIEWED RECORDER NOT FOUND  no supplied executable matched a pinned recorder hash")
+        if args.diagnose:
+            print("RECORDER LOCATOR DIAGNOSTICS  "
+                  f"roots={diagnostics['roots']} hashes-checked={diagnostics['hashes_checked']} "
+                  f"reviewed-matches={diagnostics['reviewed_matches']}")
     return 0
 
 

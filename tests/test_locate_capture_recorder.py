@@ -50,6 +50,28 @@ class LocateCaptureRecorderTests(unittest.TestCase):
             finally:
                 TOOL.reviewed_hashes = original
 
+    def test_diagnostics_retain_only_aggregate_candidate_counts(self) -> None:
+        with temporary_directory() as temporary:
+            root = Path(temporary)
+            candidate = root / ("candidate.exe" if os.name == "nt" else "candidate")
+            candidate.write_bytes(b"unreviewed recorder candidate")
+            candidate.chmod(0o700)
+            original = TOOL.reviewed_hashes
+            try:
+                TOOL.reviewed_hashes = lambda kind, protocol: {"fixture": "0" * 64}
+                matches, diagnostics = TOOL.locate_with_diagnostics(
+                    "millennium-dos", [root], None, 2)
+            finally:
+                TOOL.reviewed_hashes = original
+            self.assertEqual(matches, [])
+            self.assertEqual(diagnostics, {
+                "roots": 1,
+                "hashes_checked": 1,
+                "reviewed_matches": 0,
+            })
+            self.assertNotIn(str(candidate), repr(diagnostics))
+            self.assertNotIn(hashlib.sha256(candidate.read_bytes()).hexdigest(), repr(diagnostics))
+
     def test_windows_executable_candidates_follow_pathext_not_posix_mode_bits(self) -> None:
         info = os.stat(__file__)
         non_executable_mode = os.stat_result((stat.S_IFREG | 0o600, *info[1:]))
