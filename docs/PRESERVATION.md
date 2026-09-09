@@ -7067,11 +7067,12 @@ address `$12ff4`, then stops before the first runtime longword read at
 
 The `$404da` boundary now accepts exactly two ordered longword observations
 from `$12ff4` and `$12ff8`. It records their instruction-defined copies to
-`$37ef2` and `$37ef6`, and atomically commits only those two longwords to
+`$37ef2` and `$37ef6`, and atomically commits them to
 Eon's private native-memory image. It then follows JSR `$404ea` to the hash-locked `$204c8`
 wrapper. That local code writes byte `$02`/`$c4` at descriptor `$204aa`
 offsets 8/9, longwords `$204c0`/`$202ca` at offsets `$0e`/`$12`, and sets D0
-to five. It reads Exec base from address `$4` and stops before vector `-$a8`
+to five. Those four descriptor writes join the two table copies in the same
+atomic private-memory transaction. It reads Exec base from address `$4` and stops before vector `-$a8`
 at `$204f4`.
 
 A separate typed Exec observation must provide a nonzero base, exact call and

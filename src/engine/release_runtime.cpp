@@ -4157,6 +4157,14 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_tail_source_table(
                 MemoryTransferElementWidth::longword, NativeRuntimeByteOrder::big_endian, plan->destination_values[0]},
             {2, {NativeRuntimeAddressSpace::linear, std::nullopt, plan->destination_addresses[1]},
                 MemoryTransferElementWidth::longword, NativeRuntimeByteOrder::big_endian, plan->destination_values[1]},
+            {3, {NativeRuntimeAddressSpace::linear, std::nullopt, plan->descriptor_address + plan->descriptor_offsets[0]},
+                MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian, plan->descriptor_values[0]},
+            {4, {NativeRuntimeAddressSpace::linear, std::nullopt, plan->descriptor_address + plan->descriptor_offsets[1]},
+                MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian, plan->descriptor_values[1]},
+            {5, {NativeRuntimeAddressSpace::linear, std::nullopt, plan->descriptor_address + plan->descriptor_offsets[2]},
+                MemoryTransferElementWidth::longword, NativeRuntimeByteOrder::big_endian, plan->descriptor_values[2]},
+            {6, {NativeRuntimeAddressSpace::linear, std::nullopt, plan->descriptor_address + plan->descriptor_offsets[3]},
+                MemoryTransferElementWidth::longword, NativeRuntimeByteOrder::big_endian, plan->descriptor_values[3]},
         }};
         auto memory = *native_runtime_memory_;
         const auto applied = memory.apply(batch);

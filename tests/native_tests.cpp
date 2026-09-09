@@ -5746,12 +5746,22 @@ int main() {
                 && find_runtime_byte(*source_table_memory,0x37ef6)==0x55
                 && find_runtime_byte(*source_table_memory,0x37ef7)==0x66
                 && find_runtime_byte(*source_table_memory,0x37ef8)==0x77
-                && find_runtime_byte(*source_table_memory,0x37ef9)==0x88);
+                && find_runtime_byte(*source_table_memory,0x37ef9)==0x88
+                && find_runtime_byte(*source_table_memory,0x204b2)==0x02
+                && find_runtime_byte(*source_table_memory,0x204b3)==0xc4
+                && find_runtime_byte(*source_table_memory,0x204b8)==0x00
+                && find_runtime_byte(*source_table_memory,0x204b9)==0x02
+                && find_runtime_byte(*source_table_memory,0x204ba)==0x04
+                && find_runtime_byte(*source_table_memory,0x204bb)==0xc0
+                && find_runtime_byte(*source_table_memory,0x204bc)==0x00
+                && find_runtime_byte(*source_table_memory,0x204bd)==0x02
+                && find_runtime_byte(*source_table_memory,0x204be)==0x02
+                && find_runtime_byte(*source_table_memory,0x204bf)==0xca);
             assert(opening_controller.observe_deuteros_amiga_title_tail_exec_return({37,4,0x00fedcba,0x204f4,-0xa8,0x204f8,0xaabbccdd,0x2030}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_load_service_return({38,0x389f4,0x208c0,0x389fa,0x12345678,0x2040}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_load_selector({39,0x389fa,0x12fd8,3}).accepted);
             const auto before_copy_memory=opening_controller.native_runtime_memory_diagnostics();
-            assert(before_copy_memory && before_copy_memory->initialized_byte_count==display_setup_memory->initialized_bytes.size()+37 && before_copy_memory->applied_batch_count==11);
+            assert(before_copy_memory && before_copy_memory->initialized_byte_count==display_setup_memory->initialized_bytes.size()+47 && before_copy_memory->applied_batch_count==11);
             std::uint32_t runtime_copied=0;
             std::uint64_t runtime_copy_sequence=40;
             while(runtime_copied<0xa20){const auto count=std::min<std::uint32_t>(256,0xa20-runtime_copied);std::vector<std::uint32_t> values;values.reserve(count);for(std::uint32_t i=0;i<count;++i)values.push_back(0x80000000U+runtime_copied+i);assert(opening_controller.observe_deuteros_amiga_title_load_copy_chunk({runtime_copy_sequence++,0x38a28,0x29540+runtime_copied*4U,0x1c482+runtime_copied*4U,runtime_copied,values}).accepted);runtime_copied+=count;}
