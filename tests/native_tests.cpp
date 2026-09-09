@@ -5738,11 +5738,20 @@ int main() {
             assert(opening_controller.observe_deuteros_amiga_title_tail_repeated_graphics_return({34,0x12fec,0x00abcdef,0x201b6,-0x1aa,0x201ba,0x10203040,0x2024}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_tail_repeated_wrapper_graphics_return({35,0x12fec,0x00abcdef,0x200f4,-0x1a4,0x200f8,0x50607080,0x2028}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_tail_source_table({36,0x404da,{{0x12ff4,0x12ff8}},{{0x11223344,0x55667788}}}).accepted);
+            const auto source_table_memory=opening_controller.native_runtime_memory_checkpoint();
+            assert(source_table_memory && find_runtime_byte(*source_table_memory,0x37ef2)==0x11
+                && find_runtime_byte(*source_table_memory,0x37ef3)==0x22
+                && find_runtime_byte(*source_table_memory,0x37ef4)==0x33
+                && find_runtime_byte(*source_table_memory,0x37ef5)==0x44
+                && find_runtime_byte(*source_table_memory,0x37ef6)==0x55
+                && find_runtime_byte(*source_table_memory,0x37ef7)==0x66
+                && find_runtime_byte(*source_table_memory,0x37ef8)==0x77
+                && find_runtime_byte(*source_table_memory,0x37ef9)==0x88);
             assert(opening_controller.observe_deuteros_amiga_title_tail_exec_return({37,4,0x00fedcba,0x204f4,-0xa8,0x204f8,0xaabbccdd,0x2030}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_load_service_return({38,0x389f4,0x208c0,0x389fa,0x12345678,0x2040}).accepted);
             assert(opening_controller.observe_deuteros_amiga_title_load_selector({39,0x389fa,0x12fd8,3}).accepted);
             const auto before_copy_memory=opening_controller.native_runtime_memory_diagnostics();
-            assert(before_copy_memory && before_copy_memory->initialized_byte_count==display_setup_memory->initialized_bytes.size()+29 && before_copy_memory->applied_batch_count==10);
+            assert(before_copy_memory && before_copy_memory->initialized_byte_count==display_setup_memory->initialized_bytes.size()+37 && before_copy_memory->applied_batch_count==11);
             std::uint32_t runtime_copied=0;
             std::uint64_t runtime_copy_sequence=40;
             while(runtime_copied<0xa20){const auto count=std::min<std::uint32_t>(256,0xa20-runtime_copied);std::vector<std::uint32_t> values;values.reserve(count);for(std::uint32_t i=0;i<count;++i)values.push_back(0x80000000U+runtime_copied+i);assert(opening_controller.observe_deuteros_amiga_title_load_copy_chunk({runtime_copy_sequence++,0x38a28,0x29540+runtime_copied*4U,0x1c482+runtime_copied*4U,runtime_copied,values}).accepted);runtime_copied+=count;}

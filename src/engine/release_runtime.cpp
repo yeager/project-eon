@@ -3997,7 +3997,6 @@ EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_first_graphics_retu
 EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_second_graphics_return,observe_title_tail_second_graphics_return,DeuterosAmigaObservedGraphicsVectorReturn)
 EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_repeated_graphics_return,observe_title_tail_repeated_graphics_return,DeuterosAmigaObservedGraphicsVectorReturn)
 EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_repeated_wrapper_graphics_return,observe_title_tail_repeated_wrapper_graphics_return,DeuterosAmigaObservedGraphicsVectorReturn)
-EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_source_table,observe_title_tail_source_table,DeuterosAmigaObservedTailSourceTable)
 EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_tail_exec_return,observe_title_tail_exec_return,DeuterosAmigaObservedTailExecReturn)
 EON_DEUTEROS_BATCH_FORWARD(observe_deuteros_amiga_title_load_service_return,observe_title_load_service_return,DeuterosAmigaObservedLocalCallReturn)
 #undef EON_DEUTEROS_BATCH_FORWARD
@@ -4139,6 +4138,38 @@ DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::method(
 EON_DEUTEROS_TAIL_SELECTION(observe_deuteros_amiga_title_tail_selection_words, observe_tail_selection_words, observe_title_tail_selection_words, "tail-selection")
 EON_DEUTEROS_TAIL_SELECTION(observe_deuteros_amiga_title_tail_repeated_selection_words, observe_tail_repeated_selection_words, observe_title_tail_repeated_selection_words, "repeated-tail-selection")
 #undef EON_DEUTEROS_TAIL_SELECTION
+
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_tail_source_table(
+    const DeuterosAmigaObservedTailSourceTable observation) {
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if (!session_snapshot_ || session_snapshot_->kind != RuntimeSessionKind::deuteros_amiga_title_stage
+        || !deuteros_amiga_ || !native_runtime_memory_ || !deuteros_amiga_title_fifth_service_plan_) {
+        result.error = "Deuteros tail source table requires the active fifth-service boundary";
+        return result;
+    }
+    try {
+        auto pending = *deuteros_amiga_->title_stage_session();
+        const auto plan = pending.observe_tail_source_table(observation);
+        if (!plan) { result.error = "Deuteros tail source table did not match the next owned boundary"; return result; }
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-title-tail-source-table-" + std::to_string(observation.trace_sequence), true, {
+            {1, {NativeRuntimeAddressSpace::linear, std::nullopt, plan->destination_addresses[0]},
+                MemoryTransferElementWidth::longword, NativeRuntimeByteOrder::big_endian, plan->destination_values[0]},
+            {2, {NativeRuntimeAddressSpace::linear, std::nullopt, plan->destination_addresses[1]},
+                MemoryTransferElementWidth::longword, NativeRuntimeByteOrder::big_endian, plan->destination_values[1]},
+        }};
+        auto memory = *native_runtime_memory_;
+        const auto applied = memory.apply(batch);
+        if (!applied.accepted) { result.error = "Runtime-memory application rejected: " + applied.error; return result; }
+        if (!deuteros_amiga_->observe_title_tail_source_table(observation)) {
+            result.error = "Deuteros tail source table disappeared before commit";
+            return result;
+        }
+        *native_runtime_memory_ = std::move(memory);
+        result.accepted = true;
+    } catch (const std::exception& error) { result.error = std::string("Deuteros tail source table rejected: ") + error.what(); }
+    return result;
+}
 
 DeuterosAmigaTitleDependencyObservationResult ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_load_selector(const DeuterosAmigaObservedLoadSelector observation){
     DeuterosAmigaTitleDependencyObservationResult result;
