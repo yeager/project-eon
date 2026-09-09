@@ -256,10 +256,10 @@ Archives and disk images are read in place: Project Eon never creates the data
 directory, unpacks, copies,
 installs, modifies, or redistributes original game data.
 
-The verified Spanish Millennium DOS floppy is supported directly from its
-FAT12 image: its original `TITLE.LIB` P00 title and palette are rendered in
-place. Its executable hand-off is deliberately kept separate from the
-recovered English DOS path until that Spanish ABI has evidence.
+The verified Spanish Millennium DOS floppy is retained for preservation
+inspection only and is out of runtime scope. Project Eon can identify its
+FAT12 structure without borrowing the English DOS path, but no supported-game
+or parity claim is made for that edition.
 
 Or select a game directly from the CLI:
 
@@ -557,24 +557,16 @@ streams and CRCs, and fingerprints all 67 contained assets. The verified corpus
 contains 17 Amiga ADF images, 18 Atari ST images and both English and Spanish
 DOS data for Millennium 2.2.
 
-The Spanish Millennium floppy is now opened as a native FAT12 filesystem. Its
-39 genuine root files can be listed and read through validated cluster chains;
-integration tests lock the extracted `2200AD.EXE` and `GX.LIB` contents to
-their observed SHA-256 hashes.
+The out-of-scope Spanish Millennium floppy is opened only by the preservation
+scanner as a native FAT12 filesystem. Its 39 genuine root files can be listed
+and read through validated cluster chains; integration tests lock the
+identified `2200AD.EXE` and `GX.LIB` contents to their observed SHA-256 hashes.
 
-Its own `TITLE.LIB` is also read directly from that image: `P00` decodes as
-the original 320×200 indexed title with the Spanish release's own RGB6 DAC and
-logical translation (its final RGBA frame is separately hash-locked). The
-Spanish `2200AD4.BIN` celestial display table starts at its observed `$03db`
-offset and is exposed byte-for-byte, including `Tierra ` and `Asteroides `.
-`--verify-data millennium` reports these FAT12-derived facts without copying
-or unpacking the disk. The live original `MILL.BAT` is preserved as
-read-only launcher documentation (the `IBM`, `IBM e`, `IBM m`, `TANDY`, and
-`EGA320` choices); it does not establish gameplay controls. The
-Spanish `IBM.COM` separately provides a hash-verified static request chain for
-its own `TITLES.EXE` followed by `2200AD.EXE`. DOS call results, return values
-and both target ABIs remain unexecuted, so Project Eon does not infer a
-replacement hand-off or substitute the English state.
+Its `TITLE.LIB`, `2200AD4.BIN`, `MILL.BAT`, and `IBM.COM` remain separately
+hash-addressed preservation facts. They are not rendered, launched, localized
+as an active game edition, or used to infer a replacement hand-off. DOS call
+results, return values, and both target ABIs remain unexecuted, and no English
+state is substituted for them.
 
 The English DOS `TITLE.LIB` and `GX.LIB` are also parsed natively through their
 verified banked resource directory, exposing 38 title resources and 180
