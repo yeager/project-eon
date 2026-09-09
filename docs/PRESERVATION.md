@@ -7018,7 +7018,10 @@ The following code derives destination A0 `$1ffc8`, but its four source words
 are runtime memory reads at `$1f372..$1f379`; Eon therefore requires a second
 typed observation at the first copy instruction `$201e4`. It then records only the literal
 copy layout to `$1ffca/$1ffcc/$1ffd0/$1ffd2` and the two encoded `$ffff`
-writes to `$1ee12/$1ee10`. The next BSR at `$201fe` enters `$20118`, whose
+writes to `$1ee12/$1ee10`. Once the four observed source words are admitted,
+these six instruction-defined words are atomically committed to Eon's private
+native-memory image; neither original media nor an external graphics result is
+written. The next BSR at `$201fe` enters `$20118`, whose
 first instruction reads runtime word `$1ffc8`; execution stops there without
 inventing that value, choosing its branches, or invoking the later `-$1aa`
 graphics vector.
@@ -7028,7 +7031,8 @@ mirrored selection blocks, with exact source addresses
 `$1ffc8/$1ee10/$1ffca/$1ffcc` and
 `$1ffce/$1ee12/$1ffd0/$1ffd2`. It applies the original 16-bit wrapping add,
 signed tests and unsigned bound comparisons, then records the selected words
-back to `$1ffc8` and `$1ffce`. The graphics arguments are derived exactly as
+back to `$1ffc8` and `$1ffce`. Each admitted selection atomically commits only
+those two words to Eon's private native-memory image. The graphics arguments are derived exactly as
 `D0 = (selected_first - $10) >> 1` and
 `D1 = selected_second - 6`, with word-width wrapping. Literal A0 `$12e12`
 and A1 `$1ffda` precede the same-library `-$1aa` call at `$201b6`.
