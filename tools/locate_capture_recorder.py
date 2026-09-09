@@ -95,7 +95,8 @@ def is_executable_candidate(path: Path, info: os.stat_result) -> bool:
     return bool(info.st_mode & stat.S_IXUSR)
 
 
-def iter_candidates(roots: list[Path], max_files: int):
+def iter_candidates(roots: list[Path], max_files: int,
+                    diagnostics: dict[str, int] | None = None):
     visited = 0
     pending = list(reversed(roots))
     while pending:
@@ -120,8 +121,13 @@ def iter_candidates(roots: list[Path], max_files: int):
             visited += 1
             if visited > max_files:
                 raise LocatorError(f"search exceeded the {max_files}-file safety cap")
-            if 0 < info.st_size <= MAX_CANDIDATE_BYTES:
-                yield path, info.st_size
+            if diagnostics is not None:
+                diagnostics["executable_candidates"] += 1
+            if not 0 < info.st_size <= MAX_CANDIDATE_BYTES:
+                if diagnostics is not None:
+                    diagnostics["size_rejected_candidates"] += 1
+                continue
+            yield path, info.st_size
 
 
 def locate_with_diagnostics(kind: str, roots: list[Path], protocol: str | None,
@@ -134,18 +140,21 @@ def locate_with_diagnostics(kind: str, roots: list[Path], protocol: str | None,
     """
     expected = reviewed_hashes(kind, protocol)
     matches: list[dict[str, object]] = []
-    hashed_candidates = 0
-    for path, size in iter_candidates(roots, max_files):
-        hashed_candidates += 1
+    diagnostics = {
+        "roots": len(roots),
+        "executable_candidates": 0,
+        "size_rejected_candidates": 0,
+        "hashes_checked": 0,
+        "reviewed_matches": 0,
+    }
+    for path, size in iter_candidates(roots, max_files, diagnostics):
+        diagnostics["hashes_checked"] += 1
         digest = sha256_file(path)
         for name, reviewed_digest in expected.items():
             if digest == reviewed_digest:
                 matches.append({"protocol": name, "sha256": digest, "bytes": size, "path": str(path)})
-    return matches, {
-        "roots": len(roots),
-        "hashes_checked": hashed_candidates,
-        "reviewed_matches": len(matches),
-    }
+    diagnostics["reviewed_matches"] = len(matches)
+    return matches, diagnostics
 
 
 def locate(kind: str, roots: list[Path], protocol: str | None, max_files: int) -> list[dict[str, object]]:
@@ -192,6 +201,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.diagnose:
             print("RECORDER LOCATOR DIAGNOSTICS  "
                   f"roots={diagnostics['roots']} hashes-checked={diagnostics['hashes_checked']} "
+                  f"executables={diagnostics['executable_candidates']} "
+                  f"size-rejected={diagnostics['size_rejected_candidates']} "
                   f"reviewed-matches={diagnostics['reviewed_matches']}")
     return 0
 

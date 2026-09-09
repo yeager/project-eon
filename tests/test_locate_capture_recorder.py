@@ -56,16 +56,21 @@ class LocateCaptureRecorderTests(unittest.TestCase):
             candidate = root / ("candidate.exe" if os.name == "nt" else "candidate")
             candidate.write_bytes(b"unreviewed recorder candidate")
             candidate.chmod(0o700)
+            empty = root / ("empty.exe" if os.name == "nt" else "empty")
+            empty.write_bytes(b"")
+            empty.chmod(0o700)
             original = TOOL.reviewed_hashes
             try:
                 TOOL.reviewed_hashes = lambda kind, protocol: {"fixture": "0" * 64}
                 matches, diagnostics = TOOL.locate_with_diagnostics(
-                    "millennium-dos", [root], None, 2)
+                    "millennium-dos", [root], None, 3)
             finally:
                 TOOL.reviewed_hashes = original
             self.assertEqual(matches, [])
             self.assertEqual(diagnostics, {
                 "roots": 1,
+                "executable_candidates": 2,
+                "size_rejected_candidates": 1,
                 "hashes_checked": 1,
                 "reviewed_matches": 0,
             })
