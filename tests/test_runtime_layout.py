@@ -83,7 +83,7 @@ class RuntimeLayoutTests(unittest.TestCase):
 
     def test_windows_stage_matches_runtime_search_order_without_data_directory(self) -> None:
         self.assertIn('Copy-Item po/*.po dist/po/', WORKFLOW)
-        self.assertIn('Copy-Item assets/branding/* dist/assets/branding/', WORKFLOW)
+        self.assertIn('Copy-Item assets/branding/project-eon-logo-v2.png,assets/branding/project-eon-v2.ico,assets/branding/project-eon-v2.icns,assets/branding/README.md dist/assets/branding/', WORKFLOW)
         self.assertIn('Copy-Item $sdlTtf.FullName dist/SDL3_ttf.dll', WORKFLOW)
         self.assertIn('Source: "{#StagingDir}\\SDL3_ttf.dll"', INNO)
         self.assertIn('Source: "{#StagingDir}\\po\\*"; DestDir: "{app}\\po"', INNO)

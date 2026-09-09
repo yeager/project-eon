@@ -545,7 +545,10 @@ jobs:
           Get-ChildItem "${{ github.workspace }}/libpng-install/bin/libpng*.dll" | Copy-Item -Destination dist
           Get-ChildItem "${{ github.workspace }}/zlib-install/bin/zlib*.dll" | Copy-Item -Destination dist
           Copy-Item assets/cards/*.png dist/assets/cards/
-          Copy-Item assets/branding/* dist/assets/branding/
+          # Stage exactly the versioned branding manifest consumed by the
+          # installer. The repository retains earlier artwork for historical
+          # provenance, but it must not leak into a strict package tree.
+          Copy-Item assets/branding/project-eon-logo-v2.png,assets/branding/project-eon-v2.ico,assets/branding/project-eon-v2.icns,assets/branding/README.md dist/assets/branding/
           Copy-Item assets/fonts dist/assets/fonts -Recurse
           Copy-Item po/*.po dist/po/
           Copy-Item README.md,LICENSE dist/

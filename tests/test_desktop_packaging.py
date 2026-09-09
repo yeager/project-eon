@@ -297,7 +297,7 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn('cp assets/branding/project-eon-v2.icns "$APP/Contents/Resources/project-eon.icns"', workflow)
         self.assertIn('CFBundleIconFile', workflow)
         self.assertIn('Copy-Item assets/fonts dist/assets/fonts -Recurse', workflow)
-        self.assertIn('Copy-Item assets/branding/* dist/assets/branding/', workflow)
+        self.assertIn('Copy-Item assets/branding/project-eon-logo-v2.png,assets/branding/project-eon-v2.ico,assets/branding/project-eon-v2.icns,assets/branding/README.md dist/assets/branding/', workflow)
         self.assertIn("refusing macOS artifact with possible original game data", workflow)
         self.assertIn("macOS bundle unexpectedly inspected missing default game data", workflow)
         self.assertIn('HOME="$isolated_home" "$APP/Contents/MacOS/ProjectEon" --inspect', workflow)
