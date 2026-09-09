@@ -406,7 +406,12 @@ with the exact `-$198` return using the same observed library base; do not
 invent its D0 byte or descriptor effect.
 The formerly listed `$200f4` graphics boundary is crossed through its exact
 same-library `-$1a4` return, and the caller-connected chain now includes the
-tail, command path, and both `$41bb4` merges. From authoritative boundary
+tail, command path, and both `$41bb4` merges. The first tail chain now commits
+only hash-proven local effects to private native memory: the `$20276->$2027c`
+word, `$20094`'s status/pointer/descriptor stores, the four observed tail
+words and `$ffff` literals, both bounded selection results, and `$404da`'s
+two observed table longwords plus `$204c8`'s descriptor stores. Graphics and
+Exec vectors remain typed external boundaries; none are emulated. From authoritative boundary
 `$4051e`, the next deterministic service prefix commits seven exact effects.
 Its typed `$20e6a -> $1fb9a` return now reloads the owned selector, adds
 `$00a0`; its typed `$20e7a -> $1ff08` return then selects immutable table
