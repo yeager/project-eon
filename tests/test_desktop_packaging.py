@@ -100,7 +100,7 @@ class DesktopPackagingTests(unittest.TestCase):
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("Fetch pinned AppImage build tools", workflow)
         self.assertIn("a6d71e2b6cd66f8e8d16c37ad164658985e0cf5fcaa950c90a482890cb9d13e0", workflow)
-        self.assertIn("1cc49bcf1e2ccd593c379adb17c9f85a36d619088296504de95b1d06215aebbf", workflow)
+        self.assertIn("156f4bdbde9c52d01814600013e0a273f0118dc2de98975f3c8c63427ec79074", workflow)
         self.assertIn("sha256sum --check --strict", workflow)
         self.assertIn("Verify AppImage contents contain no game media", workflow)
         self.assertIn("package/appimage/*.AppImage", workflow)
