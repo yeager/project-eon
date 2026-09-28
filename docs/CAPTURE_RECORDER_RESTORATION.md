@@ -95,14 +95,18 @@ media, visible operator-driven input only, then
 
 ## Current recovery boundary
 
-As of 2026-09-03, both locators again returned no matching recorder under the
-project cache: Millennium's `v21-int93-installation` search and Deuteros
-Amiga's reviewed-FS-UAE search both produced the explicit empty result. Project
-Eon must retain that fact and continue unblocked work, but it must not ask
-again for generic emulator installation: the installed normal emulators are
-known and insufficient. The next required input is either an absolute path to
-an already pinned recorder, or an external reviewed source/patch/build which
-produces the exact documented digest.
+As of 2026-09-28, both locators returned no matching recorder under the
+provisioned host's `/home/trv2/.cache/project-eon-tools` cache:
+Millennium's `v21-int93-installation` search and Deuteros Amiga's reviewed-
+FS-UAE search each reported `roots=1`, `hashes-checked=35`,
+`executables=35`, `size-rejected=0`, and `reviewed-matches=0`. A metadata-only
+search of the Eon workspace and scoped cache found no Eon capture directories
+or receipts. These locator diagnostics are not capture evidence and do not
+change admission. Project Eon must continue any unblocked work, but it must
+not ask again for generic emulator installation: normal installed emulators
+are known and insufficient. The recorder boundary can move only when an
+already pinned executable is restored to the scoped cache, or when the exact
+documented digest is produced by the specified reviewed restoration path.
 
 ## Recorder restoration state machine
 

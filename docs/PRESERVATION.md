@@ -6761,6 +6761,18 @@ title-presentation boundary and reports `BOOTSTRAP ONLY`; it does not inherit
 the English executable-startup evidence. The native tests assert a one-to-one
 mapping between the capability rows and the release manifest.
 
+### External capture recorder availability (2026-09-28)
+
+On the provisioned `trv2` host, the external-cache locator was run with
+`--diagnose` for both the Millennium DOS `v21-int93-installation` recorder and
+the reviewed Deuteros Amiga FS-UAE recorder. Each search reported one root,
+35 executable hashes checked, zero size-rejected files, and zero pinned
+matches. A metadata-only search of the Eon workspace and scoped cache found no
+Eon capture directories or receipts. This is a current availability check,
+not runtime evidence; neither game's pending capture boundary advances. The
+exact recorder digests and restoration requirements remain in
+[`CAPTURE_RECORDER_RESTORATION.md`](CAPTURE_RECORDER_RESTORATION.md).
+
 Release recognition, archive traversal, selected FAT12 content, Deuteros ADF
 geometry/checksums, its first two load stages, two resource headers, and the
 first verified palette bank and both bitmap layouts are implemented and tested. Audio
