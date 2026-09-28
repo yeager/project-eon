@@ -33,7 +33,8 @@ def write_fixture(root: Path, *, kind: str = "frame", payload: bytes = b"fixture
         "payload_sha256": hashlib.sha256(payload).hexdigest(),
         "payload_bytes": str(len(payload)),
     }
-    (root / TOOL.MANIFEST_NAME).write_text("".join(f"{key}={value}\n" for key, value in fields.items()), encoding="utf-8")
+    manifest = "".join(f"{key}={value}\n" for key, value in fields.items())
+    (root / TOOL.MANIFEST_NAME).write_bytes(manifest.encode("utf-8"))
     return root
 
 
@@ -59,12 +60,12 @@ class ReplayFixtureVerifierTests(unittest.TestCase):
         with temporary_directory() as directory:
             root = write_fixture(Path(directory))
             manifest = root / TOOL.MANIFEST_NAME
-            manifest.write_text(manifest.read_text(encoding="utf-8") + "extra=value\n", encoding="utf-8")
+            manifest.write_bytes((manifest.read_text(encoding="utf-8") + "extra=value\n").encode("utf-8"))
             with self.assertRaisesRegex(ValueError, "unknown, missing, or incomplete"):
                 TOOL.verify(root)
             write_fixture(root)
             content = manifest.read_text(encoding="utf-8").replace("payload_file=checkpoint.bin", "payload_file=../checkpoint.bin")
-            manifest.write_text(content, encoding="utf-8")
+            manifest.write_bytes(content.encode("utf-8"))
             with self.assertRaisesRegex(ValueError, "unsafe"):
                 TOOL.verify(root)
 
@@ -89,7 +90,7 @@ class ReplayFixtureVerifierTests(unittest.TestCase):
             write_fixture(root)
             content = manifest.read_text(encoding="utf-8").replace(
                 "payload_file=checkpoint.bin", f"payload_file={TOOL.MANIFEST_NAME}")
-            manifest.write_text(content, encoding="utf-8")
+            manifest.write_bytes(content.encode("utf-8"))
             with self.assertRaisesRegex(ValueError, "conflicts with the manifest"):
                 TOOL.verify(root)
 
@@ -98,7 +99,7 @@ class ReplayFixtureVerifierTests(unittest.TestCase):
             root = write_fixture(Path(directory), kind="input")
             manifest = root / TOOL.MANIFEST_NAME
             content = manifest.read_text(encoding="utf-8").replace("checkpoint_sequence=1", "checkpoint_sequence=0")
-            manifest.write_text(content, encoding="utf-8")
+            manifest.write_bytes(content.encode("utf-8"))
             with self.assertRaisesRegex(ValueError, "sequence"):
                 TOOL.verify(root)
             write_fixture(root, kind="input", payload=b"x" * (TOOL.KINDS["input"] + 1))
