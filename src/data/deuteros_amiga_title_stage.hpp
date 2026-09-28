@@ -176,7 +176,7 @@ struct DeuterosAmigaTitleStageProfile {
     std::uint32_t bootstrap_profile_five_block_address = 0;
     std::uint32_t bootstrap_profile_five_block_end_address = 0;
     std::uint32_t bootstrap_profile_five_block_length = 0;
-    std::string bootstrap_profile_five_block_sha256;
+    std::string bootstrap_profile_five_block_sha256{};
     std::array<std::uint32_t, 4> bootstrap_profile_five_service_calls{};
     std::array<std::int16_t, 4> bootstrap_profile_five_service_vectors{};
     std::uint32_t bootstrap_profile_five_first_read_length = 0;
