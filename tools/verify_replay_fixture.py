@@ -47,8 +47,15 @@ def regular_file(path: Path, description: str) -> None:
 
 def read_manifest(path: Path) -> dict[str, str]:
     regular_file(path, MANIFEST_NAME)
+    contents = path.read_bytes()
+    if b"\r" in contents or not contents.endswith(b"\n"):
+        raise ValueError("fixture manifest must use LF-terminated records")
     fields: dict[str, str] = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
+    try:
+        text = contents.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise ValueError("fixture manifest is not valid UTF-8") from error
+    for line in text.split("\n")[:-1]:
         if line.count("=") != 1:
             raise ValueError("fixture manifest contains an invalid line")
         key, value = line.split("=", 1)
@@ -105,6 +112,12 @@ def verify(directory: Path) -> dict[str, str]:
         raise ValueError("fixture checkpoint sequence must be positive")
     if not safe_basename(fields["payload_file"]):
         raise ValueError("fixture payload filename is unsafe")
+    if fields["payload_file"] == MANIFEST_NAME:
+        raise ValueError("fixture payload filename conflicts with the manifest")
+    expected_entries = {MANIFEST_NAME, fields["payload_file"]}
+    actual_entries = {entry.name for entry in directory.iterdir()}
+    if actual_entries != expected_entries:
+        raise ValueError("fixture directory must contain only its manifest and payload")
     if not SHA256.fullmatch(fields["payload_sha256"]):
         raise ValueError("fixture payload hash is not lower-case SHA-256")
     payload = directory / fields["payload_file"]

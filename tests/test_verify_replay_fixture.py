@@ -68,6 +68,31 @@ class ReplayFixtureVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "unsafe"):
                 TOOL.verify(root)
 
+    def test_fixture_directory_rejects_unlisted_files_and_directories(self) -> None:
+        with temporary_directory() as directory:
+            root = write_fixture(Path(directory))
+            (root / "unlisted.bin").write_bytes(b"extra")
+            with self.assertRaisesRegex(ValueError, "only its manifest and payload"):
+                TOOL.verify(root)
+            (root / "unlisted.bin").unlink()
+            (root / "unlisted-dir").mkdir()
+            with self.assertRaisesRegex(ValueError, "only its manifest and payload"):
+                TOOL.verify(root)
+
+    def test_manifest_requires_lf_records_and_a_distinct_payload_name(self) -> None:
+        with temporary_directory() as directory:
+            root = write_fixture(Path(directory))
+            manifest = root / TOOL.MANIFEST_NAME
+            manifest.write_bytes(manifest.read_bytes().replace(b"\n", b"\r\n"))
+            with self.assertRaisesRegex(ValueError, "LF-terminated"):
+                TOOL.verify(root)
+            write_fixture(root)
+            content = manifest.read_text(encoding="utf-8").replace(
+                "payload_file=checkpoint.bin", f"payload_file={TOOL.MANIFEST_NAME}")
+            manifest.write_text(content, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "conflicts with the manifest"):
+                TOOL.verify(root)
+
     def test_kind_specific_limit_and_canonical_checkpoint_fields_are_enforced(self) -> None:
         with temporary_directory() as directory:
             root = write_fixture(Path(directory), kind="input")
