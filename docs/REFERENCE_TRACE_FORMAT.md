@@ -191,7 +191,7 @@ state snapshot, or recorded input segment may be retained by its rights holder,
 but the tool does not interpret it. `frame`, `audio`, `state`, and `input`
 payloads have independent 16 MiB, 64 MiB, 16 MiB, and 64 KiB safety limits.
 
-The LF-only manifest has exactly these fields:
+The LF-only manifest has exactly these fields and is limited to 64 KiB:
 
 | Field | Rule |
 | --- | --- |

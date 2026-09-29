@@ -94,6 +94,14 @@ class ReplayFixtureVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "conflicts with the manifest"):
                 TOOL.verify(root)
 
+    def test_oversized_manifest_is_rejected_before_decoding(self) -> None:
+        with temporary_directory() as directory:
+            root = write_fixture(Path(directory))
+            manifest = root / TOOL.MANIFEST_NAME
+            manifest.write_bytes(b"x" * (TOOL.MAX_MANIFEST_BYTES + 1))
+            with self.assertRaisesRegex(ValueError, "manifest exceeds its safety limit"):
+                TOOL.verify(root)
+
     def test_kind_specific_limit_and_canonical_checkpoint_fields_are_enforced(self) -> None:
         with temporary_directory() as directory:
             root = write_fixture(Path(directory), kind="input")

@@ -18,6 +18,7 @@ import stat
 ROOT = Path(__file__).resolve().parents[1]
 FORMAT = "project-eon-replay-fixture-v1"
 MANIFEST_NAME = "fixture.eonfixture"
+MAX_MANIFEST_BYTES = 64 * 1024
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 DECIMAL = re.compile(r"^(0|[1-9][0-9]*)$")
 KINDS = {"frame": 16 * 1024 * 1024, "audio": 64 * 1024 * 1024,
@@ -47,7 +48,10 @@ def regular_file(path: Path, description: str) -> None:
 
 def read_manifest(path: Path) -> dict[str, str]:
     regular_file(path, MANIFEST_NAME)
-    contents = path.read_bytes()
+    with path.open("rb") as stream:
+        contents = stream.read(MAX_MANIFEST_BYTES + 1)
+    if len(contents) > MAX_MANIFEST_BYTES:
+        raise ValueError("fixture manifest exceeds its safety limit")
     if b"\r" in contents or not contents.endswith(b"\n"):
         raise ValueError("fixture manifest must use LF-terminated records")
     fields: dict[str, str] = {}
