@@ -4858,7 +4858,15 @@ post-library vector setup has executed.
 
 The next deterministic native continuation is documented in
 [Millennium DOS native title initialization](MILLENNIUM_DOS_TITLE_INITIALIZATION.md).
-It executes the exact `$1b80..$1b95` register setup and collapses the
+The second descriptor's typed `$13e9` byte continuation now reuses the
+hash-bound nine-byte `$13e9..$13f1` span (file `TITLES.EXE+$12e9`, SHA-256
+`ed46676eb54a03e725cbb96371e4fd13852a350ba5b027e5c59dda07c78b8ecf`).
+An explicitly supplied byte is incremented modulo 256 and stored at
+`CS:$1389`; the native session stops before the next read at `$13f2`.
+On the existing second-descriptor test route that read names `$3c80:$0004`.
+The input remains a raw typed observation, with no inferred OS result or
+graphics meaning; arithmetic test values are not capture evidence.
+The initialization entry executes the exact `$1b80..$1b95` register setup and collapses the
 byte-verified `$0122` preservation wrapper into its known function-$00
 `INT $91` request. The owned checkpoint stops before the private interrupt
 returns and explicitly leaves the original stack storage unmodelled.

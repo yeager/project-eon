@@ -1800,6 +1800,7 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
     if((boundary_state!=MillenniumDosTitleInitializationState::graphics_record_byte_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::graphics_record_second_byte_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_byte_read_boundary
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_second_loop_byte_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_byte_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_payload_byte_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_next_loop_stream_byte_boundary
@@ -1818,6 +1819,7 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
         ||observation.source_segment!=far_byte_boundary_.source_segment
         ||observation.source_offset!=far_byte_boundary_.source_offset
         ||(boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_byte_read_boundary
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_second_loop_byte_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_byte_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_payload_byte_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_next_loop_stream_byte_boundary
@@ -2080,7 +2082,8 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
         state_=MillenniumDosTitleInitializationState::post_descriptor_second_loop_far_read_boundary;
         return;
     }
-    if(boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_byte_read_boundary){
+    if(boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_byte_read_boundary
+        ||boundary_state==MillenniumDosTitleInitializationState::post_descriptor_second_loop_byte_read_boundary){
         const auto incremented=static_cast<std::uint8_t>(observation.byte+1U);
         effects_.insert(effects_.end(),{{0x13e9,"AL",observation.byte},
             {0x13ec,"AL",incremented}});
@@ -2090,7 +2093,9 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
             static_cast<std::uint16_t>(observation.source_offset+3),0x1388};
         last_sequence_=observation.sequence;
         continuation_address_=0x13f2;
-        state_=MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_byte_read_boundary;
+        state_=boundary_state==MillenniumDosTitleInitializationState::post_descriptor_second_loop_byte_read_boundary
+            ?MillenniumDosTitleInitializationState::post_descriptor_second_loop_second_byte_read_boundary
+            :MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_byte_read_boundary;
         return;
     }
     if(boundary_state==MillenniumDosTitleInitializationState::graphics_record_second_byte_read_boundary){

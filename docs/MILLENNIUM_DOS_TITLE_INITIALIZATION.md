@@ -631,3 +631,14 @@ mode-two `$1452` word follows exact bytes `ad 4e d3 e8 88 c5` (SHA-256
 and stops at typed `$1458`. The second record's `$13e2` raw word now applies
 the exact wrapping subtraction into `CS:$138a` and stops at `$13e9`, source
 `$3c80:$0001`. No codec or graphics semantics are inferred.
+
+The second record now accepts an ordered raw byte at that exact `$13e9`
+boundary. The already hash-bound `$13e9..$13f1` span (SHA-256
+`ed46676eb54a03e725cbb96371e4fd13852a350ba5b027e5c59dda07c78b8ecf`)
+increments it with eight-bit wrapping and stores the result at `CS:$1389`.
+The caller-connected state stops before `$13f2`, source `$3c80:$0004`;
+this next byte is not consumed. The supplied-media regression extends the
+existing second-descriptor route with explicitly synthetic raw observations
+for zero and `$ff`, plus detached sequence/address rejection. Those values
+test arithmetic only and are not original runtime observations. No DOS or
+private-interrupt result, rendering interpretation, or title exit is added.

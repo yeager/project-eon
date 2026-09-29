@@ -1495,6 +1495,43 @@ int main(int argc, char** argv) {
     assert(second_record_first_byte.far_byte_boundary.source_offset==0x0001);
     assert(second_record_first_byte.memory_effects.back().offset==0x138a);
     assert(second_record_first_byte.memory_effects.back().value==0x4600);
+    // The executable/library identities above are genuine media. These raw
+    // external-byte cases exercise arithmetic; they are not captured values.
+    for(const auto invalid : std::vector<eon::MillenniumDosTitleFarByteObservation>{
+        {101,0x13e9,0x3c80,0x0001,0xff},
+        {102,0x13ea,0x3c80,0x0001,0xff},
+        {102,0x13e9,0x3c81,0x0001,0xff},
+        {102,0x13e9,0x3c80,0x0002,0xff}}){
+        auto detached=other_success;
+        bool rejected=false;
+        try { detached.observe_far_byte(invalid); }
+        catch(const std::runtime_error&) { rejected=true; }
+        const auto after=detached.checkpoint();
+        assert(rejected&&after.state==second_record_first_byte.state
+            &&after.last_sequence==second_record_first_byte.last_sequence
+            &&after.memory_effects.size()==second_record_first_byte.memory_effects.size()
+            &&after.far_byte_observations.size()==second_record_first_byte.far_byte_observations.size());
+    }
+    for(const auto raw : {std::uint8_t{0},std::uint8_t{0xff}}){
+        auto continued=other_success;
+        continued.observe_far_byte({102,0x13e9,0x3c80,0x0001,raw});
+        const auto after=continued.checkpoint();
+        assert(after.state==eon::MillenniumDosTitleInitializationState::post_descriptor_second_loop_second_byte_read_boundary
+            &&after.last_sequence==102&&after.continuation_address==0x13f2
+            &&after.far_byte_boundary.instruction_address==0x13f2
+            &&after.far_byte_boundary.source_segment==0x3c80
+            &&after.far_byte_boundary.source_offset==0x0004
+            &&after.far_byte_boundary.destination_offset==0x1388);
+        assert(after.memory_effects.size()==second_record_first_byte.memory_effects.size()+1
+            &&after.memory_effects.back().instruction_address==0x13ee
+            &&after.memory_effects.back().offset==0x1389
+            &&after.memory_effects.back().value==static_cast<std::uint8_t>(raw+1U));
+        bool next_rejected=false;
+        try { continued.observe_far_byte({103,0x13f2,0x3c80,0x0004,0}); }
+        catch(const std::runtime_error&) { next_rejected=true; }
+        assert(next_rejected&&continued.checkpoint().last_sequence==102
+            &&continued.checkpoint().memory_effects.size()==after.memory_effects.size());
+    }
     other_mode.observe_dos_memory_result({28,0x1b3f,0x1b41,true,0x8000,0,1});
     const auto allocation_failure=other_mode.checkpoint();
     assert(allocation_failure.state
