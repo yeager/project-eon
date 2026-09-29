@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import importlib.util
 from pathlib import Path
 import re
 import stat
@@ -88,11 +89,21 @@ def known_releases() -> dict[str, int]:
     return result
 
 
+def load_capture_receipt_tool():
+    spec = importlib.util.spec_from_file_location(
+        "verify_capture_receipt", ROOT / "tools" / "verify_capture_receipt.py")
+    if not spec or not spec.loader:
+        raise RuntimeError("unable to load capture receipt verifier")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def safe_basename(value: str) -> bool:
     return value not in {"", ".", ".."} and Path(value).name == value and "/" not in value and "\\" not in value
 
 
-def verify(directory: Path) -> dict[str, str]:
+def verify(directory: Path, capture_fields: dict[str, str], capture_hash: str) -> dict[str, str]:
     if not directory.is_absolute() or directory.is_symlink() or not directory.is_dir():
         raise ValueError("fixture directory must be an absolute non-symlink directory")
     fields = read_manifest(directory / MANIFEST_NAME)
@@ -109,6 +120,13 @@ def verify(directory: Path) -> dict[str, str]:
     known_size = known_releases().get(source_hash)
     if known_size is None or fields["source_release_size"] != str(known_size):
         raise ValueError("fixture source release identity is not recognised")
+    capture_source = (capture_fields.get("source_release_sha256"),
+                      capture_fields.get("source_release_bytes"))
+    fixture_source = (source_hash, fields["source_release_size"])
+    if capture_source != fixture_source:
+        raise ValueError("fixture source release does not match its capture receipt")
+    if fields["capture_sha256"] != capture_hash:
+        raise ValueError("fixture capture hash does not match its admitted receipt")
     for field in ("checkpoint_sequence", "checkpoint_tick", "payload_bytes"):
         if not DECIMAL.fullmatch(fields[field]):
             raise ValueError(f"fixture {field} is not canonical decimal")
@@ -138,9 +156,20 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fixture", type=Path, required=True,
                         help="absolute directory containing fixture.eonfixture and its opaque payload")
+    parser.add_argument("--capture", type=Path, required=True,
+                        help="absolute directory containing an independently retained, admitted capture receipt")
+    parser.add_argument("--capture-kind", choices=("millennium-dos", "deuteros-amiga"), required=True)
     args = parser.parse_args()
     try:
-        fields = verify(args.fixture)
+        if not args.capture.is_absolute() or args.capture.is_symlink() or not args.capture.is_dir():
+            raise ValueError("capture directory must be an absolute non-symlink directory")
+        receipt_tool = load_capture_receipt_tool()
+        receipt_tool.verify(args.capture_kind, args.capture)
+        receipt_path = args.capture / "run-status.txt"
+        capture_hash, _ = digest(receipt_path)
+        capture_fields = receipt_tool.receipt(receipt_path)
+        # The fixture binds the exact retained receipt bytes, not an asserted label.
+        fields = verify(args.fixture, capture_fields, capture_hash)
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(f"REPLAY FIXTURE REJECTED  {error}")
         return 2

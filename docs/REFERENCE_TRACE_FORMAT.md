@@ -181,7 +181,9 @@ media:
 
 ```sh
 python3 tools/verify_replay_fixture.py \
-  --fixture /absolute/path/to/external-checkpoint
+  --fixture /absolute/path/to/external-checkpoint \
+  --capture /absolute/path/to/admitted-capture \
+  --capture-kind deuteros-amiga
 ```
 
 The directory must be an absolute, non-symlink directory containing a regular
@@ -198,7 +200,7 @@ The LF-only manifest has exactly these fields and is limited to 64 KiB:
 | `format` | Exactly `project-eon-replay-fixture-v1`. |
 | `kind` | One of `frame`, `audio`, `state`, or `input`. |
 | `source_release_sha256`, `source_release_size` | A complete recognised outer-release identity from the committed release ledger. The verifier reads the ledger only, not the archive. |
-| `capture_sha256` | Opaque lower-case SHA-256 identity of the separately retained capture manifest or receipt. |
+| `capture_sha256` | Lower-case SHA-256 recomputed from the exact retained `run-status.txt` bytes in the separately retained capture directory. The capture verifier must admit that receipt, and its source release identity must match the fixture. |
 | `checkpoint_sequence`, `checkpoint_tick` | Canonical decimal source ordering values; sequence is positive. They are provenance labels, not timing emulation. |
 | `payload_file` | Basename of the adjacent payload; separators, traversal, and links are rejected. |
 | `payload_sha256`, `payload_bytes` | Lower-case SHA-256 and canonical decimal byte count recomputed from the regular payload. |
