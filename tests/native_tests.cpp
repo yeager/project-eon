@@ -24,6 +24,7 @@
 #include "engine/millennium_dos_title_to_game_session.hpp"
 #include "engine/millennium_dos_title_handoff_trace_admission.hpp"
 #include "engine/millennium_dos_sound_driver_load_session.hpp"
+#include "engine/millennium_dos_video_driver_load_session.hpp"
 #include "data/zip_archive.hpp"
 #include "data/native_code_image_admission.hpp"
 #include "data/amiga_adf.hpp"
@@ -9039,6 +9040,100 @@ int main(int argc, char** argv) {
         rejected_altered_mcga = true;
     }
     assert(rejected_altered_mcga);
+    const auto exercise_video_load = [&](const std::vector<std::uint8_t>& driver_bytes,
+                                         const eon::MillenniumDosVideoDriverKind kind,
+                                         const char* expected_filename,
+                                         const std::uint16_t expected_filename_address) {
+        eon::MillenniumDosVideoDriverLoadSession video_load(
+            *titles_bytes, *mill_bytes, driver_bytes, kind);
+        assert(std::string(video_load.filename()) == expected_filename);
+        auto boundary = video_load.boundary();
+        assert(boundary.kind == eon::MillenniumDosVideoDriverLoadBoundaryKind::dos_result
+            && boundary.instruction_address == 0x02d2 && boundary.ax == 0x3d00
+            && boundary.dx == expected_filename_address);
+        video_load.observe_open_result(0x02d2, false, 7);
+        boundary = video_load.boundary();
+        assert(boundary.instruction_address == 0x02eb && boundary.ax == 0x4202);
+        video_load.observe_seek_end_result(0x02eb, false, 7,
+            static_cast<std::uint16_t>(driver_bytes.size()), 0);
+        boundary = video_load.boundary();
+        assert(boundary.instruction_address == 0x02fa && boundary.ax == 0x4800
+            && boundary.cx == (driver_bytes.size() + 15) / 16);
+        video_load.observe_allocation_result(0x02fa, false, 0x3456);
+        assert(video_load.memory_effects().empty());
+        video_load.observe_seek_start_result(0x0309, false, 7, 0, 0);
+        boundary = video_load.boundary();
+        assert(boundary.instruction_address == 0x0313 && boundary.ax == 0x3f00
+            && boundary.cx == driver_bytes.size());
+        video_load.observe_read_result(0x0313, false, 7,
+            static_cast<std::uint16_t>(driver_bytes.size()));
+        assert(video_load.memory_effects().size() == driver_bytes.size());
+        assert(video_load.memory_effects().front().instruction_address == 0x0313
+            && video_load.memory_effects().front().segment == 0x3456
+            && video_load.memory_effects().front().offset == 0
+            && video_load.memory_effects().front().value == driver_bytes.front());
+        assert(video_load.memory_effects().back().offset == driver_bytes.size() - 1
+            && video_load.memory_effects().back().value == driver_bytes.back());
+        video_load.observe_close_result(0x0319, false, 7);
+        boundary = video_load.boundary();
+        assert(video_load.state()
+            == eon::MillenniumDosVideoDriverLoadState::set_vector_request_boundary);
+        assert(boundary.kind == eon::MillenniumDosVideoDriverLoadBoundaryKind::interrupt_request
+            && boundary.instruction_address == 0x020c && boundary.ax == 0x2591
+            && boundary.dx == 0);
+        video_load.observe_set_vector_request(0x020c, 0x21, 0x2591, 0);
+        assert(video_load.state()
+            == eon::MillenniumDosVideoDriverLoadState::set_vector_result_boundary);
+        boundary = video_load.boundary();
+        assert(boundary.kind
+            == eon::MillenniumDosVideoDriverLoadBoundaryKind::dos_result_observation
+            && boundary.instruction_address == 0x020c && !boundary.result_observed);
+        // Preserve even an error-shaped observation as raw DOS evidence. It
+        // cannot establish IVT contents or private-handler dispatch.
+        video_load.observe_set_vector_dos_result(0x020c, true, 0xffff);
+        assert(video_load.state()
+            == eon::MillenniumDosVideoDriverLoadState::set_vector_result_observed);
+        assert(video_load.set_vector_carry() && video_load.set_vector_ax() == 0xffff);
+        boundary = video_load.boundary();
+        assert(boundary.ax == 0xffff && boundary.instruction_address == 0x020c
+            && boundary.result_observed && boundary.carry);
+        bool rejected_repeated_result = false;
+        try { video_load.observe_set_vector_dos_result(0x020c, false, 0); }
+        catch (const std::runtime_error&) { rejected_repeated_result = true; }
+        assert(rejected_repeated_result);
+    };
+    exercise_video_load(*ega640, eon::MillenniumDosVideoDriverKind::ega640,
+        "ega640.bin", 0x0617);
+    exercise_video_load(*mcga, eon::MillenniumDosVideoDriverKind::mcga,
+        "mcga.bin", 0x05f9);
+    {
+        eon::MillenniumDosVideoDriverLoadSession short_read(
+            *titles_bytes, *mill_bytes, *ega640, eon::MillenniumDosVideoDriverKind::ega640);
+        short_read.observe_open_result(0x02d2, false, 7);
+        short_read.observe_seek_end_result(0x02eb, false, 7,
+            static_cast<std::uint16_t>(ega640->size()), 0);
+        short_read.observe_allocation_result(0x02fa, false, 0x3456);
+        short_read.observe_seek_start_result(0x0309, false, 7, 0, 0);
+        bool rejected_short_read = false;
+        try {
+            short_read.observe_read_result(0x0313, false, 7,
+                static_cast<std::uint16_t>(ega640->size() - 1));
+        } catch (const std::runtime_error&) {
+            rejected_short_read = true;
+        }
+        assert(rejected_short_read && short_read.memory_effects().empty());
+        assert(short_read.state() == eon::MillenniumDosVideoDriverLoadState::awaiting_read_result);
+    }
+    {
+        bool rejected_spanish_route = false;
+        try {
+            static_cast<void>(eon::MillenniumDosVideoDriverLoadSession(
+                *titles_bytes, *mill_bytes, *ega640, eon::MillenniumDosVideoDriverKind::mcga));
+        } catch (const std::runtime_error&) {
+            rejected_spanish_route = true;
+        }
+        assert(rejected_spanish_route);
+    }
     assert(title_flow.launcher_title_offset == 0x58f);
     assert(title_flow.launcher_game_offset == 0x59a);
     assert(title_flow.launcher_title_program == "TITLES.EXE");

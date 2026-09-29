@@ -6,10 +6,14 @@ Mode one's palette source is now corrected to TITLE.LIB `[$25f9,$28f9)`.
 The original LDS restores library-base:$0006; the former `$4865` overread
 was a relocated-pointer error. The complete 768-byte copy now reaches its
 real BIOS request at `$0fd8`, AX=$1012/CX=$00ff. A separate typed BIOS result
-permits return to the shared setup. The graphics-driver selection/load and
-INT $91 installation still need native ownership before any private service
-can be selected from the available EGA640/MCGA profiles. Title mode alone
-does not establish which driver is installed.
+permits return to the shared setup. Hardware-dependent graphics selection
+still needs ownership. A focused, hash-locked EGA640/MCGA loader session now
+has native unit coverage for explicit DOS open/seek/allocate/rewind/read/close
+results through the `$020c` SetVect request and its separately observed DOS
+result. That session is not connected to the active release-runtime facade
+and does not establish IVT contents or INT $91 dispatch, so no private service
+can yet be selected from those profiles. Title mode alone does not establish
+which driver is installed.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,
 respectively. The existing global-mode-2 descriptor regression uses explicit
 arithmetic observations; it is not evidence that either supplied driver

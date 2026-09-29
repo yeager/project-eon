@@ -133,6 +133,7 @@ add_executable(project-eon
     src/engine/deuteros_atari_bootstrap_session.cpp
     src/engine/millennium_dos_sound_selection_session.cpp
     src/engine/millennium_dos_sound_driver_load_session.cpp
+    src/engine/millennium_dos_video_driver_load_session.cpp
     src/engine/millennium_dos_paragraph_arena.cpp
     src/engine/millennium_dos_compatibility_runner.cpp
     src/engine/millennium_dos_title_exec_entry_session.cpp

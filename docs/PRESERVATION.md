@@ -4682,6 +4682,17 @@ This proves original input-to-request control flow, not a host policy: Project
 Eon does not read a host command tail as original hardware detection, select a
 driver, or assume the loader/DOS/vector calls succeed.
 
+The focused, hash-bound `MillenniumDosVideoDriverLoadSession` tests cover the
+English loader's open, seek-end, allocation, rewind, exact-length read, and
+close boundaries for either supplied driver. Each DOS result is an explicit
+input; only a successful complete read emits byte effects at the observed
+segment and offset zero. The session then exposes the `INT 21h` request at
+`$020c` (`AX=$2591`, `DX=0`) and retains a separately supplied raw DOS result.
+This state machine is not yet connected to the active release-runtime facade.
+Its terminal result boundary does not establish IVT contents, INT 91h handler
+dispatch, or any handler return. Default hardware selection is still outside
+the session.
+
 The read-in-place loader audit additionally binds `$02cf..$031b` (file
 `+$01cf`, 77 bytes, SHA-256
 `5c7f7ec03aa3109d4df2fbdec457ca7e2be412fc9d818bd07252a039fb8c6671`)
