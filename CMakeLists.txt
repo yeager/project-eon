@@ -356,6 +356,10 @@ if(BUILD_TESTING)
     # tests and is never copied into the build tree or a package.
     set(EON_REPLAY_FIXTURE_DIR "" CACHE PATH
         "Absolute external Project Eon replay-fixture directory to verify with CTest")
+    set(EON_REPLAY_CAPTURE_DIR "" CACHE PATH
+        "Absolute external capture-receipt directory bound to the replay fixture")
+    set(EON_REPLAY_CAPTURE_KIND "" CACHE STRING
+        "Capture kind used to validate the replay fixture receipt")
     # This corpus test deliberately requires every in-scope archive-layout
     # release. The Spanish Millennium DOS archive remains optional
     # preservation media; installed direct data is a distinct input shape.
@@ -460,10 +464,16 @@ if(BUILD_TESTING)
     set_tests_properties(cli-default-data-read-only PROPERTIES
         ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
     if(EON_REPLAY_FIXTURE_DIR)
+        if(NOT EON_REPLAY_CAPTURE_DIR OR NOT EON_REPLAY_CAPTURE_KIND)
+            message(FATAL_ERROR
+                "EON_REPLAY_CAPTURE_DIR and EON_REPLAY_CAPTURE_KIND are required with EON_REPLAY_FIXTURE_DIR")
+        endif()
         add_test(NAME verify-external-replay-fixture
             COMMAND "${Python3_EXECUTABLE}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/tools/verify_replay_fixture.py"
-                --fixture "${EON_REPLAY_FIXTURE_DIR}")
+                --fixture "${EON_REPLAY_FIXTURE_DIR}"
+                --capture "${EON_REPLAY_CAPTURE_DIR}"
+                --capture-kind "${EON_REPLAY_CAPTURE_KIND}")
     endif()
     # Commercial game data is never available in CI. A developer build that
     # supplies the complete in-scope archive corpus receives a separate

@@ -41,8 +41,12 @@ class RuntimeLayoutTests(unittest.TestCase):
 
     def test_external_replay_fixture_ctest_is_explicit_and_media_free(self) -> None:
         self.assertIn("EON_REPLAY_FIXTURE_DIR", CMAKE)
+        self.assertIn("EON_REPLAY_CAPTURE_DIR", CMAKE)
+        self.assertIn("EON_REPLAY_CAPTURE_KIND", CMAKE)
         self.assertIn("verify-external-replay-fixture", CMAKE)
         self.assertIn("tools/verify_replay_fixture.py", CMAKE)
+        self.assertIn('--capture "${EON_REPLAY_CAPTURE_DIR}"', CMAKE)
+        self.assertIn('--capture-kind "${EON_REPLAY_CAPTURE_KIND}"', CMAKE)
         self.assertIn("It remains opaque to the native", CMAKE)
 
     def test_ctest_scratch_is_external_to_the_checkout(self) -> None:

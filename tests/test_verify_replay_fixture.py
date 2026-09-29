@@ -3,8 +3,12 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import io
 from pathlib import Path
+import sys
 import unittest
+from contextlib import redirect_stdout
+from unittest import mock
 
 from eon_test_paths import temporary_directory
 
@@ -42,6 +46,54 @@ def write_fixture(root: Path, *, kind: str = "frame", payload: bytes = b"fixture
 
 
 class ReplayFixtureVerifierTests(unittest.TestCase):
+    def test_cli_admits_fixture_only_after_capture_verifier_and_hash_match(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            fixture = root / "fixture"
+            capture = root / "capture"
+            fixture.mkdir()
+            capture.mkdir()
+            receipt_path = capture / "run-status.txt"
+            receipt_path.write_bytes(("capture_receipt_version=22\n"
+                                      f"source_release_sha256={RELEASE}\n"
+                                      "source_release_bytes=328383\n").encode("ascii"))
+            receipt_hash = hashlib.sha256(receipt_path.read_bytes()).hexdigest()
+            write_fixture(fixture, capture_sha256=receipt_hash)
+
+            receipt_tool = TOOL.load_capture_receipt_tool()
+            with (mock.patch.object(receipt_tool, "verify") as verify_receipt,
+                  mock.patch.object(TOOL, "load_capture_receipt_tool", return_value=receipt_tool),
+                  mock.patch.object(sys, "argv", [
+                      "verify_replay_fixture.py", "--fixture", str(fixture),
+                      "--capture", str(capture), "--capture-kind", "deuteros-amiga"]),
+                  redirect_stdout(io.StringIO()) as output):
+                self.assertEqual(TOOL.main(), 0)
+            verify_receipt.assert_called_once_with("deuteros-amiga", capture)
+            self.assertIn("REPLAY FIXTURE VERIFIED  frame", output.getvalue())
+
+    def test_cli_rejects_a_fixture_bound_to_a_different_receipt(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            fixture = root / "fixture"
+            capture = root / "capture"
+            fixture.mkdir()
+            capture.mkdir()
+            (capture / "run-status.txt").write_bytes(
+                ("capture_receipt_version=22\n"
+                 f"source_release_sha256={RELEASE}\n"
+                 "source_release_bytes=328383\n").encode("ascii"))
+            write_fixture(fixture)
+
+            receipt_tool = TOOL.load_capture_receipt_tool()
+            with (mock.patch.object(receipt_tool, "verify"),
+                  mock.patch.object(TOOL, "load_capture_receipt_tool", return_value=receipt_tool),
+                  mock.patch.object(sys, "argv", [
+                      "verify_replay_fixture.py", "--fixture", str(fixture),
+                      "--capture", str(capture), "--capture-kind", "millennium-dos"]),
+                  redirect_stdout(io.StringIO()) as output):
+                self.assertEqual(TOOL.main(), 2)
+            self.assertIn("capture hash does not match", output.getvalue())
+
     def test_hash_bound_fixture_accepts_only_recognised_release(self) -> None:
         with temporary_directory() as directory:
             fields = TOOL.verify(write_fixture(Path(directory)), RECEIPT_FIELDS, RECEIPT_HASH)
