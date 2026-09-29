@@ -1140,6 +1140,8 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_video_driver_load(
                 next.observe_set_vector_request(request->instruction,request->interrupt,request->ax,request->dx);
             } else if (const auto* result = std::get_if<MillenniumDosVideoDriverSetVectorResultObservation>(&observation)) {
                 next.observe_set_vector_dos_result(result->instruction,result->carry,result->ax);
+            } else if (const auto* ivt = std::get_if<MillenniumDosVideoDriverIvtObservation>(&observation)) {
+                next.observe_ivt_vector(ivt->interrupt_number,ivt->offset,ivt->segment);
             }
             if (next.memory_effects().size() != next_session->memory_effects().size()) {
                 NativeRuntimeEffectBatch batch{"millennium-dos-video-driver-" + std::to_string(next_generation) + "-image",true,{}};
@@ -1174,7 +1176,12 @@ ReleaseRuntimeCoordinator::millennium_dos_video_driver_load_checkpoint() const {
         s.selector_source(),s.selector(),s.observed_command(),s.raw_detector_result(),
         s.driver().byte_size,s.memory_effects().size(),
         s.file_handle(),s.load_segment(),s.set_vector_carry(),
-        s.state()==MillenniumDosVideoDriverLoadState::set_vector_result_observed,s.set_vector_ax()};
+        s.state()!=MillenniumDosVideoDriverLoadState::set_vector_result_boundary,s.set_vector_ax(),
+        s.ivt_observation() ? std::optional<MillenniumDosVideoDriverIvtObservation>{
+            MillenniumDosVideoDriverIvtObservation{millennium_dos_video_driver_load_last_sequence_,
+                s.ivt_observation()->interrupt_number,s.ivt_observation()->offset,s.ivt_observation()->segment}}
+            : std::nullopt,
+        s.ivt_observation_matches_loaded_driver()};
 }
 
 std::optional<MillenniumDosCompatibilityRunnerCheckpoint>

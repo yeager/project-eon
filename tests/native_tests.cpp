@@ -4315,6 +4315,25 @@ int main(int argc, char** argv) {
         assert(video_checkpoint && video_checkpoint->set_vector_result_observed
             && video_checkpoint->set_vector_carry && video_checkpoint->set_vector_ax==1
             && video_checkpoint->state==eon::MillenniumDosVideoDriverLoadState::set_vector_result_observed);
+        assert(!video_step(eon::MillenniumDosVideoDriverIvtObservation{10,0x90,0,video_segment}));
+        video_checkpoint=video_runtime.millennium_dos_video_driver_load_checkpoint();
+        assert(video_checkpoint && video_checkpoint->last_sequence==9
+            && video_checkpoint->state==eon::MillenniumDosVideoDriverLoadState::set_vector_result_observed
+            && !video_checkpoint->ivt_observation);
+        assert(video_step(eon::MillenniumDosVideoDriverIvtObservation{10,0x91,0,0x1234}));
+        video_checkpoint=video_runtime.millennium_dos_video_driver_load_checkpoint();
+        assert(video_checkpoint && video_checkpoint->state==eon::MillenniumDosVideoDriverLoadState::ivt_observation_recorded
+            && video_checkpoint->set_vector_result_observed
+            && video_checkpoint->ivt_observation
+            && video_checkpoint->ivt_observation->interrupt_number==0x91
+            && video_checkpoint->ivt_observation->offset==0
+            && video_checkpoint->ivt_observation->segment==0x1234
+            && !video_checkpoint->ivt_observation_matches_loaded_driver
+            && video_checkpoint->set_vector_carry);
+        assert(!video_step(eon::MillenniumDosVideoDriverIvtObservation{11,0x91,0,video_segment}));
+        const auto after_duplicate_ivt=video_runtime.millennium_dos_video_driver_load_checkpoint();
+        assert(after_duplicate_ivt && after_duplicate_ivt->last_sequence==10
+            && after_duplicate_ivt->ivt_observation->segment==0x1234);
         video_runtime.reset();
         assert(!video_runtime.millennium_dos_video_driver_load_checkpoint());
         assert(video_runtime.acquire(admitted_dos_launch));

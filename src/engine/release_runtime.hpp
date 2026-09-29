@@ -420,10 +420,16 @@ struct MillenniumDosVideoDriverSetVectorResultObservation {
     std::uint16_t instruction = 0x020c, ax = 0;
     bool carry = false;
 };
+struct MillenniumDosVideoDriverIvtObservation {
+    std::uint64_t sequence = 0;
+    std::uint8_t interrupt_number = 0x91;
+    std::uint16_t offset = 0, segment = 0;
+};
 using MillenniumDosVideoDriverLoadObservation = std::variant<
     MillenniumDosVideoSelectorObservation, MillenniumDosVideoDriverDosObservation,
     MillenniumDosVideoDriverSetVectorRequestObservation,
-    MillenniumDosVideoDriverSetVectorResultObservation>;
+    MillenniumDosVideoDriverSetVectorResultObservation,
+    MillenniumDosVideoDriverIvtObservation>;
 struct MillenniumDosVideoDriverLoadObservationResult { bool accepted = false; std::string error; };
 struct MillenniumDosVideoDriverLoadCheckpoint {
     std::uint64_t generation = 0, last_sequence = 0;
@@ -438,6 +444,8 @@ struct MillenniumDosVideoDriverLoadCheckpoint {
     std::uint16_t file_handle = 0, load_segment = 0;
     bool set_vector_carry = false, set_vector_result_observed = false;
     std::uint16_t set_vector_ax = 0;
+    std::optional<MillenniumDosVideoDriverIvtObservation> ivt_observation;
+    bool ivt_observation_matches_loaded_driver = false;
 };
 
 struct MillenniumDosTitleExecPrefixObservation {

@@ -3,6 +3,7 @@
 #include "data/millennium_dos_video_driver.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -18,6 +19,7 @@ enum class MillenniumDosVideoDriverLoadState {
     set_vector_request_boundary,
     set_vector_result_boundary,
     set_vector_result_observed,
+    ivt_observation_recorded,
 };
 
 enum class MillenniumDosVideoSelectorSource { command_tail, hardware_detector };
@@ -51,6 +53,12 @@ struct MillenniumDosVideoDriverMemoryEffect {
     constexpr bool operator==(const MillenniumDosVideoDriverMemoryEffect&) const = default;
 };
 
+struct MillenniumDosVideoDriverIvtVector {
+    std::uint8_t interrupt_number = 0x91;
+    std::uint16_t offset = 0, segment = 0;
+    constexpr bool operator==(const MillenniumDosVideoDriverIvtVector&) const = default;
+};
+
 // MILL.COM's hash-locked English video loader. DOS results remain explicit
 // observations; SetVect is exposed as a request/result boundary only and does
 // not establish that an INT 91h handler was installed or dispatched.
@@ -73,6 +81,13 @@ public:
     [[nodiscard]] std::uint16_t load_segment() const { return load_segment_; }
     [[nodiscard]] bool set_vector_carry() const { return set_vector_carry_; }
     [[nodiscard]] std::uint16_t set_vector_ax() const { return set_vector_ax_; }
+    [[nodiscard]] const MillenniumDosVideoDriverIvtVector* ivt_observation() const {
+        return ivt_observation_ ? &*ivt_observation_ : nullptr;
+    }
+    [[nodiscard]] bool ivt_observation_matches_loaded_driver() const {
+        return ivt_observation_ && ivt_observation_->offset == 0
+            && ivt_observation_->segment == load_segment_;
+    }
     [[nodiscard]] MillenniumDosVideoSelectorSource selector_source() const { return selector_source_; }
     [[nodiscard]] std::uint8_t selector() const { return selector_; }
     [[nodiscard]] char observed_command() const { return observed_command_; }
@@ -90,6 +105,7 @@ public:
     void observe_set_vector_request(std::uint16_t instruction, std::uint8_t interrupt,
         std::uint16_t ax, std::uint16_t dx);
     void observe_set_vector_dos_result(std::uint16_t instruction, bool carry, std::uint16_t ax);
+    void observe_ivt_vector(std::uint8_t interrupt, std::uint16_t offset, std::uint16_t segment);
 
 private:
     MillenniumDosVideoSelectorSource selector_source_ = MillenniumDosVideoSelectorSource::command_tail;
@@ -106,6 +122,7 @@ private:
     std::uint16_t load_segment_ = 0;
     bool set_vector_carry_ = false;
     std::uint16_t set_vector_ax_ = 0;
+    std::optional<MillenniumDosVideoDriverIvtVector> ivt_observation_;
 };
 
 } // namespace eon

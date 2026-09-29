@@ -12,8 +12,13 @@ EGA640/MCGA loader session behind typed selector and DOS-result observations,
 and unit tests cover the explicit open/seek/allocate/rewind/read/close path
 through the `$020c` SetVect result. Those tests use synthetic observations;
 they do not prove the original selector, IVT contents, or INT $91 dispatch.
-No private service can yet be selected from the driver profiles. Title mode
-alone does not establish which driver is installed.
+An optional typed INT $91 IVT tuple may now follow that raw DOS result. It
+preserves the observed interrupt, offset, and segment verbatim, including a
+mismatch with the loaded image address. That comparison is correlation only;
+it does not establish successful installation, handler dispatch, or service
+execution, and it does not select a private service. No private service can
+yet be selected from the driver profiles. Title mode alone does not establish
+which driver is installed.
 The hash-bound English function-$00 profiles now expose the corrected cached-
 mode and mode-match branch targets, and a focused real-media test checks both
 original leaves in place. These static anchors still do not establish IVT

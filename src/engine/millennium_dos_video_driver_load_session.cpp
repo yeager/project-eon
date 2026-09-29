@@ -85,9 +85,10 @@ MillenniumDosVideoDriverLoadBoundary MillenniumDosVideoDriverLoadSession::bounda
         return {MillenniumDosVideoDriverLoadBoundaryKind::interrupt_request,0x020c,0x2591,0,0,0x21,false,false};
     case MillenniumDosVideoDriverLoadState::set_vector_result_boundary:
     case MillenniumDosVideoDriverLoadState::set_vector_result_observed:
+    case MillenniumDosVideoDriverLoadState::ivt_observation_recorded:
         return {MillenniumDosVideoDriverLoadBoundaryKind::dos_result_observation,0x020c,
             set_vector_ax_,0,0,0x21,set_vector_carry_,
-            state_ == MillenniumDosVideoDriverLoadState::set_vector_result_observed};
+            state_ != MillenniumDosVideoDriverLoadState::set_vector_result_boundary};
     }
     throw std::runtime_error("Invalid Millennium DOS video-driver load state");
 }
@@ -177,6 +178,18 @@ void MillenniumDosVideoDriverLoadSession::observe_set_vector_dos_result(
     state_ = MillenniumDosVideoDriverLoadState::set_vector_result_observed;
     // This is only the externally observed DOS result boundary. No vector
     // contents, handler dispatch, or private-interrupt behavior is inferred.
+}
+
+void MillenniumDosVideoDriverLoadSession::observe_ivt_vector(
+    const std::uint8_t interrupt, const std::uint16_t offset, const std::uint16_t segment) {
+    if (state_ != MillenniumDosVideoDriverLoadState::set_vector_result_observed
+        || interrupt != 0x91) {
+        throw std::runtime_error("Detached Millennium DOS INT 91h IVT observation");
+    }
+    ivt_observation_ = MillenniumDosVideoDriverIvtVector{interrupt, offset, segment};
+    state_ = MillenniumDosVideoDriverLoadState::ivt_observation_recorded;
+    // Preserve the observed tuple verbatim. Matching the loaded image address
+    // is correlation only; it does not prove installation, dispatch, or use.
 }
 
 } // namespace eon
