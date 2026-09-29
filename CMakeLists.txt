@@ -367,6 +367,20 @@ if(BUILD_TESTING)
         "Absolute original-media root containing the complete five-release in-scope archive corpus")
     set(EON_DIRECT_DATA_DIR "" CACHE PATH
         "Absolute original-media root containing recognised installed direct media")
+    set(EON_CONTAINER_DATA_DIR "" CACHE PATH
+        "Absolute original-media root containing recognised split-container disk sets")
+    if(EON_CONTAINER_DATA_DIR)
+        add_executable(eon-container-media-tests
+            tests/container_media_tests.cpp
+            src/platform/game_data.cpp
+            src/data/release_manifest.cpp
+            src/data/zip_archive.cpp
+            src/data/sha256.cpp)
+        target_include_directories(eon-container-media-tests PRIVATE src)
+        target_link_libraries(eon-container-media-tests PRIVATE ZLIB::ZLIB)
+        add_test(NAME container-media-admission
+            COMMAND eon-container-media-tests "${EON_CONTAINER_DATA_DIR}")
+    endif()
     add_executable(eon-native-tests
         tests/native_tests.cpp
         ${EON_RUNTIME_SOURCES}

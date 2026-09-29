@@ -127,6 +127,9 @@ The set digest is
 `0a87871cdfc6e0f11c598b86be0726c842c2cdcb1cb7d0dba651f1d43b835ffa`.
 Runtime admission reopens and verifies every container again, retaining only
 transient in-memory decoded leaves; it never materialises original disks.
+Discovery accepts arbitrary filesystem enumeration order and records the
+manifest order. Runtime admission rejects a subsequent reordering of those
+bound paths, rather than silently repairing the selected release descriptor.
 
 The clean English Deuteros Amiga pair is bound the same way: disk 1 outer
 `7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533`

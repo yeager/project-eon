@@ -250,6 +250,9 @@ VerifiedReleaseMedia VerifiedReleaseMedia::open(const ReleaseArchive& release) {
             throw std::runtime_error("Container media-set release has incomplete path binding");
         }
         auto verified = verify_container_set(release.containers, set);
+        if (verified.paths != release.containers) {
+            throw std::runtime_error("Container media-set release has reordered path binding");
+        }
         return VerifiedReleaseMedia(release, std::move(verified.archives), std::move(verified.inventory));
     }
     const auto& set = require_direct_set_identity(release);
