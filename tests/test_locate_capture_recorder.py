@@ -5,7 +5,7 @@ import hashlib
 import importlib.util
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import stat
 import unittest
 from unittest import mock
@@ -82,9 +82,9 @@ class LocateCaptureRecorderTests(unittest.TestCase):
         non_executable_mode = os.stat_result((stat.S_IFREG | 0o600, *info[1:]))
         with mock.patch.object(TOOL.os, "name", "nt"), \
                 mock.patch.dict(TOOL.os.environ, {"PATHEXT": ".COM;.EXE"}):
-            self.assertTrue(TOOL.is_executable_candidate(Path("reviewed-recorder.EXE"),
+            self.assertTrue(TOOL.is_executable_candidate(PureWindowsPath("reviewed-recorder.EXE"),
                                                          non_executable_mode))
-            self.assertFalse(TOOL.is_executable_candidate(Path("reviewed-recorder"),
+            self.assertFalse(TOOL.is_executable_candidate(PureWindowsPath("reviewed-recorder"),
                                                           non_executable_mode))
 
     def test_json_schema_is_stable(self) -> None:
