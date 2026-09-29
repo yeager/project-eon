@@ -720,10 +720,17 @@ new ordered service returns without reusing previous observations.
 The owned recurring main-stage framebuffer and accepted RGB4 palette now pass
 through the coordinator, revocation-aware host and SDL renderer. A completed
 buffer remains pending until the original LoadView/bit-5 visibility boundary;
-tests cover four successive publications and genuine planar hashes. Continue
-from the next main-loop control/input boundary. Connect the separately staged sound descriptors
-to the `$22bea` consumer without
-claiming that a software descriptor write already started audio hardware.
+tests cover four successive publications and genuine planar hashes. The
+reached outer control/input routes now have typed port, counter, and service
+boundaries; do not create those observations in the host. The initial
+`$21782/$21788` `$22bea` calls are already connected to the native descriptor
+consumer. Opcode `$0b` still stages records outside that initialization path,
+but the asynchronous `$224cc` caller cadence and channel state at each
+consumer invocation remain unproven. Continue only with a caller-connected
+trace of `$224cc`, its ordered invocation timing, the relevant `$22a20`,
+`$22a16`, `$22a30` and AUDx state, and the DMA/register observations that
+select the consumer branches. Do not run the consumer once per command or
+frame, or assign playback-loop timing from descriptor writes.
 The caller-connected ordinary, masked, saved-scanline, restored and `$fe`
 sprite routes are implemented; do not invent another renderer for the
 remaining asynchronous `$224cc` audio/control interrupt path. Do not reuse
