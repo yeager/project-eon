@@ -119,7 +119,10 @@ HOST_INPUT_LINE = re.compile(
     r"action=(-?[0-9]+) state=(-?[0-9]+)\n")
 # Receipt v6 additionally binds the finite recorder timing profile. Older
 # evidence remains verifiable without pretending it has the newer field.
-CAPTURE_RECEIPT_VERSION = "11"
+CAPTURE_RECEIPT_VERSION = "23"
+SOURCE_LAYOUT_RELEASE = "nested-release-zip"
+SOURCE_LAYOUT_STANDALONE = "standalone-zip-pair"
+SOURCE_LAYOUTS = {SOURCE_LAYOUT_RELEASE, SOURCE_LAYOUT_STANDALONE}
 
 
 class CaptureError(RuntimeError):
@@ -256,11 +259,14 @@ def unmount(mountpoint: Path) -> None:
 
 
 def mount_read_only(source: Path, mountpoint: Path) -> None:
-    subprocess.run(["archivemount", "-o", "ro", str(source), str(mountpoint)], check=True)
-    required = {"ro", "nosuid", "nodev", "default_permissions"}
-    if not required <= mount_options(mountpoint):
+    try:
+        subprocess.run(["archivemount", "-o", "ro", str(source), str(mountpoint)], check=True)
+        required = {"ro", "nosuid", "nodev", "default_permissions"}
+        if not required <= mount_options(mountpoint):
+            raise CaptureError("archivemount did not report required read-only safety options")
+    except Exception:
         unmount(mountpoint)
-        raise CaptureError("archivemount did not report required read-only safety options")
+        raise
 
 
 def write_exclusive(path: Path, content: str) -> None:
@@ -665,35 +671,66 @@ def input_delivery_file_observed(path: Path) -> bool:
 
 
 def run_capture(args: argparse.Namespace) -> Path:
-    release = require_absolute_regular_file(Path(args.source_release), "source release")
+    release_arg = getattr(args, "source_release", None)
+    disk1_arg = getattr(args, "disk1_archive", None)
+    disk2_arg = getattr(args, "disk2_archive", None)
+    if release_arg:
+        if disk1_arg or disk2_arg:
+            raise CaptureError("select either one source release or both standalone disk archives")
+        source_layout = SOURCE_LAYOUT_RELEASE
+        release = require_absolute_regular_file(Path(release_arg), "source release")
+        disk1_source = disk2_source = None
+        output_sources = (release,)
+    else:
+        if not disk1_arg or not disk2_arg:
+            raise CaptureError("standalone capture requires both --disk1-archive and --disk2-archive")
+        source_layout = SOURCE_LAYOUT_STANDALONE
+        release = None
+        disk1_source = require_absolute_regular_file(Path(disk1_arg), "Deuteros disk 1 archive")
+        disk2_source = require_absolute_regular_file(Path(disk2_arg), "Deuteros disk 2 archive")
+        output_sources = (disk1_source, disk2_source)
     kickstart = require_absolute_regular_file(Path(args.kickstart_archive), "Kickstart archive")
     recorder = require_absolute_regular_file(Path(args.recorder), "recorder", executable=True)
-    output = reject_unsafe_output(release, kickstart, output=Path(args.output))
+    output = reject_unsafe_output(*output_sources, kickstart, output=Path(args.output))
     if not MIN_DURATION_SECONDS <= args.duration_seconds <= MAX_DURATION_SECONDS:
         raise CaptureError(f"duration must be between {MIN_DURATION_SECONDS} and {MAX_DURATION_SECONDS} seconds")
     if not 0 <= args.focus_settle_seconds <= MAX_FOCUS_SETTLE_SECONDS:
         raise CaptureError(f"focus-settle duration must be between 0 and {MAX_FOCUS_SETTLE_SECONDS} seconds")
     environment = dict(os.environ)
     require_visible_operator_input(environment)
-    release_before = validate_identity(release, "source release", EXPECTED_RELEASE_SHA256, EXPECTED_RELEASE_SIZE)
+    release_before = (validate_identity(release, "source release", EXPECTED_RELEASE_SHA256, EXPECTED_RELEASE_SIZE)
+                      if release is not None else None)
+    disk1_archive_before = (validate_identity(disk1_source, "Deuteros disk 1 archive",
+        EXPECTED_DISK1_ARCHIVE_SHA256, EXPECTED_DISK1_ARCHIVE_SIZE)
+        if disk1_source is not None else None)
+    disk2_archive_before = (validate_identity(disk2_source, "Deuteros disk 2 archive",
+        EXPECTED_DISK2_ARCHIVE_SHA256, EXPECTED_DISK2_ARCHIVE_SIZE)
+        if disk2_source is not None else None)
     kickstart_before = validate_identity(kickstart, "Kickstart archive", EXPECTED_KICKSTART_SHA256, EXPECTED_KICKSTART_SIZE)
     recorder_identity = validate_recorder(recorder)
     output.mkdir(mode=0o700)
     mounts = [output / name for name in ("release-outer-ro", "disk1-ro", "disk2-ro", "kickstart-ro")]
-    for mountpoint in mounts:
-        mountpoint.mkdir(mode=0o700)
+    for index, mountpoint in enumerate(mounts):
+        if index != 0 or release is not None:
+            mountpoint.mkdir(mode=0o700)
     mounted: list[Path] = []
     try:
-        mount_read_only(release, mounts[0])
-        mounted.append(mounts[0])
-        disk1_archive = mounts[0] / DISK1_ARCHIVE
-        disk2_archive = mounts[0] / DISK2_ARCHIVE
-        disk1_archive_identity = validate_identity(
-            disk1_archive, "Deuteros disk 1 nested archive", EXPECTED_DISK1_ARCHIVE_SHA256,
-            EXPECTED_DISK1_ARCHIVE_SIZE)
-        disk2_archive_identity = validate_identity(
-            disk2_archive, "Deuteros disk 2 nested archive", EXPECTED_DISK2_ARCHIVE_SHA256,
-            EXPECTED_DISK2_ARCHIVE_SIZE)
+        if release is not None:
+            mount_read_only(release, mounts[0])
+            mounted.append(mounts[0])
+            disk1_archive = mounts[0] / DISK1_ARCHIVE
+            disk2_archive = mounts[0] / DISK2_ARCHIVE
+            disk1_archive_identity = validate_identity(
+                disk1_archive, "Deuteros disk 1 nested archive", EXPECTED_DISK1_ARCHIVE_SHA256,
+                EXPECTED_DISK1_ARCHIVE_SIZE)
+            disk2_archive_identity = validate_identity(
+                disk2_archive, "Deuteros disk 2 nested archive", EXPECTED_DISK2_ARCHIVE_SHA256,
+                EXPECTED_DISK2_ARCHIVE_SIZE)
+        else:
+            assert disk1_source is not None and disk2_source is not None
+            disk1_archive, disk2_archive = disk1_source, disk2_source
+            assert disk1_archive_before is not None and disk2_archive_before is not None
+            disk1_archive_identity, disk2_archive_identity = disk1_archive_before, disk2_archive_before
         mount_read_only(disk1_archive, mounts[1])
         mounted.append(mounts[1])
         mount_read_only(disk2_archive, mounts[2])
@@ -772,9 +809,19 @@ def run_capture(args: argparse.Namespace) -> Path:
         if len(console_result) != 1:
             raise CaptureError("bounded recorder console did not produce exactly one receipt")
         ended = time.time()
-        release_after = validate_identity(release, "source release", EXPECTED_RELEASE_SHA256, EXPECTED_RELEASE_SIZE)
-        if release_before != release_after:
-            raise CaptureError("source release changed during capture; evidence is rejected")
+        release_after = None
+        if release is not None:
+            release_after = validate_identity(release, "source release", EXPECTED_RELEASE_SHA256, EXPECTED_RELEASE_SIZE)
+            if release_before != release_after:
+                raise CaptureError("source release changed during capture; evidence is rejected")
+        if disk1_source is not None and disk2_source is not None:
+            disk1_archive_after = validate_identity(disk1_source, "Deuteros disk 1 archive",
+                EXPECTED_DISK1_ARCHIVE_SHA256, EXPECTED_DISK1_ARCHIVE_SIZE)
+            disk2_archive_after = validate_identity(disk2_source, "Deuteros disk 2 archive",
+                EXPECTED_DISK2_ARCHIVE_SHA256, EXPECTED_DISK2_ARCHIVE_SIZE)
+            if (disk1_archive_before, disk2_archive_before) != (disk1_archive_after, disk2_archive_after):
+                raise CaptureError("standalone disk archives changed during capture; evidence is rejected")
+            disk1_archive_identity, disk2_archive_identity = disk1_archive_after, disk2_archive_after
         kickstart_after = validate_identity(kickstart, "Kickstart archive", EXPECTED_KICKSTART_SHA256, EXPECTED_KICKSTART_SIZE)
         if kickstart_before != kickstart_after:
             raise CaptureError("Kickstart archive changed during capture; evidence is rejected")
@@ -789,11 +836,14 @@ def run_capture(args: argparse.Namespace) -> Path:
         display_status = title_display_receipt_status(output / "title-display.txt", input_path)
         write_exclusive(output / "run-status.txt",
                         f"capture_receipt_version={CAPTURE_RECEIPT_VERSION}\n"
+                        f"source_layout={source_layout}\n"
+                        f"source_container={'single-outer-zip' if release is not None else 'two-independent-zip-files'}\n"
+                        f"content_release_sha256={EXPECTED_RELEASE_SHA256}\n"
                         f"timing_profile={args.timing_profile}\n"
                         f"focus_settle_seconds={args.focus_settle_seconds}\n"
                         f"host_input_observed_during_capture={'true' if live_input_observed else 'false'}\n"
                         f"exit_status={exit_status}\nstart_unix={started:.6f}\nend_unix={ended:.6f}\n"
-                        + identity_status("source_release", release_after)
+                        + (identity_status("source_release", release_after) if release_after is not None else "")
                         + identity_status("kickstart_archive", kickstart_after)
                         + identity_status("disk1_archive", disk1_archive_identity)
                         + identity_status("disk2_archive", disk2_archive_identity)
@@ -807,13 +857,22 @@ def run_capture(args: argparse.Namespace) -> Path:
         print("CAPTURE FINISHED  external evidence only; host-input receipt status is in run-status.txt")
         return output
     finally:
+        unmount_errors: list[BaseException] = []
         for mountpoint in reversed(mounted):
-            unmount(mountpoint)
+            try:
+                unmount(mountpoint)
+            except Exception as error:
+                unmount_errors.append(error)
+        if unmount_errors:
+            raise CaptureError(f"unable to clean up {len(unmount_errors)} read-only capture view(s): {unmount_errors[0]}")
 
 
 def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source-release", required=True, help="Absolute recognised English Deuteros Amiga ZIP path")
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--source-release", help="Absolute recognised English Deuteros Amiga ZIP path")
+    source.add_argument("--disk1-archive", help="Absolute recognised standalone Deuteros disk 1 ZIP path")
+    parser.add_argument("--disk2-archive", help="Absolute recognised standalone Deuteros disk 2 ZIP path")
     parser.add_argument("--kickstart-archive", required=True, help="Absolute recognised Kickstart 1.3 ZIP path")
     parser.add_argument("--recorder", required=True, help="Absolute reviewed FS-UAE recorder binary path")
     parser.add_argument("--output", required=True, help="New absolute cache directory for external capture evidence")
@@ -824,7 +883,13 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
                         help="Required operator declaration: physical-input or diagnostic-no-input")
     parser.add_argument("--timing-profile", choices=tuple(sorted(TIMING_PROFILES)), default="realtime",
                         help="Recorder timing profile (default: realtime; warp is diagnostic only)")
-    return parser.parse_args(argv)
+    arguments = parser.parse_args(argv)
+    if arguments.source_release:
+        if arguments.disk2_archive:
+            parser.error("--disk2-archive cannot be used with --source-release")
+    elif not arguments.disk1_archive or not arguments.disk2_archive:
+        parser.error("provide --source-release or both --disk1-archive and --disk2-archive")
+    return arguments
 
 
 def main(argv: list[str] | None = None) -> int:

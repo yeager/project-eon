@@ -150,12 +150,20 @@ boundary rather than permission to rebuild or substitute a recorder.
 
 Use only the recognised English Deuteros archive and its clean disk-1/disk-2
 hashes listed in [the capture status](DEUTEROS_AMIGA_TITLE_CAPTURE_STATUS.md).
-Expose the outer archive, each selected nested disk ZIP and Kickstart archive
-through distinct `archivemount -o ro` views. The runner hashes and size-checks
-each nested disk ZIP before it mounts the contained ADF, then records the two
-nested identities in `run-status.txt`; the receipt verifier compares them to
-the reviewed constants without reopening user media. Rehash the outer archive before
-and after the run and verify every FUSE mount reports
+The runner accepts either the recognised outer release ZIP, or both standalone
+disk ZIPs as separate inputs. For the outer release, it exposes the outer
+archive, each selected nested disk ZIP and Kickstart archive through distinct
+`archivemount -o ro` views. For standalone input, it mounts each supplied disk
+ZIP directly through its own read-only view. Both routes hash and size-check
+the exact disk-1/disk-2 archives before mounting the contained ADFs, rehash
+the physical source ZIPs after the run, and record the ordered identities in
+`run-status.txt`. The standalone receipt labels its source layout and the
+canonical content-release identity separately; it does not claim an outer
+release ZIP or an invented combined physical hash. The receipt verifier
+compares the identities to the reviewed constants without reopening user
+media. Replay-fixture manifests still require an actual recognised physical
+outer ZIP, so standalone-layout receipts are not admissible as replay-fixture
+sources. Verify every FUSE mount reports
 `ro,nosuid,nodev,default_permissions`. Configure both drives with
 `floppy_write_protect = 1`; do not rely on FS-UAE's overlay mechanism as a
 substitute for write protection.
@@ -178,6 +186,24 @@ python3 tools/run_deuteros_amiga_capture.py \
   --output /home/you/.cache/project-eon-tools/deuteros-amiga-capture-<UTC>
 ```
 
+When the exact recognised disk ZIPs are supplied separately, replace
+`--source-release` with both ordered arguments:
+
+```sh
+python3 tools/run_deuteros_amiga_capture.py \
+  --disk1-archive '/absolute/path/to/Deuteros - The Next Millennium (1991)(Activision)(M3)(Disk 1 of 2).zip' \
+  --disk2-archive '/absolute/path/to/Deuteros - The Next Millennium (1991)(Activision)(M3)(Disk 2 of 2).zip' \
+  --kickstart-archive '/absolute/path/to/Kickstart v1.3 r34.005 (1987-12)(Commodore)(A500-A1000-A2000-CDTV)[!].zip' \
+  --recorder /absolute/path/to/reviewed/fs-uae \
+  --capture-intent physical-input \
+  --output /home/you/.cache/project-eon-tools/deuteros-amiga-capture-<UTC>
+```
+
+The two disk-archive options are required together and are mutually exclusive
+with `--source-release`. Disk order is fixed by the two option names; swapped,
+missing, altered, symlinked or otherwise unrecognised sources fail before a
+FUSE mount is started.
+
 `realtime` is the default and the only timing-faithful capture profile. New
 runs must also state `--capture-intent physical-input` or
 `--capture-intent diagnostic-no-input`. A physical-input run is rejected
@@ -189,15 +215,17 @@ finite `warp` profile is allowed solely for separately labelled diagnostic
 reachability work; it is receipt-bound but cannot establish original timing,
 gameplay, or title-screen behaviour.
 
-It admits only the documented outer ZIPs, reviewed recorder binary, clean
-Disk 1/Disk 2 ADFs and Kickstart ROM hashes. It mounts the outer release, each
-nested disk archive, and Kickstart archive separately with
+It admits only the documented outer or ordered standalone disk ZIPs, reviewed
+recorder binary, clean Disk 1/Disk 2 ADFs and Kickstart ROM hashes. It mounts
+the selected physical archive inputs separately with
 `ro,nosuid,nodev,default_permissions`; supplies both FUSE ADFs with
 `floppy_write_protect = 1`; and rehashes both source ZIPs after the run.
 It rejects repository/media/`/tmp` output paths and headless SDL. Its only
 recorder outputs are raw PC and host-input-delivery receipts outside the
-repository. `run-status.txt` binds the post-run outer-release, Kickstart,
-reviewed-recorder and generated-configuration identities; it reports the
+repository. `run-status.txt` binds the selected physical source layout, the
+separate canonical content-release hash, the applicable post-run outer ZIP
+or ordered standalone disk ZIP identities, Kickstart, reviewed recorder and
+generated configuration; it reports the
 optional raw-PC file by hash/size (with an 8 MiB ceiling), and the optional
 title-armed display receipt by hash/size and bounded grammar summary (with a
 512 KiB ceiling), and explicitly says
@@ -212,14 +240,14 @@ Every FUSE mount is now checked by its exact mountpoint on cleanup; a failed
 unmount rejects the run rather than silently leaving a read-only source view
 inside a later evidence directory.
 
-New captures write `capture_receipt_version=11`. They bind both the complete
+New captures write `capture_receipt_version=23`. They bind both the complete
 console-stream identity and the retained-prefix identity, validate the raw-PC
 observer grammar, contiguous ordinals, monotonic cycles, reviewed probe-site
 set, and finite per-site counts before recording a non-semantic site-count
 summary, and enforce a 64 MiB total-console safety cap. A cap crossing writes
 `recorder_console_over_limit=true`, stops the recorder, preserves the bounded
 prefix for review, and rejects the directory as inadmissible evidence. Receipt
-v11 also binds the required declared capture intent to the recorder-owned
+v23 also binds the required declared capture intent to the recorder-owned
 host-input receipt; it makes no claim about original-game input semantics.
 v6 also binds the finite `realtime` or diagnostic-only `warp` timing profile
 to the generated configuration, and validates a present FS-UAE host-delivery

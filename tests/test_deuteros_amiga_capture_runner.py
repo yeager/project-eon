@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import io
+import contextlib
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
@@ -170,6 +171,175 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
                 "--source-release", "/release.zip", "--kickstart-archive", "/kickstart.zip",
                 "--recorder", "/recorder", "--output", "/capture",
             ))
+
+    def test_standalone_source_requires_both_ordered_disk_archives(self) -> None:
+        common = ("--kickstart-archive", "/kickstart.zip", "--recorder", "/recorder",
+                  "--output", "/capture", "--capture-intent", "diagnostic-no-input")
+        arguments = TOOL.parse_arguments(("--disk1-archive", "/disk1.zip",
+                                          "--disk2-archive", "/disk2.zip", *common))
+        self.assertIsNone(arguments.source_release)
+        self.assertEqual(arguments.disk1_archive, "/disk1.zip")
+        self.assertEqual(arguments.disk2_archive, "/disk2.zip")
+        for invalid in (("--disk1-archive", "/disk1.zip"),
+                        ("--disk2-archive", "/disk2.zip"),
+                        ("--source-release", "/release.zip", "--disk2-archive", "/disk2.zip"),
+                        ("--source-release", "/release.zip", "--disk1-archive", "/disk1.zip")):
+            with self.subTest(invalid=invalid), self.assertRaises(SystemExit), \
+                    mock.patch("sys.stderr", new_callable=io.StringIO):
+                TOOL.parse_arguments((*invalid, *common))
+
+    def test_standalone_source_output_cannot_be_inside_either_media_directory(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            disk1_dir = root / "disk1-media"
+            disk2_dir = root / "disk2-media"
+            disk1_dir.mkdir()
+            disk2_dir.mkdir()
+            disk1 = disk1_dir / "disk1.zip"
+            disk2 = disk2_dir / "disk2.zip"
+            kickstart = root / "kickstart.zip"
+            for source in (disk1, disk2, kickstart):
+                source.write_bytes(b"supplied")
+            for unsafe in (disk1_dir / "capture", disk2_dir / "capture"):
+                with self.subTest(unsafe=unsafe), self.assertRaisesRegex(TOOL.CaptureError, "supplied-media"):
+                    TOOL.reject_unsafe_output(disk1.resolve(), disk2.resolve(), kickstart.resolve(),
+                                              output=unsafe.resolve())
+
+    def test_swapped_standalone_archives_fail_before_any_mount(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            media = root / "media"
+            cache = root / "cache"
+            media.mkdir()
+            cache.mkdir()
+            disk1 = media / "disk1.zip"
+            disk2 = media / "disk2.zip"
+            kickstart = media / "kickstart.zip"
+            recorder = root / "recorder"
+            disk1.write_bytes(b"disk one")
+            disk2.write_bytes(b"disk two")
+            kickstart.write_bytes(b"kickstart")
+            recorder.write_bytes(b"recorder")
+            recorder.chmod(0o700)
+            args = SimpleNamespace(source_release=None, disk1_archive=str(disk2),
+                                   disk2_archive=str(disk1), kickstart_archive=str(kickstart),
+                                   recorder=str(recorder), output=str(cache / "capture"),
+                                   duration_seconds=15, focus_settle_seconds=0,
+                                   capture_intent="diagnostic-no-input", timing_profile="realtime")
+            with mock.patch.object(TOOL, "require_visible_operator_input"), \
+                    mock.patch.object(TOOL, "mount_read_only") as mount, \
+                    self.assertRaisesRegex(TOOL.CaptureError, "exact recognised"):
+                TOOL.run_capture(args)
+            mount.assert_not_called()
+            self.assertFalse((cache / "capture").exists())
+
+    def test_standalone_capture_mounts_ordered_inputs_and_rechecks_after_run(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            media = root / "media"
+            cache = root / "cache"
+            media.mkdir()
+            cache.mkdir()
+            disk1 = media / "disk1.zip"
+            disk2 = media / "disk2.zip"
+            kickstart = media / "kickstart.zip"
+            recorder = root / "recorder"
+            for path in (disk1, disk2, kickstart, recorder):
+                path.write_bytes(b"placeholder")
+            recorder.chmod(0o700)
+            output = cache / "capture"
+            args = SimpleNamespace(source_release=None, disk1_archive=str(disk1),
+                                   disk2_archive=str(disk2), kickstart_archive=str(kickstart),
+                                   recorder=str(recorder), output=str(output), duration_seconds=15,
+                                   focus_settle_seconds=0, capture_intent="diagnostic-no-input",
+                                   timing_profile="realtime")
+            hash_calls: dict[str, int] = {}
+
+            def identity(path, label, expected_hash, expected_size):
+                if label in {"Deuteros disk 1 archive", "Deuteros disk 2 archive", "Kickstart archive"}:
+                    hash_calls[label] = hash_calls.get(label, 0) + 1
+                return expected_hash, expected_size
+
+            process = SimpleNamespace(stdout=io.BytesIO(b"bounded test console\n"), poll=lambda: 0)
+            with mock.patch.object(TOOL, "require_visible_operator_input"), \
+                    mock.patch.object(TOOL, "validate_identity", side_effect=identity), \
+                    mock.patch.object(TOOL, "validate_recorder", return_value=(TOOL.EXPECTED_RECORDER_SHA256, 17)), \
+                    mock.patch.object(TOOL, "mount_read_only") as mount, \
+                    mock.patch.object(TOOL, "unmount") as unmount, \
+                    mock.patch.object(TOOL.subprocess, "Popen", return_value=process), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                TOOL.run_capture(args)
+
+            self.assertEqual(mount.call_args_list, [
+                mock.call(disk1, output / "disk1-ro"),
+                mock.call(disk2, output / "disk2-ro"),
+                mock.call(kickstart, output / "kickstart-ro"),
+            ])
+            self.assertEqual(unmount.call_args_list, [
+                mock.call(output / "kickstart-ro"),
+                mock.call(output / "disk2-ro"),
+                mock.call(output / "disk1-ro"),
+            ])
+            self.assertEqual(hash_calls, {"Deuteros disk 1 archive": 2,
+                                          "Deuteros disk 2 archive": 2,
+                                          "Kickstart archive": 2})
+            receipt = (output / "run-status.txt").read_text(encoding="utf-8")
+            self.assertIn("capture_receipt_version=23\n", receipt)
+            self.assertIn("source_layout=standalone-zip-pair\n", receipt)
+            self.assertIn("source_container=two-independent-zip-files\n", receipt)
+            self.assertIn(f"content_release_sha256={TOOL.EXPECTED_RELEASE_SHA256}\n", receipt)
+            self.assertNotIn("source_release_sha256=", receipt)
+            self.assertNotIn("source_release_bytes=", receipt)
+
+    def test_standalone_capture_rejects_disk_change_and_unmounts_all_views(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            media = root / "media"
+            cache = root / "cache"
+            media.mkdir()
+            cache.mkdir()
+            disk1, disk2, kickstart, recorder = (media / name for name in
+                                                   ("disk1.zip", "disk2.zip", "kickstart.zip", "recorder"))
+            for path in (disk1, disk2, kickstart, recorder):
+                path.write_bytes(b"placeholder")
+            recorder.chmod(0o700)
+            output = cache / "capture"
+            args = SimpleNamespace(source_release=None, disk1_archive=str(disk1),
+                                   disk2_archive=str(disk2), kickstart_archive=str(kickstart),
+                                   recorder=str(recorder), output=str(output), duration_seconds=15,
+                                   focus_settle_seconds=0, capture_intent="diagnostic-no-input",
+                                   timing_profile="realtime")
+            disk1_checks = 0
+
+            def identity(path, label, expected_hash, expected_size):
+                nonlocal disk1_checks
+                if label == "Deuteros disk 1 archive":
+                    disk1_checks += 1
+                    if disk1_checks == 2:
+                        raise TOOL.CaptureError("disk 1 archive changed during capture")
+                return expected_hash, expected_size
+
+            process = SimpleNamespace(stdout=io.BytesIO(b"bounded test console\n"), poll=lambda: 0)
+            unmount_calls = []
+
+            def fail_one_unmount(path):
+                unmount_calls.append(path)
+                if path == output / "kickstart-ro":
+                    raise OSError("injected cleanup fault")
+
+            with mock.patch.object(TOOL, "require_visible_operator_input"), \
+                    mock.patch.object(TOOL, "validate_identity", side_effect=identity), \
+                    mock.patch.object(TOOL, "validate_recorder", return_value=(TOOL.EXPECTED_RECORDER_SHA256, 17)), \
+                    mock.patch.object(TOOL, "mount_read_only") as mount, \
+                    mock.patch.object(TOOL, "unmount", side_effect=fail_one_unmount), \
+                    mock.patch.object(TOOL.subprocess, "Popen", return_value=process), \
+                    contextlib.redirect_stdout(io.StringIO()), \
+                    self.assertRaisesRegex(TOOL.CaptureError, "unable to clean up 1 read-only"):
+                TOOL.run_capture(args)
+            self.assertEqual(disk1_checks, 2)
+            self.assertEqual(mount.call_count, 3)
+            self.assertEqual(unmount_calls, [output / "kickstart-ro", output / "disk2-ro",
+                                              output / "disk1-ro"])
 
     def test_capture_intent_fails_closed_against_the_recorder_input_receipt(self) -> None:
         present = ("host_input_receipt=present\n"

@@ -46,6 +46,104 @@ class ReceiptVerifierTests(unittest.TestCase):
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "20"}), "20")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "21"}), "21")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "22"}), "22")
+        self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "23"}), "23")
+
+    def test_v23_deuteros_source_contract_binds_standalone_pair_without_outer_zip(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        fields = {
+            "content_release_sha256": runner.EXPECTED_RELEASE_SHA256,
+            "source_layout": runner.SOURCE_LAYOUT_STANDALONE,
+            "source_container": "two-independent-zip-files",
+            "disk1_archive_sha256": runner.EXPECTED_DISK1_ARCHIVE_SHA256,
+            "disk1_archive_bytes": str(runner.EXPECTED_DISK1_ARCHIVE_SIZE),
+            "disk2_archive_sha256": runner.EXPECTED_DISK2_ARCHIVE_SHA256,
+            "disk2_archive_bytes": str(runner.EXPECTED_DISK2_ARCHIVE_SIZE),
+        }
+        TOOL.verify_deuteros_source_contract(fields, "23", runner)
+        tampered = dict(fields, disk1_archive_sha256=runner.EXPECTED_DISK2_ARCHIVE_SHA256,
+                        disk1_archive_bytes=str(runner.EXPECTED_DISK2_ARCHIVE_SIZE))
+        with self.assertRaisesRegex(ValueError, "disk1_archive identity"):
+            TOOL.verify_deuteros_source_contract(tampered, "23", runner)
+        tampered = dict(fields, source_release_sha256=runner.EXPECTED_RELEASE_SHA256,
+                        source_release_bytes=str(runner.EXPECTED_RELEASE_SIZE))
+        with self.assertRaisesRegex(ValueError, "must not claim"):
+            TOOL.verify_deuteros_source_contract(tampered, "23", runner)
+        tampered = dict(fields, content_release_sha256="0" * 64)
+        with self.assertRaisesRegex(ValueError, "content-release"):
+            TOOL.verify_deuteros_source_contract(tampered, "23", runner)
+
+    def test_v23_deuteros_receipt_runs_v11_semantic_gates(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        with temporary_directory() as directory:
+            root = Path(directory)
+            config = root / "deuteros-amiga-capture.fs-uae"
+            config.write_text("warp_mode = 0\n", encoding="utf-8")
+            console = b"visible emulator output\n"
+            (root / "recorder-console.log").write_bytes(console)
+            config_hash, config_size = hashlib.sha256(config.read_bytes()).hexdigest(), config.stat().st_size
+            console_hash = hashlib.sha256(console).hexdigest()
+            fields = {
+                "capture_receipt_version": "23",
+                "source_layout": runner.SOURCE_LAYOUT_STANDALONE,
+                "source_container": "two-independent-zip-files",
+                "content_release_sha256": runner.EXPECTED_RELEASE_SHA256,
+                "disk1_archive_sha256": runner.EXPECTED_DISK1_ARCHIVE_SHA256,
+                "disk1_archive_bytes": str(runner.EXPECTED_DISK1_ARCHIVE_SIZE),
+                "disk2_archive_sha256": runner.EXPECTED_DISK2_ARCHIVE_SHA256,
+                "disk2_archive_bytes": str(runner.EXPECTED_DISK2_ARCHIVE_SIZE),
+                "kickstart_archive_sha256": runner.EXPECTED_KICKSTART_SHA256,
+                "kickstart_archive_bytes": str(runner.EXPECTED_KICKSTART_SIZE),
+                "recorder_sha256": runner.EXPECTED_RECORDER_SHA256,
+                "recorder_bytes": "17",
+                "configuration_sha256": config_hash,
+                "configuration_bytes": str(config_size),
+                "timing_profile": "realtime",
+                "raw_pc": "absent",
+                "host_input_receipt": "absent",
+                "title_display": "absent",
+                "capture_intent": "diagnostic-no-input",
+                "capture_intent_input_requirement": "forbidden",
+                "host_input_observed_during_capture": "false",
+                "recorder_console": "present",
+                "recorder_console_sha256": console_hash,
+                "recorder_console_total_bytes": str(len(console)),
+                "recorder_console_retained_bytes": str(len(console)),
+                "recorder_console_retained_sha256": console_hash,
+                "recorder_console_over_limit": "false",
+                "recorder_console_truncated": "false",
+            }
+            status = root / "run-status.txt"
+            status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()), encoding="utf-8")
+            with mock.patch.object(TOOL, "verify_deuteros_title_display",
+                                  wraps=TOOL.verify_deuteros_title_display) as display_gate:
+                TOOL.verify("deuteros-amiga", root)
+            display_gate.assert_called_once_with(fields, root)
+
+            fields["capture_intent_input_requirement"] = "required"
+            status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "capture intent"):
+                TOOL.verify("deuteros-amiga", root)
+
+            fields["capture_intent_input_requirement"] = "forbidden"
+            fields["recorder_console_over_limit"] = "true"
+            status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "safety cap"):
+                TOOL.verify("deuteros-amiga", root)
+
+    def test_v23_deuteros_raw_and_timing_gates_keep_the_v11_contract(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        with temporary_directory() as directory:
+            root = Path(directory)
+            raw = root / "raw-pc.txt"
+            raw.write_text("legacy raw record\n", encoding="ascii")
+            with self.assertRaisesRegex(ValueError, "format does not match"):
+                TOOL.verify_deuteros_raw_pc_summary({"raw_pc": "present", "raw_pc_format": "legacy"},
+                                                     root, "23")
+            (root / "deuteros-amiga-capture.fs-uae").write_text("warp_mode = 1\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "does not match"):
+                TOOL.verify_deuteros_timing_profile({"timing_profile": "realtime"}, root)
+            with self.assertRaisesRegex(ValueError, "safety cap"):
+                TOOL.verify_console_admission({"recorder_console_over_limit": "true"}, "23")
 
     def test_capture_intent_rejects_a_receipt_that_disagrees_with_its_declared_session(self) -> None:
         millennium = TOOL.load_tool("run_millennium_dos_capture")
