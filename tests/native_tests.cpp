@@ -3106,6 +3106,15 @@ int main(int argc, char** argv) {
         const eon::ZipArchive valid_zip(zip);
         assert(valid_zip.entries().size() == 1);
         assert(valid_zip.extract(valid_zip.entries().front()).empty());
+        auto oversized_entry = valid_zip.entries().front();
+        oversized_entry.uncompressed_size = 256U * 1024U * 1024U + 1U;
+        bool rejected_oversized_entry = false;
+        try {
+            static_cast<void>(valid_zip.extract(oversized_entry));
+        } catch (const std::runtime_error& error) {
+            rejected_oversized_entry = std::string_view(error.what()) == "ZIP entry exceeds safety limit";
+        }
+        assert(rejected_oversized_entry);
         // Inventory from an admitted in-memory archive must use the supplied
         // logical label only; it has no source path to reopen.
         const auto memory_inventory = valid_zip.inventory("admitted.zip");

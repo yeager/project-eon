@@ -298,6 +298,9 @@ ZipArchive ZipArchive::open_verified(const std::filesystem::path& path,
 }
 
 std::vector<std::uint8_t> ZipArchive::extract(const ZipEntry& entry) const {
+    if (entry.compressed_size > maximum_entry_size || entry.uncompressed_size > maximum_entry_size) {
+        throw std::runtime_error("ZIP entry exceeds safety limit");
+    }
     const auto offset = static_cast<std::size_t>(entry.local_offset);
     if (offset > bytes_.size() || bytes_.size() - offset < 30
         || little32(bytes_, offset) != local_signature) {
