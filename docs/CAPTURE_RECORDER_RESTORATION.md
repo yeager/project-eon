@@ -253,6 +253,54 @@ build, no emitted observation, and no recorder pin or capture admission. The
 existing SDL window-close route reaches the terminal shutdown point, but its
 integration with a successor runner and serializer still requires review.
 
+### Terminal output development integration
+
+A subsequent external build connects a bounded serializer only to the final
+`sdlmain.cpp` path immediately before `GFX_ShutDown()`, beyond the restart
+branches. The new `OnlyAtStart` `terminal_output_path` field shares the
+environment-excluded recorder section. Before guest initialization, the caller
+requires an absolute path beneath trv2's scoped
+`recorder-recovery-20260929/terminal-captures/` cache directory. The serializer
+opens each parent component without following symlinks and retains the final
+directory descriptor; that directory must belong to the effective user and
+must not be group/world writable. No destination file is created at this stage.
+
+The terminal caller requires a captured POD, a prepared sink and an accepted
+SDL2 window-close event. That event is a raw host fact, not proof of physical
+input. Exclusive mode-0600 creation and bounded serialization occur only after
+guest execution stops. Write, file/directory sync and close failures leave the
+requested run at exit status `86`; a leftover file is never sufficient. Only
+successful serialization followed by a written/flushed terminal stdout marker
+can clear that failure status. A future consumer must bind the exact marker,
+successful process exit and output hash together. Reboot initialization clears
+the observation and accepted-close state.
+
+Full compilation and reverse-patch checking passed. The preserved external
+`dosbox-x-terminal` is 132,919,880 bytes, SHA-256
+`aeba73d5df374b20479e20bb75c13200fbea1e39ae91464c6f50b77eea036564`.
+The complete `dosbox-terminal-foundation.patch` has SHA-256
+`6964e331729e19aac14bfe65fd01bb4c69ea2a67306728fbe57384f7f1869d1b`.
+Actual-header POSIX/non-POSIX harnesses passed path bounds, symlink/collision
+rejection, parent-directory anchoring, ownership/permission checks and injected
+write/sync/close failures. The header SHA-256 is
+`c04ae69b764f58dd2698cda50390d917cbedd2f2d65ebf067719e76b3cdb4109`;
+the harness source SHA-256 is
+`841573e4778ca327dc8cf79cd5cff02422a815b3fb1a06dd9a63f1697060f59c`.
+Build details and test artifacts remain in the external
+`dosbox-terminal-build-record.md` and `terminal-harness/`.
+Independent integration review identified and verified fixes for internal
+`fresh_boot` reset and accepted close events in the menu/focus/pause paths.
+Actual-helper tests also passed success, absent/invalid configuration, absent
+close, and stdout-failure cases; the latter retained status `86` despite an
+existing output file. The glue harness source SHA-256 is
+`cf1accf99029bf3698178d1efb11d04986b4052d407469d0811c3886ae9018ec`.
+The seven-property configuration harness confirmed the new path's empty
+default, startup-only mutability and exclusion from environment overrides.
+
+This remains `OBSERVER_FIX_REQUIRED`, with no media run or new pin. The emitted
+schema is explicitly development-only. Host-input receipts and the successor
+runner/validator contract still require implementation and complete review.
+
 ## Recorder restoration state machine
 
 Recorder work is an explicit state machine. A transition may only advance when
