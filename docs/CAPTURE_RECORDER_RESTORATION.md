@@ -357,6 +357,48 @@ remained rejected. Its external result manifest
 `d784a2d6bdf5c70c2fd036ee30f54c4f9ffb84024c2652448b7393726946f3d1`.
 The complete build record is external in `dosbox-input-build-record.md`.
 
+### Experimental terminal runner and receipt schema 24
+
+`tools/run_millennium_dos_terminal_capture.py` isolates the successor's
+terminal-only lifecycle from historical capture protocols. It reuses the
+recognised source hash, read-only archive mount and configuration primitives,
+but requires explicit `--experimental-observer`, the exact input-build hash
+and byte count above, and a fresh private direct child of the reviewed trv2
+`terminal-captures/` root. It gives DOSBox-X a fresh XDG configuration/cache
+and working directory, excludes inherited emulator/recorder overrides, and
+sets compiler/tool scratch output outside both media and the repository.
+
+The operator must close the visible window manually before the 15–600 second
+abort deadline. The runner does not inject a close event, keyboard input,
+debugger command or signal to produce successful output. Timeout, console
+overflow, nonzero exit, missing/partial files or a failed console drain reject
+the run. The complete successful console is retained up to a 64 MiB hard cap;
+one exact terminal success marker, successful exit and both independently
+hashed output files are all necessary. Rejected by-products remain external.
+
+Schema `24` / protocol `v24-terminal-int6` binds the upstream commit, complete
+observer patch, recorder binary, source release, exact regenerated
+configuration and bounded artifacts. It names the raw SDL timestamp source,
+unclassified input origin, process-lifetime scope and manual-close procedure.
+`operator-input` requires at least one queue record without asserting physical
+origin; `diagnostic-no-key-delivery` requires an empty recorder-created receipt.
+Neither supplies game-input acceptance or a title/action checkpoint. Original
+Linux output-path provenance uses POSIX path semantics even when a retained
+receipt is verified on another platform.
+
+The normal verifier rejects this experimental schema. Integrity inspection
+requires `verify_capture_receipt.py --kind millennium-dos --capture <directory>
+--allow-experimental-observer`; successful inspection does not promote the
+binary into the ordinary recorder registry or admit native recovery. No
+emulator/media run is recorded for this successor. A visible operator session
+and its reviewed result remain separate work from the synthetic contract tests.
+Independent review found no remaining blocker in the experimental runner's
+shutdown, bounded publication or verification contract. On trv2, all 23 new
+runner/protocol tests, the complete 399-test Python suite, the native build
+and all eight CTests passed. Repository-artifact, preservation-ledger,
+secret-scanning and diff-whitespace gates passed. These results establish the
+tooling contract only; they are not observations of original gameplay.
+
 ## Recorder restoration state machine
 
 Recorder work is an explicit state machine. A transition may only advance when

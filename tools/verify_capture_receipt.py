@@ -5,12 +5,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import importlib.util
+import os
 from pathlib import Path
 import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"}
+CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24"}
 
 
 def load_tool(name: str):
@@ -36,8 +37,17 @@ def receipt(path: Path) -> dict[str, str]:
     info = path.lstat()
     if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
         raise ValueError("run-status.txt must be a regular non-symlink file")
+    if info.st_size > 64 * 1024:
+        raise ValueError("run-status.txt exceeds the bounded receipt contract")
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
+    with os.fdopen(fd, "rb") as stream:
+        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+            raise ValueError("run-status.txt must remain a regular file")
+        data = stream.read(64 * 1024 + 1)
+    if len(data) > 64 * 1024:
+        raise ValueError("run-status.txt exceeds the bounded receipt contract")
     fields: dict[str, str] = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in data.decode("utf-8").splitlines():
         if line.count("=") != 1:
             raise ValueError("receipt contains an invalid line")
         key, value = line.split("=", 1)
@@ -369,6 +379,13 @@ def verify(kind: str, directory: Path, *, allow_experimental_observer: bool = Fa
         raise ValueError("capture directory must be an absolute non-symlink directory")
     fields = receipt(directory / "run-status.txt")
     version = require_receipt_schema(fields)
+    if version == "24":
+        if kind != "millennium-dos":
+            raise ValueError("terminal DOS schema 24 is only supported for Millennium DOS")
+        terminal = load_tool("millennium_dos_terminal_protocol")
+        terminal.verify_fields(fields, directory,
+                               allow_experimental_observer=allow_experimental_observer)
+        return
     if kind == "millennium-dos":
         if version == "23":
             raise ValueError("capture receipt schema 23 is only supported for Deuteros Amiga")
