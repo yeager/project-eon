@@ -46,8 +46,12 @@ an MCGA interrupt postlude or select an installed driver.
 The standalone INT `$91` function-`$13` session now hash-binds the EGA/MCGA
 dispatcher prefix and table route, carries the typed `$0129` interrupt frame,
 and models MCGA's `$01e4` clear plus explicit `$01e5` conditional byte. It
-stops before callback `$0d22` or at IRET; this still does not authenticate the
-installed vector or prove that title execution selected this handler.
+continues the nonzero `$01e5` path through the hash-bound local callback
+prefix at `$0d22`. Its typed byte and word reads select only the proven branch
+destinations `$0c94`, `$0d10`, or fallthrough `$0d35`; code at those destinations
+remains outside this session. The zero `$01e5` path still stops at IRET. This
+does not authenticate the installed vector or prove title execution selected
+this handler.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,
 respectively. The existing global-mode-2 descriptor regression uses explicit
 arithmetic observations; it is not evidence that either supplied driver

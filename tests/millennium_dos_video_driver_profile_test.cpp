@@ -180,9 +180,56 @@ int main(const int argc, char** argv) {
     mcga_callback.observe_port_read({3,0x090d,0x03da,0x08});
     mcga_callback.observe_mcga_postlude_byte({4,0x001a,0x3456,0x01e5,1});
     assert(mcga_callback.state() == Function13InterruptState::callback_boundary
-        && mcga_callback.boundary() == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0021}
+        && mcga_callback.boundary() == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d22}
         && !mcga_callback.outcome());
     expect_rejected([&] { mcga_callback.execute_iret(5,0x0020); });
+    expect_rejected([&] { mcga_callback.observe_mcga_callback_read({5,0x0d22,0x9999,0x0c88,0,
+        eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte}); });
+    expect_rejected([&] { mcga_callback.observe_mcga_callback_read({5,0x0d23,0x3456,0x0c88,0,
+        eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte}); });
+    assert(mcga_callback.next_sequence() == 5 && mcga_callback.callback_reads().empty());
+    mcga_callback.observe_mcga_callback_read({5,0x0d22,0x3456,0x0c88,1,
+        eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    assert(mcga_callback.state() == Function13InterruptState::callback_local_boundary
+        && mcga_callback.boundary() == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0c94}
+        && mcga_callback.callback_reads().size() == 1);
+
+    Function13Interrupt mcga_callback_zero(mcga_bytes,
+        eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
+    mcga_callback_zero.observe_interrupt_request({1,0x0127,0x0013,0x0129,0x5678,0x0302});
+    mcga_callback_zero.observe_port_read({2,0x0908,0x03da,0x00});
+    mcga_callback_zero.observe_port_read({3,0x090d,0x03da,0x08});
+    mcga_callback_zero.observe_mcga_postlude_byte({4,0x001a,0x3456,0x01e5,1});
+    mcga_callback_zero.observe_mcga_callback_read({5,0x0d22,0x3456,0x0c88,0,
+        eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    assert(mcga_callback_zero.state() == Function13InterruptState::awaiting_mcga_callback_word
+        && mcga_callback_zero.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d2d});
+    expect_rejected([&] {
+        mcga_callback_zero.observe_mcga_callback_read({6,0x0d2d,0x3456,0x0d18,0,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    });
+    assert(mcga_callback_zero.next_sequence() == 6
+        && mcga_callback_zero.callback_reads().size() == 1);
+    mcga_callback_zero.observe_mcga_callback_read({6,0x0d2d,0x3456,0x0d18,0,
+        eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
+    assert(mcga_callback_zero.state() == Function13InterruptState::callback_local_boundary
+        && mcga_callback_zero.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d10});
+
+    Function13Interrupt mcga_callback_nonzero(mcga_bytes,
+        eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
+    mcga_callback_nonzero.observe_interrupt_request({1,0x0127,0x0013,0x0129,0x5678,0x0302});
+    mcga_callback_nonzero.observe_port_read({2,0x0908,0x03da,0x00});
+    mcga_callback_nonzero.observe_port_read({3,0x090d,0x03da,0x08});
+    mcga_callback_nonzero.observe_mcga_postlude_byte({4,0x001a,0x3456,0x01e5,1});
+    mcga_callback_nonzero.observe_mcga_callback_read({5,0x0d22,0x3456,0x0c88,0,
+        eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    mcga_callback_nonzero.observe_mcga_callback_read({6,0x0d2d,0x3456,0x0d18,1,
+        eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
+    assert(mcga_callback_nonzero.state() == Function13InterruptState::callback_local_boundary
+        && mcga_callback_nonzero.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d35});
 
     using Session = eon::MillenniumDosVideoFunctionZeroSession;
     using State = eon::MillenniumDosVideoFunctionZeroState;

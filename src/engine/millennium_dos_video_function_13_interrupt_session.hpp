@@ -15,6 +15,8 @@ enum class MillenniumDosVideoFunction13InterruptState {
     awaiting_mcga_postlude_byte,
     iret_boundary,
     callback_boundary,
+    awaiting_mcga_callback_word,
+    callback_local_boundary,
     returned,
 };
 
@@ -38,6 +40,22 @@ struct MillenniumDosVideoFunction13McgaPostludeByte {
     std::uint16_t segment = 0;
     std::uint16_t offset = 0x01e5;
     std::uint8_t value = 0;
+};
+
+enum class MillenniumDosVideoFunction13McgaCallbackReadWidth : std::uint8_t {
+    byte = 1,
+    word = 2,
+};
+
+struct MillenniumDosVideoFunction13McgaCallbackRead {
+    std::uint64_t sequence = 0;
+    std::uint16_t instruction_address = 0;
+    std::uint16_t segment = 0;
+    std::uint16_t offset = 0;
+    std::uint16_t value = 0;
+    MillenniumDosVideoFunction13McgaCallbackReadWidth width =
+        MillenniumDosVideoFunction13McgaCallbackReadWidth::byte;
+    constexpr bool operator==(const MillenniumDosVideoFunction13McgaCallbackRead&) const = default;
 };
 
 struct MillenniumDosVideoFunction13DriverByteEffect {
@@ -79,10 +97,14 @@ public:
     [[nodiscard]] std::optional<MillenniumDosVideoFunction13InterruptOutcome> outcome() const {
         return outcome_;
     }
+    [[nodiscard]] const std::vector<MillenniumDosVideoFunction13McgaCallbackRead>& callback_reads() const {
+        return callback_reads_;
+    }
 
     void observe_interrupt_request(const MillenniumDosVideoFunction13InterruptRequest& request);
     void observe_port_read(const MillenniumDosVideoFunction13PortRead& read);
     void observe_mcga_postlude_byte(const MillenniumDosVideoFunction13McgaPostludeByte& read);
+    void observe_mcga_callback_read(const MillenniumDosVideoFunction13McgaCallbackRead& read);
     void execute_iret(std::uint64_t sequence, std::uint16_t instruction_address);
 
 private:
@@ -95,6 +117,8 @@ private:
     std::optional<MillenniumDosVideoFunction13InterruptRequest> request_;
     std::optional<MillenniumDosVideoFunction13Outcome> retrace_outcome_;
     std::optional<MillenniumDosVideoFunction13InterruptOutcome> outcome_;
+    std::vector<MillenniumDosVideoFunction13McgaCallbackRead> callback_reads_;
+    std::uint16_t callback_next_instruction_ = 0;
 };
 
 } // namespace eon

@@ -4783,12 +4783,21 @@ through its conditional IRET (`+$0000..+$0024`) hashes to
 `e61647601d433d528ab51403c7a73371d58bdbfe0bd25789e936489844f3630f`; its
 handler table begins at `$0032`. After the poll, the session records the
 hash-bound local zero store at driver `$01e4`, accepts the byte at `$01e5` as
-an explicit input, and stops before callback `$0d22` when that byte is
-nonzero. Otherwise it stops at IRET. The caller frame's IP must be `$0129`;
-its CS and FLAGS remain explicit inputs and are returned verbatim. The outcome
-records only direct local register effects and supplied port reads. The
-standalone session does not authenticate an IVT vector, assert which profile
-was installed, execute the callback, or establish a real handler return.
+an explicit input, and stops at IRET when that byte is zero. A nonzero byte
+continues into the separately hash-bound callback prefix `[$0d22,$0d35)` (19
+bytes, SHA-256
+`4a470e322e180bdecc72bee6717ea0452be755951694ef22cfdd85c76763de56`). Its
+first typed read is the byte at CS:`$0c88`, requested by `$0d22`: nonzero
+branches to `$0c94`; zero reaches the word comparison at `$0d2d`, CS:`$0d18`.
+That second value branches to `$0d10` when zero and falls through to `$0d35`
+otherwise. The session records each supplied value and stops at the selected
+destination without executing its code. These on-disk bytes do not establish
+the runtime values. The caller frame's IP must be `$0129`; its CS and FLAGS
+remain explicit inputs and are returned verbatim only on the separate IRET
+path. The outcome records only direct local register effects and supplied
+port reads. The standalone session does not authenticate an IVT vector, assert
+which profile was installed, or establish that title execution reached this
+handler or a real handler return.
 
 The same hash-identified `MILL.COM` contains a distinct sound-effect choice
 routine at loaded `$0511..$0574` (file `+$0411`, 100 bytes, SHA-256

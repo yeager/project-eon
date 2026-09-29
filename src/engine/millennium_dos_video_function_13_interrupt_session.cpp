@@ -1,6 +1,7 @@
 #include "engine/millennium_dos_video_function_13_interrupt_session.hpp"
 
 #include "data/millennium_dos_video_driver.hpp"
+#include "data/sha256.hpp"
 
 #include <stdexcept>
 
@@ -11,6 +12,16 @@ MillenniumDosVideoFunction13InterruptSession::MillenniumDosVideoFunction13Interr
     const MillenniumDosVideoDriverKind kind,
     const std::uint16_t driver_segment)
     : kind_(kind), driver_segment_(driver_segment), retrace_(english_driver, kind) {
+    if (kind_ == MillenniumDosVideoDriverKind::mcga) {
+        constexpr std::size_t callback_offset = 0x0d22;
+        constexpr std::size_t callback_size = 0x13;
+        if (callback_offset > english_driver.size()
+            || english_driver.size() - callback_offset < callback_size
+            || to_hex(sha256(english_driver.subspan(callback_offset, callback_size)))
+                != "4a470e322e180bdecc72bee6717ea0452be755951694ef22cfdd85c76763de56") {
+            throw std::runtime_error("Unsupported Millennium MCGA function-$13 callback prefix");
+        }
+    }
 }
 
 std::optional<MillenniumDosVideoFunction13InterruptBoundary>
@@ -29,7 +40,11 @@ MillenniumDosVideoFunction13InterruptSession::boundary() const {
         return MillenniumDosVideoFunction13InterruptBoundary{
             static_cast<std::uint16_t>(kind_ == MillenniumDosVideoDriverKind::ega640 ? 0x0012 : 0x0020)};
     case MillenniumDosVideoFunction13InterruptState::callback_boundary:
-        return MillenniumDosVideoFunction13InterruptBoundary{0x0021};
+        return MillenniumDosVideoFunction13InterruptBoundary{0x0d22};
+    case MillenniumDosVideoFunction13InterruptState::awaiting_mcga_callback_word:
+        return MillenniumDosVideoFunction13InterruptBoundary{0x0d2d};
+    case MillenniumDosVideoFunction13InterruptState::callback_local_boundary:
+        return MillenniumDosVideoFunction13InterruptBoundary{callback_next_instruction_};
     case MillenniumDosVideoFunction13InterruptState::returned:
         return std::nullopt;
     }
@@ -80,6 +95,34 @@ void MillenniumDosVideoFunction13InterruptSession::observe_mcga_postlude_byte(
     state_ = read.value == 0
         ? MillenniumDosVideoFunction13InterruptState::iret_boundary
         : MillenniumDosVideoFunction13InterruptState::callback_boundary;
+}
+
+void MillenniumDosVideoFunction13InterruptSession::observe_mcga_callback_read(
+    const MillenniumDosVideoFunction13McgaCallbackRead& read) {
+    const bool first_read = state_ == MillenniumDosVideoFunction13InterruptState::callback_boundary;
+    const bool second_read = state_ == MillenniumDosVideoFunction13InterruptState::awaiting_mcga_callback_word;
+    if ((!first_read && !second_read)
+        || read.sequence != last_sequence_ + 1
+        || read.segment != driver_segment_
+        || (first_read
+            && (read.instruction_address != 0x0d22 || read.offset != 0x0c88
+                || read.width != MillenniumDosVideoFunction13McgaCallbackReadWidth::byte
+                || read.value > 0x00ff))
+        || (second_read
+            && (read.instruction_address != 0x0d2d || read.offset != 0x0d18
+                || read.width != MillenniumDosVideoFunction13McgaCallbackReadWidth::word))) {
+        throw std::runtime_error("Detached Millennium DOS MCGA function-$13 callback read");
+    }
+    callback_reads_.push_back(read);
+    last_sequence_ = read.sequence;
+    if (first_read && read.value == 0) {
+        state_ = MillenniumDosVideoFunction13InterruptState::awaiting_mcga_callback_word;
+        return;
+    }
+    callback_next_instruction_ = first_read
+        ? 0x0c94
+        : (read.value == 0 ? 0x0d10 : 0x0d35);
+    state_ = MillenniumDosVideoFunction13InterruptState::callback_local_boundary;
 }
 
 void MillenniumDosVideoFunction13InterruptSession::execute_iret(
