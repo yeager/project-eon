@@ -95,6 +95,10 @@ enum class MillenniumDosTitleInitializationState {
     post_descriptor_first_loop_mode_two_first_lookup_byte_boundary,
     post_descriptor_first_loop_mode_two_second_source_byte_boundary,
     post_descriptor_first_loop_mode_two_second_lookup_byte_boundary,
+    post_descriptor_first_loop_mode_four_header_byte_boundary,
+    post_descriptor_first_loop_mode_four_header_second_byte_boundary,
+    post_descriptor_first_loop_mode_four_header_word_boundary,
+    post_descriptor_first_loop_mode_four_body_boundary,
     post_descriptor_first_loop_mode_two_returned,
     post_descriptor_loop_return_boundary,
     descriptor_loop_complete_boundary,
@@ -302,6 +306,7 @@ struct MillenniumDosTitleModeTwoDriveResult {
     bool returned = false;
     std::size_t observation_count = 0;
     std::string error;
+    bool stopped_at_boundary = false;
 };
 
 // A deliberately narrow owned-media continuation for the second descriptor's

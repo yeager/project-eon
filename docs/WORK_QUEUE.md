@@ -34,6 +34,14 @@ its initial value. It stops at private INT $91 at $0127, requested by
 $1937 with AX=$0013. Recover this service and its caller-specific return
 before advancing into the $1917 patch helper or title input.
 
+The EGA640 mode-four descriptor continuation now reads the exact `$14f0`,
+`$14fc`, and `$1500` header operands and stops at `$15c5` with its normalized
+lookup and buffer context. Next recover the hash-bound table-driven
+`$15c5..$163a` planar loop across 37 records with finite transactional
+budgets. Keep mode four separate from MCGA mode-one translation and the
+synthetic mode-two regression; keep mode three distinct and leave private
+function `$0013` unexecuted until its result is evidenced.
+
 The following paragraphs retain earlier recovery history. Their intermediate
 stops and historical source assumptions are superseded by the current
 [title initialization contract](MILLENNIUM_DOS_TITLE_INITIALIZATION.md).

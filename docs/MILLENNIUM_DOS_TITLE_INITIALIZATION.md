@@ -479,9 +479,14 @@ display mode. The complete-loop regression explicitly supplies global mode
 two to exercise its recovered postprocessing; neither supplied English video
 driver establishes that mode. A successful MCGA function-zero return has
 AH=1, while EGA640 returns AH=4. Mode-one postprocessing now has its own
-complete 37-record regression. EGA's other-mode postprocessing remains
-separate recovery work; neither regression proves a complete installed-driver
-title path because the earlier private and BIOS results remain typed inputs.
+complete 37-record regression. The EGA global mode-four path now has a
+separate hash-bound continuation from `$14f0` through its two header bytes
+and lookup-pointer setup at `$15c5`. It checks each header operand against
+the admitted library prefix and stops before the table-driven planar decoder
+loop. This does not reuse mode one's translation or mode two's expansion,
+does not claim mode-three behavior, and does not prove a complete
+installed-driver title path; earlier private and BIOS results remain typed
+inputs.
 
 ### Mode-one postprocessing
 
@@ -533,6 +538,20 @@ The $16a2 shift doubles the count before REP STOSW: each admitted record clears
 and the 256-byte lookup extent remain within the same supplied library.
 The exact $163b..$16b2 span (120 bytes) hashes to
 9a18a2349e46afad9b814befcaf0a7ddd715f446f21845453a4e4f6a72ad65b7.
+
+### EGA640 mode-four boundary
+
+The mode-four setup binds the runtime spans `$1488..$149e` (file `+$1388`),
+`$14e3..$1513` (file `+$13e3`), `$1514..$153c` (file `+$1414`), and shared
+normalizer `$013c..$014c` (file `+$003c`); their SHA-256 values are checked
+by the native session constructor. The owned loop reads the genuine first header
+byte at `$14f0`, second byte at `$14fc`, and word at `$1500`, with all three
+reads constrained to the exact normalized record and the loaded TITLE.LIB
+prefix. It applies the code's header count, optional `$0300` offset and
+`CX:DX` normalization, then returns an explicit boundary at `$15c5` with the
+lookup pointer and source/destination context. The following `$15c5..$163a`
+planar decoder loop remains unsupported and is not executed. No mode-four
+pixels or full-loop parity are claimed.
 
 The final loop edge restores count one, decrements it to zero, and exposes
 $1967 before RET. The next owned continuation returns to $1c20 and reads

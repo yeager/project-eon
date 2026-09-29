@@ -6542,12 +6542,11 @@ whose linked transition bank or title-flow profile has failed validation.
 
 ## Automation integrity
 
-The repository's sole GitHub Actions workflow has read-only repository
-permission and runs Gitleaks over complete history plus native build/test jobs
-on Linux, macOS, and Windows. It handles no releases, tags, or publication. It
-uploads non-published verification artifacts (packages and platform builds) for
-CI inspection only. Releases require an explicit maintainer request outside CI;
-normal development is pushed directly to `main`.
+GitHub Actions runs Gitleaks over complete history plus native build/test jobs
+on Linux, macOS, and Windows. The manually dispatched release workflow creates
+GitHub release packages only when explicitly invoked by a maintainer; ordinary
+pushes to `main` do not publish releases. Build verification uploads remain
+non-published artifacts for CI inspection only.
 
 All action invocations are pinned to full Git object IDs, with the reviewed
 release label preserved in a comment; the same immutable-reference rule already

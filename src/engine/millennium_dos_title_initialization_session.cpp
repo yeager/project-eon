@@ -121,7 +121,8 @@ void MillenniumDosTitleInitializationSession::advance_descriptor_mode_two_return
     descriptor_loop_iteration_=next_index;
 }
 bool MillenniumDosTitleInitializationSession::descriptor_loop_can_drive() const {
-    if((selected_mode_!=1&&selected_mode_!=2)||descriptor_loop_iteration_<1||descriptor_loop_iteration_>37)return false;
+    if((selected_mode_!=1&&selected_mode_!=2&&selected_mode_!=4)
+        ||descriptor_loop_iteration_<1||descriptor_loop_iteration_>37)return false;
     if(!descriptor_loop_owned_)
         return descriptor_loop_iteration_==1
             &&state_==MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary;
@@ -158,6 +159,10 @@ bool MillenniumDosTitleInitializationSession::descriptor_loop_can_drive() const 
     case S::post_descriptor_first_loop_mode_two_second_source_byte_boundary:
     case S::post_descriptor_first_loop_mode_two_second_lookup_byte_boundary:
         return true;
+    case S::post_descriptor_first_loop_mode_four_header_byte_boundary:
+    case S::post_descriptor_first_loop_mode_four_header_second_byte_boundary:
+    case S::post_descriptor_first_loop_mode_four_header_word_boundary:
+        return selected_mode_==4;
     default:return false;
     }
 }
@@ -267,6 +272,25 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
                     next.continuation_address_=0x14dc;
                     next.advance_descriptor_mode_two_return();
                 }
+            }else if(next.state_==S::post_descriptor_first_loop_mode_four_header_byte_boundary
+                ||next.state_==S::post_descriptor_first_loop_mode_four_header_second_byte_boundary
+                ||next.state_==S::post_descriptor_first_loop_mode_four_header_word_boundary){
+                const bool byte=next.state_!=S::post_descriptor_first_loop_mode_four_header_word_boundary;
+                const auto source_segment=byte?next.far_byte_boundary_.source_segment
+                    :next.far_read_boundary_.source_segment;
+                const auto source_offset=byte?next.far_byte_boundary_.source_offset
+                    :next.far_read_boundary_.source_offset;
+                if(source_segment!=segment||source_offset<offset)
+                    throw std::runtime_error("Mode-four header lost exact normalized provenance");
+                const auto file_offset=record+source_offset-offset;
+                if(file_offset>=library.size()||(!byte&&file_offset+1>=library.size())
+                    ||file_offset>=next.title_library_first_read_count_
+                    ||(!byte&&file_offset+1>=next.title_library_first_read_count_))
+                    throw std::runtime_error("Mode-four header exceeds loaded TITLE.LIB prefix");
+                if(byte)next.observe_far_byte({sequence,next.far_byte_boundary_.instruction_address,
+                    source_segment,source_offset,library[file_offset]});
+                else next.observe_far_word({sequence,next.far_read_boundary_.instruction_address,
+                    source_segment,source_offset,word(file_offset)});
             }else{
                 const bool source=next.state_==S::post_descriptor_first_loop_mode_two_source_byte_boundary
                     ||next.state_==S::post_descriptor_first_loop_mode_two_second_source_byte_boundary;
@@ -322,6 +346,9 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
             }
             result.observation_count=count+1;
             if(next.state_==S::descriptor_loop_complete_boundary){result.returned=true;break;}
+            if(next.state_==S::post_descriptor_first_loop_mode_four_body_boundary){
+                result.stopped_at_boundary=true;break;
+            }
             if(!next.descriptor_loop_can_drive())throw std::runtime_error("Descriptor loop reached unadmitted operation");
         }
     }catch(const std::exception& error){result.error=error.what();result.observation_count=0;return result;}
@@ -589,7 +616,9 @@ void MillenniumDosTitleInitializationSession::advance_encoded_record_complete(){
             {0x14eb,"FLAGS.DF",0},{0x14ec,"CH",0},{0x14ee,"DX",0}});
         far_byte_boundary_={0x14f0,source_segment,source_offset,0};
         continuation_address_=0x14f0;
-        state_=MillenniumDosTitleInitializationState::post_descriptor_first_loop_other_header_byte_boundary;
+        state_=selected_mode_==4
+            ?MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_header_byte_boundary
+            :MillenniumDosTitleInitializationState::post_descriptor_first_loop_other_header_byte_boundary;
     }
 }
 namespace {
@@ -715,6 +744,14 @@ constexpr auto encoded_payload_prefix_sha =
     "912d067ef688829815594e9fdf4e2ae8f03051cd3be882dc482a02dae032d39b";
 constexpr auto encoded_nibble_dispatch_sha =
     "dd7abdeaa64d537ee31fb6c4dffe319a7f824226ca44bb33e0f4cb3986560be7";
+constexpr auto mode_four_dispatch_sha =
+    "7967c8650f118732cc5c884ea6d332a8dbe6dc060e5736088e7b5d0f1fb081ad";
+constexpr auto mode_four_pointer_setup_sha =
+    "357174e7e223bf63d4e8ed46e9bacd844d3d453889a8a583dad137caf4f3416f";
+constexpr auto mode_four_setup_suffix_sha =
+    "a2fb9b438c29eb19e2b381499ea611e1af7c160fdb5d6975aff0fd9b28266c40";
+constexpr auto mode_four_normalizer_sha =
+    "515520598575ae941301a7206f70bc7505f0799acbd74ba83ed7f1a17f001a6d";
 }
 
 MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession(
@@ -866,7 +903,15 @@ MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession
         || to_hex(sha256(titles_executable.subspan(0x1319,15)))
             != encoded_payload_prefix_sha
         || to_hex(sha256(titles_executable.subspan(0x1328,31)))
-            != encoded_nibble_dispatch_sha) {
+            != encoded_nibble_dispatch_sha
+        || to_hex(sha256(titles_executable.subspan(0x1388,23)))
+            != mode_four_dispatch_sha
+        || to_hex(sha256(titles_executable.subspan(0x13e3,49)))
+            != mode_four_pointer_setup_sha
+        || to_hex(sha256(titles_executable.subspan(0x1414,41)))
+            != mode_four_setup_suffix_sha
+        || to_hex(sha256(titles_executable.subspan(0x003c,17)))
+            != mode_four_normalizer_sha) {
         throw std::runtime_error("Unsupported Millennium DOS title initialization media");
     }
 }
@@ -1860,6 +1905,7 @@ void MillenniumDosTitleInitializationSession::observe_far_word(
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_mode_two_second_escape_word_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_mode_two_second_escape_word_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_header_word_boundary
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_header_word_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_second_loop_third_word_read_boundary)
         ||observation.sequence!=last_sequence_+1
         ||observation.instruction_address!=far_read_boundary_.instruction_address
@@ -1879,11 +1925,82 @@ void MillenniumDosTitleInitializationSession::observe_far_word(
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_mode_two_second_escape_word_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_mode_two_second_escape_word_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_header_word_boundary
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_header_word_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_second_loop_third_word_read_boundary
             &&observation.word!=(boundary_state==MillenniumDosTitleInitializationState::graphics_record_word_read_boundary?0x0140
                 :boundary_state==MillenniumDosTitleInitializationState::graphics_record_second_word_read_boundary?0x00c8:0x0000)))
         throw std::runtime_error("Detached Millennium DOS record word");
     far_single_word_observations_.push_back(observation);
+    if(boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_header_word_boundary){
+        if(selected_mode_!=4||far_byte_observations_.size()<2
+            ||far_byte_observations_[far_byte_observations_.size()-2].instruction_address!=0x14f0
+            ||far_byte_observations_.back().instruction_address!=0x14fc
+            ||observation.source_offset<0x1a){
+            far_single_word_observations_.pop_back();
+            throw std::runtime_error("Missing mode-four descriptor header context");
+        }
+        const auto header_flag=far_byte_observations_[far_byte_observations_.size()-2].byte;
+        const auto header_count=static_cast<std::uint16_t>(far_byte_observations_.back().byte+1U);
+        const auto palette=(header_flag&1U)!=0?0x0300U:0U;
+        const auto record_offset=static_cast<std::uint32_t>(observation.source_offset-0x1aU);
+        const auto delta=static_cast<std::uint32_t>(observation.word)+0x1cU+palette+header_count;
+        const auto raw_offset=record_offset+delta;
+        if(raw_offset>0xffffU||static_cast<std::uint32_t>(observation.source_segment)+(raw_offset>>4U)>0xffffU){
+            far_single_word_observations_.pop_back();
+            throw std::runtime_error("Mode-four lookup normalization overflows DOS address");
+        }
+        std::uint16_t source_pointer=0,source_segment=0,destination=0,destination_segment=0,width=0,height=0;
+        if(!latest_local_word(memory_effects_,0x010c)||!latest_local_word(memory_effects_,0x010e)
+            ||!latest_local_word(memory_effects_,0x0110)||!latest_local_word(memory_effects_,0x0112)
+            ||!latest_local_word(memory_effects_,0x1357)||!latest_local_word(memory_effects_,0x1359)){
+            far_single_word_observations_.pop_back();
+            throw std::runtime_error("Missing mode-four source, destination, or dimensions");
+        }
+        source_pointer=*latest_local_word(memory_effects_,0x010c);
+        source_segment=*latest_local_word(memory_effects_,0x010e);
+        destination=*latest_local_word(memory_effects_,0x0110);
+        destination_segment=*latest_local_word(memory_effects_,0x0112);
+        width=*latest_local_word(memory_effects_,0x1357);
+        height=*latest_local_word(memory_effects_,0x1359);
+        if(width==0||height==0||static_cast<std::uint32_t>(width)*height>0xffffU){
+            far_single_word_observations_.pop_back();
+            throw std::runtime_error("Unsupported mode-four descriptor dimensions");
+        }
+        const auto lookup_offset=static_cast<std::uint16_t>(raw_offset&0x0fU);
+        const auto lookup_segment=static_cast<std::uint16_t>(observation.source_segment+(raw_offset>>4U));
+        const auto initial_si=static_cast<std::uint16_t>(observation.source_offset-0x1aU);
+        const auto first_sum=static_cast<std::uint32_t>(initial_si)+observation.word;
+        const auto second_sum=first_sum+0x1cU;
+        const auto third_sum=second_sum+palette;
+        const auto fourth_sum=third_sum+header_count;
+        effects_.insert(effects_.end(),{{0x1500,"AX",observation.word},
+            {0x1503,"SI",static_cast<std::uint16_t>(first_sum)},
+            {0x1506,"SI",static_cast<std::uint16_t>(second_sum)},
+            {0x1509,"SI",static_cast<std::uint16_t>(third_sum)},
+            {0x150b,"SI",static_cast<std::uint16_t>(fourth_sum)},
+            {0x150d,"DX",observation.source_segment},{0x150f,"CX",static_cast<std::uint16_t>(fourth_sum)},
+            {0x013c,"AX",static_cast<std::uint16_t>(fourth_sum)},
+            {0x013e,"CX",static_cast<std::uint16_t>(fourth_sum&0x0fU)},
+            {0x0141,"AX",static_cast<std::uint16_t>(fourth_sum>>1U)},
+            {0x0143,"AX",static_cast<std::uint16_t>(fourth_sum>>2U)},
+            {0x0145,"AX",static_cast<std::uint16_t>(fourth_sum>>3U)},
+            {0x0147,"AX",static_cast<std::uint16_t>(fourth_sum>>4U)},
+            {0x0149,"DX",lookup_segment},{0x014b,"IP",0x1514},
+            {0x1514,"BX",0x14df},{0x1517,"CX",lookup_offset},
+            {0x151a,"DX",lookup_segment},{0x151e,"SI",source_pointer},
+            {0x151e,"DS",source_segment},{0x1523,"DI",destination},
+            {0x1523,"ES",destination_segment},{0x1528,"BX",width},
+            {0x152d,"DX",height},{0x1532,"AL",selected_mode_},
+            {0x1536,"FLAGS.ZF",0},{0x153a,"IP",0x15c5}});
+        memory_effects_.push_back({0x1517,0x14df,
+            MillenniumDosTitleInitializationEffectWidth::word,lookup_offset});
+        memory_effects_.push_back({0x151a,0x14e1,
+            MillenniumDosTitleInitializationEffectWidth::word,lookup_segment});
+        far_single_word_observations_.back()=observation;
+        last_sequence_=observation.sequence;continuation_address_=0x15c5;
+        state_=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_body_boundary;
+        return;
+    }
     if(boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_header_word_boundary){
         std::uint16_t header_count=0,header_dx=0; bool found_count=false,found_dx=false;
         for(auto it=effects_.rbegin();it!=effects_.rend();++it){
@@ -2204,7 +2321,9 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_source_byte_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_first_lookup_byte_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_source_byte_boundary
-            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_lookup_byte_boundary)
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_lookup_byte_boundary
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_header_byte_boundary
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_header_second_byte_boundary)
         ||observation.sequence!=last_sequence_+1
         ||observation.instruction_address!=far_byte_boundary_.instruction_address
         ||observation.source_segment!=far_byte_boundary_.source_segment
@@ -2225,6 +2344,8 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_first_lookup_byte_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_source_byte_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_lookup_byte_boundary
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_header_byte_boundary
+            &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_header_second_byte_boundary
             &&observation.byte!=(boundary_state==MillenniumDosTitleInitializationState::graphics_record_byte_read_boundary?0x23:0x00)))
         throw std::runtime_error("Detached Millennium DOS record byte");
     const auto second_record_header=boundary_state
@@ -2240,6 +2361,27 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
         ||static_cast<std::uint16_t>(*second_source+4U)!=observation.source_offset))
         throw std::runtime_error("Missing Millennium DOS second descriptor invocation context");
     far_byte_observations_.push_back(observation);
+    if(boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_header_byte_boundary){
+        if(selected_mode_!=4){far_byte_observations_.pop_back();throw std::runtime_error("Mode-four header used outside global mode four");}
+        const auto palette=(observation.byte&1U)!=0?0x0300U:0U;
+        effects_.insert(effects_.end(),{{0x14f0,"CL",observation.byte},{0x14f2,"FLAGS.ZF",static_cast<std::uint16_t>((observation.byte&1U)==0)}});
+        if(palette)effects_.push_back({0x14f7,"DX",0x0300});
+        far_byte_boundary_={0x14fc,observation.source_segment,
+            static_cast<std::uint16_t>(observation.source_offset+1U),0};
+        last_sequence_=observation.sequence;continuation_address_=0x14fc;
+        state_=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_header_second_byte_boundary;
+        return;
+    }
+    if(boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_header_second_byte_boundary){
+        if(selected_mode_!=4){far_byte_observations_.pop_back();throw std::runtime_error("Mode-four header used outside global mode four");}
+        const auto count=static_cast<std::uint16_t>(observation.byte+1U);
+        effects_.insert(effects_.end(),{{0x14fc,"CL",observation.byte},{0x14ff,"CX",count}});
+        far_read_boundary_={0x1500,observation.source_segment,
+            static_cast<std::uint16_t>(observation.source_offset+0x19U),1,child_code_segment_,0};
+        last_sequence_=observation.sequence;continuation_address_=0x1500;
+        state_=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_header_word_boundary;
+        return;
+    }
     if(second_record_header){
         memory_effects_.push_back({0x13f5,0x1388,
             MillenniumDosTitleInitializationEffectWidth::byte,observation.byte});
