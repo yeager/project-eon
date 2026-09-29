@@ -30,10 +30,12 @@ established. The bounded successful postlude below records only hash-bound
 local instruction effects and typed stop points.
 The separate success-postlude step models EGA's local `$0192` write and
 register clamp. Its next prefix records an explicit pending `PUSH SI` stack
-write and stops before one-count `POP AX` `$022e` or VGA `OUT` `$0207`;
+write, then stops before one-count `POP AX` `$022e` or VGA `OUT` `$0207`. The
+one-count path advances through its paired POP and, with explicit DS input,
+records the pending `$008a` store and stops at RET `$0234`; continue only with
+an exact caller/return observation.
 MCGA's branch step stops at the `$023d` single-count target or before INT
-`$92` at `$021f`. Continue EGA from its typed stack/port boundary only with
-new exact observations. No graphics or private-service behavior is inferred.
+`$92` at `$021f`. No graphics or private-service behavior is inferred.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,
 respectively. The existing global-mode-2 descriptor regression uses explicit
 arithmetic observations; it is not evidence that either supplied driver

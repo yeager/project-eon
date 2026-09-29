@@ -137,6 +137,28 @@ int main(const int argc, char** argv) {
         && ega_single_stack->sp_before == 1 && ega_single_stack->sp_after == 0xffff
         && ega_single_stack->pushed_value == 1 && ega_single_stack->si == 0
         && ega_single_stack->zero_flag);
+    ega_single_count.advance_ega_single_count_pop_prefix();
+    const auto ega_single_pop = ega_single_count.ega_stack_outcome();
+    assert(ega_single_count.state() == State::mode_success_single_pop_prefix_recorded
+        && ega_single_pop
+        && ega_single_pop->endpoint
+            == eon::MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_local_store
+        && ega_single_pop->instruction_address == 0x022f
+        && ega_single_pop->sp_before == 1 && ega_single_pop->sp_after == 1
+        && ega_single_pop->pushed_value == 1 && ega_single_pop->ax == 1);
+    expect_rejected([&] { ega_single_count.advance_ega_single_count_pop_prefix(); });
+    ega_single_count.advance_ega_single_count_store_prefix(0x4567);
+    const auto ega_single_ret = ega_single_count.ega_stack_outcome();
+    const eon::MillenniumDosVideoFunctionZeroLocalWrite ega_single_write{0x022f,0x008a,1};
+    assert(ega_single_count.state() == State::mode_success_single_store_prefix_recorded
+        && ega_single_ret
+        && ega_single_ret->endpoint
+            == eon::MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_ret
+        && ega_single_ret->instruction_address == 0x0234
+        && ega_single_ret->ax == 0x0401 && ega_single_ret->ds == 0x4567
+        && ega_single_ret->local_write == ega_single_write
+        && ega_single_ret->sp_after == ega_single_ret->sp_before);
+    expect_rejected([&] { ega_single_count.advance_ega_single_count_store_prefix(0x4567); });
 
     Session ega_known(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640, 0x0e);
     assert(ega_known.state() == State::awaiting_set_mode_result && !ega_known.cache_write()

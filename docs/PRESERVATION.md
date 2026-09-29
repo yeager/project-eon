@@ -4737,7 +4737,17 @@ an explicit SS:SP input and records the pending little-endian word write at
 input, execution stops before `POP AX` at `$022e`. For every other count,
 including zero, it stops before VGA `OUT DX,AX` at `$0207` with `DX=$03ce` and
 `AX=$ff08`. Neither the port write nor its hardware effects are modeled, and
-the one-count path does not read the caller's stack.
+the one-count path does not read the caller's stack. On that path, the exact
+seven-byte prefix `[$022e,$0235)` hashes to
+`95351aea2a6e098b77833519af453ff759b1ceb9d68f14ebf225dc1f623110ef`.
+`POP AX` consumes the value from the immediately preceding local push and
+restores the supplied SP; execution then stops before the DS-relative store
+to `$008a` at `$022f`. With explicit DS input, the following five-byte span
+`[$022f,$0234)` hashes to
+`a02ba4468a67b0925404cee676b85998fd85097bac82e4a05dba50a54bf154ef`; the
+session records the pending byte write of AL to DS:$008a, sets `AH=$04`, and
+stops at the RET opcode `$0234`. It does not mutate memory or read the caller
+stack/RET destination; no return is claimed.
 
 The read-in-place loader audit additionally binds `$02cf..$031b` (file
 `+$01cf`, 77 bytes, SHA-256

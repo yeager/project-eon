@@ -16,6 +16,8 @@ enum class MillenniumDosVideoFunctionZeroState {
     mode_match_continuation_boundary,
     mode_success_postlude_prefix_recorded,
     mode_success_stack_prefix_recorded,
+    mode_success_single_pop_prefix_recorded,
+    mode_success_single_store_prefix_recorded,
     mode_mismatch_ret_boundary,
 };
 
@@ -77,6 +79,10 @@ enum class MillenniumDosVideoFunctionZeroPostludeEndpoint {
 enum class MillenniumDosVideoFunctionZeroEgaStackEndpoint {
     // The count is one; stop at POP AX without reading the caller's stack.
     ega_single_count_pop,
+    // POP AX consumed the exact pending push; stop before DS:$008a is stored.
+    ega_local_store,
+    // The DS-local store and AH setup are recorded; stop at RET itself.
+    ega_ret,
     // Stop before the first VGA port write; no device I/O is modeled.
     ega_vga_out,
 };
@@ -87,6 +93,8 @@ struct MillenniumDosVideoFunctionZeroEgaStackOutcome {
     std::uint16_t ss = 0, sp_before = 0, sp_after = 0;
     std::uint16_t pushed_value = 0, si = 0;
     std::uint16_t ax = 0, bx = 0, cx = 0, dx = 0;
+    std::optional<std::uint16_t> ds;
+    std::optional<MillenniumDosVideoFunctionZeroLocalWrite> local_write;
     bool zero_flag = false;
     constexpr bool operator==(const MillenniumDosVideoFunctionZeroEgaStackOutcome&) const = default;
 };
@@ -141,6 +149,8 @@ public:
     void observe_bios_result(const MillenniumDosVideoFunctionZeroBiosResult& result);
     void advance_success_postlude_prefix();
     void advance_ega_success_stack_prefix(std::uint16_t ss, std::uint16_t sp);
+    void advance_ega_single_count_pop_prefix();
+    void advance_ega_single_count_store_prefix(std::uint16_t ds);
 
 private:
     MillenniumDosVideoDriverProfile driver_;

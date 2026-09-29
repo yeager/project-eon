@@ -62,6 +62,26 @@ MillenniumDosVideoFunctionZeroSession::MillenniumDosVideoFunctionZeroSession(
                 != stack_prefix_hash) {
             throw std::runtime_error("Unsupported Millennium DOS EGA success stack prefix");
         }
+        constexpr auto single_pop_offset = static_cast<std::size_t>(0x22e);
+        constexpr auto single_pop_size = static_cast<std::size_t>(0x07);
+        constexpr auto single_pop_hash =
+            "95351aea2a6e098b77833519af453ff759b1ceb9d68f14ebf225dc1f623110ef";
+        if (single_pop_offset > english_driver.size()
+            || english_driver.size() - single_pop_offset < single_pop_size
+            || to_hex(sha256(english_driver.subspan(single_pop_offset, single_pop_size)))
+                != single_pop_hash) {
+            throw std::runtime_error("Unsupported Millennium DOS EGA single-count prefix");
+        }
+        constexpr auto single_store_offset = static_cast<std::size_t>(0x22f);
+        constexpr auto single_store_size = static_cast<std::size_t>(0x05);
+        constexpr auto single_store_hash =
+            "a02ba4468a67b0925404cee676b85998fd85097bac82e4a05dba50a54bf154ef";
+        if (single_store_offset > english_driver.size()
+            || english_driver.size() - single_store_offset < single_store_size
+            || to_hex(sha256(english_driver.subspan(single_store_offset, single_store_size)))
+                != single_store_hash) {
+            throw std::runtime_error("Unsupported Millennium DOS EGA single-count store prefix");
+        }
     }
 }
 
@@ -91,6 +111,8 @@ MillenniumDosVideoFunctionZeroSession::boundary() const {
     case MillenniumDosVideoFunctionZeroState::mode_match_continuation_boundary:
     case MillenniumDosVideoFunctionZeroState::mode_success_postlude_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_stack_prefix_recorded:
+    case MillenniumDosVideoFunctionZeroState::mode_success_single_pop_prefix_recorded:
+    case MillenniumDosVideoFunctionZeroState::mode_success_single_store_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_mismatch_ret_boundary:
         return std::nullopt;
     }
@@ -139,6 +161,8 @@ void MillenniumDosVideoFunctionZeroSession::observe_bios_result(
     case MillenniumDosVideoFunctionZeroState::mode_match_continuation_boundary:
     case MillenniumDosVideoFunctionZeroState::mode_success_postlude_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_stack_prefix_recorded:
+    case MillenniumDosVideoFunctionZeroState::mode_success_single_pop_prefix_recorded:
+    case MillenniumDosVideoFunctionZeroState::mode_success_single_store_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_mismatch_ret_boundary:
         throw std::runtime_error("Millennium DOS function-zero session has stopped");
     }
@@ -201,14 +225,47 @@ void MillenniumDosVideoFunctionZeroSession::advance_ega_success_stack_prefix(
         ega_stack_outcome_ = MillenniumDosVideoFunctionZeroEgaStackOutcome{
             MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_single_count_pop,
             0x022e, ss, sp, sp_after, pushed_value, si,
-            prior.ax, prior.bx, prior.cx, prior.dx, true};
+            prior.ax, prior.bx, prior.cx, prior.dx, std::nullopt, std::nullopt, true};
     } else {
         ega_stack_outcome_ = MillenniumDosVideoFunctionZeroEgaStackOutcome{
             MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_vga_out,
             0x0207, ss, sp, sp_after, pushed_value, si,
-            0xff08, prior.bx, prior.cx, 0x03ce, false};
+            0xff08, prior.bx, prior.cx, 0x03ce, std::nullopt, std::nullopt, false};
     }
     state_ = MillenniumDosVideoFunctionZeroState::mode_success_stack_prefix_recorded;
+}
+
+void MillenniumDosVideoFunctionZeroSession::advance_ega_single_count_pop_prefix() {
+    if (state_ != MillenniumDosVideoFunctionZeroState::mode_success_stack_prefix_recorded
+        || !ega_stack_outcome_
+        || ega_stack_outcome_->endpoint
+            != MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_single_count_pop) {
+        throw std::runtime_error("Millennium DOS EGA single-count POP is not pending");
+    }
+    auto& outcome = *ega_stack_outcome_;
+    outcome.endpoint = MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_local_store;
+    outcome.instruction_address = 0x022f;
+    outcome.sp_after = outcome.sp_before;
+    outcome.ax = outcome.pushed_value;
+    state_ = MillenniumDosVideoFunctionZeroState::mode_success_single_pop_prefix_recorded;
+}
+
+void MillenniumDosVideoFunctionZeroSession::advance_ega_single_count_store_prefix(
+    const std::uint16_t ds) {
+    if (state_ != MillenniumDosVideoFunctionZeroState::mode_success_single_pop_prefix_recorded
+        || !ega_stack_outcome_
+        || ega_stack_outcome_->endpoint
+            != MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_local_store) {
+        throw std::runtime_error("Millennium DOS EGA single-count store is not pending");
+    }
+    auto& outcome = *ega_stack_outcome_;
+    const auto low_ax = static_cast<std::uint8_t>(outcome.ax & 0xffU);
+    outcome.ds = ds;
+    outcome.local_write = MillenniumDosVideoFunctionZeroLocalWrite{0x022f,0x008a,low_ax};
+    outcome.ax = static_cast<std::uint16_t>(0x0400U | low_ax);
+    outcome.endpoint = MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_ret;
+    outcome.instruction_address = 0x0234;
+    state_ = MillenniumDosVideoFunctionZeroState::mode_success_single_store_prefix_recorded;
 }
 
 } // namespace eon
