@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <cstddef>
 #include <span>
+#include <optional>
+#include <utility>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -92,6 +94,7 @@ enum class MillenniumDosTitleInitializationState {
     post_descriptor_first_loop_mode_two_second_lookup_byte_boundary,
     post_descriptor_first_loop_mode_two_returned,
     post_descriptor_loop_return_boundary,
+    descriptor_loop_complete_boundary,
     post_descriptor_next_loop_far_read_boundary,
     post_descriptor_next_loop_record_word_read_boundary,
     post_descriptor_next_loop_payload_byte_boundary,
@@ -449,6 +452,10 @@ public:
     void execute_followup_setup(std::uint64_t sequence,
         std::uint16_t call_address, std::uint16_t call_target);
     void observe_far_words(const MillenniumDosTitleFarWordsObservation&);
+    bool descriptor_loop_can_drive() const;
+    MillenniumDosTitleModeTwoDriveResult drive_descriptor_loop_from_title_library(
+        NativeRuntimeMemory&, std::span<const std::uint8_t>,
+        MillenniumDosTitleModeTwoDriveRequest);
     void consume_next_descriptor_mode_two_header(std::uint64_t sequence,
         std::span<const std::uint8_t> title_library);
     void consume_next_descriptor_pair(std::uint64_t sequence,
@@ -496,6 +503,9 @@ private:
     bool post_video_repeat_ = false;
     bool second_descriptor_payload_ = false;
     unsigned descriptor_loop_iteration_ = 0;
+    bool descriptor_loop_owned_ = false;
+    bool descriptor_loop_driving_ = false;
+    std::optional<std::pair<std::uint16_t,std::uint16_t>> admitted_loop_pair_;
     std::uint16_t descriptor_lookup_base_ = 0x0008;
     std::uint16_t descriptor_output_offset_ = 0x0170;
     std::uint16_t descriptor_output_segment_ = 0;

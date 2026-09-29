@@ -1480,113 +1480,60 @@ bool ReleaseRuntimeCoordinator::advance_millennium_dos_title_local_continuation(
   bool memory_effects_applied = false;
   try {
     const auto checkpoint = next.checkpoint();
-    switch (checkpoint.state) {
-    case MillenniumDosTitleInitializationState::selected_local_call_boundary:
-      next.execute_selected_callee_start(
-          checkpoint.last_sequence + 1, checkpoint.selected_call_address,
-          checkpoint.selected_call_target);
-      break;
-    case MillenniumDosTitleInitializationState::selected_followup_call_boundary:
-      next.execute_selected_followup_start(
-          checkpoint.last_sequence + 1,
-          checkpoint.selected_followup_call_address,
-          checkpoint.selected_followup_call_target);
-      break;
-    case MillenniumDosTitleInitializationState::title_main_allocation_call_boundary:
-      next.execute_title_main_allocation_start(
-          checkpoint.last_sequence + 1, checkpoint.title_main_call_address,
-          checkpoint.title_main_call_target);
-      break;
-    case MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary: {
+    if (next.descriptor_loop_can_drive()) {
       constexpr std::string_view library_sha =
           "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
-      if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
+      if (!memory || !active_media_)
+        throw std::runtime_error("Title loop requires owned memory and verified media");
       const auto library = active_media_->borrow(library_sha);
-      if (!library) throw std::runtime_error("Exact TITLE.LIB descriptor source is unavailable");
-      next.consume_next_descriptor_pair(checkpoint.last_sequence + 1, *library);
-      for (const std::size_t expected : {256U, 256U, 106U}) {
-        const auto reached = next.checkpoint();
-        const auto driven = next.drive_next_descriptor_stream_from_title_library(
-            *library, {reached.last_sequence + 1, 256});
-        if (!driven.accepted || driven.observation_count != expected
-            || driven.stopped_at_boundary != (expected == 106))
-          throw std::runtime_error(driven.error.empty()
-              ? "TITLE.LIB stream did not reach its verified header boundary"
-              : driven.error);
-      }
-      break;
-    }
-    case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_header_byte_boundary: {
-      // Only this independently proven relocation is admitted here. Other
-      // record headers remain typed external observations.
-      if (checkpoint.far_byte_boundary.source_segment != 0x32a1
-          || checkpoint.far_byte_boundary.source_offset != 0x0006 || !memory)
-        return false;
-      constexpr std::string_view library_sha =
-          "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
-      if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
-      const auto library = active_media_->borrow(library_sha);
-      if (!library) throw std::runtime_error("Exact TITLE.LIB header source is unavailable");
-      next.consume_next_descriptor_mode_two_header(checkpoint.last_sequence + 1, *library);
-      // The header admission proves $32a1:$00d8 == TITLE.LIB+$2ae8.
-      NativeRuntimeEffectBatch table{
-          "millennium-dos-title-canonical-lookup-"
-              + std::to_string(millennium_dos_sound_driver_load_generation_)
-              + "-" + std::to_string(checkpoint.last_sequence), true, {}};
-      for (std::size_t i = 0; i < 256; ++i)
-        table.effects.push_back({i + 1,
-            {NativeRuntimeAddressSpace::dos_segmented, 0x32a1,
-             static_cast<std::uint16_t>(0x00d8 + i)},
-            MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::little_endian,
-            (*library)[0x2ae8 + i]});
-      const auto applied = memory->apply(table);
-      if (!applied.accepted) { error = applied.error; return false; }
-      break;
-    }
-    case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_source_byte_boundary:
-    case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_first_lookup_byte_boundary:
-    case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_source_byte_boundary:
-    case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_lookup_byte_boundary: {
-      constexpr std::string_view library_sha =
-          "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
-      const auto lookup_boundary =
-          checkpoint.state == MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_first_lookup_byte_boundary
-          || checkpoint.state == MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_lookup_byte_boundary;
-      if (lookup_boundary && checkpoint.far_byte_boundary.source_segment == 0x5050
-          && checkpoint.far_byte_boundary.source_offset == 0x409a && memory
-          && !memory->read_byte({NativeRuntimeAddressSpace::dos_segmented, 0x5050, 0x409a})) {
-        if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
-        const auto& media = *active_media_;
-        const auto library = media.borrow(library_sha);
-        if (!library || library->size() <= 0x459a) return false;
-        NativeRuntimeEffectBatch lookup_batch{
-            "millennium-dos-title-mode-two-lookup-459a", true,
-            {{1, {NativeRuntimeAddressSpace::dos_segmented, 0x5050, 0x409a},
-              MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::little_endian,
-              (*library)[0x459a]}}};
-        const auto admitted = memory->apply(lookup_batch);
-        if (!admitted.accepted) { error = admitted.error; return false; }
-      }
-      // The mode-two decoder is a native continuation only when its exact
-      // current segmented source byte is already owned by this runtime.  A
-      // missing byte is an external preservation boundary, not a reason to
-      // synthesize memory or make the session scheduler fail.
-      if (!memory || checkpoint.far_byte_boundary.source_segment == 0
-          || !memory->read_byte({NativeRuntimeAddressSpace::dos_segmented,
-              checkpoint.far_byte_boundary.source_segment,
-              checkpoint.far_byte_boundary.source_offset}))
-        return false;
-      const auto driven = next.drive_mode_two_from_owned_memory(*memory,
-          {checkpoint.last_sequence + 1, 4});
-      if (!driven.accepted) {
-        error = driven.error;
-        return false;
-      }
+      if (!library) throw std::runtime_error("Exact TITLE.LIB loop source is unavailable");
+      const auto driven = next.drive_descriptor_loop_from_title_library(
+          *memory, *library, {checkpoint.last_sequence + 1, 256});
+      if (!driven.accepted) { error = driven.error; return false; }
       memory_effects_applied = true;
-      break;
-    }
-    default:
-      return false;
+    } else {
+      switch (checkpoint.state) {
+      case MillenniumDosTitleInitializationState::selected_local_call_boundary:
+        next.execute_selected_callee_start(
+            checkpoint.last_sequence + 1, checkpoint.selected_call_address,
+            checkpoint.selected_call_target);
+        break;
+      case MillenniumDosTitleInitializationState::selected_followup_call_boundary:
+        next.execute_selected_followup_start(
+            checkpoint.last_sequence + 1,
+            checkpoint.selected_followup_call_address,
+            checkpoint.selected_followup_call_target);
+        break;
+      case MillenniumDosTitleInitializationState::title_main_allocation_call_boundary:
+        next.execute_title_main_allocation_start(
+            checkpoint.last_sequence + 1, checkpoint.title_main_call_address,
+            checkpoint.title_main_call_target);
+        break;
+      case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_source_byte_boundary:
+      case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_first_lookup_byte_boundary:
+      case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_source_byte_boundary:
+      case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_lookup_byte_boundary: {
+        // The mode-two decoder is a native continuation only when its exact
+        // current segmented source byte is already owned by this runtime.  A
+        // missing byte is an external preservation boundary, not a reason to
+        // synthesize memory or make the session scheduler fail.
+        if (!memory || checkpoint.far_byte_boundary.source_segment == 0
+            || !memory->read_byte({NativeRuntimeAddressSpace::dos_segmented,
+                checkpoint.far_byte_boundary.source_segment,
+                checkpoint.far_byte_boundary.source_offset}))
+          return false;
+        const auto driven = next.drive_mode_two_from_owned_memory(*memory,
+            {checkpoint.last_sequence + 1, 4});
+        if (!driven.accepted) {
+          error = driven.error;
+          return false;
+        }
+        memory_effects_applied = true;
+        break;
+      }
+      default:
+        return false;
+      }
     }
   } catch (const std::exception& exception) {
     error = exception.what();

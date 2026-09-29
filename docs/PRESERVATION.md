@@ -4863,7 +4863,7 @@ hash-bound nine-byte `$13e9..$13f1` span (file `TITLES.EXE+$12e9`, SHA-256
 `ed46676eb54a03e725cbb96371e4fd13852a350ba5b027e5c59dda07c78b8ecf`).
 An explicitly supplied byte is incremented modulo 256 and stored at
 `CS:$1389`; the native session stops before the next read at `$13f2`.
-On the existing second-descriptor test route that read names `$3c80:$0004`.
+On the corrected second-descriptor test route that read names `$32a1:$000a`.
 The input remains a raw typed observation, with no inferred OS result or
 graphics meaning; arithmetic test values are not capture evidence.
 The subsequent second-record payload route is invocation-specific through
@@ -5052,197 +5052,40 @@ and the caller's first `$1941..$1962` loop prefix has SHA-256
 That loop atomically advances both original zero output offsets to `$0170`,
 selects descriptor index one, and re-enters the already verified `$1390`
 decoder prefix. The largest static continuation ends at `$13aa` before two
-external words at relocated `TITLE.LIB+$000f`. This is a typed preservation
+external words at `$3481:$000f`, mapped to `TITLE.LIB+$481f`. This is a typed preservation
 boundary, not a rendering or descriptor-value claim.
-The genuine `TITLE.LIB+$000f` words are `$0503/$1f02`. The existing exact
-`$13aa..$13cc` pointer suffix (SHA-256
-`e8b21803c3739aac65b59a9919f03c97d0d55daf7fd2a35e7567973765724921`)
-normalizes them against owned destination segment `$3000` to
-`$5050:$0003`, then atomically stores the pointer at `CS:$138c/$138e`.
-Execution now stops before `$13cd` reads its word at `$5050:$001b`.
-Contradictory descriptor words leave both state and runtime memory unchanged;
-no content, record, or graphics meaning is assigned to the next runtime word.
-The `$5050:$001b` word now enters through the same ordered typed single-word
-facades used by earlier record fields. Exact instruction `$13cd`, bytes
-`8b 44 18`, has SHA-256
-`30cefd61e3cc968dfe7b7f54ed07251f1fe9ec99fb33bad8b4ae24ce67b80704`.
-The typed `$1437`, `$144a`, and `$1470` continuations now apply only their
-instruction-defined shifts, run copies, lookup arithmetic, counter changes,
-and atomic output writes. Ordinary escape/run paths resume at typed `$1428`
-next-byte boundaries; the mode-two `$ff` extension stops at typed `$1452`;
-the lookup path stops at a separate high-nibble `$1428` state for the same
-source byte. No compression or pixel interpretation is asserted. The second
-record's `$13d0` word at `$3c80:$0016` is also native through the exact
-18-byte multiplication/store span (SHA-256
-`787613791d00d3ae372e3ec9b7b02d56a0704b9e14b44e2d6874b125927befe6`)
-and stops at typed `$13e2`, source `$3c80:$0014`.
-High- and low-nibble `$1428` states are now distinct, so `CL`, `SI`, `DI`,
-`DX`, and the next source byte remain instruction-accurate after escape, run,
-and lookup paths. The mode-two extension consumes typed `$1452`, exact
-six-byte SHA-256
-`846a82fa183b14b5fd42d6e0c3bdf5c16cf8863e647825e8fd588d705f655756`,
-and stops at typed `$1458`. The second record's typed `$13e2` word applies the
-hash-bound wrapping subtraction and stops at `$13e9`, source `$3c80:$0001`.
-These remain raw control-flow and arithmetic facts, not codec or pixel claims.
-The typed `$1458` continuation and both high-half variants are now native
-through the whole `$1437..$1487` loop, exact 81-byte SHA-256
-`5fab2565b47896f17a9418a67095c43645b61c02f960f8749dbb3d5b9718a725`.
-The session preserves the selected half-byte shift, constructs the two-byte
-mode-two count exactly, applies wrapping `DX` subtraction and ordered output
-writes atomically, then stops at `$1488` or the next typed `$1428` input.
-This expands deterministic execution only; stream and output bytes still have
-no claimed compression, palette, pixel, or graphics semantics.
-Completion also owns the exact `$1488..$149e` mode dispatch, 23-byte SHA-256
-`7967c8650f118732cc5c884ea6d332a8dbe6dc060e5736088e7b5d0f1fb081ad`.
-It restores the already admitted descriptor pointer and follows mode one,
-mode two, or the other-mode prefix to typed reads at `$14a9`, `$1647`, or
-`$14f0`, respectively. The genuine first-record source is `$5050:$0003`;
-its raw byte remains external and has no inferred header or graphics meaning.
-For mode two, genuine `TITLE.LIB` supplies ordered raw values `$48`, `$00`,
-and `$4000` at `$5050:$0003`, `$0004`, and `$001d`. Exact
-`$1647..$16b2` SHA-256
-`9ba1e245431578fbac9c3386bea9a102be68fe6700ca057ff5d9af3f819427fd`
-owns their branch/address arithmetic, `CS:$14df/$14e1` pointer stores, and
-atomic destination clearing. Execution stops at typed `$16b3`; neither the
-three inputs nor subsequent source bytes have inferred graphics semantics.
-The subsequent `$16b3..$16e8` loop is hash-bound as 54 exact bytes, SHA-256
-`24a597122dd6afe0c434683295f0e97ef04e60b67722db2042178f33f2c361ed`.
-Source and lookup reads remain separately typed and ordered. Between them the
-runtime owns the exact half-byte shifts, `DX` and `BX` loop edges, destination
-advance, atomic byte write, and final register restoration. A genuine first
-lookup resolves `$4000:$0170` value `$7a` through `$5050:$409a` value zero;
-no lookup-table, palette, planar, or pixel semantics are claimed.
-When all requested bytes are present in owned native memory, the coordinator
-can now drive this same typed loop through `$16e8` without external byte
-callbacks. Each input is read only from the current typed DOS
-`segment:offset` boundary in `NativeRuntimeMemory`; physical-address aliasing
-is neither resolved nor accepted as a substitute source. The operation uses a
-caller-supplied finite cap and is atomic across session and memory state on
-missing input, detached sequence, unexpected boundary, or cap exhaustion.
-Decoder output effects now carry the recovered destination segment explicitly
-instead of being attributed to the child code segment. No additional
-executable span or semantic claim is introduced. On the terminal loop edge,
-the native session follows the actual `$1960->$1390` caller to `$1963`.
-The former `$1740`/function-six connection was incorrect: that return belongs
-to the separate `$173d` invocation. The fabricated intervening result is now
-rejected. The executed `$1947/$1948` pushes establish the saved
-`$0170/$0025` loop registers. Restoring these takes the next LOOP edge and atomically
-advances both output pointers from `$0170` to `$02e0`, derives descriptor
-index two, and re-enters `$1390`. Exact loop-tail bytes `$1963..$1966` hash to
-`84ec36cbf00b01304cfbd75024c0ac7571a5776b4e364049f3b84ebfe3315612`;
-the already hash-bound `$1947..$1962` loop body remains unchanged. Execution
-stops at the next two-word relocated `TITLE.LIB` boundary `$13aa`, source
-`$3481:$001b`. No private-interrupt result is invented between iterations.
-That pair can now be consumed automatically, but only through the admitted
-`TITLE.LIB` leaf. DOS physical-address normalization proves
-`$3481:$001b == TITLE.LIB+$482b` relative to the owned `$3000` load segment;
-the bounded bytes are exactly words `$2a16/$0000`. The runtime rejects every
-other offset, hash, size, or absent leaf before mutation. The existing exact
-pointer suffix then atomically stores normalized `$32a1:$0006` and stops at
-the next external record word `$32a1:$001e`.
-The same bounded alias also proves the complete five-field header at
-`TITLE.LIB+$2a16`: words `$0010/$0017/$0000` and bytes `$02/$02`. All fields
-are validated before the automatic pair transition mutates state. The shared
-hash-bound descriptor instructions atomically store dimensions `$0017/$0010`,
-product/adjustment `$0170`, incremented byte `$03`, and mode byte `$02`, then
-select output `$4000:$02e0`. The exact physical alias also maps
-`$32a1:$0022` to `TITLE.LIB+$2a32`, whose admitted byte is `$00`. Exact
-`$1419..$1427` bytes hash to
-`912d067ef688829815594e9fdf4e2ae8f03051cd3be882dc482a02dae032d39b`;
-they copy that byte to `$4000:$02e0`, advance the source and destination,
-load loop count `$0170`, advance the normalized record offset to `$000b`,
-and take the proven non-zero loop edge. Execution stops before the next
-stream byte at `$1428`, source `$32a1:$0023`, output `$4000:$02e1`.
-The next byte is also admitted by the same exact alias as
-`TITLE.LIB+$2a33 == $10`. The complete decoder loop `$1428..$1487` hashes to
-`6486e029d2b5a8a720d7fab7c7e675fb56e267a3d7cfc9e328014a153b545a07`.
-Its high and low nibbles index the exact admitted record bytes `$00/$01`;
-the two non-wrapping results are written to `$4000:$02e1..$02e2` and both
-non-zero loop edges are taken. Execution stops at `$1428`, source
-`$32a1:$0024`, output `$4000:$02e3`, with remaining count `$016d` and prior
-byte `$01`. Payload and codec meaning remain external.
-The following canonical relocation continuation is batch-driven: source
-`$32a1:$0024`, not a physical-equivalent DOS alias, maps to
-`TITLE.LIB+$2a34 == $1e` under the complete admitted leaf hash. Its selected
-mode-two word read is also admitted at the same canonical address:
-`TITLE.LIB+$2a34..+$2a35 == $1e $20` (little-endian `$201e`). The exact
-`$144a..$146b` instruction effects produce the three repeated prior bytes at
-`$4000:$02e3..$02e5` and resume at `$1428`, source `$32a1:$0025`. The bounded
-driver is transactional and capped: an invalid hash, non-canonical segment,
-out-of-record source, or decoder boundary before the first observation commits
-nothing. Escape, run, lookup, pixel, and codec interpretation remain outside
-the batch driver.
-The same transaction may resume only at its exact high-nibble `$1428` boundary,
-not at an arbitrary decoder program counter. The next genuine stream byte and
-its hash-admitted lookup produce one instruction-defined output byte and return
-to the ordinary `$1428` stream boundary at `$32a1:$0026`. The native runtime
-then completes the next admitted low/high lookup pairs and selected mode-two
-run through `$32a1:$002b`. The exact six-byte `TITLE.LIB+$2a34..+$2a39`
-continuation has SHA-256
-`f5e49eddff72cad076c01cc7d4b884404224ea78a24ebe659e320951bca14b29`.
-The native runtime drives this 16-observation prefix as one canonical TITLE.LIB
-continuation; each resumed call validates the full leaf hash, canonical segment,
-sequence, and finite observation cap before committing any state or memory
-effects.
-caller effects commit in the same transaction as the owned-memory loop. The
-private result and all presentation semantics remain explicit boundaries.
-Its raw value is retained as AX without assigning width or graphics meaning,
-then execution stops before `$13d0` reads `$5050:$0019`. Detached addresses
-or sequences fail before state changes, and the read does not mutate runtime
-memory or original media.
-The next `$5050:$0019` word is also accepted only as an ordered typed runtime
-observation. The exact `$13d0..$13e1` span (SHA-256
-`787613791d00d3ae372e3ec9b7b02d56a0704b9e14b44e2d6874b125927befe6`)
-atomically stores both observed words at `CS:$1357/$1359` and the low unsigned
-product at `CS:$133b`; AX/DX retain the exact low/high product pair. The next
-boundary is `$13e2`, source `$5050:$0017`. No dimension, pixel, or rendering
-semantics are inferred from either input or their product.
-The third runtime word at `$5050:$0017` is now accepted only as the exact
-ordered `$13e2` observation. The seven-byte subtraction/store span has
-SHA-256 `0653c7fb33f8d3c60d973b7c038f4c724ffd194abd7f21990762340477246ed4`.
-It atomically stores the wrapping low-word subtraction result at `CS:$138a`
-and stops before `$13e9` reads byte `$5050:$0004`. Neither operand, result,
-nor next byte receives inferred graphics semantics.
-The raw byte at `$5050:$0004` is now accepted through the ordered typed-byte
-facades. Exact bytes `$13e9..$13f1` have SHA-256
-`ed46676eb54a03e725cbb96371e4fd13852a350ba5b027e5c59dda07c78b8ecf`;
-they apply the instruction-defined wrapping increment and atomically store it
-at `CS:$1389`. The next boundary is `$13f2`, source `$5050:$0007`. No field,
-mode, palette, or pixel meaning is assigned.
-The ordered `$13f2` observation now admits that raw byte and atomically stores
-it at `CS:$1388`. The exact 20-byte branch has SHA-256
-`172d30853354efec879699618dd36f3fbda28ddd07d8ea66bc2a23ace6ee6753`.
-Values one and two follow the exact `$1406..$1418` prefix (SHA-256
-`a38148b66817871d8731829b2a0703e48b2e7fecb0fee51112be1e8e3b0332d0`)
-and stop at the typed `$1419` payload-byte boundary, source `$5050:$001f`.
-All other values return to the caller, advance the loop output offsets to
-`$02e0`, select record index two, and stop at the typed `$13aa` two-word read
-from relocated `TITLE.LIB+$001b`. Detached observations fail before state
-changes. No record-field, encoding, rendering, or pixel semantics are claimed.
-The `$1419` payload observation is now native through the exact 15-byte prefix
-ending at `$1427` (SHA-256
-`912d067ef688829815594e9fdf4e2ae8f03051cd3be882dc482a02dae032d39b`).
-It atomically writes the raw byte to current output `CS:$0170`, preserves the
-instruction-defined register changes, and decrements the owned raw word from
-`CS:$138a`. A nonzero remainder stops at typed byte `$1428`, source
-`$5050:$0020`; a zero remainder stops at internal dispatch `$1488`. No codec,
-pixel, or graphics semantics are inferred.
-The alternate branch's genuine `TITLE.LIB+$001b` words are `$c800/$4000`.
-They pass the existing exact `$13aa..$13cc` pointer transformation, normalize
-to `$3c80:$0000`, and are atomically stored at `CS:$138c/$138e`. Execution
-stops at the typed `$13cd` runtime-word boundary, source `$3c80:$0018`.
-The complete `TITLE.LIB` remains read-only and hash-addressed; contradictory
-typed descriptor words fail before any state or memory effect is committed.
-The next `$1428` byte is now accepted only in sequence. The exact 31-byte
-dispatch span has SHA-256
-`dd7abdeaa64d537ee31fb6c4dffe319a7f824226ca44bb33e0f4cb3986560be7`.
-Its low nibble selects typed `$1437` word `$5050:$0020` for `$f`, typed
-`$144a` word at the same address for mode two plus `$e`, or typed `$1470`
-lookup byte at `$5050:($0008+nibble)`. No codec or graphics meaning is
-inferred. Independently, the second record's ordered `$13cd` word at
-`$3c80:$0018` is retained as raw AX and advances to typed `$13d0` word
-`$3c80:$0016`; the instruction retains its recorded SHA-256
-`30cefd61e3cc968dfe7b7f54ed07251f1fe9ec99fb33bad8b4ae24ce67b80704`.
+The corrected directory provenance is $3481:$000f -> TITLE.LIB+$481f,
+not file +$000f. The first normalized record is $3294:$0001 (file +$2941);
+the second is $32a1:$0006 (file +$2a16). Earlier $5050 and $3c80 source
+admissions came from confusing file offsets with relocated offsets and have
+been removed. Their arithmetic regressions now use correctly normalized
+contexts with explicitly synthetic values.
+
+The owned mode-two loop now reads all 37 entries at +$4813+12*i, i=1..37,
+from the exact 18,907-byte leaf, reusing the recovered typed decoder.
+Its complete $1941..$1967 code span (39 bytes at TITLES.EXE+$1841) hashes to
+f22c9595e6b1c590877b354721e6102d8107c5d6c7336b2d3491cfcaf3f8a627.
+All record headers, payload reads and bounded lookup ranges are within the
+hash-admitted library. Each record produces 368 payload bytes and 184 later
+mode-two output bytes, with the exact doubled 92-word destination clear.
+The source audit uses external metadata only; no original-derived table or
+output buffer is committed.
+
+Each quantum consumes at most 256 typed observations and atomically commits
+session plus owned memory. Entry must be the exact first directory boundary;
+later external replacement observations are rejected. Subsequent calls retain
+the same normalized segment provenance and revalidate the leaf. Payload writes
+use $010c/$010e and later mode-two output uses $0110/$0112. No BIOS, DOS or
+private result is created by this drive.
+
+Every $1960 invocation returns to $1963, restoring its proven local frame.
+There is no function-six request between loop iterations: the earlier $1740
+connection belonged to another caller and was removed. After record 37,
+LOOP decrements the saved count to zero and execution stops before RET $1967.
+The caller at $1c1d is proven, but the following $1c20 read of runtime $1896
+remains unconsumed. This is native instruction recovery, not title rendering,
+input acceptance, a private ABI or gameplay parity. Details and current
+boundaries are in [the title initialization document](MILLENNIUM_DOS_TITLE_INITIALIZATION.md).
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`

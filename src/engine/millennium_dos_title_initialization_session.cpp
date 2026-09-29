@@ -30,14 +30,23 @@ std::optional<std::uint16_t> decoder_output_segment(
 void MillenniumDosTitleInitializationSession::advance_descriptor_mode_two_return() {
     if (state_ != MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_returned
         || continuation_address_ != 0x16e8
-        || (descriptor_loop_iteration_!=1&&descriptor_loop_iteration_!=2))
+        || descriptor_loop_iteration_<1||descriptor_loop_iteration_>37)
         throw std::runtime_error("Detached Millennium DOS descriptor loop return");
-    if(descriptor_loop_iteration_==2){
+    if(!descriptor_loop_owned_&&descriptor_loop_iteration_==2){
         continuation_address_=0x1963;
         state_=MillenniumDosTitleInitializationState::post_descriptor_loop_return_boundary;
         return;
     }
-    // The owned $1947/$1948 frame saved CX=$25 and DX=$170 before CALL $1960.
+    if(descriptor_loop_iteration_==37){
+        effects_.insert(effects_.end(),{{0x1963,"DX",0x0170},{0x1964,"CX",1},{0x1965,"CX",0}});
+        continuation_address_=0x1967;
+        state_=MillenniumDosTitleInitializationState::descriptor_loop_complete_boundary;
+        return;
+    }
+    // Each owned $1947/$1948 frame saves the remaining count and fixed stride.
+    const auto saved_cx=static_cast<std::uint16_t>(38-descriptor_loop_iteration_);
+    const auto next_index=static_cast<std::uint16_t>(descriptor_loop_iteration_+1);
+    const auto table_displacement=static_cast<std::uint16_t>(next_index*12U);
     const auto first_pointer=latest_local_word(memory_effects_,0x010c);
     const auto second_pointer=latest_local_word(memory_effects_,0x0110);
     const auto source_offset=latest_local_word(memory_effects_,0x0e4a);
@@ -51,22 +60,168 @@ void MillenniumDosTitleInitializationSession::advance_descriptor_mode_two_return
         MillenniumDosTitleInitializationEffectWidth::word,advanced_first});
     memory_effects_.push_back({0x1959,0x0110,
         MillenniumDosTitleInitializationEffectWidth::word,advanced_second});
-    effects_.insert(effects_.end(),{{0x1963,"DX",0x0170},{0x1964,"CX",0x0025},
-        {0x1965,"CX",0x0024},{0x1949,"SI",0x010c},
+    effects_.insert(effects_.end(),{{0x1963,"DX",0x0170},{0x1964,"CX",saved_cx},
+        {0x1965,"CX",static_cast<std::uint16_t>(saved_cx-1U)},{0x1949,"SI",0x010c},
         {0x194c,"AX",*first_pointer},{0x194e,"AX",advanced_first},
         {0x1952,"SI",0x0110},{0x1955,"AX",*second_pointer},
         {0x1957,"AX",advanced_second},{0x195b,"AX",0x0026},
-        {0x195e,"AX",0x0002},{0x1390,"CX",0x000c},
-        {0x1393,"AX",0x0018},{0x1395,"SI",static_cast<std::uint16_t>(*source_offset+0x0018)},
+        {0x195e,"AX",next_index},{0x1390,"CX",0x000c},
+        {0x1393,"AX",table_displacement},{0x1395,"SI",static_cast<std::uint16_t>(*source_offset+table_displacement)},
         {0x1395,"DS",*source_segment},{0x139a,"DI",0},
         {0x139a,"ES",*destination_segment},{0x139f,"DX",*destination_segment},
         {0x13a1,"BX",0},{0x13a4,"ES",child_code_segment_},{0x13a5,"DI",0x138c}});
     far_read_boundary_={0x13aa,*source_segment,
-        static_cast<std::uint16_t>(*source_offset+0x0018),2,child_code_segment_,0x138c};
+        static_cast<std::uint16_t>(*source_offset+table_displacement),2,child_code_segment_,0x138c};
     continuation_address_=0x13aa;
     state_=MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary;
-    descriptor_loop_iteration_=2;
+    descriptor_loop_iteration_=next_index;
 }
+bool MillenniumDosTitleInitializationSession::descriptor_loop_can_drive() const {
+    if(selected_mode_!=2||descriptor_loop_iteration_<1||descriptor_loop_iteration_>37)return false;
+    if(!descriptor_loop_owned_)
+        return descriptor_loop_iteration_==1
+            &&state_==MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary;
+    using S=MillenniumDosTitleInitializationState;
+    switch(state_){
+    case S::post_descriptor_first_loop_far_read_boundary:
+    case S::post_descriptor_next_loop_far_read_boundary:
+    case S::post_descriptor_first_loop_record_word_read_boundary:
+    case S::post_descriptor_first_loop_second_word_read_boundary:
+    case S::post_descriptor_first_loop_third_word_read_boundary:
+    case S::post_descriptor_first_loop_byte_read_boundary:
+    case S::post_descriptor_first_loop_second_byte_read_boundary:
+    case S::post_descriptor_first_loop_encoded_payload_byte_boundary:
+    case S::post_descriptor_first_loop_encoded_stream_byte_boundary:
+    case S::post_descriptor_first_loop_encoded_high_nibble_byte_boundary:
+    case S::post_descriptor_first_loop_encoded_xlat_byte_boundary:
+    case S::post_descriptor_first_loop_encoded_high_xlat_byte_boundary:
+    case S::post_descriptor_first_loop_encoded_escape_word_boundary:
+    case S::post_descriptor_first_loop_encoded_high_escape_word_boundary:
+    case S::post_descriptor_first_loop_encoded_mode_two_word_boundary:
+    case S::post_descriptor_first_loop_encoded_high_mode_two_word_boundary:
+    case S::post_descriptor_first_loop_encoded_mode_two_escape_word_boundary:
+    case S::post_descriptor_first_loop_encoded_high_mode_two_escape_word_boundary:
+    case S::post_descriptor_first_loop_encoded_mode_two_second_escape_word_boundary:
+    case S::post_descriptor_first_loop_encoded_high_mode_two_second_escape_word_boundary:
+    case S::post_descriptor_first_loop_mode_two_header_byte_boundary:
+    case S::post_descriptor_first_loop_mode_two_header_second_byte_boundary:
+    case S::post_descriptor_first_loop_mode_two_header_word_boundary:
+    case S::post_descriptor_first_loop_mode_two_source_byte_boundary:
+    case S::post_descriptor_first_loop_mode_two_first_lookup_byte_boundary:
+    case S::post_descriptor_first_loop_mode_two_second_source_byte_boundary:
+    case S::post_descriptor_first_loop_mode_two_second_lookup_byte_boundary:
+        return true;
+    default:return false;
+    }
+}
+
+MillenniumDosTitleModeTwoDriveResult
+MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_library(
+    NativeRuntimeMemory& runtime_memory,const std::span<const std::uint8_t> library,
+    const MillenniumDosTitleModeTwoDriveRequest request){
+    MillenniumDosTitleModeTwoDriveResult result;
+    if(!descriptor_loop_can_drive()||title_library_segment_!=0x3000
+        ||library.size()!=18907||to_hex(sha256(library))
+            !="6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678"
+        ||last_sequence_==std::numeric_limits<std::uint64_t>::max()
+        ||request.first_sequence!=last_sequence_+1||request.maximum_observations==0
+        ||request.maximum_observations>256
+        ||request.first_sequence>std::numeric_limits<std::uint64_t>::max()-request.maximum_observations){
+        result.error="Descriptor loop requires owned state, exact library, next sequence and finite budget";
+        return result;
+    }
+    auto next=*this;
+    auto memory=runtime_memory;
+    next.descriptor_loop_owned_=true;
+    next.descriptor_loop_driving_=true;
+    const auto word=[&](const std::size_t offset){
+        if(offset+1>=library.size())throw std::runtime_error("Descriptor library word outside leaf");
+        return static_cast<std::uint16_t>(library[offset]|static_cast<std::uint16_t>(library[offset+1])<<8U);
+    };
+    try{
+        for(std::size_t count=0;count<request.maximum_observations;++count){
+            const auto directory=0x4813U+12U*next.descriptor_loop_iteration_;
+            const auto first=word(directory),second=word(directory+2);
+            const auto base=latest_local_word(next.memory_effects_,0x0e48);
+            if(!base||*base!=0x3000||second!=0)
+                throw std::runtime_error("Unproven descriptor library base or directory segment");
+            const auto segment=static_cast<std::uint16_t>(*base+(first>>4U));
+            const auto offset=static_cast<std::uint16_t>(first&15U);
+            const auto record=static_cast<std::size_t>(first);
+            if(record+28>library.size())throw std::runtime_error("Descriptor header exceeds leaf");
+            const auto prior=next.memory_effects_.size();
+            const auto sequence=request.first_sequence+count;
+            using S=MillenniumDosTitleInitializationState;
+            if(next.state_==S::post_descriptor_first_loop_far_read_boundary
+                ||next.state_==S::post_descriptor_next_loop_far_read_boundary){
+                const auto& boundary=next.far_read_boundary_;
+                if(next.continuation_address_!=0x13aa||boundary.instruction_address!=0x13aa
+                    ||boundary.source_segment!=0x3481||boundary.source_offset!=3U+12U*next.descriptor_loop_iteration_)
+                    throw std::runtime_error("Detached descriptor directory read");
+                next.admitted_loop_pair_={{first,second}};
+                next.observe_far_words({sequence,0x13aa,boundary.source_segment,boundary.source_offset,first,second});
+                next.admitted_loop_pair_.reset();
+            }else{
+                const bool source=next.state_==S::post_descriptor_first_loop_mode_two_source_byte_boundary
+                    ||next.state_==S::post_descriptor_first_loop_mode_two_second_source_byte_boundary;
+                const bool lookup=next.state_==S::post_descriptor_first_loop_mode_two_first_lookup_byte_boundary
+                    ||next.state_==S::post_descriptor_first_loop_mode_two_second_lookup_byte_boundary;
+                const bool byte=next.continuation_address_==next.far_byte_boundary_.instruction_address;
+                if(source){
+                    const auto boundary=next.far_byte_boundary_;
+                    const auto expected_segment=latest_local_word(next.memory_effects_,0x010e);
+                    const auto expected_offset=latest_local_word(next.memory_effects_,0x010c);
+                    if(!expected_segment||!expected_offset||boundary.source_segment!=*expected_segment
+                        ||boundary.source_offset<*expected_offset
+                        ||static_cast<unsigned>(boundary.source_offset-*expected_offset)>=368U)
+                        throw std::runtime_error("Mode-two source outside owned descriptor output");
+                    const auto value=memory.read_byte({NativeRuntimeAddressSpace::dos_segmented,
+                        boundary.source_segment,boundary.source_offset});
+                    if(!value)throw std::runtime_error("Mode-two source is not initialized");
+                    next.observe_far_byte({sequence,boundary.instruction_address,boundary.source_segment,boundary.source_offset,*value});
+                }else{
+                    const auto read_segment=byte?next.far_byte_boundary_.source_segment:next.far_read_boundary_.source_segment;
+                    const auto read_offset=byte?next.far_byte_boundary_.source_offset:next.far_read_boundary_.source_offset;
+                    if(read_segment!=segment||read_offset<offset)
+                        throw std::runtime_error("Descriptor read lost exact normalized provenance");
+                    const auto file_offset=record+read_offset-offset;
+                    if(file_offset>=library.size()||(!byte&&file_offset+1>=library.size()))
+                        throw std::runtime_error("Descriptor operand exceeds library");
+                    if(lookup){
+                        const auto table=record+word(record+26)+28U
+                            +((library[record]&1U)?0x300U:0U)+library[record+1]+1U;
+                        if(file_offset<table||file_offset>=table+256U||table+256U>library.size())
+                            throw std::runtime_error("Descriptor lookup exceeds verified table");
+                    }
+                    if(byte)next.observe_far_byte({sequence,next.far_byte_boundary_.instruction_address,
+                        read_segment,read_offset,library[file_offset]});
+                    else next.observe_far_word({sequence,next.far_read_boundary_.instruction_address,
+                        read_segment,read_offset,word(file_offset)});
+                }
+            }
+            NativeRuntimeEffectBatch batch{"millennium-dos-owned-loop-"+std::to_string(sequence),true,{}};
+            for(std::size_t i=prior;i<next.memory_effects_.size();++i){
+                const auto& effect=next.memory_effects_[i];
+                batch.effects.push_back({batch.effects.size()+1,
+                    {NativeRuntimeAddressSpace::dos_segmented,effect.explicit_segment?effect.segment:next.child_code_segment_,effect.offset},
+                    effect.width==MillenniumDosTitleInitializationEffectWidth::word?MemoryTransferElementWidth::word:MemoryTransferElementWidth::byte,
+                    NativeRuntimeByteOrder::little_endian,effect.value});
+            }
+            if(!batch.effects.empty()){
+                const auto applied=memory.apply(batch);
+                if(!applied.accepted)throw std::runtime_error(applied.error);
+            }
+            result.observation_count=count+1;
+            if(next.state_==S::descriptor_loop_complete_boundary){result.returned=true;break;}
+            if(!next.descriptor_loop_can_drive())throw std::runtime_error("Descriptor loop reached unadmitted operation");
+        }
+    }catch(const std::exception& error){result.error=error.what();result.observation_count=0;return result;}
+    result.accepted=true;
+    next.descriptor_loop_driving_=false;
+    *this=std::move(next);runtime_memory=std::move(memory);
+    return result;
+}
+
 MillenniumDosTitleModeTwoDriveResult
 MillenniumDosTitleInitializationSession::drive_mode_two_from_owned_memory(
     NativeRuntimeMemory& runtime_memory,
@@ -1266,6 +1421,8 @@ void MillenniumDosTitleInitializationSession::execute_followup_setup(
 
 void MillenniumDosTitleInitializationSession::observe_far_words(
     const MillenniumDosTitleFarWordsObservation& observation){
+    if(descriptor_loop_owned_&&!descriptor_loop_driving_)
+        throw std::runtime_error("Owned descriptor loop requires hash-bound library drive");
     const auto boundary_state=state_;
     if((boundary_state!=MillenniumDosTitleInitializationState::timer_vector_far_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::video_vector_far_read_boundary
@@ -1285,16 +1442,11 @@ void MillenniumDosTitleInitializationSession::observe_far_words(
         ||boundary_state==MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary
         ||boundary_state==MillenniumDosTitleInitializationState::post_descriptor_second_loop_far_read_boundary;
     if(descriptor_read){
-        const auto expected_first=static_cast<std::uint16_t>(
+        const auto expected_first=admitted_loop_pair_?admitted_loop_pair_->first:static_cast<std::uint16_t>(
             boundary_state==MillenniumDosTitleInitializationState::graphics_descriptor_far_read_boundary
                 ?0x0006:boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary
-                    ?0x0503:boundary_state==MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary
-                        ?0x2a16:0xc800);
-        const auto expected_second=static_cast<std::uint16_t>(
-            boundary_state==MillenniumDosTitleInitializationState::graphics_descriptor_far_read_boundary
-                ?0x0000:boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary
-                    ?0x1f02:boundary_state==MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary
-                        ?0x0000:0x4000);
+                    ?0x2941:0x2a16);
+        const auto expected_second=admitted_loop_pair_?admitted_loop_pair_->second:std::uint16_t{0};
         if(observation.first_word!=expected_first
             ||observation.second_word!=expected_second)
             throw std::runtime_error("Contradictory Millennium DOS TITLE.LIB descriptor words");
@@ -1333,7 +1485,9 @@ void MillenniumDosTitleInitializationSession::observe_far_words(
             child_code_segment_,0x1359};
         last_sequence_=observation.sequence;
         continuation_address_=0x13cd;
-        state_=boundary_state==MillenniumDosTitleInitializationState::graphics_descriptor_far_read_boundary
+        state_=admitted_loop_pair_
+            ?MillenniumDosTitleInitializationState::post_descriptor_first_loop_record_word_read_boundary
+            :boundary_state==MillenniumDosTitleInitializationState::graphics_descriptor_far_read_boundary
             ?MillenniumDosTitleInitializationState::graphics_record_word_read_boundary
             :boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary
                 ?MillenniumDosTitleInitializationState::post_descriptor_first_loop_record_word_read_boundary
@@ -1503,6 +1657,8 @@ void MillenniumDosTitleInitializationSession::execute_video_hook_setup(
 
 void MillenniumDosTitleInitializationSession::observe_far_word(
     const MillenniumDosTitleFarWordObservation& observation){
+    if(descriptor_loop_owned_&&!descriptor_loop_driving_)
+        throw std::runtime_error("Owned descriptor loop requires hash-bound library drive");
     const auto boundary_state=state_;
     if((boundary_state!=MillenniumDosTitleInitializationState::graphics_record_word_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::graphics_record_second_word_read_boundary
@@ -1845,6 +2001,8 @@ void MillenniumDosTitleInitializationSession::observe_far_word(
 
 void MillenniumDosTitleInitializationSession::observe_far_byte(
     const MillenniumDosTitleFarByteObservation& observation){
+    if(descriptor_loop_owned_&&!descriptor_loop_driving_)
+        throw std::runtime_error("Owned descriptor loop requires hash-bound library drive");
     const auto boundary_state=state_;
     if((boundary_state!=MillenniumDosTitleInitializationState::graphics_record_byte_read_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::graphics_record_second_byte_read_boundary

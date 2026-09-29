@@ -2,25 +2,18 @@
 
 ## Current DOS descriptor continuation
 
-The canonical route now corrects the loop's return to `$1963`, removes the
-fictitious intervening function-six result, and reaches the next descriptor
-directly. Its genuine-library header and complete owned-memory mode-two loop
-end at the second `$1963` return. Recover that caller's next iteration before
-advancing further. Payload output uses `$010c/$010e`; setup preserves the
-original doubled clear count. These corrections supersede earlier references
-to a `$16e8->$1740` return for this loop invocation.
+The owned mode-two path now addresses the complete 37-record loop using the
+actual relocated directory at TITLE.LIB+$4813. The first record is
+$3294:$0001; the former $5050 mapping and lookup alias are rejected.
+All header, payload and lookup reads remain within the verified leaf.
+Each finite quantum preserves exact segmented addresses and commits session
+plus memory together. The final boundary is RET $1967 after the loop count
+reaches zero. Recover its proven caller continuation at $1c20 and runtime
+word $1896 next, without inventing that word or subsequent private results.
 
-The second title descriptor can now enter the existing payload decoder using
-its own source, destination and lookup BX. It stops before postprocessing at
-`$1488`, or before `RET $1405` when the observed selector is neither one nor
-two. Recover the actual caller-specific continuation before joining either
-stop to another descriptor iteration. Do not reuse the first descriptor's
-`$1740` return suffix. The canonical `$32a1:$0006` stream also now uses its
-instruction-defined lookup base `$000b`; counts or output expectations from
-the former fixed `$0008` implementation must be re-established from source.
-No private-interrupt, OS, frame or title-to-game result is supplied by this
-change. The detailed paragraphs below retain the earlier recovery sequence;
-their intermediate stops are not a substitute for the current checkpoints.
+The following paragraphs retain earlier recovery history. Their intermediate
+stops and historical source assumptions are superseded by the current
+[title initialization contract](MILLENNIUM_DOS_TITLE_INITIALIZATION.md).
 
 The Millennium DOS non-mode-1 title path now observes both external vector
 pairs and atomically installs the exact timer and video hooks. Its verified

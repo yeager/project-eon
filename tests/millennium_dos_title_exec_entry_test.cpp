@@ -843,9 +843,105 @@ int main(int argc, char** argv) {
         &&first_title_loop.memory_effects[18969].offset==0x0110
         &&first_title_loop.memory_effects[18969].value==0x0170);
     auto contradictory_first_loop_descriptor=other_success;
+    // Start only at the real first directory read. No decoded source bytes
+    // or lookup aliases are supplied by this complete-loop regression.
+    std::vector<eon::MillenniumDosTitleInitializationMemoryEffect> complete_loop_effects;
+    std::size_t complete_loop_observations=0;
+    for(const std::size_t quantum : {256U,128U}){
+        auto whole_loop=other_success;
+        eon::NativeRuntimeMemory whole_memory;
+        std::size_t observations=0;
+        bool returned=false;
+        for(unsigned frame=0;frame<1024&&!returned;++frame){
+            const auto before=whole_loop.checkpoint();
+            const auto driven=whole_loop.drive_descriptor_loop_from_title_library(
+                whole_memory,title_library,{before.last_sequence+1,quantum});
+            if(!driven.accepted)throw std::runtime_error(driven.error);
+            assert(driven.observation_count>0&&driven.observation_count<=quantum);
+            observations+=driven.observation_count;returned=driven.returned;
+        }
+        const auto completed=whole_loop.checkpoint();
+        assert(returned&&!whole_loop.descriptor_loop_can_drive()
+            &&completed.state==eon::MillenniumDosTitleInitializationState::descriptor_loop_complete_boundary
+            &&completed.continuation_address==0x1967);
+        std::size_t output_bytes=0,clear_words=0;
+        for(std::size_t i=first_title_loop.memory_effects.size();i<completed.memory_effects.size();++i){
+            const auto& effect=completed.memory_effects[i];
+            if(effect.instruction_address==0x16db){
+                assert(effect.explicit_segment&&effect.segment==0x5000);
+                ++output_bytes;
+            }
+            if(effect.instruction_address==0x16a6){
+                assert(effect.explicit_segment&&effect.segment==0x5000&&effect.value==0);
+                ++clear_words;
+            }
+        }
+        assert(output_bytes==37U*184U&&clear_words==37U*92U);
+        if(complete_loop_effects.empty()){
+            complete_loop_effects=completed.memory_effects;
+            complete_loop_observations=observations;
+        }else{
+            assert(observations==complete_loop_observations
+                &&completed.memory_effects.size()==complete_loop_effects.size());
+            for(std::size_t i=0;i<complete_loop_effects.size();++i){
+                const auto& a=complete_loop_effects[i];const auto& b=completed.memory_effects[i];
+                assert(a.instruction_address==b.instruction_address&&a.offset==b.offset
+                    &&a.value==b.value&&a.width==b.width&&a.segment==b.segment
+                    &&a.explicit_segment==b.explicit_segment);
+            }
+        }
+    }
+    auto stepped_loop=other_success;
+    eon::NativeRuntimeMemory stepped_memory;
+    for(unsigned step=0;step<64;++step){
+        const auto before=stepped_loop.checkpoint();
+        const auto accepted=stepped_loop.drive_descriptor_loop_from_title_library(
+            stepped_memory,title_library,{before.last_sequence+1,1});
+        if(!accepted.accepted)throw std::runtime_error(accepted.error);
+        assert(accepted.observation_count==1&&!accepted.returned);
+    }
+    const auto stepped_before=stepped_loop.checkpoint();
+    const auto memory_before=stepped_memory.checkpoint();
+    for(const std::size_t invalid_budget : {0U,257U}){
+        const auto rejected=stepped_loop.drive_descriptor_loop_from_title_library(
+            stepped_memory,title_library,{stepped_before.last_sequence+1,invalid_budget});
+        assert(!rejected.accepted&&rejected.observation_count==0
+            &&stepped_loop.checkpoint().last_sequence==stepped_before.last_sequence
+            &&stepped_memory.checkpoint().applied_batch_count==memory_before.applied_batch_count);
+    }
+    auto damaged_library=title_library;damaged_library.back()^=1;
+    const auto wrong_loop_hash=stepped_loop.drive_descriptor_loop_from_title_library(
+        stepped_memory,damaged_library,{stepped_before.last_sequence+1,1});
+    assert(!wrong_loop_hash.accepted&&stepped_loop.checkpoint().memory_effects.size()==stepped_before.memory_effects.size());
+    for(unsigned kind=0;kind<3;++kind){
+        auto externally_mutated=stepped_loop;
+        bool ownership_rejected=false;
+        try{
+            if(kind==0)externally_mutated.observe_far_byte({stepped_before.last_sequence+1,
+                stepped_before.far_byte_boundary.instruction_address,
+                stepped_before.far_byte_boundary.source_segment,
+                stepped_before.far_byte_boundary.source_offset,0});
+            else if(kind==1)externally_mutated.observe_far_word({stepped_before.last_sequence+1,
+                stepped_before.far_read_boundary.instruction_address,
+                stepped_before.far_read_boundary.source_segment,
+                stepped_before.far_read_boundary.source_offset,0});
+            else externally_mutated.observe_far_words({stepped_before.last_sequence+1,
+                stepped_before.far_read_boundary.instruction_address,
+                stepped_before.far_read_boundary.source_segment,
+                stepped_before.far_read_boundary.source_offset,0,0});
+        }catch(const std::runtime_error& error){
+            ownership_rejected=std::string(error.what()).find("Owned descriptor loop")!=std::string::npos;
+        }
+        assert(ownership_rejected&&externally_mutated.checkpoint().last_sequence==stepped_before.last_sequence
+            &&externally_mutated.checkpoint().state==stepped_before.state
+            &&externally_mutated.checkpoint().memory_effects.size()==stepped_before.memory_effects.size()
+            &&externally_mutated.checkpoint().far_byte_observations.size()==stepped_before.far_byte_observations.size()
+            &&externally_mutated.checkpoint().far_single_word_observations.size()==stepped_before.far_single_word_observations.size()
+            &&externally_mutated.checkpoint().far_word_observations.size()==stepped_before.far_word_observations.size());
+    }
     bool contradictory_first_loop_descriptor_rejected=false;
     try { contradictory_first_loop_descriptor.observe_far_words(
-        {92,0x13aa,0x3481,0x000f,0x0502,0x1f02}); }
+        {92,0x13aa,0x3481,0x000f,0x0503,0x1f02}); }
     catch(const std::runtime_error&) {
         contradictory_first_loop_descriptor_rejected=true;
     }
@@ -854,7 +950,9 @@ int main(int argc, char** argv) {
             ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary
         &&contradictory_first_loop_descriptor.checkpoint().memory_effects.size()==18970);
     other_success.observe_far_words(
-        {92,0x13aa,0x3481,0x000f,0x0503,0x1f02});
+        {92,0x13aa,0x3481,0x000f,0x2941,0x0000});
+    // External arithmetic fixtures below cannot be promoted to an owned loop.
+    assert(!other_success.descriptor_loop_can_drive());
     auto compact_owned_mode_two=other_success;
     const auto first_title_record=other_success.checkpoint();
     assert(first_title_record.state
@@ -862,26 +960,26 @@ int main(int argc, char** argv) {
         &&first_title_record.last_sequence==92
         &&first_title_record.continuation_address==0x13cd
         &&first_title_record.far_read_boundary.instruction_address==0x13cd
-        &&first_title_record.far_read_boundary.source_segment==0x5050
-        &&first_title_record.far_read_boundary.source_offset==0x001b
+        &&first_title_record.far_read_boundary.source_segment==0x3294
+        &&first_title_record.far_read_boundary.source_offset==0x0019
         &&first_title_record.far_read_boundary.word_count==1
         &&first_title_record.far_read_boundary.destination_segment==0x2468
         &&first_title_record.far_read_boundary.destination_offset==0x1359
         &&first_title_record.memory_effects.size()==18972
         &&first_title_record.memory_effects[18970].offset==0x138c
-        &&first_title_record.memory_effects[18970].value==0x0003
+        &&first_title_record.memory_effects[18970].value==0x0001
         &&first_title_record.memory_effects[18971].offset==0x138e
-        &&first_title_record.memory_effects[18971].value==0x5050);
+        &&first_title_record.memory_effects[18971].value==0x3294);
     auto detached_first_title_record=other_success;
     bool detached_first_title_record_rejected=false;
     try { detached_first_title_record.observe_far_word(
-        {93,0x13cd,0x5050,0x001a,0xa55a}); }
+        {93,0x13cd,0x3294,0x0018,0xa55a}); }
     catch(const std::runtime_error&) { detached_first_title_record_rejected=true; }
     assert(detached_first_title_record_rejected
         &&detached_first_title_record.checkpoint().last_sequence==92
         &&detached_first_title_record.checkpoint().far_single_word_observations.size()==3
         &&detached_first_title_record.checkpoint().memory_effects.size()==18972);
-    other_success.observe_far_word({93,0x13cd,0x5050,0x001b,0xa55a});
+    other_success.observe_far_word({93,0x13cd,0x3294,0x0019,0xa55a});
     const auto first_title_second_word=other_success.checkpoint();
     assert(first_title_second_word.state
             ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_word_read_boundary
@@ -890,22 +988,22 @@ int main(int argc, char** argv) {
         &&first_title_second_word.far_single_word_observations.size()==4
         &&first_title_second_word.far_single_word_observations.back().word==0xa55a
         &&first_title_second_word.far_read_boundary.instruction_address==0x13d0
-        &&first_title_second_word.far_read_boundary.source_segment==0x5050
-        &&first_title_second_word.far_read_boundary.source_offset==0x0019
+        &&first_title_second_word.far_read_boundary.source_segment==0x3294
+        &&first_title_second_word.far_read_boundary.source_offset==0x0017
         &&first_title_second_word.far_read_boundary.word_count==1
         &&first_title_second_word.far_read_boundary.destination_offset==0x1357
         &&first_title_second_word.memory_effects.size()==18972);
     auto detached_first_title_second_word=other_success;
     bool detached_first_title_second_word_rejected=false;
     try { detached_first_title_second_word.observe_far_word(
-        {94,0x13d0,0x5050,0x0018,0x0010}); }
+        {94,0x13d0,0x3294,0x0016,0x0010}); }
     catch(const std::runtime_error&) {
         detached_first_title_second_word_rejected=true;
     }
     assert(detached_first_title_second_word_rejected
         &&detached_first_title_second_word.checkpoint().last_sequence==93
         &&detached_first_title_second_word.checkpoint().memory_effects.size()==18972);
-    other_success.observe_far_word({94,0x13d0,0x5050,0x0019,0x0010});
+    other_success.observe_far_word({94,0x13d0,0x3294,0x0017,0x0010});
     const auto first_title_third_word=other_success.checkpoint();
     assert(first_title_third_word.state
             ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_third_word_read_boundary
@@ -914,8 +1012,8 @@ int main(int argc, char** argv) {
         &&first_title_third_word.far_single_word_observations.size()==5
         &&first_title_third_word.far_single_word_observations.back().word==0x0010
         &&first_title_third_word.far_read_boundary.instruction_address==0x13e2
-        &&first_title_third_word.far_read_boundary.source_segment==0x5050
-        &&first_title_third_word.far_read_boundary.source_offset==0x0017
+        &&first_title_third_word.far_read_boundary.source_segment==0x3294
+        &&first_title_third_word.far_read_boundary.source_offset==0x0015
         &&first_title_third_word.far_read_boundary.word_count==1
         &&first_title_third_word.far_read_boundary.destination_offset==0x138a
         &&first_title_third_word.memory_effects.size()==18975
@@ -928,14 +1026,14 @@ int main(int argc, char** argv) {
     auto detached_first_title_third_word=other_success;
     bool detached_first_title_third_word_rejected=false;
     try { detached_first_title_third_word.observe_far_word(
-        {95,0x13e2,0x5050,0x0016,0x0050}); }
+        {95,0x13e2,0x3294,0x0014,0x0050}); }
     catch(const std::runtime_error&) {
         detached_first_title_third_word_rejected=true;
     }
     assert(detached_first_title_third_word_rejected
         &&detached_first_title_third_word.checkpoint().last_sequence==94
         &&detached_first_title_third_word.checkpoint().memory_effects.size()==18975);
-    other_success.observe_far_word({95,0x13e2,0x5050,0x0017,0x0050});
+    other_success.observe_far_word({95,0x13e2,0x3294,0x0015,0x0050});
     const auto first_title_byte=other_success.checkpoint();
     assert(first_title_byte.state
             ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_byte_read_boundary
@@ -944,8 +1042,8 @@ int main(int argc, char** argv) {
         &&first_title_byte.far_single_word_observations.size()==6
         &&first_title_byte.far_single_word_observations.back().word==0x0050
         &&first_title_byte.far_byte_boundary.instruction_address==0x13e9
-        &&first_title_byte.far_byte_boundary.source_segment==0x5050
-        &&first_title_byte.far_byte_boundary.source_offset==0x0004
+        &&first_title_byte.far_byte_boundary.source_segment==0x3294
+        &&first_title_byte.far_byte_boundary.source_offset==0x0002
         &&first_title_byte.far_byte_boundary.destination_offset==0x1389
         &&first_title_byte.memory_effects.size()==18976
         &&first_title_byte.memory_effects.back().instruction_address==0x13e5
@@ -954,12 +1052,12 @@ int main(int argc, char** argv) {
     auto detached_first_title_byte=other_success;
     bool detached_first_title_byte_rejected=false;
     try { detached_first_title_byte.observe_far_byte(
-        {96,0x13e9,0x5050,0x0005,0xfe}); }
+        {96,0x13e9,0x3294,0x0003,0xfe}); }
     catch(const std::runtime_error&) { detached_first_title_byte_rejected=true; }
     assert(detached_first_title_byte_rejected
         &&detached_first_title_byte.checkpoint().last_sequence==95
         &&detached_first_title_byte.checkpoint().memory_effects.size()==18976);
-    other_success.observe_far_byte({96,0x13e9,0x5050,0x0004,0xfe});
+    other_success.observe_far_byte({96,0x13e9,0x3294,0x0002,0xfe});
     const auto first_title_second_byte=other_success.checkpoint();
     assert(first_title_second_byte.state
             ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_byte_read_boundary
@@ -968,15 +1066,15 @@ int main(int argc, char** argv) {
         &&first_title_second_byte.far_byte_observations.size()==3
         &&first_title_second_byte.far_byte_observations.back().byte==0xfe
         &&first_title_second_byte.far_byte_boundary.instruction_address==0x13f2
-        &&first_title_second_byte.far_byte_boundary.source_segment==0x5050
-        &&first_title_second_byte.far_byte_boundary.source_offset==0x0007
+        &&first_title_second_byte.far_byte_boundary.source_segment==0x3294
+        &&first_title_second_byte.far_byte_boundary.source_offset==0x0005
         &&first_title_second_byte.far_byte_boundary.destination_offset==0x1388
         &&first_title_second_byte.memory_effects.size()==18977
         &&first_title_second_byte.memory_effects.back().instruction_address==0x13ee
         &&first_title_second_byte.memory_effects.back().offset==0x1389
         &&first_title_second_byte.memory_effects.back().value==0x00ff);
     auto encoded_first_title_record=other_success;
-    encoded_first_title_record.observe_far_byte({97,0x13f2,0x5050,0x0007,0x01});
+    encoded_first_title_record.observe_far_byte({97,0x13f2,0x3294,0x0005,0x01});
     const auto encoded_payload=encoded_first_title_record.checkpoint();
     assert(encoded_payload.state
             ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_payload_byte_boundary
@@ -985,20 +1083,20 @@ int main(int argc, char** argv) {
         &&encoded_payload.far_byte_observations.size()==4
         &&encoded_payload.far_byte_observations.back().byte==1
         &&encoded_payload.far_byte_boundary.instruction_address==0x1419
-        &&encoded_payload.far_byte_boundary.source_segment==0x5050
-        &&encoded_payload.far_byte_boundary.source_offset==0x001f
+        &&encoded_payload.far_byte_boundary.source_segment==0x3294
+        &&encoded_payload.far_byte_boundary.source_offset==0x001d
         &&encoded_payload.memory_effects.size()==18978
         &&encoded_payload.memory_effects.back().offset==0x1388
         &&encoded_payload.memory_effects.back().value==1);
     auto detached_encoded_payload=encoded_first_title_record;
     bool detached_encoded_payload_rejected=false;
     try { detached_encoded_payload.observe_far_byte(
-        {98,0x1419,0x5050,0x0020,0x7a}); }
+        {98,0x1419,0x3294,0x001e,0x7a}); }
     catch(const std::runtime_error&) { detached_encoded_payload_rejected=true; }
     assert(detached_encoded_payload_rejected
         &&detached_encoded_payload.checkpoint().last_sequence==97
         &&detached_encoded_payload.checkpoint().memory_effects.size()==18978);
-    encoded_first_title_record.observe_far_byte({98,0x1419,0x5050,0x001f,0x7a});
+    encoded_first_title_record.observe_far_byte({98,0x1419,0x3294,0x001d,0x7a});
     const auto encoded_stream=encoded_first_title_record.checkpoint();
     assert(encoded_stream.state
             ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary
@@ -1007,8 +1105,8 @@ int main(int argc, char** argv) {
         &&encoded_stream.far_byte_observations.size()==5
         &&encoded_stream.far_byte_observations.back().byte==0x7a
         &&encoded_stream.far_byte_boundary.instruction_address==0x1428
-        &&encoded_stream.far_byte_boundary.source_segment==0x5050
-        &&encoded_stream.far_byte_boundary.source_offset==0x0020
+        &&encoded_stream.far_byte_boundary.source_segment==0x3294
+        &&encoded_stream.far_byte_boundary.source_offset==0x001e
         &&encoded_stream.memory_effects.size()==18979
         &&encoded_stream.memory_effects.back().instruction_address==0x141c
         &&encoded_stream.memory_effects.back().offset==0x0170
@@ -1016,121 +1114,121 @@ int main(int argc, char** argv) {
     auto detached_encoded_stream=encoded_first_title_record;
     bool detached_encoded_stream_rejected=false;
     try { detached_encoded_stream.observe_far_byte(
-        {99,0x1428,0x5050,0x0021,0xab}); }
+        {99,0x1428,0x3294,0x001f,0xab}); }
     catch(const std::runtime_error&) { detached_encoded_stream_rejected=true; }
     assert(detached_encoded_stream_rejected
         &&detached_encoded_stream.checkpoint().last_sequence==98
         &&detached_encoded_stream.checkpoint().far_byte_observations.size()==5);
     auto encoded_escape=encoded_first_title_record;
-    encoded_escape.observe_far_byte({99,0x1428,0x5050,0x0020,0x0f});
+    encoded_escape.observe_far_byte({99,0x1428,0x3294,0x001e,0x0f});
     const auto escape_word=encoded_escape.checkpoint();
     assert(escape_word.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_escape_word_boundary);
     assert(escape_word.continuation_address==0x1437);
-    assert(escape_word.far_read_boundary.source_segment==0x5050);
-    assert(escape_word.far_read_boundary.source_offset==0x0020);
-    encoded_escape.observe_far_word({100,0x1437,0x5050,0x0020,0x1234});
+    assert(escape_word.far_read_boundary.source_segment==0x3294);
+    assert(escape_word.far_read_boundary.source_offset==0x001e);
+    encoded_escape.observe_far_word({100,0x1437,0x3294,0x001e,0x1234});
     const auto escaped_output=encoded_escape.checkpoint();
     assert(escaped_output.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_nibble_byte_boundary);
     assert(escaped_output.continuation_address==0x1428);
-    assert(escaped_output.far_byte_boundary.source_offset==0x0021);
+    assert(escaped_output.far_byte_boundary.source_offset==0x001f);
     assert(escaped_output.memory_effects.back().offset==0x0171);
     assert(escaped_output.memory_effects.back().value==0x23);
     auto encoded_high_escape=encoded_escape;
-    encoded_high_escape.observe_far_byte({101,0x1428,0x5050,0x0021,0xfa});
+    encoded_high_escape.observe_far_byte({101,0x1428,0x3294,0x001f,0xfa});
     assert(encoded_high_escape.checkpoint().state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_escape_word_boundary);
-    encoded_high_escape.observe_far_word({102,0x1437,0x5050,0x0022,0x004e});
+    encoded_high_escape.observe_far_word({102,0x1437,0x3294,0x0020,0x004e});
     const auto high_escape_output=encoded_high_escape.checkpoint();
     assert(high_escape_output.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary);
     assert(high_escape_output.continuation_address==0x1428);
     assert(high_escape_output.far_byte_boundary.instruction_address==0x1428);
-    assert(high_escape_output.far_byte_boundary.source_segment==0x5050);
-    assert(high_escape_output.far_byte_boundary.source_offset==0x0023);
+    assert(high_escape_output.far_byte_boundary.source_segment==0x3294);
+    assert(high_escape_output.far_byte_boundary.source_offset==0x0021);
     assert(high_escape_output.memory_effects.back().offset==0x0172);
     assert(high_escape_output.memory_effects.back().value==0x4e);
     auto encoded_high_mode=encoded_escape;
-    encoded_high_mode.observe_far_byte({101,0x1428,0x5050,0x0021,0xea});
+    encoded_high_mode.observe_far_byte({101,0x1428,0x3294,0x001f,0xea});
     assert(encoded_high_mode.checkpoint().state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_mode_two_word_boundary);
-    encoded_high_mode.observe_far_word({102,0x144a,0x5050,0x0022,0x0003});
+    encoded_high_mode.observe_far_word({102,0x144a,0x3294,0x0020,0x0003});
     const auto high_mode_output=encoded_high_mode.checkpoint();
     assert(high_mode_output.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary);
-    assert(high_mode_output.far_byte_boundary.source_offset==0x0023);
+    assert(high_mode_output.far_byte_boundary.source_offset==0x0021);
     assert(high_mode_output.memory_effects.back().offset==0x0176);
     assert(high_mode_output.memory_effects.back().value==0x23);
-    encoded_escape.observe_far_byte({101,0x1428,0x5050,0x0021,0x2a});
+    encoded_escape.observe_far_byte({101,0x1428,0x3294,0x001f,0x2a});
     const auto high_nibble_lookup=encoded_escape.checkpoint();
     assert(high_nibble_lookup.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_xlat_byte_boundary);
-    assert(high_nibble_lookup.far_byte_boundary.source_offset==0x000a);
-    encoded_escape.observe_far_byte({102,0x1470,0x5050,0x000a,0x10});
+    assert(high_nibble_lookup.far_byte_boundary.source_offset==0x0008);
+    encoded_escape.observe_far_byte({102,0x1470,0x3294,0x0008,0x10});
     const auto next_low_nibble=encoded_escape.checkpoint();
     assert(next_low_nibble.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary);
-    assert(next_low_nibble.far_byte_boundary.source_offset==0x0022);
+    assert(next_low_nibble.far_byte_boundary.source_offset==0x0020);
     auto mode_two_dispatch=encoded_first_title_record;
-    mode_two_dispatch.observe_far_byte({99,0x1428,0x5050,0x0020,0x0e});
+    mode_two_dispatch.observe_far_byte({99,0x1428,0x3294,0x001e,0x0e});
     assert(mode_two_dispatch.checkpoint().state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_mode_two_word_boundary);
     auto mode_two_extension=mode_two_dispatch;
-    mode_two_extension.observe_far_word({100,0x144a,0x5050,0x0020,0x0ff0});
+    mode_two_extension.observe_far_word({100,0x144a,0x3294,0x001e,0x0ff0});
     assert(mode_two_extension.checkpoint().state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_mode_two_escape_word_boundary);
-    mode_two_extension.observe_far_word({101,0x1452,0x5050,0x0021,0x0550});
+    mode_two_extension.observe_far_word({101,0x1452,0x3294,0x001f,0x0550});
     const auto mode_two_second_extension=mode_two_extension.checkpoint();
     assert(mode_two_second_extension.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_mode_two_second_escape_word_boundary);
     assert(mode_two_second_extension.continuation_address==0x1458);
-    assert(mode_two_second_extension.far_read_boundary.source_offset==0x0022);
+    assert(mode_two_second_extension.far_read_boundary.source_offset==0x0020);
     auto detached_mode_two_second_extension=mode_two_extension;
     const auto detached_mode_two_effect_count=detached_mode_two_second_extension.checkpoint().memory_effects.size();
     bool detached_mode_two_second_extension_rejected=false;
     try { detached_mode_two_second_extension.observe_far_word(
-        {102,0x1458,0x5050,0x0023,0x04d0}); }
+        {102,0x1458,0x3294,0x0021,0x04d0}); }
     catch(const std::runtime_error&) { detached_mode_two_second_extension_rejected=true; }
     assert(detached_mode_two_second_extension_rejected
         &&detached_mode_two_second_extension.checkpoint().last_sequence==101
         &&detached_mode_two_second_extension.checkpoint().memory_effects.size()==detached_mode_two_effect_count);
-    mode_two_extension.observe_far_word({102,0x1458,0x5050,0x0022,0x04d0});
+    mode_two_extension.observe_far_word({102,0x1458,0x3294,0x0020,0x04d0});
     const auto extended_mode_two_run=mode_two_extension.checkpoint();
     assert(extended_mode_two_run.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_header_byte_boundary);
     assert(extended_mode_two_run.continuation_address==0x1647);
-    assert(extended_mode_two_run.far_byte_boundary.source_segment==0x5050);
-    assert(extended_mode_two_run.far_byte_boundary.source_offset==0x0003);
+    assert(extended_mode_two_run.far_byte_boundary.source_segment==0x3294);
+    assert(extended_mode_two_run.far_byte_boundary.source_offset==0x0001);
     assert(extended_mode_two_run.memory_effects.size()==detached_mode_two_effect_count+0x554f);
     assert(extended_mode_two_run.memory_effects.back().value==0x7a);
     auto detached_post_record_header=mode_two_extension;
     const auto post_record_effect_count=detached_post_record_header.checkpoint().memory_effects.size();
     bool detached_post_record_header_rejected=false;
-    try { detached_post_record_header.observe_far_byte({103,0x1647,0x5050,0x0004,0x05}); }
+    try { detached_post_record_header.observe_far_byte({103,0x1647,0x3294,0x0002,0x05}); }
     catch(const std::runtime_error&) { detached_post_record_header_rejected=true; }
     assert(detached_post_record_header_rejected
         &&detached_post_record_header.checkpoint().last_sequence==102
         &&detached_post_record_header.checkpoint().memory_effects.size()==post_record_effect_count);
-    mode_two_extension.observe_far_byte({103,0x1647,0x5050,0x0003,0x48});
+    mode_two_extension.observe_far_byte({103,0x1647,0x3294,0x0001,0x48});
     assert(mode_two_extension.checkpoint().state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_header_second_byte_boundary);
     assert(mode_two_extension.checkpoint().continuation_address==0x1653);
-    assert(mode_two_extension.checkpoint().far_byte_boundary.source_offset==0x0004);
-    mode_two_extension.observe_far_byte({104,0x1653,0x5050,0x0004,0x00});
+    assert(mode_two_extension.checkpoint().far_byte_boundary.source_offset==0x0002);
+    mode_two_extension.observe_far_byte({104,0x1653,0x3294,0x0002,0x00});
     assert(mode_two_extension.checkpoint().state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_header_word_boundary);
     assert(mode_two_extension.checkpoint().continuation_address==0x1657);
-    assert(mode_two_extension.checkpoint().far_read_boundary.source_offset==0x001d);
+    assert(mode_two_extension.checkpoint().far_read_boundary.source_offset==0x001b);
     auto detached_mode_two_header_word=mode_two_extension;
     const auto mode_two_header_effect_count=detached_mode_two_header_word.checkpoint().memory_effects.size();
     bool detached_mode_two_header_word_rejected=false;
-    try { detached_mode_two_header_word.observe_far_word({105,0x1657,0x5050,0x001c,0x4000}); }
+    try { detached_mode_two_header_word.observe_far_word({105,0x1657,0x3294,0x001a,0x4000}); }
     catch(const std::runtime_error&) { detached_mode_two_header_word_rejected=true; }
     assert(detached_mode_two_header_word_rejected
         &&detached_mode_two_header_word.checkpoint().last_sequence==104
         &&detached_mode_two_header_word.checkpoint().memory_effects.size()==mode_two_header_effect_count);
-    mode_two_extension.observe_far_word({105,0x1657,0x5050,0x001d,0x4000});
+    mode_two_extension.observe_far_word({105,0x1657,0x3294,0x001b,0x4000});
     const auto mode_two_source=mode_two_extension.checkpoint();
     assert(mode_two_source.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_source_byte_boundary);
@@ -1138,17 +1236,17 @@ int main(int argc, char** argv) {
     assert(mode_two_source.far_byte_boundary.instruction_address==0x16b3);
     assert(mode_two_source.far_byte_boundary.source_offset==0x0170);
     assert(mode_two_source.memory_effects[mode_two_header_effect_count].offset==0x14df);
-    assert(mode_two_source.memory_effects[mode_two_header_effect_count].value==0x4020);
+    assert(mode_two_source.memory_effects[mode_two_header_effect_count].value==0x401e);
     {
-        compact_owned_mode_two.observe_far_word({93,0x13cd,0x5050,0x001b,0x0002});
-        compact_owned_mode_two.observe_far_word({94,0x13d0,0x5050,0x0019,0x0001});
-        compact_owned_mode_two.observe_far_word({95,0x13e2,0x5050,0x0017,0x0001});
-        compact_owned_mode_two.observe_far_byte({96,0x13e9,0x5050,0x0004,0xfe});
-        compact_owned_mode_two.observe_far_byte({97,0x13f2,0x5050,0x0007,0x01});
-        compact_owned_mode_two.observe_far_byte({98,0x1419,0x5050,0x001f,0x7a});
-        compact_owned_mode_two.observe_far_byte({99,0x1647,0x5050,0x0003,0x48});
-        compact_owned_mode_two.observe_far_byte({100,0x1653,0x5050,0x0004,0x00});
-        compact_owned_mode_two.observe_far_word({101,0x1657,0x5050,0x001d,0x4000});
+        compact_owned_mode_two.observe_far_word({93,0x13cd,0x3294,0x0019,0x0002});
+        compact_owned_mode_two.observe_far_word({94,0x13d0,0x3294,0x0017,0x0001});
+        compact_owned_mode_two.observe_far_word({95,0x13e2,0x3294,0x0015,0x0001});
+        compact_owned_mode_two.observe_far_byte({96,0x13e9,0x3294,0x0002,0xfe});
+        compact_owned_mode_two.observe_far_byte({97,0x13f2,0x3294,0x0005,0x01});
+        compact_owned_mode_two.observe_far_byte({98,0x1419,0x3294,0x001d,0x7a});
+        compact_owned_mode_two.observe_far_byte({99,0x1647,0x3294,0x0001,0x48});
+        compact_owned_mode_two.observe_far_byte({100,0x1653,0x3294,0x0002,0x00});
+        compact_owned_mode_two.observe_far_word({101,0x1657,0x3294,0x001b,0x4000});
         const auto compact_source=compact_owned_mode_two.checkpoint();
         assert(compact_source.state
             ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_source_byte_boundary);
@@ -1170,7 +1268,7 @@ int main(int argc, char** argv) {
         // this exercises segmented aliasing, not a substitute game asset.
         final_bytes[{eon::NativeRuntimeAddressSpace::dos_segmented,0x4000,0x0170}]=0x7a;
         final_bytes[{eon::NativeRuntimeAddressSpace::dos_segmented,0x4000,0x0171}]=0x7a;
-        final_bytes[{eon::NativeRuntimeAddressSpace::dos_segmented,0x5050,0x409a}]
+        final_bytes[{eon::NativeRuntimeAddressSpace::dos_segmented,0x3294,0x4098}]
             =title_library.at(0x459a);
         eon::NativeRuntimeEffectBatch seed{"millennium-dos-mode-two-owned-test",true,{}};
         for(const auto& [location,value]:final_bytes)
@@ -1329,6 +1427,13 @@ int main(int argc, char** argv) {
         assert(caller_returned&&mode_two_observations==736
             &&canonical_mode_two.checkpoint().continuation_address==0x1963
             &&canonical_mode_two.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_descriptor_loop_return_boundary);
+        auto unowned_third=canonical_mode_two;
+        bool unowned_third_rejected=false;
+        try { unowned_third.observe_far_words({unowned_third.checkpoint().last_sequence+1,
+            0x13aa,0x3481,0x0027,0x2a16,0}); }
+        catch(const std::runtime_error&){unowned_third_rejected=true;}
+        assert(unowned_third_rejected&&unowned_third.checkpoint().last_sequence==canonical_mode_two.checkpoint().last_sequence
+            &&unowned_third.checkpoint().state==canonical_mode_two.checkpoint().state);
         const auto same_checkpoint=[](const auto& left,const auto& right){
             assert(left.state==right.state&&left.last_sequence==right.last_sequence
                 &&left.continuation_address==right.continuation_address
@@ -1482,25 +1587,25 @@ int main(int argc, char** argv) {
     mode_two_extension.observe_far_byte({106,0x16b3,0x4000,0x0170,0x7a});
     assert(mode_two_extension.checkpoint().state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_first_lookup_byte_boundary);
-    assert(mode_two_extension.checkpoint().far_byte_boundary.source_segment==0x5050);
-    assert(mode_two_extension.checkpoint().far_byte_boundary.source_offset==0x409a);
+    assert(mode_two_extension.checkpoint().far_byte_boundary.source_segment==0x3294);
+    assert(mode_two_extension.checkpoint().far_byte_boundary.source_offset==0x4098);
     auto detached_mode_two_lookup=mode_two_extension;
     const auto lookup_effect_count=detached_mode_two_lookup.checkpoint().memory_effects.size();
     bool detached_mode_two_lookup_rejected=false;
-    try { detached_mode_two_lookup.observe_far_byte({107,0x16bb,0x5050,0x409b,0x00}); }
+    try { detached_mode_two_lookup.observe_far_byte({107,0x16bb,0x3294,0x4099,0x00}); }
     catch(const std::runtime_error&) { detached_mode_two_lookup_rejected=true; }
     assert(detached_mode_two_lookup_rejected
         &&detached_mode_two_lookup.checkpoint().last_sequence==106
         &&detached_mode_two_lookup.checkpoint().memory_effects.size()==lookup_effect_count);
-    mode_two_extension.observe_far_byte({107,0x16bb,0x5050,0x409a,0x00});
+    mode_two_extension.observe_far_byte({107,0x16bb,0x3294,0x4098,0x00});
     assert(mode_two_extension.checkpoint().state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_source_byte_boundary);
     assert(mode_two_extension.checkpoint().far_byte_boundary.source_offset==0x0171);
     mode_two_extension.observe_far_byte({108,0x16c8,0x4000,0x0171,0x7a});
     assert(mode_two_extension.checkpoint().state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_lookup_byte_boundary);
-    assert(mode_two_extension.checkpoint().far_byte_boundary.source_offset==0x409a);
-    mode_two_extension.observe_far_byte({109,0x16d0,0x5050,0x409a,0x00});
+    assert(mode_two_extension.checkpoint().far_byte_boundary.source_offset==0x4098);
+    mode_two_extension.observe_far_byte({109,0x16d0,0x3294,0x4098,0x00});
     const auto mode_two_pair=mode_two_extension.checkpoint();
     assert(mode_two_pair.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_source_byte_boundary);
@@ -1509,40 +1614,40 @@ int main(int argc, char** argv) {
     assert(mode_two_pair.memory_effects.back().explicit_segment);
     assert(mode_two_pair.memory_effects.back().offset==0x0170);
     assert(mode_two_pair.memory_effects.back().value==0);
-    mode_two_dispatch.observe_far_word({100,0x144a,0x5050,0x0020,0x0030});
+    mode_two_dispatch.observe_far_word({100,0x144a,0x3294,0x001e,0x0030});
     const auto mode_two_run=mode_two_dispatch.checkpoint();
     assert(mode_two_run.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_nibble_byte_boundary);
     assert(mode_two_run.continuation_address==0x1428);
-    assert(mode_two_run.far_byte_boundary.source_offset==0x0021);
+    assert(mode_two_run.far_byte_boundary.source_offset==0x001f);
     assert(mode_two_run.memory_effects.size()==18984);
     assert(mode_two_run.memory_effects.back().offset==0x0175);
     assert(mode_two_run.memory_effects.back().value==0x7a);
-    encoded_first_title_record.observe_far_byte({99,0x1428,0x5050,0x0020,0xab});
+    encoded_first_title_record.observe_far_byte({99,0x1428,0x3294,0x001e,0xab});
     const auto encoded_xlat=encoded_first_title_record.checkpoint();
     assert(encoded_xlat.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_xlat_byte_boundary);
     assert(encoded_xlat.last_sequence==99);
     assert(encoded_xlat.continuation_address==0x1470);
-    assert(encoded_xlat.far_byte_boundary.source_segment==0x5050);
-    assert(encoded_xlat.far_byte_boundary.source_offset==0x0013);
-    encoded_first_title_record.observe_far_byte({100,0x1470,0x5050,0x0013,0x10});
+    assert(encoded_xlat.far_byte_boundary.source_segment==0x3294);
+    assert(encoded_xlat.far_byte_boundary.source_offset==0x0011);
+    encoded_first_title_record.observe_far_byte({100,0x1470,0x3294,0x0011,0x10});
     const auto xlat_output=encoded_first_title_record.checkpoint();
     assert(xlat_output.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_nibble_byte_boundary);
     assert(xlat_output.continuation_address==0x1428);
-    assert(xlat_output.far_byte_boundary.source_offset==0x0020);
+    assert(xlat_output.far_byte_boundary.source_offset==0x001e);
     assert(xlat_output.memory_effects.back().offset==0x0171);
     assert(xlat_output.memory_effects.back().value==0x8a);
     auto detached_first_title_second_byte=other_success;
     bool detached_first_title_second_byte_rejected=false;
     try { detached_first_title_second_byte.observe_far_byte(
-        {97,0x13f2,0x5050,0x0008,0x03}); }
+        {97,0x13f2,0x3294,0x0006,0x03}); }
     catch(const std::runtime_error&) { detached_first_title_second_byte_rejected=true; }
     assert(detached_first_title_second_byte_rejected
         &&detached_first_title_second_byte.checkpoint().last_sequence==96
         &&detached_first_title_second_byte.checkpoint().memory_effects.size()==18977);
-    other_success.observe_far_byte({97,0x13f2,0x5050,0x0007,0x03});
+    other_success.observe_far_byte({97,0x13f2,0x3294,0x0005,0x03});
     const auto second_title_loop=other_success.checkpoint();
     assert(second_title_loop.state
             ==eon::MillenniumDosTitleInitializationState::post_descriptor_second_loop_far_read_boundary
@@ -1570,66 +1675,66 @@ int main(int argc, char** argv) {
     assert(detached_second_descriptor_rejected
         &&detached_second_descriptor.checkpoint().last_sequence==97
         &&detached_second_descriptor.checkpoint().memory_effects.size()==18980);
-    other_success.observe_far_words({98,0x13aa,0x3481,0x001b,0xc800,0x4000});
+    other_success.observe_far_words({98,0x13aa,0x3481,0x001b,0x2a16,0x0000});
     const auto second_descriptor=other_success.checkpoint();
     assert(second_descriptor.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_second_loop_record_word_read_boundary);
     assert(second_descriptor.last_sequence==98);
     assert(second_descriptor.continuation_address==0x13cd);
     assert(second_descriptor.far_word_observations.size()==5);
-    assert(second_descriptor.far_word_observations.back().first_word==0xc800);
-    assert(second_descriptor.far_word_observations.back().second_word==0x4000);
+    assert(second_descriptor.far_word_observations.back().first_word==0x2a16);
+    assert(second_descriptor.far_word_observations.back().second_word==0x0000);
     assert(second_descriptor.far_read_boundary.instruction_address==0x13cd);
-    assert(second_descriptor.far_read_boundary.source_segment==0x3c80);
-    assert(second_descriptor.far_read_boundary.source_offset==0x0018);
+    assert(second_descriptor.far_read_boundary.source_segment==0x32a1);
+    assert(second_descriptor.far_read_boundary.source_offset==0x001e);
     assert(second_descriptor.memory_effects.size()==18982);
     assert(second_descriptor.memory_effects[18980].offset==0x138c);
-    assert(second_descriptor.memory_effects[18980].value==0);
+    assert(second_descriptor.memory_effects[18980].value==6);
     assert(second_descriptor.memory_effects[18981].offset==0x138e);
-    assert(second_descriptor.memory_effects[18981].value==0x3c80);
+    assert(second_descriptor.memory_effects[18981].value==0x32a1);
     auto detached_second_record_word=other_success;
     bool detached_second_record_word_rejected=false;
     try { detached_second_record_word.observe_far_word(
-        {99,0x13cd,0x3c80,0x0019,0x2468}); }
+        {99,0x13cd,0x32a1,0x001f,0x2468}); }
     catch(const std::runtime_error&) { detached_second_record_word_rejected=true; }
     assert(detached_second_record_word_rejected
         &&detached_second_record_word.checkpoint().last_sequence==98
         &&detached_second_record_word.checkpoint().far_single_word_observations.size()==6);
-    other_success.observe_far_word({99,0x13cd,0x3c80,0x0018,0x2468});
+    other_success.observe_far_word({99,0x13cd,0x32a1,0x001e,0x2468});
     const auto second_record_second_word=other_success.checkpoint();
     assert(second_record_second_word.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_second_loop_second_word_read_boundary);
     assert(second_record_second_word.last_sequence==99);
     assert(second_record_second_word.continuation_address==0x13d0);
-    assert(second_record_second_word.far_read_boundary.source_segment==0x3c80);
-    assert(second_record_second_word.far_read_boundary.source_offset==0x0016);
+    assert(second_record_second_word.far_read_boundary.source_segment==0x32a1);
+    assert(second_record_second_word.far_read_boundary.source_offset==0x001c);
     assert(second_record_second_word.far_single_word_observations.back().word==0x2468);
-    other_success.observe_far_word({100,0x13d0,0x3c80,0x0016,0x0010});
+    other_success.observe_far_word({100,0x13d0,0x32a1,0x001c,0x0010});
     const auto second_record_third_word=other_success.checkpoint();
     assert(second_record_third_word.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_second_loop_third_word_read_boundary);
     assert(second_record_third_word.continuation_address==0x13e2);
-    assert(second_record_third_word.far_read_boundary.source_segment==0x3c80);
-    assert(second_record_third_word.far_read_boundary.source_offset==0x0014);
+    assert(second_record_third_word.far_read_boundary.source_segment==0x32a1);
+    assert(second_record_third_word.far_read_boundary.source_offset==0x001a);
     assert(second_record_third_word.memory_effects.back().offset==0x133b);
     assert(second_record_third_word.memory_effects.back().value==0x4680);
     auto compact_second_record=other_success;
-    other_success.observe_far_word({101,0x13e2,0x3c80,0x0014,0x0080});
+    other_success.observe_far_word({101,0x13e2,0x32a1,0x001a,0x0080});
     const auto second_record_first_byte=other_success.checkpoint();
     assert(second_record_first_byte.state
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_second_loop_byte_read_boundary);
     assert(second_record_first_byte.continuation_address==0x13e9);
-    assert(second_record_first_byte.far_byte_boundary.source_segment==0x3c80);
-    assert(second_record_first_byte.far_byte_boundary.source_offset==0x0001);
+    assert(second_record_first_byte.far_byte_boundary.source_segment==0x32a1);
+    assert(second_record_first_byte.far_byte_boundary.source_offset==0x0007);
     assert(second_record_first_byte.memory_effects.back().offset==0x138a);
     assert(second_record_first_byte.memory_effects.back().value==0x4600);
     // The executable/library identities above are genuine media. These raw
     // external-byte cases exercise arithmetic; they are not captured values.
     for(const auto invalid : std::vector<eon::MillenniumDosTitleFarByteObservation>{
-        {101,0x13e9,0x3c80,0x0001,0xff},
-        {102,0x13ea,0x3c80,0x0001,0xff},
+        {101,0x13e9,0x32a1,0x0007,0xff},
+        {102,0x13ea,0x32a1,0x0007,0xff},
         {102,0x13e9,0x3c81,0x0001,0xff},
-        {102,0x13e9,0x3c80,0x0002,0xff}}){
+        {102,0x13e9,0x32a1,0x0008,0xff}}){
         auto detached=other_success;
         bool rejected=false;
         try { detached.observe_far_byte(invalid); }
@@ -1642,37 +1747,37 @@ int main(int argc, char** argv) {
     }
     for(const auto raw : {std::uint8_t{0},std::uint8_t{0xff}}){
         auto continued=other_success;
-        continued.observe_far_byte({102,0x13e9,0x3c80,0x0001,raw});
+        continued.observe_far_byte({102,0x13e9,0x32a1,0x0007,raw});
         const auto after=continued.checkpoint();
         assert(after.state==eon::MillenniumDosTitleInitializationState::post_descriptor_second_loop_second_byte_read_boundary
             &&after.last_sequence==102&&after.continuation_address==0x13f2
             &&after.far_byte_boundary.instruction_address==0x13f2
-            &&after.far_byte_boundary.source_segment==0x3c80
-            &&after.far_byte_boundary.source_offset==0x0004
+            &&after.far_byte_boundary.source_segment==0x32a1
+            &&after.far_byte_boundary.source_offset==0x000a
             &&after.far_byte_boundary.destination_offset==0x1388);
         assert(after.memory_effects.size()==second_record_first_byte.memory_effects.size()+1
             &&after.memory_effects.back().instruction_address==0x13ee
             &&after.memory_effects.back().offset==0x1389
             &&after.memory_effects.back().value==static_cast<std::uint8_t>(raw+1U));
-        continued.observe_far_byte({103,0x13f2,0x3c80,0x0004,0});
+        continued.observe_far_byte({103,0x13f2,0x32a1,0x000a,0});
         assert(continued.checkpoint().state
             ==eon::MillenniumDosTitleInitializationState::post_descriptor_second_loop_local_return_boundary
             &&continued.checkpoint().continuation_address==0x1405);
     }
     // Synthetic raw count and bytes, connected through the genuine second
     // descriptor. These do not describe a captured display or decoder format.
-    compact_second_record.observe_far_word({101,0x13e2,0x3c80,0x0014,0x467d});
+    compact_second_record.observe_far_word({101,0x13e2,0x32a1,0x001a,0x467d});
     auto zero_limit_record=compact_second_record;
-    zero_limit_record.observe_far_byte({102,0x13e9,0x3c80,0x0001,0xff});
-    zero_limit_record.observe_far_byte({103,0x13f2,0x3c80,0x0004,2});
-    zero_limit_record.observe_far_byte({104,0x1419,0x3c80,0x001c,0xfe});
-    zero_limit_record.observe_far_byte({105,0x1428,0x3c80,0x001d,0});
-    zero_limit_record.observe_far_byte({106,0x1470,0x3c80,0x0005,3});
+    zero_limit_record.observe_far_byte({102,0x13e9,0x32a1,0x0007,0xff});
+    zero_limit_record.observe_far_byte({103,0x13f2,0x32a1,0x000a,2});
+    zero_limit_record.observe_far_byte({104,0x1419,0x32a1,0x0022,0xfe});
+    zero_limit_record.observe_far_byte({105,0x1428,0x32a1,0x0023,0});
+    zero_limit_record.observe_far_byte({106,0x1470,0x32a1,0x000b,3});
     assert(zero_limit_record.checkpoint().memory_effects.back().value==1);
-    compact_second_record.observe_far_byte({102,0x13e9,0x3c80,0x0001,3});
-    compact_second_record.observe_far_byte({103,0x13f2,0x3c80,0x0004,2});
-    assert(compact_second_record.checkpoint().far_byte_boundary.source_offset==0x001c);
-    compact_second_record.observe_far_byte({104,0x1419,0x3c80,0x001c,1});
+    compact_second_record.observe_far_byte({102,0x13e9,0x32a1,0x0007,3});
+    compact_second_record.observe_far_byte({103,0x13f2,0x32a1,0x000a,2});
+    assert(compact_second_record.checkpoint().far_byte_boundary.source_offset==0x0022);
+    compact_second_record.observe_far_byte({104,0x1419,0x32a1,0x0022,1});
     const auto second_payload=compact_second_record.checkpoint();
     std::uint16_t expected_second_segment=0;
     for(const auto& effect : second_record_first_byte.memory_effects)
@@ -1696,11 +1801,11 @@ int main(int argc, char** argv) {
         &&second_payload.memory_effects.back().explicit_segment
         &&second_payload.memory_effects.back().segment==expected_second_segment
         &&second_payload.memory_effects.back().value==1);
-    compact_second_record.observe_far_byte({105,0x1428,0x3c80,0x001d,0x10});
-    assert(compact_second_record.checkpoint().far_byte_boundary.source_offset==0x0005);
+    compact_second_record.observe_far_byte({105,0x1428,0x32a1,0x0023,0x10});
+    assert(compact_second_record.checkpoint().far_byte_boundary.source_offset==0x000b);
     auto stale_lookup=compact_second_record;
     bool stale_lookup_rejected=false;
-    try { stale_lookup.observe_far_byte({106,0x1470,0x3c80,0x0008,1}); }
+    try { stale_lookup.observe_far_byte({106,0x1470,0x32a1,0x0008,1}); }
     catch(const std::runtime_error&) { stale_lookup_rejected=true; }
     assert(stale_lookup_rejected&&stale_lookup.checkpoint().last_sequence==105
         &&stale_lookup.checkpoint().memory_effects.size()==compact_second_record.checkpoint().memory_effects.size()
@@ -1709,12 +1814,12 @@ int main(int argc, char** argv) {
         &&stale_lookup.checkpoint().register_effects.size()==compact_second_record.checkpoint().register_effects.size()
         &&stale_lookup.checkpoint().far_byte_observations.size()==compact_second_record.checkpoint().far_byte_observations.size()
         &&stale_lookup.checkpoint().far_byte_boundary.source_offset==compact_second_record.checkpoint().far_byte_boundary.source_offset);
-    compact_second_record.observe_far_byte({106,0x1470,0x3c80,0x0005,1});
+    compact_second_record.observe_far_byte({106,0x1470,0x32a1,0x000b,1});
     assert(compact_second_record.checkpoint().memory_effects.back().offset==0x02e1
         &&compact_second_record.checkpoint().memory_effects.back().segment==expected_second_segment);
-    compact_second_record.observe_far_byte({107,0x1428,0x3c80,0x001d,0x10});
-    assert(compact_second_record.checkpoint().far_byte_boundary.source_offset==0x0006);
-    compact_second_record.observe_far_byte({108,0x1470,0x3c80,0x0006,1});
+    compact_second_record.observe_far_byte({107,0x1428,0x32a1,0x0023,0x10});
+    assert(compact_second_record.checkpoint().far_byte_boundary.source_offset==0x000c);
+    compact_second_record.observe_far_byte({108,0x1470,0x32a1,0x000c,1});
     const auto second_complete=compact_second_record.checkpoint();
     assert(second_complete.state==eon::MillenniumDosTitleInitializationState::post_descriptor_second_loop_decoded_record_boundary
         &&second_complete.continuation_address==0x1488
