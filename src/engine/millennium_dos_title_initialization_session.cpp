@@ -462,7 +462,7 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
                     add_register_effect(0x162a,"FLAGS.CF",carry?1:0);
                     add_register_effect(0x162b,"DI",di);
                     cl=static_cast<std::uint8_t>(cl^4U);
-                    add_register_effect(0x162e,"DX",static_cast<std::uint16_t>(*height));
+                    add_register_effect(0x162d,"DX",static_cast<std::uint16_t>(*height));
                     add_register_effect(0x162e,"CL",cl);
                     add_register_effect(0x1631,"BX",static_cast<std::uint16_t>(*width-column-1U));
                 }
