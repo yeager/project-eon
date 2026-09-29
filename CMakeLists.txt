@@ -437,6 +437,18 @@ if(BUILD_TESTING)
     set_tests_properties(native-data-detection PROPERTIES
         ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
     if(EON_DIRECT_DATA_DIR)
+        add_executable(eon-millennium-dos-video-driver-profile-test
+            tests/millennium_dos_video_driver_profile_test.cpp
+            src/data/millennium_dos_video_driver.cpp
+            src/data/sha256.cpp)
+        target_include_directories(eon-millennium-dos-video-driver-profile-test PRIVATE src)
+        if(MSVC)
+            target_compile_options(eon-millennium-dos-video-driver-profile-test PRIVATE /UNDEBUG)
+        else()
+            target_compile_options(eon-millennium-dos-video-driver-profile-test PRIVATE -UNDEBUG)
+        endif()
+        add_test(NAME millennium-dos-video-driver-profiles-real-media
+            COMMAND eon-millennium-dos-video-driver-profile-test "${EON_DIRECT_DATA_DIR}")
         add_test(NAME millennium-dos-title-runtime-real-media
             COMMAND eon-native-tests --direct-title-runtime "${EON_DIRECT_DATA_DIR}")
         set_tests_properties(millennium-dos-title-runtime-real-media PROPERTIES

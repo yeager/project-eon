@@ -57,6 +57,25 @@ MillenniumDosVideoDriverProfile parse_driver_profile(
         || function_thirty_one != expected_thirty_one) {
         throw std::runtime_error("Unsupported Millennium DOS video-driver dispatch targets");
     }
+    if (!spanish) {
+        // The exact English leaves are hash-bound above. Keep the two short
+        // relative branches explicit as well so their published destinations
+        // cannot drift into an instruction operand while changing profile
+        // arithmetic. JNE skips the cached-mode query to the mode setup; JZ
+        // reaches the successful mode-match continuation.
+        const auto jne = static_cast<std::size_t>(function_zero) + 0x0a;
+        const auto jz = static_cast<std::size_t>(function_zero) + 0x1e;
+        const auto known_target = static_cast<std::size_t>(function_zero) + 0x13;
+        const auto match_target = static_cast<std::size_t>(function_zero) + 0x23;
+        const auto match_opcode = static_cast<std::uint8_t>(ega ? 0xc6 : 0xbf);
+        if (bytes[jne] != 0x75 || bytes[jne + 1] != 0x07
+            || bytes[known_target] != 0xb8
+            || bytes[jz] != 0x74 || bytes[jz + 1] != 0x03
+            || bytes[match_target] != match_opcode
+            || bytes[static_cast<std::size_t>(function_zero) + 0x22] != 0xc3) {
+            throw std::runtime_error("Unsupported Millennium English function-zero control flow");
+        }
+    }
     constexpr auto ega_six_source_pointer_load_offset = 0x33U;
     constexpr auto mcga_six_source_pointer_load_offset = 0x29U;
     return {
@@ -68,12 +87,12 @@ MillenniumDosVideoDriverProfile parse_driver_profile(
         .function_zero_cached_mode_address = static_cast<std::uint16_t>(ega ? 0x8c : 0xae),
         .function_zero_cached_mode_unknown_sentinel = 0xff,
         .function_zero_cached_mode_query_interrupt_site = static_cast<std::uint16_t>(function_zero + 0x0f),
-        .function_zero_cached_mode_unknown_branch_target = static_cast<std::uint16_t>(function_zero + 0x14),
+        .function_zero_cached_mode_known_branch_target = static_cast<std::uint16_t>(function_zero + 0x13),
         .function_four_address = function_four,
         .function_zero_video_mode = mode,
         .function_zero_set_mode_interrupt_site = static_cast<std::uint16_t>(function_zero + 0x16),
         .function_zero_verify_mode_interrupt_site = static_cast<std::uint16_t>(function_zero + 0x1b),
-        .function_zero_mode_match_return = static_cast<std::uint16_t>(function_zero + 0x24),
+        .function_zero_mode_match_branch_target = static_cast<std::uint16_t>(function_zero + 0x23),
         .function_zero_mode_mismatch_return = static_cast<std::uint16_t>(function_zero + 0x22),
         .function_four_input_offset = 0,
         .function_four_input_mask = 3,

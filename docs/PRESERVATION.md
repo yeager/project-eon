@@ -4694,6 +4694,16 @@ observations; no captured selector, DOS return, IVT content, INT 91h handler
 dispatch, or handler return is established. No private service may yet be
 selected from these profiles.
 
+The exact English EGA640 and MCGA function-$00 prefixes also validate their
+short relative branches against the full leaf hashes. The cached-mode `JNE`
+at function offset `$0a` targets the mode setup at `+$13` (`$1db` / `$1f9`);
+the mode-match `JZ` at `+$1e` targets the success continuation at `+$23`
+(`$1eb` / `$209`, beginning with `C6` in EGA640 and `BF` in MCGA). These are
+instruction targets, not return addresses or evidence that the routine was
+dispatched. The mismatch path reaches `RET` at `+$22` (`$1ea` / `$208`).
+Spanish driver parsing retains its separate identity and has not been extended
+by this English-only branch check.
+
 The read-in-place loader audit additionally binds `$02cf..$031b` (file
 `+$01cf`, 77 bytes, SHA-256
 `5c7f7ec03aa3109d4df2fbdec457ca7e2be412fc9d818bd07252a039fb8c6671`)

@@ -14,6 +14,10 @@ through the `$020c` SetVect result. Those tests use synthetic observations;
 they do not prove the original selector, IVT contents, or INT $91 dispatch.
 No private service can yet be selected from the driver profiles. Title mode
 alone does not establish which driver is installed.
+The hash-bound English function-$00 profiles now expose the corrected cached-
+mode and mode-match branch targets, and a focused real-media test checks both
+original leaves in place. These static anchors still do not establish IVT
+contents, private-handler dispatch, or BIOS results.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,
 respectively. The existing global-mode-2 descriptor regression uses explicit
 arithmetic observations; it is not evidence that either supplied driver

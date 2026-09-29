@@ -22,12 +22,12 @@ struct MillenniumDosVideoDriverProfile {
     std::uint16_t function_zero_cached_mode_address = 0;
     std::uint8_t function_zero_cached_mode_unknown_sentinel = 0;
     std::uint16_t function_zero_cached_mode_query_interrupt_site = 0;
-    std::uint16_t function_zero_cached_mode_unknown_branch_target = 0;
+    std::uint16_t function_zero_cached_mode_known_branch_target = 0;
     std::uint16_t function_four_address = 0;
     std::uint8_t function_zero_video_mode = 0;
     std::uint16_t function_zero_set_mode_interrupt_site = 0;
     std::uint16_t function_zero_verify_mode_interrupt_site = 0;
-    std::uint16_t function_zero_mode_match_return = 0;
+    std::uint16_t function_zero_mode_match_branch_target = 0;
     std::uint16_t function_zero_mode_mismatch_return = 0;
     std::uint16_t function_four_input_offset = 0;
     std::uint8_t function_four_input_mask = 0;
