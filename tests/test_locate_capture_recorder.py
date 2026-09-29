@@ -91,6 +91,12 @@ class LocateCaptureRecorderTests(unittest.TestCase):
         self.assertEqual(json.loads('{"schema":"project-eon.recorder-locator/v1"}')["schema"],
                          "project-eon.recorder-locator/v1")
 
+    def test_deuteros_locator_uses_the_complete_reviewed_build_registry(self) -> None:
+        runner = TOOL.load_runner("run_deuteros_amiga_capture")
+        self.assertEqual(TOOL.reviewed_hashes("deuteros-amiga", None), runner.reviewed_recorder_hashes())
+        self.assertEqual(runner.reviewed_recorder_hashes()["reviewed-fs-uae"],
+                         "0e0bfb1fe73a6f37dc38992b39e34e355564adc516106c399c8be86fb38232ec")
+
 
 if __name__ == "__main__":
     unittest.main()

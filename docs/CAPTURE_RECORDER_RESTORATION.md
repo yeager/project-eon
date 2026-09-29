@@ -18,6 +18,7 @@ cache before asking Project Eon to run an evidence capture:
 | Millennium DOS | `v21-int93-installation` | `18ec0ead7d08deeca694fbbe8155d5f5e6a99562adaea22fe914a691961fe1f1` | Read-only DOSBox-X observer for the current vector-installation boundary |
 | Millennium DOS | `v13-title-poll` | `07d80df74d303b519884d37dd474da071b414e98396e8ae030ad89256432521b` | Host-key to original title-poll chronology only |
 | Deuteros Amiga | reviewed FS-UAE v10 | `0e0bfb1fe73a6f37dc38992b39e34e355564adc516106c399c8be86fb38232ec` | Raw PC, host-delivery and title-armed display-write observer |
+| Deuteros Amiga | reviewed FS-UAE v10, trv2 x86_64 | `c6422037df6cadeb50ffaee3bb1c1b56d21722a7c687287d6058d4802943f54b` | Independently reviewed restoration of the same bounded grammar |
 
 The default restoration location is a new directory under
 `$HOME/.cache/project-eon-tools/`, for example
@@ -93,7 +94,7 @@ The same rules apply: a fresh external output directory, read-only original
 media, visible operator-driven input only, then
 `tools/verify_capture_receipt.py --kind deuteros-amiga` before use.
 
-## Current recovery boundary
+## Historical recovery boundary (2026-09-28)
 
 As of 2026-09-28, both locators returned no matching recorder under the
 provisioned host's `/home/trv2/.cache/project-eon-tools` cache:
@@ -107,6 +108,67 @@ not ask again for generic emulator installation: normal installed emulators
 are known and insufficient. The recorder boundary can move only when an
 already pinned executable is restored to the scoped cache, or when the exact
 documented digest is produced by the specified reviewed restoration path.
+
+## trv2 FS-UAE restoration (2026-09-29)
+
+The Deuteros recorder reached `PINNED_RECORDER` on trv2 (x86_64 Linux).
+The historical aarch64 pin remains valid. Runner, locator and receipt verifier
+share the finite reviewed-build registry; an arbitrary system FS-UAE still
+fails admission. Millennium DOS recorder availability is unchanged.
+
+All source, patches, test fixtures, review and binaries remain beneath the
+external cache `~/.cache/project-eon-tools/recorder-recovery-20260929/`.
+The baseline uses upstream revision
+`4ae7ddaec50b567ed80d71ffbff067cb58e945a3`, GCC 15.2.0, bootstrap and configure
+flags `--disable-jit --without-libmpeg2 --disable-cdtv`, then `make -j8` with
+`TMPDIR` beneath that cache. Baseline SHA-256:
+`14bcef8b7982d6c866bd905f71fb68b7aa038647bc2d556493e4cc414fe7f2d7`.
+
+The complete external patch `fs-uae-observer-v10-trv2.patch` has SHA-256
+`ec5eb3e3ee13305070b78277f21ce58c4f88dfe098ca2fe025910959b9366851`.
+It adds only the bounded observer header and hooks in `newcpu.cpp`,
+`custom.cpp` and `fs-uae/main.c`. CPU samples directly read the canonical
+mapped chip-RAM allocation, reject other banks and compose SR without
+mutating cached flags. Live frontend delivery publishes the packed atomic
+ordinal/frame only after a successful receipt write; playback, state actions
+and port-selection routes cannot publish a delivery. Display hooks distinguish
+CPU and both Copper routes and exclude custom-register read fallback.
+
+An independent source review checked the CPU/header/frontend changes and
+the single emulation-thread guarantee for the required A500 configuration.
+Separate reviewers checked the display hooks. The external review record is
+`fs-uae-trv2-review.md`, SHA-256
+`c34f4b6114d2ea8c00173449207f9d1c279de91699b9c31f5466f928a33eb616`.
+It approves the exact binary
+`c6422037df6cadeb50ffaee3bb1c1b56d21722a7c687287d6058d4802943f54b`,
+62,014,696 bytes. Recompiling all three modified translation units reproduced
+that digest, and reverse-applying the complete patch passed a dry check.
+
+The actual observer header has SHA-256
+`270c8e5fee262c12df951e9431ba9f19d8b1a63384a6af47e7964fc69215f939`.
+Its external C++ harness source has SHA-256
+`1f18198849495c809994a6bd5074ac9da58bb1e2c37ea84e74586ac43609033d`.
+Runner parsers accepted bounded protocol fixtures and rejected a real injected
+short write. Tests covered 128 raw samples/site, 256 input deliveries, 2,048
+display writes, 64 writes/register, title arming, register filtering, atomic
+input links, failed input publication, unset/relative/parent-component paths,
+existing-file and symlink protection, and `0600` permissions. These fixtures
+are module tests only; they contain no original media and are not captures.
+A no-media `--version` check produced no observer files.
+The reproducible external parser driver `harness/eon_observer_test_driver.py`
+has SHA-256 `9c9093aba7f962709b1c681a241f20ef5b8438119bcb191e2e5aa64fea6ef40a`;
+its passing metadata summary `harness/eon_observer_test_summary.json` has
+SHA-256 `52e20eba26d76906454db89fa7e6f17733f562677a6525a5b7b56733bc97f833`.
+
+After pinning, the locator found this exact executable. A fresh visible
+15-second realtime `diagnostic-no-input` run then passed receipt verification
+using the user's standalone disk archives and existing Kickstart ZIP, all
+mounted read-only and rehashed afterward. The external v23 `run-status.txt`
+has SHA-256 `cad2d29e7d4642296fe515e20bd60d98fd2e23c05954ea41a6ac792c6225a34c`.
+It records 256 raw samples (128/site at `$1fe84` and `$1fe96`), no host input,
+no title-display receipt and an empty console. See `PRESERVATION.md` for the
+raw-output identity. This reaches `RECEIPT_VERIFIED` for the no-input diagnostic
+only; manual input, trace admission and native recovery remain separate steps.
 
 ## Recorder restoration state machine
 

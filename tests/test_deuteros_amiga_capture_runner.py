@@ -120,6 +120,21 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
             finally:
                 TOOL.EXPECTED_RECORDER_SHA256 = original_hash
 
+    def test_additional_reviewed_build_does_not_replace_the_historical_pin(self) -> None:
+        with temporary_directory() as directory:
+            recorder = Path(directory) / "second-reviewed-build"
+            recorder.write_bytes(b"second recorder boundary bytes")
+            digest = hashlib.sha256(recorder.read_bytes()).hexdigest()
+            historical = TOOL.EXPECTED_RECORDER_SHA256
+            with mock.patch.object(TOOL, "reviewed_recorder_hashes", return_value={
+                "reviewed-fs-uae": historical, "reviewed-second-host": digest,
+            }):
+                self.assertEqual(TOOL.validate_recorder(recorder), (digest, recorder.stat().st_size))
+                recorder.write_bytes(b"unreviewed changed build")
+                with self.assertRaises(TOOL.CaptureError):
+                    TOOL.validate_recorder(recorder)
+            self.assertEqual(TOOL.EXPECTED_RECORDER_SHA256, historical)
+
     def test_input_receipt_status_keeps_no_input_distinct_from_a_receipt(self) -> None:
         with temporary_directory() as directory:
             receipt = Path(directory) / "host-input-receipt.txt"

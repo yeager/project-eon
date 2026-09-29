@@ -29,6 +29,8 @@ EXPECTED_KICKSTART_SHA256 = "c9521c114900633c09317ca6ff979db7b9df34d3cb537de062f
 # This is the supplied ZIP size, not the 262,144-byte ROM payload size.
 EXPECTED_KICKSTART_SIZE = 143_269
 EXPECTED_RECORDER_SHA256 = "0e0bfb1fe73a6f37dc38992b39e34e355564adc516106c399c8be86fb38232ec"
+# Independently reviewed x86_64 restoration; see CAPTURE_RECORDER_RESTORATION.md.
+TRV2_RECORDER_SHA256 = "c6422037df6cadeb50ffaee3bb1c1b56d21722a7c687287d6058d4802943f54b"
 EXPECTED_DISK1_SHA256 = "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38"
 EXPECTED_DISK2_SHA256 = "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a"
 EXPECTED_DISK1_ARCHIVE_SHA256 = "7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533"
@@ -177,12 +179,19 @@ def validate_identity(path: Path, label: str, expected_hash: str, expected_size:
     return digest, size
 
 
+def reviewed_recorder_hashes() -> dict[str, str]:
+    """Keep historical evidence valid when another host build is reviewed."""
+    return {"reviewed-fs-uae": EXPECTED_RECORDER_SHA256,
+            "reviewed-fs-uae-trv2": TRV2_RECORDER_SHA256}
+
+
 def validate_recorder(path: Path) -> tuple[str, int]:
     digest, size = sha256_file(path)
-    if digest != EXPECTED_RECORDER_SHA256:
+    if digest not in reviewed_recorder_hashes().values():
+        expected = ", ".join(sorted(reviewed_recorder_hashes().values()))
         raise CaptureError(
-            "recorder hash does not match the reviewed FS-UAE binary "
-            f"(expected SHA-256 {EXPECTED_RECORDER_SHA256}, got {digest}); select "
+            "recorder hash does not match a reviewed FS-UAE binary "
+            f"(expected SHA-256 {expected}, got {digest}); select "
             "the reviewed external recorder rather than a normal FS-UAE installation")
     return digest, size
 

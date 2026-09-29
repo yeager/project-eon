@@ -77,7 +77,7 @@ def reviewed_hashes(kind: str, protocol: str | None) -> dict[str, str]:
     if protocol:
         raise LocatorError("--recorder-protocol is valid only for millennium-dos")
     runner = load_runner("run_deuteros_amiga_capture")
-    return {"reviewed-fs-uae": runner.EXPECTED_RECORDER_SHA256}
+    return runner.reviewed_recorder_hashes()
 
 
 def is_executable_candidate(path: Path, info: os.stat_result) -> bool:

@@ -16,6 +16,7 @@ configuration and supplied media remain outside this repository.
 | CPU route | A500-compatible cycle-exact 68000 loop, `src/newcpu.cpp:m68k_run_1_ce` |
 | Recorder activation | Exclusive new output named by `PROJECT_EON_FS_UAE_RAW_RECORD` |
 | Reviewed local v10 binary | aarch64 Linux, 61,449,016 bytes, SHA-256 `0e0bfb1fe73a6f37dc38992b39e34e355564adc516106c399c8be86fb38232ec` |
+| Reviewed trv2 v10 binary | x86_64 Linux, 62,014,696 bytes, SHA-256 `c6422037df6cadeb50ffaee3bb1c1b56d21722a7c687287d6058d4802943f54b`; restoration/review metadata in `CAPTURE_RECORDER_RESTORATION.md` |
 
 The FS-UAE configuration file must be passed as the positional command-line
 argument. `--config=…` is not a FS-UAE configuration-file option and is known

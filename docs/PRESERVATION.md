@@ -6766,6 +6766,32 @@ title-presentation boundary and reports `BOOTSTRAP ONLY`; it does not inherit
 the English executable-startup evidence. The native tests assert a one-to-one
 mapping between the capability rows and the release manifest.
 
+### Deuteros recorder restored on trv2 (2026-09-29)
+
+An independently reviewed x86_64 FS-UAE recorder is now available on trv2:
+62,014,696 bytes, SHA-256
+`c6422037df6cadeb50ffaee3bb1c1b56d21722a7c687287d6058d4802943f54b`.
+The historical aarch64 pin remains admitted. Build, external patch, independent
+review and module-test provenance are recorded in
+[`CAPTURE_RECORDER_RESTORATION.md`](CAPTURE_RECORDER_RESTORATION.md).
+
+The first fresh visible 15-second realtime diagnostic used the supplied
+standalone disk ZIPs and existing exact Kickstart ZIP through read-only FUSE
+views, with no host input. Receipt v23 passed the normal verifier. Its bounded
+raw-PC file is 41,876 bytes, SHA-256
+`092c131201446b3b9f9540d25208d63cbc4f24733b177b86df3cf31b34d63063`,
+with 256 records: 128 at `$1fe84` and 128 at `$1fe96`. The console was empty;
+host-input and title-display receipts were absent. Both disk archives and
+Kickstart retained their exact pre-run hashes, and all mounts were removed.
+External evidence remains at
+`~/.cache/project-eon-tools/deuteros-amiga-trv2-preflight-20260929-01/` on trv2.
+
+This advances recorder restoration through `RECEIPT_VERIFIED` for a no-input
+diagnostic. It does not admit a game-input result, title display, ABI, reference
+trace or native gameplay continuation. A physical-input capture still needs
+the operator's visible manual input and independent input timeline; the
+standalone receipt's documented replay-fixture limitation also remains.
+
 ### External capture recorder availability (2026-09-28)
 
 On the provisioned `trv2` host, the external-cache locator was run with
@@ -6773,7 +6799,7 @@ On the provisioned `trv2` host, the external-cache locator was run with
 the reviewed Deuteros Amiga FS-UAE recorder. Each search reported one root,
 35 executable hashes checked, zero size-rejected files, and zero pinned
 matches. A metadata-only search of the Eon workspace and scoped cache found no
-Eon capture directories or receipts. This is a current availability check,
+Eon capture directories or receipts. This was an availability check on that date,
 not runtime evidence; neither game's pending capture boundary advances. The
 exact recorder digests and restoration requirements remain in
 [`CAPTURE_RECORDER_RESTORATION.md`](CAPTURE_RECORDER_RESTORATION.md).

@@ -457,7 +457,9 @@ def verify(kind: str, directory: Path, *, allow_experimental_observer: bool = Fa
                                                          tool.EXPECTED_DISK1_ARCHIVE_SIZE))
             require_identity(fields, "disk2_archive", (tool.EXPECTED_DISK2_ARCHIVE_SHA256,
                                                          tool.EXPECTED_DISK2_ARCHIVE_SIZE))
-        require_identity(fields, "recorder", (tool.EXPECTED_RECORDER_SHA256, int(fields["recorder_bytes"])))
+        if fields.get("recorder_sha256") not in tool.reviewed_recorder_hashes().values():
+            raise ValueError("recorder identity is not a reviewed FS-UAE build")
+        require_identity(fields, "recorder", (fields["recorder_sha256"], int(fields["recorder_bytes"])))
         verify_file(fields, directory, "raw_pc", "raw-pc.txt")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.txt")
         if version in {"10", "11", "23"}:

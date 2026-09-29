@@ -119,6 +119,16 @@ class ReceiptVerifierTests(unittest.TestCase):
                 TOOL.verify("deuteros-amiga", root)
             display_gate.assert_called_once_with(fields, root)
 
+            for reviewed_hash in runner.reviewed_recorder_hashes().values():
+                fields["recorder_sha256"] = reviewed_hash
+                status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()), encoding="utf-8")
+                TOOL.verify("deuteros-amiga", root)
+            fields["recorder_sha256"] = "0" * 64
+            status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "recorder identity"):
+                TOOL.verify("deuteros-amiga", root)
+            fields["recorder_sha256"] = runner.EXPECTED_RECORDER_SHA256
+
             fields["capture_intent_input_requirement"] = "required"
             status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "capture intent"):
