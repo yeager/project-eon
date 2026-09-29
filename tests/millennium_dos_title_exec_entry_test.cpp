@@ -1289,6 +1289,69 @@ int main(int argc, char** argv) {
             &&complete_checkpoint.far_byte_boundary.source_segment==0x32a1
             &&complete_checkpoint.far_byte_boundary.source_offset==0x0006
             &&complete_checkpoint.state==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_header_byte_boundary);
+        const auto same_checkpoint=[](const auto& left,const auto& right){
+            assert(left.state==right.state&&left.last_sequence==right.last_sequence
+                &&left.continuation_address==right.continuation_address
+                &&left.memory_effects.size()==right.memory_effects.size()
+                &&left.register_effects.size()==right.register_effects.size()
+                &&left.far_byte_observations.size()==right.far_byte_observations.size()
+                &&left.far_single_word_observations.size()==right.far_single_word_observations.size()
+                &&left.far_byte_boundary.instruction_address==right.far_byte_boundary.instruction_address
+                &&left.far_byte_boundary.source_segment==right.far_byte_boundary.source_segment
+                &&left.far_byte_boundary.source_offset==right.far_byte_boundary.source_offset);
+            for(std::size_t i=0;i<left.memory_effects.size();++i){
+                const auto& a=left.memory_effects[i];const auto& b=right.memory_effects[i];
+                assert(a.instruction_address==b.instruction_address&&a.offset==b.offset
+                    &&a.width==b.width&&a.value==b.value&&a.segment==b.segment
+                    &&a.explicit_segment==b.explicit_segment);
+            }
+            for(std::size_t i=0;i<left.register_effects.size();++i){
+                const auto& a=left.register_effects[i];const auto& b=right.register_effects[i];
+                assert(a.instruction_address==b.instruction_address
+                    &&a.register_name==b.register_name&&a.value==b.value);
+            }
+        };
+        for(const std::size_t quantum : {1U,2U,3U,7U,256U}){
+            auto resumed=owned_mode_two;
+            std::size_t total=0;
+            bool stopped=false;
+            while(!stopped&&total<618){
+                const auto before=resumed.checkpoint();
+                const auto driven=resumed.drive_next_descriptor_stream_from_title_library(
+                    title_library,{before.last_sequence+1,quantum});
+                if(!driven.accepted)throw std::runtime_error(driven.error);
+                assert(driven.observation_count>0&&driven.observation_count<=quantum);
+                total+=driven.observation_count;
+                stopped=driven.stopped_at_boundary;
+            }
+            assert(total==618&&stopped);
+            same_checkpoint(resumed.checkpoint(),complete_checkpoint);
+            const auto terminal=resumed.checkpoint();
+            const auto rejected=resumed.drive_next_descriptor_stream_from_title_library(
+                title_library,{terminal.last_sequence+1,quantum});
+            assert(!rejected.accepted&&rejected.observation_count==0);
+            same_checkpoint(resumed.checkpoint(),terminal);
+        }
+        // Pause at a word operand, then reject invalid requests transactionally.
+        auto paused=owned_mode_two;
+        const auto pause=paused.drive_next_descriptor_stream_from_title_library(
+            title_library,{automatic_pair.last_sequence+1,1});
+        assert(pause.accepted&&!pause.stopped_at_boundary&&pause.observation_count==1
+            &&paused.checkpoint().continuation_address==0x144a);
+        const auto paused_before=paused.checkpoint();
+        for(const auto request : std::vector<eon::MillenniumDosTitleDescriptorStreamDriveRequest>{
+            {paused_before.last_sequence+1,0},{paused_before.last_sequence+1,257},
+            {paused_before.last_sequence,1}}){
+            const auto rejected=paused.drive_next_descriptor_stream_from_title_library(title_library,request);
+            assert(!rejected.accepted&&rejected.observation_count==0);
+            same_checkpoint(paused.checkpoint(),paused_before);
+        }
+        auto changed_library=title_library;
+        changed_library.back()^=1;
+        const auto wrong_hash=paused.drive_next_descriptor_stream_from_title_library(
+            changed_library,{paused_before.last_sequence+1,1});
+        assert(!wrong_hash.accepted&&wrong_hash.observation_count==0);
+        same_checkpoint(paused.checkpoint(),paused_before);
         auto rejected_stream=owned_mode_two;
         const auto stream_before=rejected_stream.checkpoint();
         const auto rejected_stream_result=rejected_stream.drive_next_descriptor_stream_from_title_library(

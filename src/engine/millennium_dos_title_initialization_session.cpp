@@ -176,42 +176,59 @@ MillenniumDosTitleInitializationSession::drive_next_descriptor_stream_from_title
         "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
     constexpr std::uint16_t relocated_stream_segment = 0x32a1;
     constexpr std::uint16_t expected_library_segment = 0x3000;
-    const auto admitted_entry =
-        state_ == MillenniumDosTitleInitializationState::post_descriptor_next_loop_stream_byte_boundary
-        || state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary
-        || state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_nibble_byte_boundary;
-    if (!admitted_entry
-        || continuation_address_ != 0x1428 || title_library_segment_ != expected_library_segment
+    // Use the same exact state/address contract before and within a quantum.
+    // A budget may end between a stream byte and its lookup or word operand.
+    const auto operand_width=[](const MillenniumDosTitleInitializationSession& session){
+        using State=MillenniumDosTitleInitializationState;
+        std::uint16_t instruction=0;
+        unsigned width=0;
+        switch(session.state_){
+        case State::post_descriptor_next_loop_stream_byte_boundary:
+        case State::post_descriptor_first_loop_encoded_stream_byte_boundary:
+        case State::post_descriptor_first_loop_encoded_high_nibble_byte_boundary:
+            instruction=0x1428;width=1;break;
+        case State::post_descriptor_first_loop_encoded_xlat_byte_boundary:
+        case State::post_descriptor_first_loop_encoded_high_xlat_byte_boundary:
+            instruction=0x1470;width=1;break;
+        case State::post_descriptor_first_loop_encoded_escape_word_boundary:
+        case State::post_descriptor_first_loop_encoded_high_escape_word_boundary:
+            instruction=0x1437;width=2;break;
+        case State::post_descriptor_first_loop_encoded_mode_two_word_boundary:
+        case State::post_descriptor_first_loop_encoded_high_mode_two_word_boundary:
+            instruction=0x144a;width=2;break;
+        case State::post_descriptor_first_loop_encoded_mode_two_escape_word_boundary:
+        case State::post_descriptor_first_loop_encoded_high_mode_two_escape_word_boundary:
+            instruction=0x1452;width=2;break;
+        case State::post_descriptor_first_loop_encoded_mode_two_second_escape_word_boundary:
+        case State::post_descriptor_first_loop_encoded_high_mode_two_second_escape_word_boundary:
+            instruction=0x1458;width=2;break;
+        default:return 0U;
+        }
+        if(session.continuation_address_!=instruction)return 0U;
+        if(width==1)return session.far_byte_boundary_.instruction_address==instruction?width:0U;
+        return session.far_read_boundary_.instruction_address==instruction
+            &&session.far_read_boundary_.word_count==1?width:0U;
+    };
+    if (operand_width(*this)==0
+        || title_library_segment_ != expected_library_segment
         || title_library.size() != 18907 || to_hex(sha256(title_library)) != expected_title_library_sha
         || last_sequence_ == std::numeric_limits<std::uint64_t>::max()
         || request.first_sequence != last_sequence_ + 1 || request.maximum_observations == 0
         || request.maximum_observations > 256
         || request.first_sequence > std::numeric_limits<std::uint64_t>::max()
             - request.maximum_observations) {
-        result.error = "TITLE.LIB stream drive requires the exact relocated second-descriptor byte boundary";
+        result.error = "TITLE.LIB stream drive requires an exact relocated descriptor operand boundary";
         return result;
     }
 
     auto next = *this;
     const auto title_library_base = static_cast<std::uint32_t>(expected_library_segment) * 16U;
     for (std::size_t count = 0; count < request.maximum_observations; ++count) {
-        const auto byte_boundary = next.state_ == MillenniumDosTitleInitializationState::post_descriptor_next_loop_stream_byte_boundary
-            || next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_stream_byte_boundary
-            || next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_nibble_byte_boundary
-            || next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_xlat_byte_boundary
-            || next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_xlat_byte_boundary;
-        const auto word_boundary = next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_escape_word_boundary
-            || next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_escape_word_boundary
-            || next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_mode_two_word_boundary
-            || next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_mode_two_word_boundary
-            || next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_mode_two_escape_word_boundary
-            || next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_mode_two_escape_word_boundary
-            || next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_mode_two_second_escape_word_boundary
-            || next.state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_mode_two_second_escape_word_boundary;
+        const auto width=operand_width(next);
+        const auto byte_boundary=width==1;
+        const auto word_boundary=width==2;
         if (!byte_boundary && !word_boundary) {
-            // The next decoder operation is deliberately left typed.  In
-            // particular, this driver does not turn a word/escape/mode-two
-            // boundary into a general DOS-memory read.
+            // The next operation lies outside the admitted stream decoder.
             result.accepted = count != 0;
             result.stopped_at_boundary = count != 0;
             result.observation_count = count;
@@ -261,6 +278,7 @@ MillenniumDosTitleInitializationSession::drive_next_descriptor_stream_from_title
         }
     }
     result.accepted = true;
+    result.stopped_at_boundary = operand_width(next)==0;
     result.observation_count = request.maximum_observations;
     *this = std::move(next);
     return result;

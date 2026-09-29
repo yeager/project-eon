@@ -676,3 +676,14 @@ continuation or infer another loop iteration. Supplied-media tests use a
 clearly synthetic compact record to exercise both nibble halves and reject
 the former lookup address. These tests establish instruction arithmetic,
 not original display values or gameplay.
+
+The genuine-library stream driver uses one exact state/instruction contract
+for both entry and execution. All thirteen already admitted stream-byte,
+lookup-byte and escape-word states can resume after an observation budget
+ends. A budget ending exactly at the next unsupported operation reports that
+stop immediately; it does not require an extra call. The canonical segment,
+library hash, source bounds, sequence checks and transactional commit remain
+mandatory. The supplied-media regression compares the complete 618-observation
+route, every memory/register effect and the `$1647` endpoint across budgets
+1, 2, 3, 7 and 256. This changes scheduling only, with no new external result
+or decoder operation admitted.
