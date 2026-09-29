@@ -5290,11 +5290,19 @@ resolves to `$0235` (EGA) / `$024c` (MCGA). Its exact six-byte prefixes load
 AL from driver-local `$008a` / `$00ac`, set AH to `$04` / `$01`, and return;
 neither reads the caller's `ES:BX`. The supplied on-disk bytes are zero, but
 their launcher/title-runtime values and the original installed-driver choice
-are not established. Therefore this is a driver-specific, read-only ABI fact,
-not permission to select a driver, fix `$da05`, or execute the startup/GX
-path. This is a strict SDL-adapter boundary for requested video mode and a
-masked driver-local option; Project Eon executes neither the driver, BIOS call,
-nor any path-dependent initial presentation.
+are not established. Standalone sessions now hash-bind EGA's
+`[$0235,$023b)` (SHA-256
+`94333f834cb173cd0d147abb963ac8363d3cc8a1420317660eb75024b04abda2`) and
+MCGA's `[$024c,$0252)` (SHA-256
+`2fb9fb052bcfb36d2dd2becda30bc6537ae31b6d1631493fbf290d39bbb85e93`). Each
+requires an explicit runtime DS:offset byte observation, forms AX from that
+value and the exact profile AH, and stops at the RET opcode. Neither the
+on-disk zero nor a calculated runtime value is substituted, and no caller
+return or driver installation is claimed. This is a driver-specific,
+read-only ABI fact, not permission to select a driver, fix `$da05`, or execute
+the startup/GX path. It remains a strict SDL-adapter boundary for requested
+video mode and a masked driver-local option; Project Eon executes neither the
+driver, BIOS call, nor any path-dependent initial presentation.
 
 The caller sites that request private functions `$02` and `$04` leave the
 pointed `ES:BX` records inside the original executable image, but the supplied

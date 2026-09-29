@@ -36,6 +36,10 @@ records the pending `$008a` store and stops at RET `$0234`; continue only with
 an exact caller/return observation.
 MCGA's branch step stops at the `$023d` single-count target or before INT
 `$92` at `$021f`. No graphics or private-service behavior is inferred.
+The standalone English function `$1f` session now requires the explicit
+runtime DS-local byte and stops at its hash-bound RET instruction for EGA640
+and MCGA. It does not use either file's initialized zero or establish caller
+reachability.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,
 respectively. The existing global-mode-2 descriptor regression uses explicit
 arithmetic observations; it is not evidence that either supplied driver

@@ -1,4 +1,5 @@
 #include "data/millennium_dos_video_driver.hpp"
+#include "engine/millennium_dos_video_function_31_session.hpp"
 #include "engine/millennium_dos_video_function_zero_session.hpp"
 
 #include <cassert>
@@ -37,10 +38,12 @@ int main(const int argc, char** argv) {
         return 2;
     }
     const auto root = std::filesystem::path(argv[1]);
+    const auto ega_bytes = read_driver(root / "EGA640.BIN");
+    const auto mcga_bytes = read_driver(root / "MCGA.BIN");
     const auto ega = eon::parse_millennium_dos_video_driver(
-        read_driver(root / "EGA640.BIN"), eon::MillenniumDosVideoDriverKind::ega640);
+        ega_bytes, eon::MillenniumDosVideoDriverKind::ega640);
     const auto mcga = eon::parse_millennium_dos_video_driver(
-        read_driver(root / "MCGA.BIN"), eon::MillenniumDosVideoDriverKind::mcga);
+        mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga);
 
     assert(ega.function_zero_cached_mode_known_branch_target == 0x1db);
     assert(ega.function_zero_cached_mode_query_interrupt_site == 0x1d6);
@@ -55,12 +58,42 @@ int main(const int argc, char** argv) {
     assert(mcga.function_zero_mode_match_branch_target == 0x209);
     assert(mcga.function_zero_mode_mismatch_return == 0x208);
 
+    using Function31Session = eon::MillenniumDosVideoFunction31Session;
+    using Function31State = eon::MillenniumDosVideoFunction31State;
+    Function31Session ega_function_31(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640);
+    assert(ega_function_31.state() == Function31State::awaiting_local_state_read
+        && !ega_function_31.outcome());
+    expect_rejected([&] {
+        ega_function_31.observe_local_state_read({0,0x0235,0x1234,0x008a,0x37});
+    });
+    expect_rejected([&] {
+        ega_function_31.observe_local_state_read({1,0x0235,0x1234,0x008c,0x37});
+    });
+    assert(ega_function_31.state() == Function31State::awaiting_local_state_read
+        && !ega_function_31.outcome());
+    const eon::MillenniumDosVideoFunction31LocalRead ega_function_31_read{
+        1,0x0235,0x1234,0x008a,0x37};
+    ega_function_31.observe_local_state_read(ega_function_31_read);
+    const eon::MillenniumDosVideoFunction31Outcome ega_function_31_outcome{
+        0x023a,ega_function_31_read,0x0437};
+    assert(ega_function_31.state() == Function31State::ret_boundary
+        && ega_function_31.outcome() == ega_function_31_outcome);
+    expect_rejected([&] { ega_function_31.observe_local_state_read(ega_function_31_read); });
+
+    Function31Session mcga_function_31(mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga);
+    const eon::MillenniumDosVideoFunction31LocalRead mcga_function_31_read{
+        1,0x024c,0x5678,0x00ac,0xab};
+    mcga_function_31.observe_local_state_read(mcga_function_31_read);
+    const eon::MillenniumDosVideoFunction31Outcome mcga_function_31_outcome{
+        0x0251,mcga_function_31_read,0x01ab};
+    assert(mcga_function_31.state() == Function31State::ret_boundary
+        && mcga_function_31.outcome() == mcga_function_31_outcome);
+
     using Session = eon::MillenniumDosVideoFunctionZeroSession;
     using State = eon::MillenniumDosVideoFunctionZeroState;
     using Result = eon::MillenniumDosVideoFunctionZeroBiosResult;
     using Endpoint = eon::MillenniumDosVideoFunctionZeroEndpoint;
 
-    const auto ega_bytes = read_driver(root / "EGA640.BIN");
     Session ega_unknown(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640, 0xff);
     auto boundary = ega_unknown.boundary();
     assert(boundary && boundary->kind
@@ -173,7 +206,6 @@ int main(const int argc, char** argv) {
     expect_rejected([&] { ega_known.advance_success_postlude_prefix(); });
     expect_rejected([&] { ega_known.advance_ega_success_stack_prefix(0, 0); });
 
-    const auto mcga_bytes = read_driver(root / "MCGA.BIN");
     Session mcga_unknown(mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga, 0xff);
     assert(mcga_unknown.boundary()->instruction_address == 0x1f4);
     mcga_unknown.observe_bios_result(Result{1,0x1f4,0x10,0x0013,0,0,0,0});

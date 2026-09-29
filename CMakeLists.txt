@@ -135,6 +135,7 @@ add_executable(project-eon
     src/engine/millennium_dos_sound_driver_load_session.cpp
     src/engine/millennium_dos_video_driver_load_session.cpp
     src/engine/millennium_dos_video_function_zero_session.cpp
+    src/engine/millennium_dos_video_function_31_session.cpp
     src/engine/millennium_dos_paragraph_arena.cpp
     src/engine/millennium_dos_compatibility_runner.cpp
     src/engine/millennium_dos_title_exec_entry_session.cpp
@@ -441,6 +442,7 @@ if(BUILD_TESTING)
         add_executable(eon-millennium-dos-video-driver-profile-test
             tests/millennium_dos_video_driver_profile_test.cpp
             src/engine/millennium_dos_video_function_zero_session.cpp
+            src/engine/millennium_dos_video_function_31_session.cpp
             src/data/millennium_dos_video_driver.cpp
             src/data/sha256.cpp)
         target_include_directories(eon-millennium-dos-video-driver-profile-test PRIVATE src)
