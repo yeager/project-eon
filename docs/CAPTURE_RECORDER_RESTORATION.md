@@ -170,6 +170,48 @@ no title-display receipt and an empty console. See `PRESERVATION.md` for the
 raw-output identity. This reaches `RECEIPT_VERIFIED` for the no-input diagnostic
 only; manual input, trace admission and native recovery remain separate steps.
 
+## trv2 DOSBox-X identity foundation (2026-09-29)
+
+The exact upstream revision `234797680781567e18c374c9e62da24de5423db0`
+now builds on trv2 with GCC 15.2.0. The external source and artifacts are under
+`~/.cache/project-eon-tools/recorder-recovery-20260929/`, with compiler
+`TMPDIR` set to its `tmp/` directory. Configuration uses
+`--enable-debug=heavy --enable-sdl2 --prefix=/usr --disable-sdltest
+--disable-opengl`. Installing SDL2_net/FFmpeg development packages and repeating
+configure resolved the missing-header and stale-link-library failures without
+upstream source changes. The clean baseline is 132,860,704 bytes, SHA-256
+`2a823db6bde49f449c9d9904c6e41bf3f195e038424bc4411067f4fb054eacca`.
+
+A separately built identity-only development patch now registers and validates
+the runner's six exact v21 configuration fields before guest initialization;
+`Config::ParseEnv` explicitly excludes the recorder section. Its COM loader
+check hashes only the existing successful read buffer, requires the original
+full size to equal the returned read size, and matches the exact name, size
+and SHA-256 of `TITLES.EXE` or `2200AD.EXE`. MZ loads are excluded. It adds no
+file reads, seeks, guest writes, input, capture output or observer arm.
+Identity is cleared on every execute attempt, termination (including TSR),
+and machine initialization. Parent identity is deliberately not restored after
+nested termination; a complete process-lifetime map remains future work.
+
+The complete external patch `dosbox-identity-foundation.patch` has SHA-256
+`65a3980bc9b3eed948d050a8e1e79dcc605b6da5972b96493048d529ca936cb3`.
+Its executable is 132,895,488 bytes, SHA-256
+`7face6cfc41f48523c0478f5677cff83b6fea15289ad4d3a744b8d9e226a5a96`.
+Reverse-patch checking and full compilation passed. Independent harnesses
+checked the exact configuration helpers/environment parser and portable SHA
+padding boundaries, failure gates and both genuine DOS leaves read in place.
+The trv2 identity-test hash manifest is
+`2f4f7d6681f407cb3805575008cc3dcc5554340943f4da8733743426265ae98a`.
+Detailed build/review metadata remains in `dosbox-identity-build-record.md`
+beside the patch; test sources/results are in `config-harness/` and
+`identity-harness/`. No emulator run used game media.
+
+This remains `OBSERVER_FIX_REQUIRED`, not a pinned recorder. Exact normal-core
+and callback predicates, bounded POD observation storage, terminal-only
+serialization and a reviewed graceful-stop route still have to be integrated
+and independently reviewed. Existing recorder pins and native admission are
+unchanged.
+
 ## Recorder restoration state machine
 
 Recorder work is an explicit state machine. A transition may only advance when
