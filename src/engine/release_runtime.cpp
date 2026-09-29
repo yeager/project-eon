@@ -1493,6 +1493,12 @@ bool ReleaseRuntimeCoordinator::advance_millennium_dos_title_local_continuation(
       memory_effects_applied = true;
     } else {
       switch (checkpoint.state) {
+      case MillenniumDosTitleInitializationState::descriptor_loop_complete_boundary:
+        if (!memory)
+          throw std::runtime_error("Title loop caller requires owned native memory");
+        next.advance_owned_descriptor_loop_caller(
+            checkpoint.last_sequence + 1, *memory);
+        break;
       case MillenniumDosTitleInitializationState::selected_local_call_boundary:
         next.execute_selected_callee_start(
             checkpoint.last_sequence + 1, checkpoint.selected_call_address,

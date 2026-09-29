@@ -5081,11 +5081,27 @@ private result is created by this drive.
 Every $1960 invocation returns to $1963, restoring its proven local frame.
 There is no function-six request between loop iterations: the earlier $1740
 connection belonged to another caller and was removed. After record 37,
-LOOP decrements the saved count to zero and execution stops before RET $1967.
-The caller at $1c1d is proven, but the following $1c20 read of runtime $1896
-remains unconsumed. This is native instruction recovery, not title rendering,
-input acceptance, a private ABI or gameplay parity. Details and current
+LOOP decrements the saved count to zero and exposes RET $1967. A separate
+owned continuation follows the proven return to $1c20 and reads both bytes
+of CS:$1896 from native memory. The compatibility child loader owns this
+location through TITLES.EXE+$1796; its initial word is 10, but no constant
+replaces current memory. The caller's logical shift and $1931 prefix lead
+to the actual private INT $91 at $0127, through CALL $1937 with AX=$0013.
+Missing input or detached state commits nothing. The private result and
+$1917 patch helper remain unexecuted. This is native instruction recovery,
+not title rendering, input acceptance, a private ABI or gameplay parity. Details and current
 boundaries are in [the title initialization document](MILLENNIUM_DOS_TITLE_INITIALIZATION.md).
+
+The caller continuation is independently bound to TITLES.EXE file `+$1b20`,
+runtime `$1c20..$1c27` (8 bytes, SHA-256
+`941449ea637d026bfe0a0f813b5da7ce8848291f05ef524889cb8b09df0830a6`),
+and file `+$1831`, runtime `$1931..$1939` (9 bytes, SHA-256
+`93d8217ed5b2fbb49ff65b6591d99dae23e84d40ae262e8e5060c18421eafc75`).
+The initial word at file `+$1796` has two-byte SHA-256
+`102b51b9765a56a3e899f7cf0ee38e5251f9c503b357b330a49183eb7b155604`.
+A later writer at `$18f3`, reached through `$1c35->$1898`, can replace this
+word; the caller therefore reads owned runtime memory rather than the original
+file again. That later path remains outside this continuation.
 
 The visible choice prompt is also recovered as an ephemeral, original byte
 span only: loaded `$0407..$04a1` (file `+$0307`, including its DOS `$`

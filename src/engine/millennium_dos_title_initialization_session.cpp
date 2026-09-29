@@ -27,6 +27,35 @@ std::optional<std::uint16_t> decoder_output_segment(
 }
 }
 
+void MillenniumDosTitleInitializationSession::advance_owned_descriptor_loop_caller(
+    const std::uint64_t sequence, const NativeRuntimeMemory& memory) {
+    if (!descriptor_loop_owned_ || descriptor_loop_driving_
+        || descriptor_loop_iteration_ != 37
+        || state_ != MillenniumDosTitleInitializationState::descriptor_loop_complete_boundary
+        || continuation_address_ != 0x1967
+        || last_sequence_ == std::numeric_limits<std::uint64_t>::max()
+        || sequence != last_sequence_ + 1)
+        throw std::runtime_error("Detached Millennium DOS owned descriptor caller");
+    const auto low = memory.read_byte({NativeRuntimeAddressSpace::dos_segmented,
+        child_code_segment_, 0x1896});
+    const auto high = memory.read_byte({NativeRuntimeAddressSpace::dos_segmented,
+        child_code_segment_, 0x1897});
+    if (!low || !high)
+        throw std::runtime_error("Missing Millennium DOS owned title wait word");
+    const auto word = static_cast<std::uint16_t>(*low | (*high << 8U));
+    const auto count = static_cast<std::uint16_t>(word >> 1U);
+    auto next = *this;
+    next.effects_.insert(next.effects_.end(), {{0x1c20,"AX",word},
+        {0x1c23,"AX",count},{0x1931,"CX",count},{0x1934,"AX",0x0013}});
+    // The call and wrapper save registers on the guest stack; their storage
+    // is not modeled. Function $13 has no established record-pointer ABI.
+    next.boundary_ = {0x1937,0x0122,0x0127,0x91,0x0013,0,0,false,false};
+    next.last_sequence_ = sequence;
+    next.continuation_address_ = 0x0127;
+    next.state_ = MillenniumDosTitleInitializationState::descriptor_loop_wait_private_interrupt_boundary;
+    *this = std::move(next);
+}
+
 void MillenniumDosTitleInitializationSession::advance_descriptor_mode_two_return() {
     if (state_ != MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_returned
         || continuation_address_ != 0x16e8
@@ -626,6 +655,10 @@ MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession
     constexpr std::size_t other_mode_followup_offset = 0x0387;
     constexpr std::size_t other_mode_followup_size = 18;
     if (titles_executable.size() != 7022
+        || to_hex(sha256(titles_executable.subspan(0x1b20,8)))
+            != "941449ea637d026bfe0a0f813b5da7ce8848291f05ef524889cb8b09df0830a6"
+        || to_hex(sha256(titles_executable.subspan(0x1831,9)))
+            != "93d8217ed5b2fbb49ff65b6591d99dae23e84d40ae262e8e5060c18421eafc75"
         || to_hex(sha256(titles_executable)) != titles_sha
         || child_code_segment == 0 || entry_sequence == 0
         || to_hex(sha256(titles_executable.subspan(startup_offset, startup_size)))

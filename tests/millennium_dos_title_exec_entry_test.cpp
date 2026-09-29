@@ -850,6 +850,14 @@ int main(int argc, char** argv) {
     for(const std::size_t quantum : {256U,128U}){
         auto whole_loop=other_success;
         eon::NativeRuntimeMemory whole_memory;
+        eon::NativeRuntimeEffectBatch image_batch{"whole-title-image",true,{}};
+        for(const auto& byte : child.image_effects())
+            image_batch.effects.push_back({image_batch.effects.size()+1,
+                {eon::NativeRuntimeAddressSpace::dos_segmented,
+                    first_title_loop.child_code_segment,byte.offset},
+                eon::MemoryTransferElementWidth::byte,
+                eon::NativeRuntimeByteOrder::little_endian,byte.value});
+        assert(whole_memory.apply(image_batch).accepted);
         std::size_t observations=0;
         bool returned=false;
         for(unsigned frame=0;frame<1024&&!returned;++frame){
@@ -889,6 +897,60 @@ int main(int argc, char** argv) {
                     &&a.value==b.value&&a.width==b.width&&a.segment==b.segment
                     &&a.explicit_segment==b.explicit_segment);
             }
+        }
+        const auto caller_memory=whole_memory.checkpoint();
+        auto wrong_sequence=whole_loop;
+        rejected=false;
+        try { wrong_sequence.advance_owned_descriptor_loop_caller(
+            completed.last_sequence+2,whole_memory); }
+        catch(const std::runtime_error&){rejected=true;}
+        assert(rejected&&wrong_sequence.checkpoint().last_sequence==completed.last_sequence);
+        for(const bool only_low : {false,true}){
+            auto missing=whole_loop;
+            eon::NativeRuntimeMemory incomplete;
+            if(only_low)assert(incomplete.apply({"only-low",true,{{1,
+                {eon::NativeRuntimeAddressSpace::dos_segmented,completed.child_code_segment,0x1896},
+                eon::MemoryTransferElementWidth::byte,eon::NativeRuntimeByteOrder::little_endian,10}}}).accepted);
+            rejected=false;
+            try{missing.advance_owned_descriptor_loop_caller(completed.last_sequence+1,incomplete);}
+            catch(const std::runtime_error&){rejected=true;}
+            assert(rejected&&missing.checkpoint().state==completed.state
+                &&missing.checkpoint().last_sequence==completed.last_sequence
+                &&missing.checkpoint().register_effects.size()==completed.register_effects.size());
+        }
+        whole_loop.advance_owned_descriptor_loop_caller(completed.last_sequence+1,whole_memory);
+        const auto waiting=whole_loop.checkpoint();
+        assert(waiting.state==eon::MillenniumDosTitleInitializationState::descriptor_loop_wait_private_interrupt_boundary
+            &&waiting.continuation_address==0x0127&&waiting.boundary.call_address==0x1937
+            &&waiting.boundary.function==0x0013&&waiting.boundary.interrupt==0x91
+            &&waiting.boundary.record_segment==0&&waiting.boundary.record_offset==0
+            &&!waiting.boundary.result_observed&&!waiting.boundary.stack_storage_modeled);
+        assert(waiting.register_effects[completed.register_effects.size()].value==10
+            &&waiting.register_effects[completed.register_effects.size()+1].value==5);
+        assert(whole_memory.checkpoint().checksum==caller_memory.checksum
+            &&whole_memory.checkpoint().applied_batch_count==caller_memory.applied_batch_count);
+        rejected=false;
+        try{whole_loop.observe_private_interrupt_result({waiting.last_sequence+1,0x0127,0x0129,0,0});}
+        catch(const std::runtime_error&){rejected=true;}
+        assert(rejected&&whole_loop.checkpoint().last_sequence==waiting.last_sequence);
+        rejected=false;
+        try{whole_loop.advance_owned_descriptor_loop_caller(waiting.last_sequence+1,whole_memory);}
+        catch(const std::runtime_error&){rejected=true;}
+        assert(rejected&&whole_loop.checkpoint().state==waiting.state
+            &&whole_loop.checkpoint().register_effects.size()==waiting.register_effects.size());
+        // Detached arithmetic variations alter owned runtime memory only;
+        // they do not replace or modify the admitted executable leaf.
+        for(const std::uint16_t value : {0U,11U,65535U}){
+            auto varied=wrong_sequence;
+            auto varied_memory=whole_memory;
+            assert(varied_memory.apply({"runtime-wait-variation",true,{{1,
+                {eon::NativeRuntimeAddressSpace::dos_segmented,completed.child_code_segment,0x1896},
+                eon::MemoryTransferElementWidth::word,eon::NativeRuntimeByteOrder::little_endian,value}}}).accepted);
+            varied.advance_owned_descriptor_loop_caller(completed.last_sequence+1,varied_memory);
+            const auto result=varied.checkpoint();
+            assert(result.register_effects[completed.register_effects.size()].value==value
+                &&result.register_effects[completed.register_effects.size()+1].value==(value>>1U)
+                &&result.register_effects[completed.register_effects.size()+2].value==(value>>1U));
         }
     }
     auto stepped_loop=other_success;

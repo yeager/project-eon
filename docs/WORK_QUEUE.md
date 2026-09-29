@@ -7,9 +7,13 @@ actual relocated directory at TITLE.LIB+$4813. The first record is
 $3294:$0001; the former $5050 mapping and lookup alias are rejected.
 All header, payload and lookup reads remain within the verified leaf.
 Each finite quantum preserves exact segmented addresses and commits session
-plus memory together. The final boundary is RET $1967 after the loop count
-reaches zero. Recover its proven caller continuation at $1c20 and runtime
-word $1896 next, without inventing that word or subsequent private results.
+plus memory together. After the loop count reaches zero, the owned caller
+continues through RET $1967 to $1c20, reads runtime word CS:$1896, shifts it
+right once, and enters $1931. The child executable image already supplies
+this word; the continuation reads current native memory rather than assuming
+its initial value. It stops at private INT $91 at $0127, requested by
+$1937 with AX=$0013. Recover this service and its caller-specific return
+before advancing into the $1917 patch helper or title input.
 
 The following paragraphs retain earlier recovery history. Their intermediate
 stops and historical source assumptions are superseded by the current

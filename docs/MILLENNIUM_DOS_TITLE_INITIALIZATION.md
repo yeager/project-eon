@@ -470,11 +470,20 @@ and the 256-byte lookup extent remain within the same supplied library.
 The exact $163b..$16b2 span (120 bytes) hashes to
 9a18a2349e46afad9b814befcaf0a7ddd715f446f21845453a4e4f6a72ad65b7.
 
-The final loop edge restores count one, decrements it to zero, and stops at
-$1967 before RET. The proven caller is $1c1d, whose next operation at $1c20
-reads runtime word $1896. Neither that value nor the following callee is
-invented. Completing the descriptor loop establishes instruction execution,
-not pixels, a private ABI, title input or a title-to-game handoff.
+The final loop edge restores count one, decrements it to zero, and exposes
+$1967 before RET. The next owned continuation returns to $1c20 and reads
+both bytes of CS:$1896 from native memory. The compatibility child loader
+already loads the hash-verified executable image at CS:$0100, so file
+TITLES.EXE+$1796 supplies this location. The initial word is 10, but the
+continuation uses the current owned word and does not substitute that value.
+A missing byte or detached caller leaves the session unchanged.
+
+The caller shifts AX right once at $1c23, calls $1931 at $1c25, and enters
+the private wrapper through $1937 with AX=$0013. Execution stops at the
+actual INT $91 instruction, $0127. The count and request are instruction
+effects; no private-service result, patch rendering, title input or
+title-to-game handoff is supplied. Existing result observers reject this
+distinct caller state.
 
 The public continuation dispatcher still forwards only typed observations.
 The owned loop scheduler supplies no new DOS, BIOS or private-interrupt result;
