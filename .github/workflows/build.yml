@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      package_version:
+        description: Optional explicit Windows package version for a requested release
+        required: false
+        type: string
 
 # CI is deliberately read-only. Project Eon releases are created only when the
 # maintainer explicitly requests one; this workflow cannot tag or publish.
@@ -596,7 +601,13 @@ jobs:
           }
       - name: Create Inno Setup installer
         shell: pwsh
-        run: iscc "/DMyAppVersion=0.1.0-ci.${{ github.run_number }}" packaging/windows/project-eon.iss
+        env:
+          PACKAGE_VERSION: ${{ inputs.package_version || format('0.1.0-ci.{0}', github.run_number) }}
+        run: |
+          if ($env:PACKAGE_VERSION -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(-ci\.[0-9]+)?$') {
+            throw "Invalid package version"
+          }
+          iscc "/DMyAppVersion=$env:PACKAGE_VERSION" packaging/windows/project-eon.iss
       - name: Verify installed Inno Setup package and runtime closure
         shell: pwsh
         run: |

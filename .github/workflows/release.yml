@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Successful main Build run whose verified packages will be published
+        required: true
+        type: string
+      version:
+        description: Release version without the v prefix
+        required: true
+        default: '0.1.0'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-eon-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Verify complete build and publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_BUILD_RUN: ${{ inputs.build_run_id }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          export TMPDIR="$HOME/.cache/project-eon-tools/release/tmp"
+          mkdir -p "$TMPDIR"
+          python3 packaging/publish-release.py
