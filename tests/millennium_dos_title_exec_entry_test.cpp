@@ -10,6 +10,7 @@
 #include <iterator>
 #include <map>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -17,6 +18,102 @@ std::vector<std::uint8_t> read(const std::filesystem::path& path) {
     std::ifstream stream(path, std::ios::binary);
     if (!stream) throw std::runtime_error("Missing real Millennium DOS leaf");
     return {std::istreambuf_iterator<char>(stream), {}};
+}
+
+struct StartupSelectionFixture {
+    eon::MillenniumDosTitleInitializationSession session;
+    eon::MillenniumDosTitleInitializationCheckpoint before_interrupt;
+};
+
+// The DOS/INT return is an explicit fixture input. The executable image and
+// startup prefix remain the admitted real TITLES.EXE leaf for every mode.
+StartupSelectionFixture start_selected_mode(
+    const std::vector<std::uint8_t>& titles, const std::uint16_t returned_ax,
+    const std::uint16_t returned_flags) {
+    eon::MillenniumDosTitleInitializationSession session(titles,0x2468,2);
+    session.execute_exact_startup(3,0x1b80,0x1b95,0x0122,0x91);
+    const auto before_interrupt=session.checkpoint();
+    session.observe_private_interrupt_result(
+        {4,0x0127,0x0129,returned_ax,returned_flags});
+    return {std::move(session),before_interrupt};
+}
+
+eon::MillenniumDosTitleInitializationSession make_mode_four_descriptor_fixture(
+    const std::vector<std::uint8_t>& titles,
+    const std::vector<std::uint8_t>& title_library) {
+    // All DOS, INT 91h, and BIOS return records below are synthetic test
+    // inputs, not captured observations. TITLE.LIB descriptor and payload
+    // bytes are consumed only through the hash-bound title-library driver.
+    auto startup=start_selected_mode(titles,0x0401,0x7202);
+    auto session=std::move(startup.session);
+    const auto step=[&](){return session.checkpoint().last_sequence+1;};
+    session.execute_selected_callee_start(step(),0x1bb2,0x1ada);
+    session.observe_selected_callee_private_interrupt_result(
+        {step(),0x0127,0x0129,0x1ae5,0x9876,0x0202});
+    session.execute_selected_followup_start(step(),0x1ae5,0x0487);
+    for(unsigned index=0;index<16;++index)
+        session.observe_bios_palette_result(
+            {step(),0x0497,0x0499,static_cast<std::uint16_t>(0x3000+index),
+                static_cast<std::uint16_t>(0x0300+index)},titles);
+
+    session.execute_title_main_allocation_start(step(),0x1bb8,0x1b1f);
+    session.observe_dos_memory_result({step(),0x1b26,0x1b28,false,0,0,0});
+    session.observe_dos_memory_result({step(),0x1b2d,0x1b2f,false,0x6000,0x7000,0});
+    session.observe_dos_memory_result({step(),0x1b38,0x1b3a,false,0,0,0});
+    session.observe_dos_memory_result({step(),0x1b3f,0x1b41,false,0x4000,0,0});
+    session.observe_dos_memory_result({step(),0x1b4f,0x1b51,false,0x5000,0,0});
+    session.observe_dos_file_result({step(),0x1af9,0x1afb,false,0x42,0,0,0,0});
+    session.observe_dos_file_result({step(),0x1b09,0x1b0b,false,0x49db,0,0,0,0});
+    session.observe_dos_file_result({step(),0x1b12,0x1b14,false,0,0,0,0,0});
+    session.observe_dos_memory_result({step(),0x1b64,0x1b66,false,0x3000,0,0});
+    session.observe_dos_memory_result({step(),0x1b74,0x1b76,false,0x4000,0,0});
+    session.observe_dos_memory_result({step(),0x1bca,0x1bcc,false,0x5000,0x6000,0});
+    session.observe_dos_memory_result({step(),0x1bd5,0x1bd7,false,0,0,0});
+    session.observe_dos_file_result({step(),0x0549,0x054b,false,0x55,0,0,0,0},title_library);
+    session.observe_dos_file_result({step(),0x057c,0x057e,false,0x49db,0,0,0,0},title_library);
+    for(unsigned index=0;index<8;++index)
+        session.observe_dos_file_result({step(),0x057c,0x057e,false,0,0,0,0,0},title_library);
+    session.observe_dos_file_result({step(),0x059e,0x05a0,false,0,0,0,0,0},title_library);
+    session.execute_post_relocation(step(),title_library);
+    session.execute_post_library_setup(step(),0x1bef,0x1aac);
+    session.observe_dos_vector_result({step(),0x10f4,0x10f6,0x3500,0x1234,0xabcd,0x0246});
+    session.observe_dos_vector_result({step(),0x1106,0x1108,0x9999,0x2222,0x3333,0x0247});
+    session.observe_dos_vector_result({step(),0x110b,0x110d,0x3504,0x5678,0xcdef,0x0202});
+    session.observe_dos_vector_result({step(),0x111d,0x111f,0x7777,0x9a9b,0x8888,0x0246});
+    session.observe_setup_bios_result({step(),0x1ab9,0x1abb,0xdead,0x7654,0x0247});
+    session.observe_setup_bios_result({step(),0x1ac1,0x1ac3,0xbeef,0x1357,0x0203});
+    session.execute_next_setup(step(),0x1bf2,0x11a7);
+    session.execute_followup_setup(step(),0x1bf5,0x114e);
+    session.observe_far_words({step(),0x115d,0,0x0070,0xaaaa,0xbbbb});
+    session.execute_video_hook_setup(step(),0x1bf8,0x12a0);
+    session.observe_far_words({step(),0x12ad,0,0x0024,0xcccc,0xdddd});
+    session.execute_post_video_mode_call(step(),0x1c02,0x1ada);
+    session.observe_selected_callee_private_interrupt_result(
+        {step(),0x0127,0x0129,0x1ae5,0x4444,0x0202});
+    session.execute_selected_followup_start(step(),0x1ae5,0x0487);
+    for(unsigned index=0;index<16;++index)
+        session.observe_bios_palette_result(
+            {step(),0x0497,0x0499,0x1000,0x0202},titles);
+    session.execute_post_video_setup(step(),0x1c0e,0x135e);
+    session.execute_post_video_graphics_call(step(),0x1c11,0x0ff3);
+    session.observe_private_interrupt_result({step(),0x0127,0x0129,0xabcd,0x0246});
+    session.execute_post_video_followup(step(),0x1c17,0x1725);
+
+    // These typed far-memory and INT 91h observations are fixture-only
+    // external results. The first descriptor-loop record itself is then read
+    // by the hash-bound TITLE.LIB driver.
+    session.observe_far_words({step(),0x13aa,0x3481,0x0003,6,0});
+    session.observe_far_word({step(),0x13cd,0x3000,0x001e,0x0140});
+    session.observe_far_word({step(),0x13d0,0x3000,0x001c,0x00c8});
+    session.observe_far_word({step(),0x13e2,0x3000,0x001a,0});
+    session.observe_far_byte({step(),0x13e9,0x3000,0x0007,0x23});
+    session.observe_far_byte({step(),0x13f2,0x3000,0x000a,0});
+    session.observe_private_interrupt_result({step(),0x0127,0x0129,0x1357,0x0246});
+    const std::vector<std::uint8_t> function_001a_record{
+        0x10,0x20,0x30,0x40,0x50,0x60,0x70,0x80,0x68,0x24};
+    session.observe_private_interrupt_result({step(),0x0127,0x0129,0xbeef,0x0202,
+        0x2468,0x0fdf,function_001a_record});
+    return session;
 }
 }
 
@@ -90,10 +187,9 @@ int main(int argc, char** argv) {
         &&child.image_effects().back().offset==0x1c6d
         &&child.image_effects().back().value==titles.back());
 
-    eon::MillenniumDosTitleInitializationSession initialization(
-        titles,0x2468,2);
-    initialization.execute_exact_startup(3,0x1b80,0x1b95,0x0122,0x91);
-    const auto initialized=initialization.checkpoint();
+    auto mode_one_startup=start_selected_mode(titles,0x0101,0x7202);
+    auto initialization=std::move(mode_one_startup.session);
+    const auto initialized=std::move(mode_one_startup.before_interrupt);
     assert(initialized.state
         ==eon::MillenniumDosTitleInitializationState::private_interrupt_result_boundary
         &&initialized.last_sequence==3
@@ -114,8 +210,6 @@ int main(int argc, char** argv) {
         &&initialized.boundary.record_offset==0x1ac4
         &&!initialized.boundary.result_observed
         &&!initialized.boundary.stack_storage_modeled);
-    initialization.observe_private_interrupt_result(
-        {4,0x0127,0x0129,0x0101,0x7202});
     const auto selected=initialization.checkpoint();
     assert(selected.state
         ==eon::MillenniumDosTitleInitializationState::selected_local_call_boundary
@@ -135,6 +229,82 @@ int main(int argc, char** argv) {
         &&selected.memory_effects[2].value==1
         &&selected.memory_effects[3].offset==0x1aa0
         &&selected.memory_effects[3].value==0xda00);
+    auto mode_four_startup=start_selected_mode(titles,0x0401,0x7202);
+    const auto mode_four_selection=mode_four_startup.session.checkpoint();
+    assert(mode_four_selection.state
+        ==eon::MillenniumDosTitleInitializationState::selected_local_call_boundary
+        &&mode_four_selection.selected_mode==4
+        &&mode_four_selection.selected_call_address==0x1bb2
+        &&mode_four_selection.selected_call_target==0x1ada);
+    auto mode_four_loop=make_mode_four_descriptor_fixture(titles,title_library);
+    assert(mode_four_loop.checkpoint().state
+        ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary
+        &&mode_four_loop.checkpoint().selected_mode==4
+        &&mode_four_loop.checkpoint().continuation_address==0x13aa);
+    eon::NativeRuntimeMemory mode_four_memory;
+    eon::NativeRuntimeEffectBatch mode_four_image{"mode-four-child-image",true,{}};
+    for(const auto& byte:child.image_effects())
+        mode_four_image.effects.push_back({mode_four_image.effects.size()+1,
+            {eon::NativeRuntimeAddressSpace::dos_segmented,
+                mode_four_loop.checkpoint().child_code_segment,byte.offset},
+            eon::MemoryTransferElementWidth::byte,
+            eon::NativeRuntimeByteOrder::little_endian,byte.value});
+    assert(mode_four_memory.apply(mode_four_image).accepted);
+    bool mode_four_returned=false;
+    for(unsigned frame=0;frame<1024&&!mode_four_returned;++frame){
+        const auto before=mode_four_loop.checkpoint();
+        const auto driven=mode_four_loop.drive_descriptor_loop_from_title_library(
+            mode_four_memory,title_library,{before.last_sequence+1,256});
+        if(!driven.accepted)throw std::runtime_error(
+            "Mode-four real-media descriptor drive failed: "+driven.error);
+        mode_four_returned=driven.returned;
+    }
+    const auto mode_four_complete=mode_four_loop.checkpoint();
+    std::size_t mode_four_body_returns=0;
+    std::size_t mode_four_stride_writes=0;
+    std::size_t mode_four_cleared_words=0;
+    std::size_t mode_four_planar_writes=0;
+    std::map<std::pair<std::uint16_t,std::uint16_t>,std::uint8_t>
+        final_mode_four_bytes;
+    for(const auto& effect:mode_four_complete.register_effects)
+        if(effect.instruction_address==0x1637&&effect.register_name=="DS")
+            ++mode_four_body_returns;
+    for(const auto& effect:mode_four_complete.memory_effects){
+        if(effect.instruction_address==0x15d7){
+            assert(effect.offset==0x14dd
+                &&effect.width==eon::MillenniumDosTitleInitializationEffectWidth::word);
+            ++mode_four_stride_writes;
+            final_mode_four_bytes[{mode_four_complete.child_code_segment,effect.offset}]
+                =static_cast<std::uint8_t>(effect.value);
+            final_mode_four_bytes[{mode_four_complete.child_code_segment,
+                static_cast<std::uint16_t>(effect.offset+1)}]
+                =static_cast<std::uint8_t>(effect.value>>8U);
+        }else if(effect.instruction_address==0x15e3){
+            assert(effect.explicit_segment&&effect.value==0
+                &&effect.width==eon::MillenniumDosTitleInitializationEffectWidth::word);
+            ++mode_four_cleared_words;
+            final_mode_four_bytes[{effect.segment,effect.offset}]=0;
+            final_mode_four_bytes[{effect.segment,
+                static_cast<std::uint16_t>(effect.offset+1)}]=0;
+        }else if(effect.instruction_address==0x1600){
+            assert(effect.explicit_segment&&effect.value!=0
+                &&effect.width==eon::MillenniumDosTitleInitializationEffectWidth::byte);
+            ++mode_four_planar_writes;
+            final_mode_four_bytes[{effect.segment,effect.offset}]
+                =static_cast<std::uint8_t>(effect.value);
+        }
+    }
+    assert(mode_four_returned
+        &&mode_four_complete.state
+            ==eon::MillenniumDosTitleInitializationState::descriptor_loop_complete_boundary
+        &&mode_four_complete.continuation_address==0x1967
+        &&mode_four_body_returns==37
+        &&mode_four_stride_writes==mode_four_body_returns
+        &&mode_four_cleared_words>mode_four_body_returns
+        &&mode_four_planar_writes>0);
+    for(const auto& [destination,value]:final_mode_four_bytes)
+        assert(mode_four_memory.read_byte({eon::NativeRuntimeAddressSpace::dos_segmented,
+            destination.first,destination.second})==value);
     initialization.execute_selected_callee_start(5,0x1bad,0x1ac6);
     const auto mode_one_boundary=initialization.checkpoint();
     assert(mode_one_boundary.state==eon::MillenniumDosTitleInitializationState::

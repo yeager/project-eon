@@ -565,9 +565,15 @@ emulated with its flag-sensitive bit loop. It clears the bounded destination,
 reads the decoded source only from initialized native runtime memory, and
 resolves all 256 lookup bytes against the exact record table. Clear and planar
 writes commit transactionally per record; the local return advances through
-the established 37-record caller. The existing real-media regression does
-not yet exercise a mode-four source/output sequence, so decoded pixels and
-full mode-four parity remain unverified.
+the established 37-record caller. A real-media regression now exercises all 37
+mode-four body returns against the hash-bound TITLE.LIB leaf. The fixture seeds
+native memory only with the admitted child image; descriptor-decoded input and
+planar output then travel through the same owned memory model. It asserts each
+`$15d7` stride write, bounded `$15e3` clear, nonzero `$1600` planar write, and
+resulting emulated memory bytes. The startup INT 91h, DOS, and BIOS returns are
+explicit synthetic fixture inputs, not captured observations. This verifies
+the hash-bound body and its memory effects, but decoded-pixel parity against a
+captured runtime remains unverified.
 
 The final loop edge restores count one, decrements it to zero, and exposes
 $1967 before RET. The next owned continuation returns to $1c20 and reads

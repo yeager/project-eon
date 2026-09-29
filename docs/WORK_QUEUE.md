@@ -36,13 +36,15 @@ before advancing into the $1917 patch helper or title input.
 
 The EGA640 mode-four descriptor continuation reads the exact `$14f0`, `$14fc`,
 and `$1500` header operands, then emulates the hash-bound `$15c5..$163a`
-planar loop using initialized decoded bytes and the exact record table. Clear
-and output writes commit transactionally per descriptor, and the local return
-advances across the 37-record caller. Add direct mode-four source/output
-coverage before claiming decoded-pixel verification. Keep mode four separate
-from MCGA mode-one translation and the synthetic mode-two regression; keep
-mode three distinct and leave private function `$0013` unexecuted until its
-result is evidenced.
+planar loop using initialized decoded bytes and the exact record table. A
+real-media regression now drives the body for all 37 records, checks stride,
+clear, planar writes and resulting emulated memory, and uses only the admitted
+child image to seed native memory. Its startup INT 91h, DOS and BIOS returns
+are synthetic fixture inputs, not captured observations; captured runtime and
+decoded-pixel parity remain unverified. Keep mode four separate from MCGA
+mode-one translation and the synthetic mode-two regression; keep mode three
+distinct and leave private function `$0013` unexecuted until its result is
+evidenced.
 
 The following paragraphs retain earlier recovery history. Their intermediate
 stops and historical source assumptions are superseded by the current
