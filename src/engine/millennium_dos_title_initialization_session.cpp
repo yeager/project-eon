@@ -25,6 +25,19 @@ std::optional<std::uint16_t> decoder_output_segment(
     // destination belongs to later mode-specific processing.
     return latest_local_word(effects, 0x010e);
 }
+std::uint8_t owned_palette_byte(
+    const std::vector<MillenniumDosTitleInitializationMemoryEffect>& effects,
+    const std::uint16_t child_segment,const std::uint16_t address) {
+    for(auto it=effects.rbegin();it!=effects.rend();++it){
+        const auto segment=it->explicit_segment?it->segment:child_segment;
+        if(segment!=child_segment)continue;
+        if(it->offset==address)return static_cast<std::uint8_t>(it->value);
+        if(it->width==MillenniumDosTitleInitializationEffectWidth::word
+            &&static_cast<unsigned>(it->offset)+1U==address)
+            return static_cast<std::uint8_t>(it->value>>8U);
+    }
+    throw std::runtime_error("Missing owned Millennium DOS palette byte");
+}
 }
 
 void MillenniumDosTitleInitializationSession::advance_owned_descriptor_loop_caller(
@@ -57,8 +70,10 @@ void MillenniumDosTitleInitializationSession::advance_owned_descriptor_loop_call
 }
 
 void MillenniumDosTitleInitializationSession::advance_descriptor_mode_two_return() {
-    if (state_ != MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_returned
-        || continuation_address_ != 0x16e8
+    if (!((state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_returned
+            && continuation_address_ == 0x16e8)
+        ||(state_ == MillenniumDosTitleInitializationState::descriptor_mode_one_return_boundary
+            &&continuation_address_ == 0x14dc))
         || descriptor_loop_iteration_<1||descriptor_loop_iteration_>37)
         throw std::runtime_error("Detached Millennium DOS descriptor loop return");
     if(!descriptor_loop_owned_&&descriptor_loop_iteration_==2){
@@ -106,12 +121,15 @@ void MillenniumDosTitleInitializationSession::advance_descriptor_mode_two_return
     descriptor_loop_iteration_=next_index;
 }
 bool MillenniumDosTitleInitializationSession::descriptor_loop_can_drive() const {
-    if(selected_mode_!=2||descriptor_loop_iteration_<1||descriptor_loop_iteration_>37)return false;
+    if((selected_mode_!=1&&selected_mode_!=2)||descriptor_loop_iteration_<1||descriptor_loop_iteration_>37)return false;
     if(!descriptor_loop_owned_)
         return descriptor_loop_iteration_==1
             &&state_==MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary;
     using S=MillenniumDosTitleInitializationState;
     switch(state_){
+    case S::post_descriptor_first_loop_mode_one_header_byte_boundary:
+    case S::descriptor_mode_one_translation_boundary:
+        return selected_mode_==1;
     case S::post_descriptor_first_loop_far_read_boundary:
     case S::post_descriptor_next_loop_far_read_boundary:
     case S::post_descriptor_first_loop_record_word_read_boundary:
@@ -149,7 +167,7 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
     NativeRuntimeMemory& runtime_memory,const std::span<const std::uint8_t> library,
     const MillenniumDosTitleModeTwoDriveRequest request){
     MillenniumDosTitleModeTwoDriveResult result;
-    if(!descriptor_loop_can_drive()||title_library_segment_!=0x3000
+    if(!descriptor_loop_can_drive()||title_library_segment_==0
         ||library.size()!=18907||to_hex(sha256(library))
             !="6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678"
         ||last_sequence_==std::numeric_limits<std::uint64_t>::max()
@@ -173,7 +191,8 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
             const auto directory=0x4813U+12U*next.descriptor_loop_iteration_;
             const auto first=word(directory),second=word(directory+2);
             const auto base=latest_local_word(next.memory_effects_,0x0e48);
-            if(!base||*base!=0x3000||second!=0)
+            if(!base||*base!=title_library_segment_||second!=0
+                ||static_cast<unsigned>(*base)+(first>>4U)>0xffffU)
                 throw std::runtime_error("Unproven descriptor library base or directory segment");
             const auto segment=static_cast<std::uint16_t>(*base+(first>>4U));
             const auto offset=static_cast<std::uint16_t>(first&15U);
@@ -187,11 +206,67 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
                 ||next.state_==S::post_descriptor_next_loop_far_read_boundary){
                 const auto& boundary=next.far_read_boundary_;
                 if(next.continuation_address_!=0x13aa||boundary.instruction_address!=0x13aa
-                    ||boundary.source_segment!=0x3481||boundary.source_offset!=3U+12U*next.descriptor_loop_iteration_)
+                    ||static_cast<unsigned>(*base)+0x481U>0xffffU
+                    ||boundary.source_segment!=static_cast<std::uint16_t>(*base+0x481U)
+                    ||boundary.source_offset!=3U+12U*next.descriptor_loop_iteration_)
                     throw std::runtime_error("Detached descriptor directory read");
                 next.admitted_loop_pair_={{first,second}};
                 next.observe_far_words({sequence,0x13aa,boundary.source_segment,boundary.source_offset,first,second});
                 next.admitted_loop_pair_.reset();
+            }else if(next.state_==S::post_descriptor_first_loop_mode_one_header_byte_boundary){
+                const auto output=latest_local_word(next.memory_effects_,0x010c);
+                const auto output_segment=latest_local_word(next.memory_effects_,0x010e);
+                const auto length=latest_local_word(next.memory_effects_,0x133b);
+                const auto table=record+word(record+26)+28U+((library[record]&1U)?0x300U:0U);
+                if(next.selected_mode_!=1||next.continuation_address_!=0x14a9
+                    ||next.far_byte_boundary_.source_segment!=segment
+                    ||next.far_byte_boundary_.source_offset!=offset
+                    ||!output||!output_segment||!length||*length!=368
+                    ||static_cast<unsigned>(*output)+*length>0x10000U
+                    ||table+256U>library.size()||table+256U>next.title_library_first_read_count_)
+                    throw std::runtime_error("Mode-one translation requires owned record and bounded table");
+                next.mode_one_table_file_offset_=table;
+                next.mode_one_translation_offset_=*output;
+                next.mode_one_translation_remaining_=*length;
+                next.effects_.insert(next.effects_.end(),{
+                    {0x14a9,"CL",library[record]}});
+                if(library[record]&1U)next.effects_.push_back({0x14b0,"DX",0x0300});
+                next.effects_.insert(next.effects_.end(),{
+                    {0x14b5,"CL",library[record+1]},
+                    {0x14b8,"CX",static_cast<std::uint16_t>(library[record+1]+1U)},
+                    {0x14b9,"AX",word(record+26)},
+                    {0x14bc,"SI",static_cast<std::uint16_t>(offset+word(record+26))},
+                    {0x14bf,"SI",static_cast<std::uint16_t>(offset+word(record+26)+28U)},
+                    {0x14c2,"SI",static_cast<std::uint16_t>(offset+table-record)},
+                    {0x14c4,"ES",*output_segment},{0x14c4,"DI",*output},
+                    {0x14c9,"BX",static_cast<std::uint16_t>(offset+table-record)},
+                    {0x14cb,"CX",*length}});
+                next.last_sequence_=sequence;
+                next.continuation_address_=0x14d0;
+                next.state_=S::descriptor_mode_one_translation_boundary;
+            }else if(next.state_==S::descriptor_mode_one_translation_boundary){
+                const auto output_segment=latest_local_word(next.memory_effects_,0x010e);
+                if(next.selected_mode_!=1||!output_segment||next.mode_one_translation_remaining_==0)
+                    throw std::runtime_error("Missing mode-one translation context");
+                const auto value=memory.read_byte({NativeRuntimeAddressSpace::dos_segmented,
+                    *output_segment,next.mode_one_translation_offset_});
+                if(!value)throw std::runtime_error("Mode-one translation source is not initialized");
+                const auto translated=library[next.mode_one_table_file_offset_+*value];
+                next.effects_.insert(next.effects_.end(),{{0x14d0,"AL",*value},{0x14d3,"AL",translated}});
+                next.memory_effects_.push_back({0x14d5,next.mode_one_translation_offset_,
+                    MillenniumDosTitleInitializationEffectWidth::byte,translated,*output_segment,true});
+                ++next.mode_one_translation_offset_;
+                --next.mode_one_translation_remaining_;
+                next.effects_.insert(next.effects_.end(),{{0x14d5,"DI",next.mode_one_translation_offset_},
+                    {0x14d6,"CX",next.mode_one_translation_remaining_}});
+                next.last_sequence_=sequence;
+                if(next.mode_one_translation_remaining_==0){
+                    next.effects_.insert(next.effects_.end(),{{0x14d9,"DS",next.child_code_segment_},
+                        {0x14db,"ES",next.child_code_segment_}});
+                    next.state_=S::descriptor_mode_one_return_boundary;
+                    next.continuation_address_=0x14dc;
+                    next.advance_descriptor_mode_two_return();
+                }
             }else{
                 const bool source=next.state_==S::post_descriptor_first_loop_mode_two_source_byte_boundary
                     ||next.state_==S::post_descriptor_first_loop_mode_two_second_source_byte_boundary;
@@ -660,6 +735,10 @@ MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession
     constexpr std::size_t other_mode_followup_offset = 0x0387;
     constexpr std::size_t other_mode_followup_size = 18;
     if (titles_executable.size() != 7022
+        || to_hex(sha256(titles_executable.subspan(0x139f,62)))
+            != "42a404d94066eaf9e459169575427bb04a594c88fc1b683db6e3574e32b39e5a"
+        || to_hex(sha256(titles_executable.subspan(0x1afb,15)))
+            != "b4c5b260c0b7061bc5c179aafb00bdf53a6be8252985cea8d305ed389724d663"
         || to_hex(sha256(titles_executable.subspan(0x0e6b,116)))
             != "06323277c5dc901ffa5fa711f7e85ba1f4b27c71552f84440c5f4ba1f285b91e"
         || to_hex(sha256(titles_executable.subspan(0x1b20,8)))
@@ -827,16 +906,22 @@ void MillenniumDosTitleInitializationSession::execute_selected_followup_start(
         throw std::runtime_error("Detached Millennium DOS title BIOS continuation");
     }
     if(selected_followup_call_target_==0x044c){
+        const auto red=post_video_repeat_?owned_palette_byte(memory_effects_,child_code_segment_,0x014c):0;
+        const auto green=post_video_repeat_?owned_palette_byte(memory_effects_,child_code_segment_,0x014d):0;
+        const auto blue=post_video_repeat_?owned_palette_byte(memory_effects_,child_code_segment_,0x014e):0;
         memory_effects_.push_back({0x044e,0x0107,
             MillenniumDosTitleInitializationEffectWidth::byte,1});
         effects_.insert(effects_.end(),{
             {0x044c,"AL",1},{0x0452,"DS",child_code_segment_},
             {0x0454,"SI",0x014c},{0x0457,"CX",0x0010},
             {0x045b,"BX",0x0010},{0x045e,"BX",0x0000},
-            {0x0461,"DH",0},{0x0464,"CH",0},{0x0467,"CL",0},
+            {0x0461,"DH",static_cast<std::uint16_t>(red)},
+            {0x0464,"CH",static_cast<std::uint16_t>(green)},
+            {0x0467,"CL",static_cast<std::uint16_t>(blue)},
             {0x0469,"AH",0x10},{0x046b,"AL",0x10}});
         bios_boundary_={selected_followup_call_address_,0x044c,0x046d,0x10,
-            0x1010,0,0,0xff00,0,0x014c,false};
+            0x1010,0,static_cast<std::uint16_t>((green<<8U)|blue),0xff00,
+            static_cast<std::uint16_t>(red<<8U),0x014c,false};
     } else if(selected_followup_call_target_==0x0487){
         effects_.insert(effects_.end(),{
             {0x0487,"DS",child_code_segment_},{0x0489,"SI",0x0477},
@@ -848,6 +933,7 @@ void MillenniumDosTitleInitializationSession::execute_selected_followup_start(
         throw std::runtime_error("Unsupported Millennium DOS title BIOS continuation");
     }
     last_sequence_=sequence;
+    continuation_address_=bios_boundary_.interrupt_address;
     state_=MillenniumDosTitleInitializationState::bios_palette_interrupt_boundary;
 }
 
@@ -895,9 +981,9 @@ void MillenniumDosTitleInitializationSession::observe_bios_palette_result(
         if(selected_followup_call_target_==0x044c){
             const auto source=static_cast<std::uint16_t>(0x014c+next_index*3);
             const auto file_offset=static_cast<std::size_t>(source-0x0100);
-            const auto red=titles_executable[file_offset];
-            const auto green=titles_executable[file_offset+1];
-            const auto blue=titles_executable[file_offset+2];
+            const auto red=post_video_repeat_?owned_palette_byte(memory_effects_,child_code_segment_,source):titles_executable[file_offset];
+            const auto green=post_video_repeat_?owned_palette_byte(memory_effects_,child_code_segment_,static_cast<std::uint16_t>(source+1)):titles_executable[file_offset+1];
+            const auto blue=post_video_repeat_?owned_palette_byte(memory_effects_,child_code_segment_,static_cast<std::uint16_t>(source+2)):titles_executable[file_offset+2];
             bios_boundary_={selected_followup_call_address_,0x044c,0x046d,0x10,
                 0x1010,static_cast<std::uint16_t>(next_index),
                 static_cast<std::uint16_t>((green<<8U)|blue),0xff00,
@@ -1606,7 +1692,7 @@ void MillenniumDosTitleInitializationSession::observe_far_words(
             {0x12b3,"DI",0x0024},{0x12b6,"AX",0x126a},
             {0x12ba,"AX",child_code_segment_},{0x12bd,"ES",child_code_segment_}});
         last_sequence_=observation.sequence;
-        continuation_address_=0x1c02;
+        continuation_address_=selected_mode_==1?0x1c07:0x1c02;
         state_=MillenniumDosTitleInitializationState::post_video_hook_mode_call_boundary;
         return;
     }
@@ -2477,13 +2563,19 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
 void MillenniumDosTitleInitializationSession::execute_post_video_mode_call(
     const std::uint64_t sequence,const std::uint16_t call_address,
     const std::uint16_t call_target){
+    const bool mode_one=selected_mode_==1;
+    const auto expected_call=static_cast<std::uint16_t>(mode_one?0x1c07:0x1c02);
+    const auto expected_target=static_cast<std::uint16_t>(mode_one?0x1ac6:0x1ada);
     if(state_!=MillenniumDosTitleInitializationState::post_video_hook_mode_call_boundary
-        ||sequence!=last_sequence_+1||call_address!=0x1c02||call_target!=0x1ada
-        ||continuation_address_!=call_address||selected_mode_==1)
+        ||sequence!=last_sequence_+1||call_address!=expected_call||call_target!=expected_target
+        ||continuation_address_!=call_address)
         throw std::runtime_error("Detached Millennium DOS post-video mode call");
-    effects_.insert(effects_.end(),{{0x1ada,"AX",0x0004},
-        {0x1add,"ES",child_code_segment_},{0x1adf,"BX",0x1ac5}});
-    selected_callee_boundary_={0x1ae2,0x0122,0x0127,0x91,0x0004,
+    selected_call_address_=expected_call;
+    selected_call_target_=expected_target;
+    effects_.insert(effects_.end(),{{expected_target,"AX",0x0004},
+        {static_cast<std::uint16_t>(expected_target+3),"ES",child_code_segment_},
+        {static_cast<std::uint16_t>(expected_target+5),"BX",0x1ac5}});
+    selected_callee_boundary_={static_cast<std::uint16_t>(mode_one?0x1ace:0x1ae2),0x0122,0x0127,0x91,0x0004,
         child_code_segment_,0x1ac5,false};
     post_video_repeat_=true;
     last_sequence_=sequence;
@@ -2496,7 +2588,7 @@ void MillenniumDosTitleInitializationSession::execute_post_video_setup(
     const std::uint16_t call_target){
     if(state_!=MillenniumDosTitleInitializationState::post_video_setup_call_boundary
         ||sequence!=last_sequence_+1||call_address!=0x1c0e||call_target!=0x135e
-        ||continuation_address_!=call_address||selected_mode_==1)
+        ||continuation_address_!=call_address)
         throw std::runtime_error("Detached Millennium DOS post-video setup");
     const auto pointer_cell=static_cast<std::uint16_t>(selected_mode_==1?0x010c:0x0110);
     std::uint16_t source_segment=0;
@@ -2515,9 +2607,10 @@ void MillenniumDosTitleInitializationSession::execute_post_video_setup(
         MillenniumDosTitleInitializationEffectWidth::word,child_code_segment_});
     effects_.insert(effects_.end(),{{0x135f,"DS",child_code_segment_},
         {0x1361,"ES",child_code_segment_},{0x1362,"SI",0},
-        {0x1362,"DS",source_segment},{0x1367,"AL",selected_mode_},
-        {0x136f,"SI",0},{0x136f,"DS",source_segment},
-        {0x1374,"AX",0},{0x137a,"AX",source_segment},
+        {0x1362,"DS",source_segment},{0x1367,"AL",selected_mode_}});
+    if(selected_mode_!=1)effects_.insert(effects_.end(),{
+        {0x136f,"SI",0},{0x136f,"DS",source_segment}});
+    effects_.insert(effects_.end(),{{0x1374,"AX",0},{0x137a,"AX",source_segment},
         {0x1380,"AX",child_code_segment_},{0x1382,"DS",child_code_segment_}});
     last_sequence_=sequence;
     continuation_address_=0x1c11;
@@ -2529,7 +2622,7 @@ void MillenniumDosTitleInitializationSession::execute_post_video_graphics_call(
     const std::uint16_t call_target){
     if(state_!=MillenniumDosTitleInitializationState::post_video_graphics_call_boundary
         ||sequence!=last_sequence_+1||call_address!=0x1c11||call_target!=0x0ff3
-        ||continuation_address_!=call_address||selected_mode_==1)
+        ||continuation_address_!=call_address)
         throw std::runtime_error("Detached Millennium DOS graphics request");
     effects_.insert(effects_.end(),{{0x0ff3,"AX",child_code_segment_},
         {0x0ff5,"ES",child_code_segment_},{0x0ff7,"BX",0x0fe9},
@@ -2548,7 +2641,7 @@ void MillenniumDosTitleInitializationSession::execute_post_video_followup(
     const std::uint16_t call_target){
     if(state_!=MillenniumDosTitleInitializationState::post_video_followup_call_boundary
         ||sequence!=last_sequence_+1||call_address!=0x1c17||call_target!=0x1725
-        ||continuation_address_!=call_address||selected_mode_==1)
+        ||continuation_address_!=call_address)
         throw std::runtime_error("Detached Millennium DOS descriptor setup");
     const auto owned_word=[this](const std::uint16_t offset){
         for(auto it=memory_effects_.rbegin();it!=memory_effects_.rend();++it)

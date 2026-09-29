@@ -1043,7 +1043,12 @@ void assert_modern_asset_pack_admission() {
 
 } // namespace
 
-int main() {
+int test_millennium_dos_title_runtime(const std::filesystem::path& root);
+
+int main(int argc, char** argv) {
+    if (argc == 3 && std::string_view(argv[1]) == "--direct-title-runtime")
+        return test_millennium_dos_title_runtime(argv[2]);
+    if (argc != 1) return 2;
     {
         eon::MillenniumDosParagraphArena arena(7,0x0100,0x0110);
         assert(!arena.allocate(0).allocation);

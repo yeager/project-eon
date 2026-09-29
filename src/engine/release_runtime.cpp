@@ -2052,7 +2052,58 @@ MillenniumDosTitleInitializationObservationResult ReleaseRuntimeCoordinator::obs
     const auto checkpoint=next.checkpoint();if(checkpoint.memory_effects.size()>prior){NativeRuntimeEffectBatch batch{"millennium-dos-title-next-setup-"+std::to_string(observation.sequence),true,{}};for(std::size_t i=prior;i<checkpoint.memory_effects.size();++i){const auto& effect=checkpoint.memory_effects[i];batch.effects.push_back({batch.effects.size()+1,{NativeRuntimeAddressSpace::dos_segmented,checkpoint.child_code_segment,effect.offset},effect.width==MillenniumDosTitleInitializationEffectWidth::byte?MemoryTransferElementWidth::byte:MemoryTransferElementWidth::word,NativeRuntimeByteOrder::little_endian,effect.value});}const auto applied=memory.apply(batch);if(!applied.accepted){result.error=applied.error;return result;}}
     millennium_dos_title_initialization_=std::move(next);*native_runtime_memory_=std::move(memory);result.accepted=true;return result;
 }
-MillenniumDosTitleInitializationObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_title_far_words(const MillenniumDosTitleFarWordsObservation observation){MillenniumDosTitleInitializationObservationResult result;if(!active_||!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_title||!millennium_dos_title_initialization_||!native_runtime_memory_){result.error="Title far words require the active native title boundary";return result;}auto next=*millennium_dos_title_initialization_;auto memory=*native_runtime_memory_;const auto prior=next.checkpoint().memory_effects.size();try{next.observe_far_words(observation);auto reached=next.checkpoint();if(reached.state==MillenniumDosTitleInitializationState::post_vector_hook_call_boundary){next.execute_video_hook_setup(reached.last_sequence+1,0x1bf8,0x12a0);reached=next.checkpoint();}if(reached.state==MillenniumDosTitleInitializationState::post_video_hook_mode_call_boundary)next.execute_post_video_mode_call(reached.last_sequence+1,0x1c02,0x1ada);}catch(const std::exception& e){result.error=e.what();return result;}const auto checkpoint=next.checkpoint();NativeRuntimeEffectBatch batch{"millennium-dos-title-vector-hook-"+std::to_string(observation.sequence),true,{}};for(std::size_t i=prior;i<checkpoint.memory_effects.size();++i){const auto& effect=checkpoint.memory_effects[i];batch.effects.push_back({batch.effects.size()+1,{NativeRuntimeAddressSpace::dos_segmented,effect.explicit_segment?effect.segment:checkpoint.child_code_segment,effect.offset},effect.width==MillenniumDosTitleInitializationEffectWidth::byte?MemoryTransferElementWidth::byte:MemoryTransferElementWidth::word,NativeRuntimeByteOrder::little_endian,effect.value});}const auto applied=memory.apply(batch);if(!applied.accepted){result.error=applied.error;return result;}millennium_dos_title_initialization_=std::move(next);*native_runtime_memory_=std::move(memory);result.accepted=true;return result;}
+MillenniumDosTitleInitializationObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_title_far_words(
+    const MillenniumDosTitleFarWordsObservation observation) {
+    MillenniumDosTitleInitializationObservationResult result;
+    if (!active_ || !session_snapshot_
+        || session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title
+        || !millennium_dos_title_initialization_ || !native_runtime_memory_) {
+        result.error = "Title far words require the active native title boundary";
+        return result;
+    }
+    auto next = *millennium_dos_title_initialization_;
+    auto memory = *native_runtime_memory_;
+    const auto prior = next.checkpoint().memory_effects.size();
+    try {
+        next.observe_far_words(observation);
+        auto reached = next.checkpoint();
+        if (reached.state == MillenniumDosTitleInitializationState::post_vector_hook_call_boundary) {
+            next.execute_video_hook_setup(reached.last_sequence + 1, 0x1bf8, 0x12a0);
+            reached = next.checkpoint();
+        }
+        if (reached.state == MillenniumDosTitleInitializationState::post_video_hook_mode_call_boundary) {
+            next.execute_post_video_mode_call(reached.last_sequence + 1,
+                reached.selected_mode == 1 ? 0x1c07 : 0x1c02,
+                reached.selected_mode == 1 ? 0x1ac6 : 0x1ada);
+        }
+    } catch (const std::exception& e) {
+        result.error = e.what();
+        return result;
+    }
+    const auto checkpoint = next.checkpoint();
+    NativeRuntimeEffectBatch batch{
+        "millennium-dos-title-vector-hook-" + std::to_string(observation.sequence), true, {}};
+    for (std::size_t i = prior; i < checkpoint.memory_effects.size(); ++i) {
+        const auto& effect = checkpoint.memory_effects[i];
+        batch.effects.push_back({batch.effects.size() + 1,
+            {NativeRuntimeAddressSpace::dos_segmented,
+                effect.explicit_segment ? effect.segment : checkpoint.child_code_segment,
+                effect.offset},
+            effect.width == MillenniumDosTitleInitializationEffectWidth::byte
+                ? MemoryTransferElementWidth::byte : MemoryTransferElementWidth::word,
+            NativeRuntimeByteOrder::little_endian, effect.value});
+    }
+    const auto applied = memory.apply(batch);
+    if (!applied.accepted) {
+        result.error = applied.error;
+        return result;
+    }
+    millennium_dos_title_initialization_ = std::move(next);
+    *native_runtime_memory_ = std::move(memory);
+    result.accepted = true;
+    return result;
+}
 MillenniumDosTitleInitializationObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_title_far_word(const MillenniumDosTitleFarWordObservation observation){MillenniumDosTitleInitializationObservationResult result;if(!active_||!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_title||!millennium_dos_title_initialization_||!native_runtime_memory_){result.error="Title far word requires the active native title boundary";return result;}auto next=*millennium_dos_title_initialization_;auto memory=*native_runtime_memory_;const auto prior=next.checkpoint().memory_effects.size();try{next.observe_far_word(observation);}catch(const std::exception& e){result.error=e.what();return result;}const auto checkpoint=next.checkpoint();NativeRuntimeEffectBatch batch{"millennium-dos-title-record-word-"+std::to_string(observation.sequence),true,{}};for(std::size_t i=prior;i<checkpoint.memory_effects.size();++i){const auto& effect=checkpoint.memory_effects[i];batch.effects.push_back({batch.effects.size()+1,{NativeRuntimeAddressSpace::dos_segmented,effect.explicit_segment?effect.segment:checkpoint.child_code_segment,effect.offset},effect.width==MillenniumDosTitleInitializationEffectWidth::byte?MemoryTransferElementWidth::byte:MemoryTransferElementWidth::word,NativeRuntimeByteOrder::little_endian,effect.value});}if(!batch.effects.empty()){const auto applied=memory.apply(batch);if(!applied.accepted){result.error=applied.error;return result;}}millennium_dos_title_initialization_=std::move(next);*native_runtime_memory_=std::move(memory);result.accepted=true;return result;}
 MillenniumDosTitleInitializationObservationResult ReleaseRuntimeCoordinator::observe_millennium_dos_title_far_byte(const MillenniumDosTitleFarByteObservation observation){MillenniumDosTitleInitializationObservationResult result;if(!active_||!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::millennium_dos_title||!millennium_dos_title_initialization_||!native_runtime_memory_){result.error="Title far byte requires the active native title boundary";return result;}auto next=*millennium_dos_title_initialization_;auto memory=*native_runtime_memory_;const auto prior=next.checkpoint().memory_effects.size();try{next.observe_far_byte(observation);}catch(const std::exception& e){result.error=e.what();return result;}const auto checkpoint=next.checkpoint();NativeRuntimeEffectBatch batch{"millennium-dos-title-record-byte-"+std::to_string(observation.sequence),true,{}};for(std::size_t i=prior;i<checkpoint.memory_effects.size();++i){const auto& effect=checkpoint.memory_effects[i];batch.effects.push_back({batch.effects.size()+1,{NativeRuntimeAddressSpace::dos_segmented,effect.explicit_segment?effect.segment:checkpoint.child_code_segment,effect.offset},effect.width==MillenniumDosTitleInitializationEffectWidth::byte?MemoryTransferElementWidth::byte:MemoryTransferElementWidth::word,NativeRuntimeByteOrder::little_endian,effect.value});}const auto applied=memory.apply(batch);if(!applied.accepted){result.error=applied.error;return result;}millennium_dos_title_initialization_=std::move(next);*native_runtime_memory_=std::move(memory);result.accepted=true;return result;}
 

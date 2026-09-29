@@ -85,6 +85,8 @@ enum class MillenniumDosTitleInitializationState {
     post_descriptor_first_loop_encoded_high_xlat_byte_boundary,
     post_descriptor_first_loop_encoded_record_complete,
     post_descriptor_first_loop_mode_one_header_byte_boundary,
+    descriptor_mode_one_translation_boundary,
+    descriptor_mode_one_return_boundary,
     post_descriptor_first_loop_other_header_byte_boundary,
     post_descriptor_first_loop_mode_two_header_byte_boundary,
     post_descriptor_first_loop_mode_two_header_second_byte_boundary,
@@ -529,6 +531,9 @@ private:
     std::uint8_t title_library_read_index_ = 0;
     std::uint16_t title_library_first_read_count_ = 0;
     std::uint16_t failure_address_ = 0;
+    std::size_t mode_one_table_file_offset_ = 0;
+    std::uint16_t mode_one_translation_offset_ = 0;
+    std::uint16_t mode_one_translation_remaining_ = 0;
     std::uint16_t continuation_address_ = 0;
     std::vector<MillenniumDosTitleDosVectorResultRecord> dos_vector_results_;
     MillenniumDosTitleSetupBiosBoundary setup_bios_boundary_;

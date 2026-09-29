@@ -383,6 +383,7 @@ if(BUILD_TESTING)
     endif()
     add_executable(eon-native-tests
         tests/native_tests.cpp
+        tests/millennium_dos_title_runtime_test.cpp
         ${EON_RUNTIME_SOURCES}
     )
     target_include_directories(eon-native-tests PRIVATE src)
@@ -434,6 +435,12 @@ if(BUILD_TESTING)
     add_test(NAME native-data-detection COMMAND eon-native-tests)
     set_tests_properties(native-data-detection PROPERTIES
         ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
+    if(EON_DIRECT_DATA_DIR)
+        add_test(NAME millennium-dos-title-runtime-real-media
+            COMMAND eon-native-tests --direct-title-runtime "${EON_DIRECT_DATA_DIR}")
+        set_tests_properties(millennium-dos-title-runtime-real-media PROPERTIES
+            ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
+    endif()
     add_executable(eon-game-text-localization-tests
         tests/game_text_localization_tests.cpp
         src/game_text_localization.cpp

@@ -322,8 +322,10 @@ int main(int argc, char** argv) {
         &&sized_allocation.dos_boundary.cx==0x0004
         &&sized_allocation.dos_boundary.dx==0xbeef
         &&sized_allocation.memory_effects.size()==9);
+    // Exercise the mode-one loop with the coordinator's library base,
+    // distinct from the mode-two fixture's historical $3000 allocation.
     initialization.observe_dos_memory_result(
-        {33,0x1b64,0x1b66,false,0x3000,0,0x0202});
+        {33,0x1b64,0x1b66,false,0x4fa1,0,0x0202});
     assert(initialization.checkpoint().state
         ==eon::MillenniumDosTitleInitializationState::
             dos_single_paragraph_allocation_result_boundary
@@ -350,7 +352,7 @@ int main(int argc, char** argv) {
         &&initialization.checkpoint().dos_boundary.service==0x3f
         &&initialization.checkpoint().dos_boundary.bx==0x0055
         &&initialization.checkpoint().dos_boundary.cx==0x8000
-        &&initialization.checkpoint().dos_boundary.segment==0x3000);
+        &&initialization.checkpoint().dos_boundary.segment==0x4fa1);
     bool oversized_library_read_rejected=false;
     try {
         initialization.observe_dos_file_result(
@@ -398,7 +400,7 @@ int main(int argc, char** argv) {
         &&relocation.continuation_address==0x0f6b
         &&relocation.dos_file_results.size()==14
         &&relocation.memory_effects.size()==18924
-        &&relocation.memory_effects[14].segment==0x3000
+        &&relocation.memory_effects[14].segment==0x4fa1
         &&relocation.memory_effects[14].offset==0
         &&relocation.memory_effects[14].value==0x26
         &&relocation.memory_effects[18921].offset==0x0e5d
@@ -406,7 +408,7 @@ int main(int argc, char** argv) {
         &&relocation.memory_effects[18922].offset==0x0e4a
         &&relocation.memory_effects[18922].value==3
         &&relocation.memory_effects[18923].offset==0x0e4c
-        &&relocation.memory_effects[18923].value==0x3481);
+        &&relocation.memory_effects[18923].value==0x5422);
     auto palette_bad=initialization;
     auto damaged_palette_library=title_library;damaged_palette_library[0x25f9]^=1;
     rejected=false;
@@ -423,7 +425,7 @@ int main(int argc, char** argv) {
         &&palette.memory_effects[18924].offset==0x0e59
         &&palette.memory_effects[18924].value==6
         &&palette.memory_effects[18925].offset==0x0e5b
-        &&palette.memory_effects[18925].value==0x3000
+        &&palette.memory_effects[18925].value==0x4fa1
         &&palette.memory_effects[18926].offset==0x014c
         &&palette.memory_effects[18926].value==0);
     for(std::size_t i=0;i<768;++i){
@@ -860,6 +862,111 @@ int main(int argc, char** argv) {
         &&incomplete_function_001a.checkpoint().memory_effects.size()==18958);
     const std::vector<std::uint8_t> observed_function_001a_record{
         0x10,0x20,0x30,0x40,0x50,0x60,0x70,0x80,0x68,0x24};
+    // Explicitly synthetic external returns exercise the mode-one caller;
+    // all subsequent loop operands come from the genuine hash-bound leaf.
+    auto mode_one_loop=palette_return;
+    const auto step=[&](){return mode_one_loop.checkpoint().last_sequence+1;};
+    mode_one_loop.execute_post_library_setup(step(),0x1bef,0x1aac);
+    mode_one_loop.observe_dos_vector_result({step(),0x10f4,0x10f6,0,0x1234,0xabcd,0});
+    mode_one_loop.observe_dos_vector_result({step(),0x1106,0x1108,0,0,0,0});
+    mode_one_loop.observe_dos_vector_result({step(),0x110b,0x110d,0,0x5678,0xcdef,0});
+    mode_one_loop.observe_dos_vector_result({step(),0x111d,0x111f,0,0,0,0});
+    mode_one_loop.observe_setup_bios_result({step(),0x1ab9,0x1abb,0,0,0});
+    mode_one_loop.observe_setup_bios_result({step(),0x1ac1,0x1ac3,0,0,0});
+    mode_one_loop.execute_next_setup(step(),0x1bf2,0x11a7);
+    mode_one_loop.execute_followup_setup(step(),0x1bf5,0x114e);
+    mode_one_loop.observe_far_words({step(),0x115d,0,0x70,0,0});
+    mode_one_loop.execute_video_hook_setup(step(),0x1bf8,0x12a0);
+    mode_one_loop.observe_far_words({step(),0x12ad,0,0x24,0,0});
+    assert(mode_one_loop.checkpoint().continuation_address==0x1c07);
+    mode_one_loop.execute_post_video_mode_call(step(),0x1c07,0x1ac6);
+    mode_one_loop.observe_selected_callee_private_interrupt_result({step(),0x0127,0x0129,0x1ad1,0,0});
+    mode_one_loop.execute_selected_followup_start(step(),0x1ad1,0x044c);
+    for(unsigned index=0;index<16;++index){
+        const auto boundary=mode_one_loop.checkpoint();
+        assert(boundary.continuation_address==0x046d
+            &&boundary.bios_boundary.cx==static_cast<std::uint16_t>(
+                (title_library[0x25f9+index*3+1]<<8U)|title_library[0x25f9+index*3+2])
+            &&boundary.bios_boundary.dx_known_value==static_cast<std::uint16_t>(title_library[0x25f9+index*3]<<8U));
+        mode_one_loop.observe_bios_palette_result({step(),0x046d,0x046f,0,0},titles);
+    }
+    mode_one_loop.execute_post_video_setup(step(),0x1c0e,0x135e);
+    mode_one_loop.execute_post_video_graphics_call(step(),0x1c11,0x0ff3);
+    mode_one_loop.observe_private_interrupt_result({step(),0x0127,0x0129,0,0});
+    mode_one_loop.execute_post_video_followup(step(),0x1c17,0x1725);
+    mode_one_loop.observe_far_words({step(),0x13aa,0x5422,3,6,0});
+    mode_one_loop.observe_far_word({step(),0x13cd,0x4fa1,0x1e,0x0140});
+    mode_one_loop.observe_far_word({step(),0x13d0,0x4fa1,0x1c,0x00c8});
+    mode_one_loop.observe_far_word({step(),0x13e2,0x4fa1,0x1a,0});
+    mode_one_loop.observe_far_byte({step(),0x13e9,0x4fa1,7,0x23});
+    mode_one_loop.observe_far_byte({step(),0x13f2,0x4fa1,10,0});
+    mode_one_loop.observe_private_interrupt_result({step(),0x0127,0x0129,0,0});
+    mode_one_loop.observe_private_interrupt_result({step(),0x0127,0x0129,0,0,0x2468,0x0fdf,
+        observed_function_001a_record});
+    eon::NativeRuntimeMemory mode_one_memory;
+    bool mode_one_finished=false;
+    bool mode_one_resume_checked=false;
+    for(unsigned frame=0;frame<1024&&!mode_one_finished;++frame){
+        if(!mode_one_resume_checked&&mode_one_loop.checkpoint().state
+            ==eon::MillenniumDosTitleInitializationState::descriptor_mode_one_translation_boundary){
+            auto missing=mode_one_loop;
+            eon::NativeRuntimeMemory empty_memory;
+            const auto before=missing.checkpoint();
+            const auto failed=missing.drive_descriptor_loop_from_title_library(
+                empty_memory,title_library,{before.last_sequence+1,1});
+            assert(!failed.accepted&&failed.observation_count==0
+                &&missing.checkpoint().last_sequence==before.last_sequence
+                &&missing.checkpoint().memory_effects.size()==before.memory_effects.size()
+                &&empty_memory.revision()==0);
+            auto split=mode_one_loop;auto split_memory=mode_one_memory;
+            auto paired=mode_one_loop;auto paired_memory=mode_one_memory;
+            for(unsigned index=0;index<2;++index){
+                const auto single=split.drive_descriptor_loop_from_title_library(split_memory,
+                    title_library,{split.checkpoint().last_sequence+1,1});
+                assert(single.accepted&&single.observation_count==1);
+            }
+            const auto pair=paired.drive_descriptor_loop_from_title_library(paired_memory,
+                title_library,{before.last_sequence+1,2});
+            assert(pair.accepted&&split_memory.checkpoint().checksum==paired_memory.checkpoint().checksum
+                &&split.checkpoint().last_sequence==paired.checkpoint().last_sequence
+                &&split.checkpoint().continuation_address==paired.checkpoint().continuation_address);
+            mode_one_resume_checked=true;
+        }
+        const auto result=mode_one_loop.drive_descriptor_loop_from_title_library(
+            mode_one_memory,title_library,{step(),256});
+        if(!result.accepted)throw std::runtime_error(result.error);
+        mode_one_finished=result.returned;
+    }
+    assert(mode_one_finished&&mode_one_resume_checked
+        &&mode_one_loop.checkpoint().continuation_address==0x1967);
+    std::size_t translated_count=0;
+    std::uint16_t admitted_mode_one_segment=0;
+    for(const auto& effect:mode_one_loop.checkpoint().memory_effects)
+        if(!effect.explicit_segment&&effect.segment==0&&effect.offset==0x010e
+            &&effect.width==eon::MillenniumDosTitleInitializationEffectWidth::word)
+            admitted_mode_one_segment=effect.value;
+    assert(admitted_mode_one_segment!=0);
+    std::map<std::uint16_t,std::uint8_t> decoded_mode_one;
+    for(const auto& effect:mode_one_loop.checkpoint().memory_effects){
+        if(effect.instruction_address==0x14d5){
+            assert(effect.explicit_segment&&effect.segment==admitted_mode_one_segment);
+            const auto directory=0x4813U+12U*(effect.offset/368U);
+            const auto record=static_cast<std::size_t>(title_library[directory]
+                |title_library[directory+1]<<8U);
+            const auto delta=static_cast<std::size_t>(title_library[record+26]
+                |title_library[record+27]<<8U);
+            const auto table=record+delta+28U+((title_library[record]&1U)?768U:0U);
+            assert(decoded_mode_one.contains(effect.offset)
+                &&effect.value==title_library[table+decoded_mode_one.at(effect.offset)]);
+            ++translated_count;
+        }
+        if(effect.explicit_segment&&effect.segment==admitted_mode_one_segment){
+            decoded_mode_one[effect.offset]=static_cast<std::uint8_t>(effect.value);
+            if(effect.width==eon::MillenniumDosTitleInitializationEffectWidth::word)
+                decoded_mode_one[static_cast<std::uint16_t>(effect.offset+1)]=static_cast<std::uint8_t>(effect.value>>8U);
+        }
+    }
+    assert(translated_count==37U*368U);
     other_success.observe_private_interrupt_result(
         {91,0x0127,0x0129,0xbeef,0x0202,0x2468,0x0fdf,
             observed_function_001a_record});

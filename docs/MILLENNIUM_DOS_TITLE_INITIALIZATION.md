@@ -92,7 +92,7 @@ request:
 | `$1ad1 -> $044c` | `$044c..$046e` | `1c2afa83de99564ceb8e9168f7d6fa586ef7ba21ec2b7d1bdaad9291ec3efc0a` | `INT $10` at `$046d`, `AX=$1010`, `BX=0`, `CX=0`, known `DH=0` |
 | `$1ae5 -> $0487` | `$0487..$0498` | `111aabbae0194a132060f1acd6cc5d6c100ccb9c64facdb64c90785a845e6c6b` | `INT $10` at `$0497`, `AX=$1000`, `BX=0`, `CX=$0010` |
 
-The mode-one path reads its first RGB triplet from the exact 48-byte table at
+The initial mode-one path reads its first RGB triplet from the exact 48-byte table at
 `$014c` (SHA-256
 `9d1fdeadf710e7f0a6736f172415e15d7db87480588ec771327f30128afb43e9`)
 and writes byte one to child cell `$0107`. The other path reads the first
@@ -104,7 +104,7 @@ For mode one, only the high byte of DX is known at the BIOS boundary because
 the code writes DH but retains the incoming DL. The checkpoint therefore
 publishes a DX known-mask of `$ff00` rather than fabricating DL. The other
 route does not use a proven DX value and publishes a zero known-mask. Eon
-stops before either BIOS result and does not iterate the palette loops. The
+stops before each BIOS result. The
 mode-one `$0107 := 1` write commits atomically with the state transition; the
 other route advances state without inventing an empty memory batch.
 
@@ -114,8 +114,10 @@ Each BIOS return is a typed, ordered observation. Mode one accepts only
 `$046d -> $046f`; the other route accepts only `$0497 -> $0499`. Raw AX and
 FLAGS are retained for all 16 observations, but the original loops do not use
 those returned values. They restore/decrement their own loop counter and read
-the next request directly from the still hash-verified `TITLES.EXE` view.
-Project Eon therefore retains no copied palette table in the session.
+the next request from the current palette. Initial requests use the
+hash-verified `TITLES.EXE` table. The repeated mode-one invocation follows the
+owned TITLE.LIB copy into child `$014c`; it must use those latest local bytes,
+including the first RGB triplet, rather than the original executable table.
 
 For mode one, request index `i` has `BX=i`, reads the RGB triplet at
 `$014c + 3*i`, exposes its first byte as known DH and its next two bytes as
@@ -365,7 +367,11 @@ copies the words to `CS:$1266/$1268` and atomically installs `CS:$126a` at
 IVT cell `$0000:$0024`. The non-mode-1 caller's next 10 bytes (SHA-256
 `a111bf870ff60815e5d9f6a8c5d3a765335dcc8d77e1b0034b185b0872a3ec4d`)
 test the established mode byte and reach call `$1c02->$1ada`. Execution stops
-before that call. That second invocation now reuses the same hash-bound `$1ada`
+before that call. Mode one instead reaches `$1c07->$1ac6`, requests private
+function `$0004`, and repeats `$044c` with the current library palette.
+The complete selector `$1bfb..$1c09` is bound at file `+$1afb`, 15 bytes,
+SHA-256 `b4c5b260c0b7061bc5c179aafb00bdf53a6be8252985cea8d305ed389724d663`.
+The non-mode-one second invocation reuses the same hash-bound `$1ada`
 callee contract: function `$0004` through INT `$91`, followed by the `$0487`
 palette routine and its sixteen individually typed BIOS INT `$10` results.
 Its exact return re-applies the mode-2 `$b800` video segment when selected,
@@ -374,7 +380,8 @@ call `$1c0e->$135e`. Mode one's preceding palette BIOS boundary at `$0fd8`
 remains distinct from these repeated palette calls.
 The 42-byte `$135e` callee (file `+$125e`, SHA-256
 `c35f93db0d58443d76374684ed2c54ce78ddb7fc8e01ffa809026382450b4868`)
-selects the already-owned second DOS allocation for non-mode-1, stores its
+selects the already-owned first DOS allocation (`$010c/$010e`) for mode one
+and the second (`$0110/$0112`) otherwise, stores its
 far pointer at `CS:$1341/$1343`, stores CS at `$134b`, restores DS, and
 returns. The `$0ff3` request prefix (16 bytes, SHA-256
 `d17cc200504c832c3062e1c6951c753a8819c0fd1255b7273c28b3fcf1f3e363`)
@@ -471,9 +478,38 @@ All 37 original records select payload decoder branch two and produce
 display mode. The complete-loop regression explicitly supplies global mode
 two to exercise its recovered postprocessing; neither supplied English video
 driver establishes that mode. A successful MCGA function-zero return has
-AH=1, while EGA640 returns AH=4. Their mode-one and other-mode postprocessing
-remain separate recovery work, and the 37-record regression does not prove
-either supplied driver's complete title path.
+AH=1, while EGA640 returns AH=4. Mode-one postprocessing now has its own
+complete 37-record regression. EGA's other-mode postprocessing remains
+separate recovery work; neither regression proves a complete installed-driver
+title path because the earlier private and BIOS results remain typed inputs.
+
+### Mode-one postprocessing
+
+The branch and translation body `$149f..$14dc` (file `+$139f`, 62 bytes,
+SHA-256 `42a404d94066eaf9e459169575427bb04a594c88fc1b683db6e3574e32b39e5a`)
+locate the record's translation table after its payload and optional 768-byte
+palette. The `$14d0/$14d3/$14d5` loop reads each decoded byte from the owned
+`$010c/$010e` destination, indexes that table, and writes the translated byte
+in place. Each of the 37 genuine records produces 368 translated bytes.
+The finite execution quantum can stop between bytes; missing initialized
+source memory rejects the entire quantum without committing session or memory.
+The recovered return at `$14dc` rejoins the existing descriptor caller and
+eventually reaches `$1967`.
+
+Directory and normalized record addresses are relative to the admitted
+library allocation. The illustrative `$3000` segment is not a requirement
+of the native loop. The first loaded prefix must still cover every header,
+payload operand and translation table used; a full immutable leaf alone is
+not evidence that a short DOS read populated those runtime addresses.
+
+With `EON_DIRECT_DATA_DIR` configured, CTest also registers
+`millennium-dos-title-runtime-real-media`. It uses the normal coordinator
+and verified direct-media admission to reach `$0fd8`, checks all 768 owned
+palette bytes and rejection rollback, then follows typed setup inputs through
+the repeated mode-one palette to the private function `$19` request. Its
+external BIOS/vector/private returns are explicitly synthetic contract inputs;
+the test does not require the unrelated complete archive corpus and does not
+claim a captured hardware result.
 
 The independent bounded source audit observed lookup and
 ordinary-run branches only; synthetic arithmetic regressions retain escape,

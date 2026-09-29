@@ -13,8 +13,13 @@ does not establish which driver is installed.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,
 respectively. The existing global-mode-2 descriptor regression uses explicit
 arithmetic observations; it is not evidence that either supplied driver
-reaches that path. Prioritize the corrected mode-one palette and remaining
-mode-one descriptor postprocessing alongside graphics-loader ownership.
+reaches that path. Mode one's repeated palette now uses the current library
+bytes, selects `$1c07->$1ac6`, and enters its own bounded descriptor
+postprocessing. All 37 records translate 368 decoded bytes in place before
+the shared `$1967` return. This execution accepts the actual library allocation
+instead of requiring the test fixture's `$3000` segment. Earlier BIOS/private
+results remain explicit inputs; graphics-loader ownership and EGA mode-four
+postprocessing remain priorities before claiming a complete driver path.
 
 The owned mode-two path now addresses the complete 37-record loop using the
 actual relocated directory at TITLE.LIB+$4813. The first record is

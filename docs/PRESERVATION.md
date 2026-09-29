@@ -4682,6 +4682,28 @@ This proves original input-to-request control flow, not a host policy: Project
 Eon does not read a host command tail as original hardware detection, select a
 driver, or assume the loader/DOS/vector calls succeed.
 
+The read-in-place loader audit additionally binds `$02cf..$031b` (file
+`+$01cf`, 77 bytes, SHA-256
+`5c7f7ec03aa3109d4df2fbdec457ca7e2be412fc9d818bd07252a039fb8c6671`)
+and the vector-install request `$0207..$020d` (file `+$0107`, seven bytes,
+SHA-256 `3ddea3ddd44ab8bff9643c6f3d0bf0d46ef382aabdc799a0e4858ce84748eb09`).
+The loader checks the read carry flag but does not compare returned AX with
+the requested length. A carry-clear short read therefore does not establish
+an exact loaded driver, even if the original caller proceeds to install its
+vector. Native ownership must retain the actual loaded range and require the
+complete identified leaf before dispatching a recovered driver routine.
+
+Both identified drivers' function `$13` contains the same 14-byte routine
+(EGA file `+$0d37`, MCGA file `+$0905`, SHA-256
+`3bc140d91abbde582da6b63df063ad9ca92aeea2fd74d285d5eda8e9aa24f440`).
+It polls status port `$03da` until bit `$08` clears and then sets. These reads
+remain external device inputs. The MCGA dispatcher also has a conditional
+postlude at file `+$0012`, 19 bytes, SHA-256
+`b730298f05c412e926887cdef49cfed19e5c4aac7e211cecdaa95a1d17fac316`:
+nonzero driver cell `$01e5` invokes `$0d22` before IRET. A completed retrace
+poll alone therefore does not establish a completed MCGA interrupt return.
+No device values, selected driver, or callback result are inferred here.
+
 The same hash-identified `MILL.COM` contains a distinct sound-effect choice
 routine at loaded `$0511..$0574` (file `+$0411`, 100 bytes, SHA-256
 `f9e63fc4c7c590fc57abef4a0154a2399f714951c787f98d2f7d64eee86a7434`). Its
@@ -4947,6 +4969,18 @@ and is required by the native session constructor.
 The native path stops at BIOS INT $10/$0fd8 with AX=$1012, BX=0, CX=$00ff,
 ES=child CS and DX=$014c. Only an external typed result at `$0fda` permits
 the original return to `$1bef`; no visible palette or BIOS success is claimed.
+The later mode-one selector `$1bfb..$1c09` (file `+$1afb`, 15 bytes,
+SHA-256 `b4c5b260c0b7061bc5c179aafb00bdf53a6be8252985cea8d305ed389724d663`)
+calls `$1ac6` at `$1c07`. Its repeated BIOS palette loop uses the current
+owned child palette copied above, not the initial TITLES.EXE RGB bytes.
+Mode-one descriptor translation `$149f..$14dc` (file `+$139f`, 62 bytes,
+SHA-256 `42a404d94066eaf9e459169575427bb04a594c88fc1b683db6e3574e32b39e5a`)
+maps the 368 decoded bytes of each of the 37 genuine records in place using
+its record-specific library table. The native finite-step driver validates
+loaded-prefix bounds, exact segmented ownership and initialized source bytes;
+its successful final return is `$1967`. The preceding BIOS/private returns
+remain explicit inputs. Regression inputs exercise those contracts without
+claiming captured driver execution or a displayed frame.
 For non-mode-1, the separately hash-bound epilogue returns to its proven
 `$1bec` caller and reaches call `$1bef -> $1aac`. Eon stops before that setup
 callee; mode one reaches that caller only after its separate palette BIOS result.
