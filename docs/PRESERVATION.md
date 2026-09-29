@@ -4774,6 +4774,22 @@ nonzero driver cell `$01e5` invokes `$0d22` before IRET. A completed retrace
 poll alone therefore does not establish a completed MCGA interrupt return.
 No device values, selected driver, or callback result are inferred here.
 
+A separate hash-bound interrupt session now connects a typed request at the
+title wrapper's `$0127` (`AX=$0013`) to the exact driver table entry and
+function `$13` poll loop. The EGA dispatch prefix at file `+$0000..+$0012`
+hashes to `a7d507882cf6bfe5b51db64b2dfb3ea8dd66f9d032b52622af2edac0a5ba81aa`;
+its handler table begins at `$0020`, and IRET is at `$0012`. MCGA's prefix
+through its conditional IRET (`+$0000..+$0024`) hashes to
+`e61647601d433d528ab51403c7a73371d58bdbfe0bd25789e936489844f3630f`; its
+handler table begins at `$0032`. After the poll, the session records the
+hash-bound local zero store at driver `$01e4`, accepts the byte at `$01e5` as
+an explicit input, and stops before callback `$0d22` when that byte is
+nonzero. Otherwise it stops at IRET. The caller frame's IP must be `$0129`;
+its CS and FLAGS remain explicit inputs and are returned verbatim. The outcome
+records only direct local register effects and supplied port reads. The
+standalone session does not authenticate an IVT vector, assert which profile
+was installed, execute the callback, or establish a real handler return.
+
 The same hash-identified `MILL.COM` contains a distinct sound-effect choice
 routine at loaded `$0511..$0574` (file `+$0411`, 100 bytes, SHA-256
 `f9e63fc4c7c590fc57abef4a0154a2399f714951c787f98d2f7d64eee86a7434`). Its

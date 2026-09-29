@@ -1,6 +1,7 @@
 #include "data/millennium_dos_video_driver.hpp"
 #include "engine/millennium_dos_video_function_31_session.hpp"
 #include "engine/millennium_dos_video_function_13_session.hpp"
+#include "engine/millennium_dos_video_function_13_interrupt_session.hpp"
 #include "engine/millennium_dos_video_function_zero_session.hpp"
 
 #include <cassert>
@@ -128,6 +129,60 @@ int main(const int argc, char** argv) {
     assert(mcga_function_13.state() == Function13State::ret_boundary
         && mcga_retrace && mcga_retrace->ret_instruction_address == 0x0912
         && mcga_retrace->reads.size() == 2);
+
+    using Function13Interrupt = eon::MillenniumDosVideoFunction13InterruptSession;
+    using Function13InterruptState = eon::MillenniumDosVideoFunction13InterruptState;
+    Function13Interrupt ega_interrupt(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640, 0x2345);
+    expect_rejected([&] { ega_interrupt.observe_interrupt_request({1,0x0127,0x0006,0x0129,0x4567,0x0202}); });
+    assert(ega_interrupt.state() == Function13InterruptState::awaiting_interrupt_request
+        && ega_interrupt.next_sequence() == 1);
+    ega_interrupt.observe_interrupt_request({1,0x0127,0x0013,0x0129,0x4567,0x0202});
+    assert(ega_interrupt.boundary() == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d3a});
+    ega_interrupt.observe_port_read({2,0x0d3a,0x03da,0x00});
+    ega_interrupt.observe_port_read({3,0x0d3f,0x03da,0x08});
+    assert(ega_interrupt.state() == Function13InterruptState::iret_boundary
+        && ega_interrupt.boundary() == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0012});
+    ega_interrupt.execute_iret(4,0x0012);
+    const auto ega_interrupt_outcome = ega_interrupt.outcome();
+    assert(ega_interrupt.state() == Function13InterruptState::returned
+        && ega_interrupt_outcome && ega_interrupt_outcome->ax == 0x0008
+        && ega_interrupt_outcome->dx == 0x03da && ega_interrupt_outcome->di == 0x0026
+        && ega_interrupt_outcome->ds == 0x2345
+        && ega_interrupt_outcome->return_ip == 0x0129
+        && ega_interrupt_outcome->return_cs == 0x4567
+        && ega_interrupt_outcome->return_flags == 0x0202);
+
+    Function13Interrupt mcga_interrupt(mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
+    mcga_interrupt.observe_interrupt_request({1,0x0127,0x0013,0x0129,0x5678,0x0302});
+    mcga_interrupt.observe_port_read({2,0x0908,0x03da,0x00});
+    mcga_interrupt.observe_port_read({3,0x090d,0x03da,0x08});
+    assert(mcga_interrupt.state() == Function13InterruptState::awaiting_mcga_postlude_byte
+        && mcga_interrupt.boundary() == eon::MillenniumDosVideoFunction13InterruptBoundary{0x001a});
+    expect_rejected([&] { mcga_interrupt.observe_mcga_postlude_byte({4,0x001a,0x9999,0x01e5,0}); });
+    assert(mcga_interrupt.next_sequence() == 4);
+    mcga_interrupt.observe_mcga_postlude_byte({4,0x001a,0x3456,0x01e5,0});
+    assert(mcga_interrupt.state() == Function13InterruptState::iret_boundary
+        && mcga_interrupt.boundary() == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0020});
+    mcga_interrupt.execute_iret(5,0x0020);
+    const auto mcga_interrupt_outcome = mcga_interrupt.outcome();
+    assert(mcga_interrupt_outcome && mcga_interrupt_outcome->ax == 0x0008
+        && mcga_interrupt_outcome->ds == 0x3456
+        && mcga_interrupt_outcome->return_ip == 0x0129
+        && mcga_interrupt_outcome->return_cs == 0x5678
+        && mcga_interrupt_outcome->return_flags == 0x0302
+        && mcga_interrupt_outcome->memory_effects.size() == 1
+        && mcga_interrupt_outcome->memory_effects.front()
+            == (eon::MillenniumDosVideoFunction13DriverByteEffect{0x0012,0x3456,0x01e4,0}));
+
+    Function13Interrupt mcga_callback(mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
+    mcga_callback.observe_interrupt_request({1,0x0127,0x0013,0x0129,0x5678,0x0302});
+    mcga_callback.observe_port_read({2,0x0908,0x03da,0x00});
+    mcga_callback.observe_port_read({3,0x090d,0x03da,0x08});
+    mcga_callback.observe_mcga_postlude_byte({4,0x001a,0x3456,0x01e5,1});
+    assert(mcga_callback.state() == Function13InterruptState::callback_boundary
+        && mcga_callback.boundary() == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0021}
+        && !mcga_callback.outcome());
+    expect_rejected([&] { mcga_callback.execute_iret(5,0x0020); });
 
     using Session = eon::MillenniumDosVideoFunctionZeroSession;
     using State = eon::MillenniumDosVideoFunctionZeroState;

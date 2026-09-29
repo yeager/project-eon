@@ -43,6 +43,11 @@ reachability.
 Function `$13` also has a standalone poll-loop session; continue it only with
 ordered raw reads from VGA status port `$03da`. A completed poll does not prove
 an MCGA interrupt postlude or select an installed driver.
+The standalone INT `$91` function-`$13` session now hash-binds the EGA/MCGA
+dispatcher prefix and table route, carries the typed `$0129` interrupt frame,
+and models MCGA's `$01e4` clear plus explicit `$01e5` conditional byte. It
+stops before callback `$0d22` or at IRET; this still does not authenticate the
+installed vector or prove that title execution selected this handler.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,
 respectively. The existing global-mode-2 descriptor regression uses explicit
 arithmetic observations; it is not evidence that either supplied driver
