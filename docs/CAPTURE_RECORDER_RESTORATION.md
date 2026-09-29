@@ -212,6 +212,47 @@ serialization and a reviewed graceful-stop route still have to be integrated
 and independently reviewed. Existing recorder pins and native admission are
 unchanged.
 
+### Bounded title-prefix and INT-6 observation foundation
+
+The subsequent trv2 development build integrates normal-core prefetch and
+software-interrupt predicates with one recorder-owned POD slot. Arming requires
+the SHA-256-bound loaded `TITLES.EXE`, its dynamic load CS, normal real-mode
+execution at IP `0134`, the exact `cd93075d` preimage, and the following software
+INT `93h` at return IP `0136` with a zero IVT entry. It does not substitute the
+`2200AD.EXE` CRC tuple for this observed title prefix.
+
+The later default INT-6 callback must match index `3`, CS:IP `f000:ca64`, and
+stub bytes `fe380300` at `f000:ca60`. The slot records only bounded scalar
+register/frame values and publishes its captured flag last. Memory inspection
+requires direct low-memory RAM or ROM page-handler identity, allocation bounds
+and unchanged page aliases; it bypasses neither a hardware handler nor a slow
+path that could change mapping state. Stack words use wrapped 16-bit starting
+offsets with contiguous two-byte reads. Execute/termination invalidates pending
+arming but preserves an already captured slot; fresh-machine initialization
+clears the entire slot.
+
+Full compilation and reverse-patch checking passed on trv2. The external
+`dosbox-pod-foundation.patch` has SHA-256
+`227a0759a644f40a376968962c0ed7fd2b1acd844e69bb19e8b2644e15f29ac6`.
+The preserved executable `dosbox-x-pod` is 132,908,416 bytes, SHA-256
+`524f60359f03c315d44475e3f2d0ea851622d79cdf533fe9b6afab4ce4bbba60`.
+An actual-source harness in the external `observation-harness/` directory
+passed ordered arming, once-only capture, rejection gates, lifecycle reset,
+stack-boundary and memory-boundary cases. Its generated source SHA-256 is
+`08250c0db2dd799b059ddc65b2449ffb260e8e15fcf0f100ded7fdadf15bde0a`;
+its executable SHA-256 is
+`bba0e4a52ebe3da2f9d61965f5eee24e8f14e8bf57f7e851b2c920195bad0881`.
+These checks used no emulator run or original media.
+Independent source review also checked the direct page-handler predicates,
+normal-core/interrupt ordering, callback allocation and exception-stack layout;
+it found no blocking guest-side effect or mapping issue. The complete build
+record remains external in `dosbox-pod-build-record.md`.
+
+This remains `OBSERVER_FIX_REQUIRED`. There is no terminal serializer in this
+build, no emitted observation, and no recorder pin or capture admission. The
+existing SDL window-close route reaches the terminal shutdown point, but its
+integration with a successor runner and serializer still requires review.
+
 ## Recorder restoration state machine
 
 Recorder work is an explicit state machine. A transition may only advance when
