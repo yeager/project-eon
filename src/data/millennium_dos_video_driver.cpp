@@ -68,10 +68,29 @@ MillenniumDosVideoDriverProfile parse_driver_profile(
         const auto known_target = static_cast<std::size_t>(function_zero) + 0x13;
         const auto match_target = static_cast<std::size_t>(function_zero) + 0x23;
         const auto match_opcode = static_cast<std::uint8_t>(ega ? 0xc6 : 0xbf);
+        const auto cache = static_cast<std::size_t>(ega ? 0x8c : 0xae);
         if (bytes[jne] != 0x75 || bytes[jne + 1] != 0x07
             || bytes[known_target] != 0xb8
             || bytes[jz] != 0x74 || bytes[jz + 1] != 0x03
             || bytes[match_target] != match_opcode
+            || bytes[static_cast<std::size_t>(function_zero) + 0x0e] != 0xcd
+            || bytes[static_cast<std::size_t>(function_zero) + 0x0f] != 0x10
+            || bytes[static_cast<std::size_t>(function_zero) + 0x10] != 0xa2
+            || bytes[static_cast<std::size_t>(function_zero) + 0x11] != cache
+            || bytes[static_cast<std::size_t>(function_zero) + 0x12] != 0
+            || bytes[static_cast<std::size_t>(function_zero) + 0x13] != 0xb8
+            || bytes[static_cast<std::size_t>(function_zero) + 0x14] != mode
+            || bytes[static_cast<std::size_t>(function_zero) + 0x15] != 0
+            || bytes[static_cast<std::size_t>(function_zero) + 0x16] != 0xcd
+            || bytes[static_cast<std::size_t>(function_zero) + 0x17] != 0x10
+            || bytes[static_cast<std::size_t>(function_zero) + 0x18] != 0xb4
+            || bytes[static_cast<std::size_t>(function_zero) + 0x19] != 0x0f
+            || bytes[static_cast<std::size_t>(function_zero) + 0x1a] != 0xcd
+            || bytes[static_cast<std::size_t>(function_zero) + 0x1b] != 0x10
+            || bytes[static_cast<std::size_t>(function_zero) + 0x1c] != 0x3c
+            || bytes[static_cast<std::size_t>(function_zero) + 0x1d] != mode
+            || bytes[static_cast<std::size_t>(function_zero) + 0x20] != 0x33
+            || bytes[static_cast<std::size_t>(function_zero) + 0x21] != 0xc0
             || bytes[static_cast<std::size_t>(function_zero) + 0x22] != 0xc3) {
             throw std::runtime_error("Unsupported Millennium English function-zero control flow");
         }
@@ -86,14 +105,18 @@ MillenniumDosVideoDriverProfile parse_driver_profile(
         .function_zero_input_offset = 0,
         .function_zero_cached_mode_address = static_cast<std::uint16_t>(ega ? 0x8c : 0xae),
         .function_zero_cached_mode_unknown_sentinel = 0xff,
-        .function_zero_cached_mode_query_interrupt_site = static_cast<std::uint16_t>(function_zero + 0x0f),
+        .function_zero_cached_mode_query_interrupt_site = static_cast<std::uint16_t>(
+            spanish ? 0 : function_zero + 0x0e),
+        .function_zero_cached_mode_store_instruction = static_cast<std::uint16_t>(function_zero + 0x10),
         .function_zero_cached_mode_known_branch_target = static_cast<std::uint16_t>(function_zero + 0x13),
         .function_four_address = function_four,
         .function_zero_video_mode = mode,
         .function_zero_set_mode_interrupt_site = static_cast<std::uint16_t>(function_zero + 0x16),
-        .function_zero_verify_mode_interrupt_site = static_cast<std::uint16_t>(function_zero + 0x1b),
+        .function_zero_verify_mode_interrupt_site = static_cast<std::uint16_t>(
+            spanish ? 0 : function_zero + 0x1a),
         .function_zero_mode_match_branch_target = static_cast<std::uint16_t>(function_zero + 0x23),
         .function_zero_mode_mismatch_return = static_cast<std::uint16_t>(function_zero + 0x22),
+        .function_zero_mode_mismatch_zero_ax_instruction = static_cast<std::uint16_t>(function_zero + 0x20),
         .function_four_input_offset = 0,
         .function_four_input_mask = 3,
         .function_four_state_address = state,

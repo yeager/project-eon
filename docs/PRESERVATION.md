@@ -4694,15 +4694,26 @@ observations; no captured selector, DOS return, IVT content, INT 91h handler
 dispatch, or handler return is established. No private service may yet be
 selected from these profiles.
 
-The exact English EGA640 and MCGA function-$00 prefixes also validate their
-short relative branches against the full leaf hashes. The cached-mode `JNE`
-at function offset `$0a` targets the mode setup at `+$13` (`$1db` / `$1f9`);
-the mode-match `JZ` at `+$1e` targets the success continuation at `+$23`
-(`$1eb` / `$209`, beginning with `C6` in EGA640 and `BF` in MCGA). These are
-instruction targets, not return addresses or evidence that the routine was
-dispatched. The mismatch path reaches `RET` at `+$22` (`$1ea` / `$208`).
+The exact English EGA640 and MCGA function-$00 spans are hash-bound against
+the full leaf identities and checked instruction by instruction through the
+first byte of the successful continuation. EGA640 file offsets
+`[$01c8,$01ec)` (36 bytes) have SHA-256
+`457990d045815f27b50e45c0e26a7e7b1cbe18d754a20fabcab065f340142c4d`; MCGA
+`[$01e6,$020a)` (36 bytes) have SHA-256
+`fb21e417ebf59d096edf515db6258423a2e304ce513b125a075e15f0a23723e8`. The
+cached-mode `JNE` at function offset `$0a` targets the mode setup at `+$13`
+(`$1db` / `$1f9`). The BIOS INT opcode bytes are at EGA640 `$1d6` (conditional
+current-mode query), `$1de` (set mode), and `$1e2` (verify query); MCGA `$1f4`,
+`$1fc`, and `$0200`, respectively. The mode-match `JZ` at `+$1e` targets the
+successful continuation at `+$23` (`$1eb` / `$209`, beginning with `C6` in
+EGA640 and `BF` in MCGA). The standalone function-$00 session stops at that
+continuation without executing it. It retains each typed external BIOS result,
+and models only the first query's returned AL write to the verified driver-
+local cache. On mismatch it applies the proven local AX zeroing and stops at
+the RET opcode (`$1ea` / `$208`); it does not execute RET or claim a caller
+return. It does not synthesize BIOS results or infer hardware behavior.
 Spanish driver parsing retains its separate identity and has not been extended
-by this English-only branch check.
+by this English-only instruction check.
 
 The read-in-place loader audit additionally binds `$02cf..$031b` (file
 `+$01cf`, 77 bytes, SHA-256

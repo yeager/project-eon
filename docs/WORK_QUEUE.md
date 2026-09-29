@@ -19,10 +19,14 @@ it does not establish successful installation, handler dispatch, or service
 execution, and it does not select a private service. No private service can
 yet be selected from the driver profiles. Title mode alone does not establish
 which driver is installed.
-The hash-bound English function-$00 profiles now expose the corrected cached-
-mode and mode-match branch targets, and a focused real-media test checks both
-original leaves in place. These static anchors still do not establish IVT
-contents, private-handler dispatch, or BIOS results.
+The hash-bound English function-$00 profiles validate exact instruction spans
+through their match-continuation opcodes. The standalone session accepts the
+conditional cache query result, set-mode result, and verify-query result as
+typed external inputs; it stops at the successful continuation or mismatch
+RET opcode after applying the proven local zero-AX operation. Focused real-
+media tests cover both original leaves and rejected/reordered results. No BIOS
+behavior, caller return, successful postlude, IVT contents, or private-handler
+dispatch is established.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,
 respectively. The existing global-mode-2 descriptor regression uses explicit
 arithmetic observations; it is not evidence that either supplied driver
