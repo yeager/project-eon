@@ -15,6 +15,7 @@ enum class MillenniumDosVideoFunctionZeroState {
     awaiting_verify_mode_result,
     mode_match_continuation_boundary,
     mode_success_postlude_prefix_recorded,
+    mode_success_stack_prefix_recorded,
     mode_mismatch_ret_boundary,
 };
 
@@ -73,6 +74,23 @@ enum class MillenniumDosVideoFunctionZeroPostludeEndpoint {
     mcga_int92_request,
 };
 
+enum class MillenniumDosVideoFunctionZeroEgaStackEndpoint {
+    // The count is one; stop at POP AX without reading the caller's stack.
+    ega_single_count_pop,
+    // Stop before the first VGA port write; no device I/O is modeled.
+    ega_vga_out,
+};
+
+struct MillenniumDosVideoFunctionZeroEgaStackOutcome {
+    MillenniumDosVideoFunctionZeroEgaStackEndpoint endpoint{};
+    std::uint16_t instruction_address = 0;
+    std::uint16_t ss = 0, sp_before = 0, sp_after = 0;
+    std::uint16_t pushed_value = 0, si = 0;
+    std::uint16_t ax = 0, bx = 0, cx = 0, dx = 0;
+    bool zero_flag = false;
+    constexpr bool operator==(const MillenniumDosVideoFunctionZeroEgaStackOutcome&) const = default;
+};
+
 struct MillenniumDosVideoFunctionZeroPostludeOutcome {
     MillenniumDosVideoFunctionZeroPostludeEndpoint endpoint{};
     std::uint16_t instruction_address = 0;
@@ -117,9 +135,12 @@ public:
     }
     [[nodiscard]] std::optional<MillenniumDosVideoFunctionZeroPostludeOutcome>
     postlude_prefix_outcome() const { return postlude_prefix_outcome_; }
+    [[nodiscard]] std::optional<MillenniumDosVideoFunctionZeroEgaStackOutcome>
+    ega_stack_outcome() const { return ega_stack_outcome_; }
 
     void observe_bios_result(const MillenniumDosVideoFunctionZeroBiosResult& result);
     void advance_success_postlude_prefix();
+    void advance_ega_success_stack_prefix(std::uint16_t ss, std::uint16_t sp);
 
 private:
     MillenniumDosVideoDriverProfile driver_;
@@ -130,6 +151,7 @@ private:
     std::optional<MillenniumDosVideoFunctionZeroLocalWrite> cache_write_;
     std::optional<MillenniumDosVideoFunctionZeroOutcome> outcome_;
     std::optional<MillenniumDosVideoFunctionZeroPostludeOutcome> postlude_prefix_outcome_;
+    std::optional<MillenniumDosVideoFunctionZeroEgaStackOutcome> ega_stack_outcome_;
 };
 
 } // namespace eon

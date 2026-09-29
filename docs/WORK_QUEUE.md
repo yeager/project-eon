@@ -25,12 +25,15 @@ conditional cache query result, set-mode result, and verify-query result as
 typed external inputs; it stops at the successful continuation or mismatch
 RET opcode after applying the proven local zero-AX operation. Focused real-
 media tests cover both original leaves and rejected/reordered results. No BIOS
-behavior, caller return, successful postlude, IVT contents, or private-handler
-dispatch is established.
+behavior, caller return, IVT contents, or private-handler dispatch is
+established. The bounded successful postlude below records only hash-bound
+local instruction effects and typed stop points.
 The separate success-postlude step models EGA's local `$0192` write and
-register clamp only up to pre-`PUSH SI` `$01fd`; MCGA's branch step stops at
-the `$023d` single-count target or before INT `$92` at `$021f`. It grants no
-graphics or private-service behavior.
+register clamp. Its next prefix records an explicit pending `PUSH SI` stack
+write and stops before one-count `POP AX` `$022e` or VGA `OUT` `$0207`;
+MCGA's branch step stops at the `$023d` single-count target or before INT
+`$92` at `$021f`. Continue EGA from its typed stack/port boundary only with
+new exact observations. No graphics or private-service behavior is inferred.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,
 respectively. The existing global-mode-2 descriptor regression uses explicit
 arithmetic observations; it is not evidence that either supplied driver

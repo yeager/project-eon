@@ -110,6 +110,33 @@ int main(const int argc, char** argv) {
         && ega_postlude->cx == 4 && ega_postlude->si == 4 && !ega_postlude->di
         && ega_postlude->local_write == ega_postlude_write);
     expect_rejected([&] { ega_unknown.advance_success_postlude_prefix(); });
+    ega_unknown.advance_ega_success_stack_prefix(0x2000, 0x0100);
+    const auto ega_stack = ega_unknown.ega_stack_outcome();
+    assert(ega_stack
+        && ega_stack->endpoint
+            == eon::MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_vga_out
+        && ega_stack->instruction_address == 0x0207
+        && ega_stack->ss == 0x2000 && ega_stack->sp_before == 0x0100
+        && ega_stack->sp_after == 0x00fe && ega_stack->pushed_value == 4
+        && ega_stack->si == 3 && ega_stack->ax == 0xff08
+        && ega_stack->bx == 0x0072 && ega_stack->cx == 4
+        && ega_stack->dx == 0x03ce && !ega_stack->zero_flag);
+    expect_rejected([&] { ega_unknown.advance_ega_success_stack_prefix(0x2000, 0x0100); });
+
+    Session ega_single_count(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640, 0xff);
+    ega_single_count.observe_bios_result(Result{1,0x1d6,0x10,0x560e,0,0,0,0});
+    ega_single_count.observe_bios_result(Result{2,0x1de,0x10,0x000e,0,0,0,0});
+    ega_single_count.observe_bios_result(Result{3,0x1e2,0x10,0x000e,0,1,0,0});
+    ega_single_count.advance_success_postlude_prefix();
+    ega_single_count.advance_ega_success_stack_prefix(0x1000, 1);
+    const auto ega_single_stack = ega_single_count.ega_stack_outcome();
+    assert(ega_single_stack
+        && ega_single_stack->endpoint
+            == eon::MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_single_count_pop
+        && ega_single_stack->instruction_address == 0x022e
+        && ega_single_stack->sp_before == 1 && ega_single_stack->sp_after == 0xffff
+        && ega_single_stack->pushed_value == 1 && ega_single_stack->si == 0
+        && ega_single_stack->zero_flag);
 
     Session ega_known(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640, 0x0e);
     assert(ega_known.state() == State::awaiting_set_mode_result && !ega_known.cache_write()
@@ -122,6 +149,7 @@ int main(const int argc, char** argv) {
         && ega_mismatch->verify_result.ax == 0x1234
         && ega_mismatch->ax_after_local_effect == 0 && !ega_mismatch->ax_is_routine_return);
     expect_rejected([&] { ega_known.advance_success_postlude_prefix(); });
+    expect_rejected([&] { ega_known.advance_ega_success_stack_prefix(0, 0); });
 
     const auto mcga_bytes = read_driver(root / "MCGA.BIN");
     Session mcga_unknown(mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga, 0xff);

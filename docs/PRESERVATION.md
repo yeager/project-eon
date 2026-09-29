@@ -4729,6 +4729,16 @@ value, including zero, it sets `BX=$fa00` and `AX=$0001`, then stops before
 the private `INT $92` opcode at `$021f`. No stack write, video I/O, INT $92
 dispatch, handler result, or graphics effect is modeled.
 
+EGA640's next prefix `[$01fd,$0207)` (10 bytes, SHA-256
+`eea3f3e5c3ee34063ddb6aba69216ef578da41d9799d20da871fa3de40613795`)
+executes `PUSH SI`, `DEC SI`, and its conditional branch. The session requires
+an explicit SS:SP input and records the pending little-endian word write at
+`SS:(SP-2)` with 16-bit SP wrap; it does not mutate memory. For a one-count
+input, execution stops before `POP AX` at `$022e`. For every other count,
+including zero, it stops before VGA `OUT DX,AX` at `$0207` with `DX=$03ce` and
+`AX=$ff08`. Neither the port write nor its hardware effects are modeled, and
+the one-count path does not read the caller's stack.
+
 The read-in-place loader audit additionally binds `$02cf..$031b` (file
 `+$01cf`, 77 bytes, SHA-256
 `5c7f7ec03aa3109d4df2fbdec457ca7e2be412fc9d818bd07252a039fb8c6671`)
