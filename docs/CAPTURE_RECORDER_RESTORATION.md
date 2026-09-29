@@ -301,6 +301,62 @@ This remains `OBSERVER_FIX_REQUIRED`, with no media run or new pin. The emitted
 schema is explicitly development-only. Host-input receipts and the successor
 runner/validator contract still require implementation and complete review.
 
+### Bounded SDL input development integration
+
+The next external build retains up to 256 SDL2 key events in a fixed POD
+buffer. Each wrapper calls the existing poll/wait function exactly once,
+returns its result unchanged, and copies scalar fields only after a successful
+dequeue. The existing call sites in `sdlmain.cpp`, `sdl_gui.cpp`,
+`sdl_mapper.cpp` and `debug_gui.cpp` use these wrappers; SDL1 remains a direct
+passthrough. No extra SDL call, clock lookup, allocation, output or guest write
+occurs in the append operation. Input chronology is retained across internal
+reboots, independently of the reset title/INT-6 observation.
+
+The `ticks` field contains the original SDL2 event's `key.timestamp` bits.
+It is not a fresh `GetTicks()` sample, physical-origin proof, guest-delivery
+proof or causal link to a title action. The existing host-key grammar accepts
+this representation, but a successor protocol must explicitly declare the new
+timestamp provenance. The 257th event sets overflow; terminal formatting then
+rejects the entire receipt rather than publishing a truncated chronology.
+
+Both distinct output paths must be prepared before guest initialization. The
+new `host_input_output_path` has the same external-root, descriptor, ownership,
+permission and environment protections as the observation path. Terminal
+publication requires both files to succeed before the success marker/status
+can be emitted. An empty, successfully observed input stream produces an empty
+receipt; it does not independently establish that physical input was absent.
+
+Full compilation and reverse-patch checking passed. External `dosbox-x-input`
+is 132,945,208 bytes, SHA-256
+`776a02c687951fdc88a65834719ba7cf0124c879c371b278f8117f203cd4375f`.
+The complete `dosbox-input-foundation.patch` has SHA-256
+`23951d5c7cab7d18206f7f15eac352bc2901ab8bbd56b9693e621796aeb9efe5`.
+Actual-header tests passed empty/full/overflow/reset, high-bit fields, bounded
+formatting and 0–64 KiB output limits. The host-input header SHA-256 is
+`9a19882773be2996ad5b0d1b00c12f9ce57e0a2a3f5110abfb400482a55cdd12`.
+The eight-property configuration harness passed both output-path defaults,
+startup-only mutability and environment exclusion, with the six identity
+checks unchanged. Tests used synthetic unit-test records, not emulator runs or
+substitutes for original media. This is still `OBSERVER_FIX_REQUIRED`; there is
+no new recorder pin, capture or native-recovery admission.
+
+Independent coverage review found no remaining SDL2 dequeue bypass in the
+configured Linux `src/` build and no background poll/wait caller. That
+single-producer conclusion is configuration-specific; alternate Windows/VS
+PDCurses input paths require separate review. Internal clipboard `GenKBStroke`
+and `PushDummySDL` producers can enqueue synthetic key events that reach the
+same wrappers. Consequently the receipt means **SDL-queue key delivery, origin
+unclassified**. A populated receipt cannot by itself promote a session to
+physical-input evidence, and no synthetic event is silently filtered out.
+An independently generated actual-source wrapper/glue harness passed inactive,
+null, empty and non-key events, down/up/high-bit fields, unchanged event bytes,
+one underlying call and unchanged returns. Missing/identical output paths,
+input/observation short writes, absent observations and stdout failures all
+remained rejected. Its external result manifest
+`terminal-harness/hostinput-integration-results.txt` has SHA-256
+`d784a2d6bdf5c70c2fd036ee30f54c4f9ffb84024c2652448b7393726946f3d1`.
+The complete build record is external in `dosbox-input-build-record.md`.
+
 ## Recorder restoration state machine
 
 Recorder work is an explicit state machine. A transition may only advance when
