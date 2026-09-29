@@ -1,5 +1,19 @@
 # Project Eon P0 work queue
 
+## Current DOS descriptor continuation
+
+The second title descriptor can now enter the existing payload decoder using
+its own source, destination and lookup BX. It stops before postprocessing at
+`$1488`, or before `RET $1405` when the observed selector is neither one nor
+two. Recover the actual caller-specific continuation before joining either
+stop to another descriptor iteration. Do not reuse the first descriptor's
+`$1740` return suffix. The canonical `$32a1:$0006` stream also now uses its
+instruction-defined lookup base `$000b`; counts or output expectations from
+the former fixed `$0008` implementation must be re-established from source.
+No private-interrupt, OS, frame or title-to-game result is supplied by this
+change. The detailed paragraphs below retain the earlier recovery sequence;
+their intermediate stops are not a substitute for the current checkpoints.
+
 The Millennium DOS non-mode-1 title path now observes both external vector
 pairs and atomically installs the exact timer and video hooks. Its verified
 caller continuation enters the repeated mode call `$1c02->$1ada`. Mode one

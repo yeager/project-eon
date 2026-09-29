@@ -4866,6 +4866,17 @@ An explicitly supplied byte is incremented modulo 256 and stored at
 On the existing second-descriptor test route that read names `$3c80:$0004`.
 The input remains a raw typed observation, with no inferred OS result or
 graphics meaning; arithmetic test values are not capture evidence.
+The subsequent second-record payload route is invocation-specific through
+the existing decoder. Its exact `$13f2..$1427` setup (54 bytes at file
+`TITLES.EXE+$12f2`, SHA-256
+`49b3ef2683a584b6239f382c4dcefd93171d0839f706f9eb79aac1b64b896f61`)
+loads the destination from `$010c/$010e` and record pointer from `$138c/$138e`.
+Lookup BX is the normalized source offset plus five, not a constant eight;
+this also corrects the admitted `$32a1:$0006` record to lookup base `$000b`.
+Second-record decoding stops before `$1488` postprocessing, and its nonpayload
+branch stops before `RET $1405`. No third iteration or first-record caller
+return is assumed. See the title-initialization document for provenance and
+the distinction between genuine code and synthetic arithmetic observations.
 The initialization entry executes the exact `$1b80..$1b95` register setup and collapses the
 byte-verified `$0122` preservation wrapper into its known function-$00
 `INT $91` request. The owned checkpoint stops before the private interrupt

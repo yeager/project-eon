@@ -642,3 +642,37 @@ existing second-descriptor route with explicitly synthetic raw observations
 for zero and `$ff`, plus detached sequence/address rejection. Those values
 test arithmetic only and are not original runtime observations. No DOS or
 private-interrupt result, rendering interpretation, or title exit is added.
+
+### Invocation-specific payload continuation
+
+Read-only inspection of the same hash-identified `TITLES.EXE` confirms the
+complete `$13f2..$1427` span (file `+$12f2`, 54 bytes, SHA-256
+`49b3ef2683a584b6239f382c4dcefd93171d0839f706f9eb79aac1b64b896f61`).
+The second record's `$13f2` observation selects either a stop before `RET`
+at `$1405`, or the existing payload decoder. The latter loads the destination
+from `CS:$010c/$010e` and the source from `CS:$138c/$138e`, then adds `$1c`
+to the source offset. On the existing second-record route these are output
+offset `$02e0` and payload `$3c80:$001c`. Required pointer context is checked
+before any observation or effect is appended.
+DOS library-read effects now explicitly retain their destination segment.
+In particular the byte at library `$3000:$010e` is distinct from the child's
+local pointer word at `CS:$010e`; local pointer and limit searches exclude
+nonlocal effects. The supplied-media regression checks this distinction
+against the original library byte without interpreting its contents.
+
+The `$13cb` instruction preserves the normalized source offset in BX;
+`$1422` adds five. Lookup addresses therefore use invocation-specific BX:
+`$0008` for normalized offset three, `$0005` for the second record at offset
+zero, and `$000b` for the independently admitted `$32a1:$0006` record.
+The shared decoder now uses that value for both nibble lookup paths instead
+of the former fixed `$0008`. Its arithmetic also retains the latest raw
+`CS:$1389` byte when that value is zero, without falling back to older state.
+
+The second invocation shares the already hash-bound escape, repetition and
+lookup transitions through `$1487`, retaining its own output segment and
+offset. Completion stops at an explicit `$1488` boundary before mode-specific
+postprocessing. It cannot take the first descriptor's `$16e8->$1740` caller
+continuation or infer another loop iteration. Supplied-media tests use a
+clearly synthetic compact record to exercise both nibble halves and reject
+the former lookup address. These tests establish instruction arithmetic,
+not original display values or gameplay.

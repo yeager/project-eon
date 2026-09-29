@@ -102,6 +102,8 @@ enum class MillenniumDosTitleInitializationState {
     post_descriptor_second_loop_third_word_read_boundary,
     post_descriptor_second_loop_byte_read_boundary,
     post_descriptor_second_loop_second_byte_read_boundary,
+    post_descriptor_second_loop_local_return_boundary,
+    post_descriptor_second_loop_decoded_record_boundary,
     dos_file_failure_boundary,
     allocation_failure_boundary,
 };
@@ -496,6 +498,10 @@ private:
     std::uint16_t selected_followup_call_address_ = 0;
     std::uint16_t selected_followup_call_target_ = 0;
     bool post_video_repeat_ = false;
+    bool second_descriptor_payload_ = false;
+    std::uint16_t descriptor_lookup_base_ = 0x0008;
+    std::uint16_t descriptor_output_offset_ = 0x0170;
+    std::uint16_t descriptor_output_segment_ = 0;
     MillenniumDosTitleBiosInterruptBoundary bios_boundary_;
     std::vector<MillenniumDosTitleBiosResultRecord> bios_results_;
     std::uint16_t title_main_call_address_ = 0;
