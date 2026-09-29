@@ -99,6 +99,7 @@ enum class MillenniumDosTitleInitializationState {
     post_descriptor_first_loop_mode_four_header_second_byte_boundary,
     post_descriptor_first_loop_mode_four_header_word_boundary,
     post_descriptor_first_loop_mode_four_body_boundary,
+    post_descriptor_first_loop_mode_four_returned,
     post_descriptor_first_loop_mode_two_returned,
     post_descriptor_loop_return_boundary,
     descriptor_loop_complete_boundary,

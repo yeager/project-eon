@@ -473,6 +473,15 @@ the full 18,907-byte library identity:
 6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678.
 No physical-equivalent segment aliases are accepted.
 
+The mode-four loop uses those same indexes 1..37; directory index 0 is the
+separate `P00` setup object and is not a descriptor invocation. Among these
+37 records, 33 have header `$06,$02`, three have `$0e,$02` (indexes 29, 30,
+and 33), and index 1 has `$0e,$01`. Each carries delta `$00b3`. Their
+normalized lookup tables run from
+TITLE.LIB `+$2a12` through `+$4810`; the final 256-byte table ends at
+`+$490f`, within the supplied leaf. This excludes the exceptional-looking
+index-zero header `$07,$23` from mode-four descriptor processing.
+
 All 37 original records select payload decoder branch two and produce
 368 payload bytes. This record selector is distinct from the title's global
 display mode. The complete-loop regression explicitly supplies global mode
@@ -539,7 +548,7 @@ and the 256-byte lookup extent remain within the same supplied library.
 The exact $163b..$16b2 span (120 bytes) hashes to
 9a18a2349e46afad9b814befcaf0a7ddd715f446f21845453a4e4f6a72ad65b7.
 
-### EGA640 mode-four boundary
+### EGA640 mode-four descriptor execution
 
 The mode-four setup binds the runtime spans `$1488..$149e` (file `+$1388`),
 `$14e3..$1513` (file `+$13e3`), `$1514..$153c` (file `+$1414`), and shared
@@ -549,9 +558,16 @@ byte at `$14f0`, second byte at `$14fc`, and word at `$1500`, with all three
 reads constrained to the exact normalized record and the loaded TITLE.LIB
 prefix. It applies the code's header count, optional `$0300` offset and
 `CX:DX` normalization, then returns an explicit boundary at `$15c5` with the
-lookup pointer and source/destination context. The following `$15c5..$163a`
-planar decoder loop remains unsupported and is not executed. No mode-four
-pixels or full-loop parity are claimed.
+lookup pointer and source/destination context. The `$15c5..$163a` planar
+routine is now hash-bound (runtime file `+$14c5`, 118 bytes; SHA-256
+`416385b5fd03b0fec92663dea3d60f6d556c6310a4af97db9d5bd52874abba49`) and
+emulated with its flag-sensitive bit loop. It clears the bounded destination,
+reads the decoded source only from initialized native runtime memory, and
+resolves all 256 lookup bytes against the exact record table. Clear and planar
+writes commit transactionally per record; the local return advances through
+the established 37-record caller. The existing real-media regression does
+not yet exercise a mode-four source/output sequence, so decoded pixels and
+full mode-four parity remain unverified.
 
 The final loop edge restores count one, decrements it to zero, and exposes
 $1967 before RET. The next owned continuation returns to $1c20 and reads

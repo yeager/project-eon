@@ -19,6 +19,14 @@ std::optional<std::uint16_t> latest_local_word(
     return std::nullopt;
 }
 
+std::optional<std::uint16_t> latest_register_value(
+    const std::vector<MillenniumDosTitleInitializationRegisterEffect>& effects,
+    const std::string_view name) {
+    for(auto it=effects.rbegin();it!=effects.rend();++it)
+        if(it->register_name==name)return it->value;
+    return std::nullopt;
+}
+
 std::optional<std::uint16_t> decoder_output_segment(
     const std::vector<MillenniumDosTitleInitializationMemoryEffect>& effects) {
     // $1407 loads ES:DI from $010c/$010e. The distinct $0110/$0112
@@ -72,6 +80,8 @@ void MillenniumDosTitleInitializationSession::advance_owned_descriptor_loop_call
 void MillenniumDosTitleInitializationSession::advance_descriptor_mode_two_return() {
     if (!((state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_returned
             && continuation_address_ == 0x16e8)
+        ||(state_ == MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_returned
+            && continuation_address_ == 0x163a)
         ||(state_ == MillenniumDosTitleInitializationState::descriptor_mode_one_return_boundary
             &&continuation_address_ == 0x14dc))
         || descriptor_loop_iteration_<1||descriptor_loop_iteration_>37)
@@ -162,6 +172,7 @@ bool MillenniumDosTitleInitializationSession::descriptor_loop_can_drive() const 
     case S::post_descriptor_first_loop_mode_four_header_byte_boundary:
     case S::post_descriptor_first_loop_mode_four_header_second_byte_boundary:
     case S::post_descriptor_first_loop_mode_four_header_word_boundary:
+    case S::post_descriptor_first_loop_mode_four_body_boundary:
         return selected_mode_==4;
     default:return false;
     }
@@ -206,6 +217,7 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
                 throw std::runtime_error("Descriptor header exceeds loaded prefix");
             const auto prior=next.memory_effects_.size();
             const auto sequence=request.first_sequence+count;
+            bool mode_four_body_applied=false;
             using S=MillenniumDosTitleInitializationState;
             if(next.state_==S::post_descriptor_first_loop_far_read_boundary
                 ||next.state_==S::post_descriptor_next_loop_far_read_boundary){
@@ -272,6 +284,213 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
                     next.continuation_address_=0x14dc;
                     next.advance_descriptor_mode_two_return();
                 }
+            }else if(next.state_==S::post_descriptor_first_loop_mode_four_body_boundary){
+                const auto source_offset=latest_local_word(next.memory_effects_,0x010c);
+                const auto source_segment=latest_local_word(next.memory_effects_,0x010e);
+                const auto destination_offset=latest_local_word(next.memory_effects_,0x0110);
+                const auto destination_segment=latest_local_word(next.memory_effects_,0x0112);
+                const auto width=latest_local_word(next.memory_effects_,0x1357);
+                const auto height=latest_local_word(next.memory_effects_,0x1359);
+                const auto table_offset=latest_local_word(next.memory_effects_,0x14df);
+                const auto table_segment=latest_local_word(next.memory_effects_,0x14e1);
+                const auto register_value=[&](const std::string_view name){
+                    const auto value=latest_register_value(next.effects_,name);
+                    if(!value)throw std::runtime_error("Missing mode-four planar register context");
+                    return *value;
+                };
+                if(next.selected_mode_!=4||next.continuation_address_!=0x15c5
+                    ||!source_offset||!source_segment||!destination_offset||!destination_segment
+                    ||!width||!height||!table_offset||!table_segment
+                    ||*width==0||*height==0||static_cast<std::uint32_t>(*width)* *height>0xffffU
+                    ||register_value("SI")!=*source_offset||register_value("DS")!=*source_segment
+                    ||register_value("DI")!=*destination_offset||register_value("ES")!=*destination_segment
+                    ||register_value("BX")!=*width||register_value("DX")!=*height)
+                    throw std::runtime_error("Mode-four planar loop lacks its exact owned descriptor context");
+                const auto source_size=static_cast<std::uint32_t>(*width)* *height;
+                if(*height>0xfffcU)
+                    throw std::runtime_error("Mode-four planar row-count adjustment overflows its 16-bit operand");
+                const auto adjusted_height=static_cast<std::uint16_t>(*height+3U);
+                const auto stride=static_cast<std::uint32_t>(*width)*(adjusted_height>>2U);
+                const auto clear_bytes=4U*stride;
+                const auto source_linear=static_cast<std::uint64_t>(*source_segment)*16U+*source_offset;
+                const auto destination_linear=static_cast<std::uint64_t>(*destination_segment)*16U+*destination_offset;
+                const auto local_stride_linear=static_cast<std::uint64_t>(next.child_code_segment_)*16U+0x14ddU;
+                if(stride==0||stride>0xffffU||clear_bytes==0||clear_bytes>0x10000U
+                    ||static_cast<std::uint32_t>(*source_offset)+source_size>0x10000U
+                    ||static_cast<std::uint32_t>(*destination_offset)+clear_bytes>0x10000U
+                    ||source_linear+source_size>0x10fff0U
+                    ||destination_linear+clear_bytes>0x10fff0U
+                    ||(source_linear<destination_linear+clear_bytes
+                        &&destination_linear<source_linear+source_size)
+                    ||(local_stride_linear<source_linear+source_size&&source_linear<local_stride_linear+2U)
+                    ||(local_stride_linear<destination_linear+clear_bytes
+                        &&destination_linear<local_stride_linear+2U))
+                    throw std::runtime_error("Mode-four planar buffers wrap a bounded DOS segment");
+                const auto table_file_offset=static_cast<std::size_t>(
+                    static_cast<std::uint64_t>(*table_segment)*16U+*table_offset
+                    -static_cast<std::uint64_t>(title_library_segment_)*16U);
+                const auto computed_table=record+word(record+26)+28U
+                    +((library[record]&1U)?0x300U:0U)
+                    +static_cast<std::size_t>(library[record+1])+1U;
+                if(table_file_offset!=computed_table||computed_table+256U>library.size()
+                    ||computed_table+256U>next.title_library_first_read_count_)
+                    throw std::runtime_error("Mode-four planar lookup pointer is detached from its exact TITLE.LIB table");
+
+                std::vector<std::uint8_t> source_bytes;
+                source_bytes.reserve(source_size);
+                for(std::uint32_t index=0;index<source_size;++index){
+                    const auto value=memory.read_byte({NativeRuntimeAddressSpace::dos_segmented,
+                        *source_segment,static_cast<std::uint64_t>(*source_offset)+index});
+                    if(!value)throw std::runtime_error("Mode-four planar source byte is not initialized");
+                    source_bytes.push_back(*value);
+                }
+
+                const auto clear_words=2U*stride;
+                NativeRuntimeEffectBatch clear_batch{
+                    "millennium-dos-owned-loop-"+std::to_string(sequence)+"-mode-four-clear",true,{}};
+                const auto add_clear_effect=[&](const std::uint16_t segment_value,
+                    const std::uint16_t offset_value,const MemoryTransferElementWidth element_width,
+                    const std::uint32_t value){
+                    clear_batch.effects.push_back({clear_batch.effects.size()+1,
+                        {NativeRuntimeAddressSpace::dos_segmented,segment_value,offset_value},
+                        element_width,NativeRuntimeByteOrder::little_endian,value});
+                };
+                next.memory_effects_.push_back({0x15d7,0x14dd,
+                    MillenniumDosTitleInitializationEffectWidth::word,static_cast<std::uint16_t>(stride)});
+                add_clear_effect(next.child_code_segment_,0x14dd,MemoryTransferElementWidth::word,stride);
+                const auto add_register_effect=[&](const std::uint16_t instruction,
+                    const std::string_view name,const std::uint16_t value){
+                    next.effects_.push_back({instruction,name,value});
+                };
+                add_register_effect(0x15c5,"CX",*width);
+                add_register_effect(0x15c7,"AX",*height);
+                add_register_effect(0x15c9,"AX",adjusted_height);
+                add_register_effect(0x15cc,"AX",static_cast<std::uint16_t>(adjusted_height>>1U));
+                add_register_effect(0x15ce,"AX",static_cast<std::uint16_t>(adjusted_height>>2U));
+                add_register_effect(0x15d0,"AX",static_cast<std::uint16_t>(stride));
+                add_register_effect(0x15d2,"DX",*height);
+                add_register_effect(0x15db,"CX",static_cast<std::uint16_t>(stride));
+                add_register_effect(0x15dd,"AX",0);
+                add_register_effect(0x15df,"CX",static_cast<std::uint16_t>(clear_words));
+                for(std::uint32_t index=0;index<clear_words;++index){
+                    const auto offset=static_cast<std::uint16_t>(*destination_offset+2U*index);
+                    next.memory_effects_.push_back({0x15e3,offset,
+                        MillenniumDosTitleInitializationEffectWidth::word,0,*destination_segment,true});
+                    add_clear_effect(*destination_segment,offset,MemoryTransferElementWidth::word,0);
+                }
+                add_register_effect(0x15e3,"DI",static_cast<std::uint16_t>(*destination_offset+clear_bytes));
+                add_register_effect(0x15e3,"CX",0);
+                add_register_effect(0x15e5,"DI",*destination_offset);
+                add_register_effect(0x15e6,"ES",*destination_segment);
+                add_register_effect(0x15e7,"CL",0);
+                const auto clear_applied=memory.apply(clear_batch);
+                if(!clear_applied.accepted)throw std::runtime_error(clear_applied.error);
+
+                std::vector<std::uint8_t> planar(clear_bytes,0);
+                NativeRuntimeEffectBatch pixel_batch{
+                    "millennium-dos-owned-loop-"+std::to_string(sequence)+"-mode-four-planar",true,{}};
+                std::uint16_t di=*destination_offset;
+                std::uint8_t cl=0,ah=0x80;
+                std::size_t source_index=0;
+                for(std::uint32_t column=0;column<*width;++column){
+                    ah=0x80;
+                    add_register_effect(0x15e9,"AH",ah);
+                    for(std::uint32_t row=0;row<*height;++row){
+                        const auto original_source=source_bytes[source_index++];
+                        const auto lookup=library[computed_table+original_source];
+                        const auto rotate=static_cast<unsigned>(cl&7U);
+                        std::uint8_t al=rotate==0?lookup:static_cast<std::uint8_t>(
+                            (lookup>>rotate)|(lookup<<(8U-rotate)));
+                        add_register_effect(0x15ed,"AL",original_source);
+                        add_register_effect(0x15ed,"SI",static_cast<std::uint16_t>(*source_offset+source_index));
+                        add_register_effect(0x15ef,"DS",*table_segment);
+                        add_register_effect(0x15ef,"BX",*table_offset);
+                        add_register_effect(0x15f4,"AL",lookup);
+                        add_register_effect(0x15f6,"DS",*source_segment);
+                        add_register_effect(0x15f7,"AL",al);
+                        const auto sample_base=di;
+                        std::uint8_t ch=0x88;
+                        add_register_effect(0x15f9,"DI",di);
+                        add_register_effect(0x15fa,"CH",ch);
+                        for(std::uint32_t bit=0;bit<8;++bit){
+                            const bool sample_carry=(al&1U)!=0;
+                            al=static_cast<std::uint8_t>(al>>1U);
+                            add_register_effect(0x15fc,"AL",al);
+                            add_register_effect(0x15fc,"FLAGS.CF",sample_carry?1:0);
+                            if(sample_carry){
+                                if(di<*destination_offset||static_cast<std::uint32_t>(di-*destination_offset)>=clear_bytes)
+                                    throw std::runtime_error("Mode-four planar write escaped the cleared destination");
+                                const auto index=static_cast<std::size_t>(di-*destination_offset);
+                                planar[index]=static_cast<std::uint8_t>(planar[index]|ah);
+                                next.memory_effects_.push_back({0x1600,di,
+                                    MillenniumDosTitleInitializationEffectWidth::byte,planar[index],*destination_segment,true});
+                            }
+                            if(al==0){
+                                di=sample_base;
+                                if((ah&0xaaU)!=0)ah=static_cast<std::uint8_t>(ah>>1U);
+                                add_register_effect(0x1618,"DI",di);
+                                add_register_effect(0x161e,"AH",ah);
+                                break;
+                            }
+                            di=static_cast<std::uint16_t>(di+stride);
+                            const bool plane_carry=(ch&1U)!=0;
+                            ch=static_cast<std::uint8_t>(ch>>1U);
+                            add_register_effect(0x1607,"DI",di);
+                            add_register_effect(0x160c,"CH",ch);
+                            add_register_effect(0x160c,"FLAGS.CF",plane_carry?1:0);
+                            if(plane_carry){
+                                di=sample_base;
+                                add_register_effect(0x1610,"DI",di);
+                                if(ch==0)break;
+                                ah=static_cast<std::uint8_t>(ah>>1U);
+                                add_register_effect(0x1614,"AH",ah);
+                            }
+                        }
+                        const bool rotate_carry=(ah&1U)!=0;
+                        ah=static_cast<std::uint8_t>((ah>>1U)|(rotate_carry?0x80U:0U));
+                        if(rotate_carry)di=static_cast<std::uint16_t>(di+1U);
+                        add_register_effect(0x1620,"AH",ah);
+                        add_register_effect(0x1622,"DI",di);
+                        const auto remaining=static_cast<std::uint16_t>(*height-row-1U);
+                        add_register_effect(0x1625,"DX",remaining);
+                    }
+                    const bool rotate_carry=(ah&0x80U)!=0;
+                    ah=static_cast<std::uint8_t>((ah<<1U)|(rotate_carry?1U:0U));
+                    const bool carry=!rotate_carry;
+                    if(carry)di=static_cast<std::uint16_t>(di+1U);
+                    add_register_effect(0x1628,"AH",ah);
+                    add_register_effect(0x162a,"FLAGS.CF",carry?1:0);
+                    add_register_effect(0x162b,"DI",di);
+                    cl=static_cast<std::uint8_t>(cl^4U);
+                    add_register_effect(0x162e,"DX",static_cast<std::uint16_t>(*height));
+                    add_register_effect(0x162e,"CL",cl);
+                    add_register_effect(0x1631,"BX",static_cast<std::uint16_t>(*width-column-1U));
+                }
+                if(source_index!=source_size)
+                    throw std::runtime_error("Mode-four planar source traversal did not consume its complete descriptor");
+                // The effect log preserves every instruction-level OR result,
+                // including repeated writes to one byte. NativeRuntimeMemory
+                // rejects duplicate destinations in a batch, so commit the
+                // equivalent final byte image once per nonzero destination.
+                for(std::uint32_t index=0;index<clear_bytes;++index){
+                    if(planar[index]==0)continue;
+                    const auto offset=static_cast<std::uint16_t>(*destination_offset+index);
+                    pixel_batch.effects.push_back({pixel_batch.effects.size()+1,
+                        {NativeRuntimeAddressSpace::dos_segmented,*destination_segment,offset},
+                        MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::little_endian,planar[index]});
+                }
+                if(!pixel_batch.effects.empty()){
+                    const auto pixel_applied=memory.apply(pixel_batch);
+                    if(!pixel_applied.accepted)throw std::runtime_error(pixel_applied.error);
+                }
+                add_register_effect(0x1632,"BX",0);
+                add_register_effect(0x1637,"DS",next.child_code_segment_);
+                add_register_effect(0x1639,"ES",next.child_code_segment_);
+                next.last_sequence_=sequence;
+                next.continuation_address_=0x163a;
+                next.state_=S::post_descriptor_first_loop_mode_four_returned;
+                next.advance_descriptor_mode_two_return();
+                mode_four_body_applied=true;
             }else if(next.state_==S::post_descriptor_first_loop_mode_four_header_byte_boundary
                 ||next.state_==S::post_descriptor_first_loop_mode_four_header_second_byte_boundary
                 ||next.state_==S::post_descriptor_first_loop_mode_four_header_word_boundary){
@@ -332,23 +551,22 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
                         read_segment,read_offset,word(file_offset)});
                 }
             }
-            NativeRuntimeEffectBatch batch{"millennium-dos-owned-loop-"+std::to_string(sequence),true,{}};
-            for(std::size_t i=prior;i<next.memory_effects_.size();++i){
-                const auto& effect=next.memory_effects_[i];
-                batch.effects.push_back({batch.effects.size()+1,
-                    {NativeRuntimeAddressSpace::dos_segmented,effect.explicit_segment?effect.segment:next.child_code_segment_,effect.offset},
-                    effect.width==MillenniumDosTitleInitializationEffectWidth::word?MemoryTransferElementWidth::word:MemoryTransferElementWidth::byte,
-                    NativeRuntimeByteOrder::little_endian,effect.value});
-            }
-            if(!batch.effects.empty()){
-                const auto applied=memory.apply(batch);
-                if(!applied.accepted)throw std::runtime_error(applied.error);
+            if(!mode_four_body_applied){
+                NativeRuntimeEffectBatch batch{"millennium-dos-owned-loop-"+std::to_string(sequence),true,{}};
+                for(std::size_t i=prior;i<next.memory_effects_.size();++i){
+                    const auto& effect=next.memory_effects_[i];
+                    batch.effects.push_back({batch.effects.size()+1,
+                        {NativeRuntimeAddressSpace::dos_segmented,effect.explicit_segment?effect.segment:next.child_code_segment_,effect.offset},
+                        effect.width==MillenniumDosTitleInitializationEffectWidth::word?MemoryTransferElementWidth::word:MemoryTransferElementWidth::byte,
+                        NativeRuntimeByteOrder::little_endian,effect.value});
+                }
+                if(!batch.effects.empty()){
+                    const auto applied=memory.apply(batch);
+                    if(!applied.accepted)throw std::runtime_error(applied.error);
+                }
             }
             result.observation_count=count+1;
             if(next.state_==S::descriptor_loop_complete_boundary){result.returned=true;break;}
-            if(next.state_==S::post_descriptor_first_loop_mode_four_body_boundary){
-                result.stopped_at_boundary=true;break;
-            }
             if(!next.descriptor_loop_can_drive())throw std::runtime_error("Descriptor loop reached unadmitted operation");
         }
     }catch(const std::exception& error){result.error=error.what();result.observation_count=0;return result;}
@@ -752,6 +970,8 @@ constexpr auto mode_four_setup_suffix_sha =
     "a2fb9b438c29eb19e2b381499ea611e1af7c160fdb5d6975aff0fd9b28266c40";
 constexpr auto mode_four_normalizer_sha =
     "515520598575ae941301a7206f70bc7505f0799acbd74ba83ed7f1a17f001a6d";
+constexpr auto mode_four_planar_body_sha =
+    "416385b5fd03b0fec92663dea3d60f6d556c6310a4af97db9d5bd52874abba49";
 }
 
 MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession(
@@ -911,7 +1131,9 @@ MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession
         || to_hex(sha256(titles_executable.subspan(0x1414,41)))
             != mode_four_setup_suffix_sha
         || to_hex(sha256(titles_executable.subspan(0x003c,17)))
-            != mode_four_normalizer_sha) {
+            != mode_four_normalizer_sha
+        || to_hex(sha256(titles_executable.subspan(0x14c5,0x76)))
+            != mode_four_planar_body_sha) {
         throw std::runtime_error("Unsupported Millennium DOS title initialization media");
     }
 }
