@@ -20,6 +20,15 @@ enum class MillenniumDosVideoDriverLoadState {
     set_vector_result_observed,
 };
 
+enum class MillenniumDosVideoSelectorSource { command_tail, hardware_detector };
+struct MillenniumDosVideoSelectorObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t instruction_address = 0x0204;
+    MillenniumDosVideoSelectorSource source = MillenniumDosVideoSelectorSource::command_tail;
+    char command = 0;
+    std::uint8_t raw_detector_result = 0;
+};
+
 enum class MillenniumDosVideoDriverLoadBoundaryKind { dos_result, interrupt_request, dos_result_observation };
 
 struct MillenniumDosVideoDriverLoadBoundary {
@@ -49,7 +58,9 @@ class MillenniumDosVideoDriverLoadSession {
 public:
     MillenniumDosVideoDriverLoadSession(std::span<const std::uint8_t> titles_executable,
         std::span<const std::uint8_t> mill_com,
-        std::span<const std::uint8_t> selected_driver, MillenniumDosVideoDriverKind kind);
+        std::span<const std::uint8_t> selected_driver, MillenniumDosVideoDriverKind kind,
+        MillenniumDosVideoSelectorSource selector_source, std::uint8_t selector,
+        char observed_command, std::uint8_t raw_detector_result);
 
     [[nodiscard]] MillenniumDosVideoDriverLoadState state() const { return state_; }
     [[nodiscard]] MillenniumDosVideoDriverLoadBoundary boundary() const;
@@ -62,6 +73,10 @@ public:
     [[nodiscard]] std::uint16_t load_segment() const { return load_segment_; }
     [[nodiscard]] bool set_vector_carry() const { return set_vector_carry_; }
     [[nodiscard]] std::uint16_t set_vector_ax() const { return set_vector_ax_; }
+    [[nodiscard]] MillenniumDosVideoSelectorSource selector_source() const { return selector_source_; }
+    [[nodiscard]] std::uint8_t selector() const { return selector_; }
+    [[nodiscard]] char observed_command() const { return observed_command_; }
+    [[nodiscard]] std::uint8_t raw_detector_result() const { return raw_detector_result_; }
 
     void observe_open_result(std::uint16_t instruction, bool carry, std::uint16_t ax);
     void observe_seek_end_result(std::uint16_t instruction, bool carry,
@@ -77,6 +92,10 @@ public:
     void observe_set_vector_dos_result(std::uint16_t instruction, bool carry, std::uint16_t ax);
 
 private:
+    MillenniumDosVideoSelectorSource selector_source_ = MillenniumDosVideoSelectorSource::command_tail;
+    std::uint8_t selector_ = 0;
+    char observed_command_ = 0;
+    std::uint8_t raw_detector_result_ = 0;
     MillenniumDosVideoDriverLoadState state_ = MillenniumDosVideoDriverLoadState::awaiting_open_result;
     MillenniumDosVideoDriverProfile driver_;
     std::vector<std::uint8_t> driver_bytes_;

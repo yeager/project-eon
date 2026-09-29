@@ -7,13 +7,13 @@ The original LDS restores library-base:$0006; the former `$4865` overread
 was a relocated-pointer error. The complete 768-byte copy now reaches its
 real BIOS request at `$0fd8`, AX=$1012/CX=$00ff. A separate typed BIOS result
 permits return to the shared setup. Hardware-dependent graphics selection
-still needs ownership. A focused, hash-locked EGA640/MCGA loader session now
-has native unit coverage for explicit DOS open/seek/allocate/rewind/read/close
-results through the `$020c` SetVect request and its separately observed DOS
-result. That session is not connected to the active release-runtime facade
-and does not establish IVT contents or INT $91 dispatch, so no private service
-can yet be selected from those profiles. Title mode alone does not establish
-which driver is installed.
+still needs captured evidence. The active runtime now owns a hash-locked
+EGA640/MCGA loader session behind typed selector and DOS-result observations,
+and unit tests cover the explicit open/seek/allocate/rewind/read/close path
+through the `$020c` SetVect result. Those tests use synthetic observations;
+they do not prove the original selector, IVT contents, or INT $91 dispatch.
+No private service can yet be selected from the driver profiles. Title mode
+alone does not establish which driver is installed.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,
 respectively. The existing global-mode-2 descriptor regression uses explicit
 arithmetic observations; it is not evidence that either supplied driver

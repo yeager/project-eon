@@ -4678,20 +4678,21 @@ The subsequent 48-byte map `$01de..$020d` (file `+$00de`, SHA-256
 `57d768c01d59a98d7a5cc452a871be2fa2c7e20c272e88da82e644635ac57be3`) maps
 AL `$01` to `ega640.bin` at `$0617` and every other value to `mcga.bin` at
 `$05f9`, before the existing load-to-`DS:$0000` / vector-install boundary.
-This proves original input-to-request control flow, not a host policy: Project
-Eon does not read a host command tail as original hardware detection, select a
-driver, or assume the loader/DOS/vector calls succeed.
+This proves original input-to-request control flow, not a host policy. Project
+Eon does not derive the default selector from host hardware. Its runtime now
+accepts a typed observation of the selector and `$0204` loader entry; that
+interface does not produce or authenticate the observation.
 
-The focused, hash-bound `MillenniumDosVideoDriverLoadSession` tests cover the
-English loader's open, seek-end, allocation, rewind, exact-length read, and
-close boundaries for either supplied driver. Each DOS result is an explicit
-input; only a successful complete read emits byte effects at the observed
-segment and offset zero. The session then exposes the `INT 21h` request at
-`$020c` (`AX=$2591`, `DX=0`) and retains a separately supplied raw DOS result.
-This state machine is not yet connected to the active release-runtime facade.
-Its terminal result boundary does not establish IVT contents, INT 91h handler
-dispatch, or any handler return. Default hardware selection is still outside
-the session.
+The active release-runtime facade owns a hash-bound
+`MillenniumDosVideoDriverLoadSession`. It validates the selector mapping and
+loads only the matching exact EGA640 or MCGA leaf after explicit DOS
+open/seek/allocation/rewind/read/close results. Only a complete read emits
+byte effects at the observed segment and offset zero. The session exposes the
+`INT 21h` request at `$020c` (`AX=$2591`, `DX=0`) and retains its separately
+supplied raw DOS result. Native tests use synthetic selector and DOS-result
+observations; no captured selector, DOS return, IVT content, INT 91h handler
+dispatch, or handler return is established. No private service may yet be
+selected from these profiles.
 
 The read-in-place loader audit additionally binds `$02cf..$031b` (file
 `+$01cf`, 77 bytes, SHA-256

@@ -18,6 +18,7 @@
 #include "engine/millennium_dos_save_session.hpp"
 #include "engine/millennium_dos_sound_selection_session.hpp"
 #include "engine/millennium_dos_sound_driver_load_session.hpp"
+#include "engine/millennium_dos_video_driver_load_session.hpp"
 #include "engine/millennium_dos_compatibility_runner.hpp"
 #include "engine/millennium_dos_title_exec_entry_session.hpp"
 #include "engine/millennium_dos_title_child_compatibility_service.hpp"
@@ -401,6 +402,42 @@ struct MillenniumDosSoundDriverLoadCheckpoint {
         MillenniumDosSoundDriverCodeSegmentProvenance::external_observation;
     std::vector<MillenniumDosSoundDriverRuntimeWordEffect> runtime_word_effects;
     std::vector<MillenniumDosSoundDriverRuntimeByteEffect> runtime_byte_effects;
+};
+
+struct MillenniumDosVideoDriverDosObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t instruction = 0;
+    bool carry = false;
+    std::uint16_t bx = 0, ax = 0, dx = 0;
+};
+struct MillenniumDosVideoDriverSetVectorRequestObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t instruction = 0x020c, ax = 0x2591, dx = 0;
+    std::uint8_t interrupt = 0x21;
+};
+struct MillenniumDosVideoDriverSetVectorResultObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t instruction = 0x020c, ax = 0;
+    bool carry = false;
+};
+using MillenniumDosVideoDriverLoadObservation = std::variant<
+    MillenniumDosVideoSelectorObservation, MillenniumDosVideoDriverDosObservation,
+    MillenniumDosVideoDriverSetVectorRequestObservation,
+    MillenniumDosVideoDriverSetVectorResultObservation>;
+struct MillenniumDosVideoDriverLoadObservationResult { bool accepted = false; std::string error; };
+struct MillenniumDosVideoDriverLoadCheckpoint {
+    std::uint64_t generation = 0, last_sequence = 0;
+    MillenniumDosVideoDriverLoadState state = MillenniumDosVideoDriverLoadState::awaiting_open_result;
+    MillenniumDosVideoDriverLoadBoundary boundary;
+    MillenniumDosVideoDriverKind driver_kind = MillenniumDosVideoDriverKind::ega640;
+    MillenniumDosVideoSelectorSource selector_source = MillenniumDosVideoSelectorSource::command_tail;
+    std::uint8_t selector = 0;
+    char observed_command = 0;
+    std::uint8_t raw_detector_result = 0;
+    std::size_t admitted_driver_byte_count = 0, loaded_byte_count = 0;
+    std::uint16_t file_handle = 0, load_segment = 0;
+    bool set_vector_carry = false, set_vector_result_observed = false;
+    std::uint16_t set_vector_ax = 0;
 };
 
 struct MillenniumDosTitleExecPrefixObservation {
@@ -808,6 +845,8 @@ public:
     millennium_dos_startup_input() const;
     [[nodiscard]] MillenniumDosSoundDriverLoadObservationResult observe_millennium_dos_sound_driver_load(MillenniumDosSoundDriverLoadObservation);
     [[nodiscard]] std::optional<MillenniumDosSoundDriverLoadCheckpoint> millennium_dos_sound_driver_load_checkpoint() const;
+    [[nodiscard]] MillenniumDosVideoDriverLoadObservationResult observe_millennium_dos_video_driver_load(MillenniumDosVideoDriverLoadObservation);
+    [[nodiscard]] std::optional<MillenniumDosVideoDriverLoadCheckpoint> millennium_dos_video_driver_load_checkpoint() const;
     [[nodiscard]] std::optional<MillenniumDosCompatibilityRunnerCheckpoint> tick_millennium_dos_compatibility_runner();
     [[nodiscard]] MillenniumDosSessionDriveResult
     drive_millennium_dos_session(std::uint32_t step_limit = 64);
@@ -1306,6 +1345,9 @@ private:
     MillenniumDosSoundDriverCodeSegmentProvenance
         millennium_dos_sound_driver_code_segment_provenance_=
             MillenniumDosSoundDriverCodeSegmentProvenance::external_observation;
+    std::optional<MillenniumDosVideoDriverLoadSession> millennium_dos_video_driver_load_;
+    std::uint64_t millennium_dos_video_driver_load_generation_ = 0;
+    std::uint64_t millennium_dos_video_driver_load_last_sequence_ = 0;
     std::optional<MillenniumDosCompatibilityRunner> millennium_dos_compatibility_runner_;
     std::optional<MillenniumDosTitleExecEntrySession> millennium_dos_title_exec_entry_;
     std::optional<MillenniumDosTitleChildCompatibilityService>

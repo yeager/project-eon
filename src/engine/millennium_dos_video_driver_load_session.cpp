@@ -10,11 +10,33 @@ MillenniumDosVideoDriverLoadSession::MillenniumDosVideoDriverLoadSession(
     const std::span<const std::uint8_t> titles_executable,
     const std::span<const std::uint8_t> mill_com,
     const std::span<const std::uint8_t> selected_driver,
-    const MillenniumDosVideoDriverKind kind)
-    : driver_(parse_millennium_dos_video_driver(selected_driver, kind)),
+    const MillenniumDosVideoDriverKind kind,
+    const MillenniumDosVideoSelectorSource selector_source,
+    const std::uint8_t selector, const char observed_command,
+    const std::uint8_t raw_detector_result)
+    : selector_source_(selector_source), selector_(selector),
+      observed_command_(observed_command), raw_detector_result_(raw_detector_result),
+      driver_(parse_millennium_dos_video_driver(selected_driver, kind)),
       driver_bytes_(selected_driver.begin(), selected_driver.end()) {
+    if ((kind != MillenniumDosVideoDriverKind::ega640 && kind != MillenniumDosVideoDriverKind::mcga)
+        || (selector_source != MillenniumDosVideoSelectorSource::command_tail
+            && selector_source != MillenniumDosVideoSelectorSource::hardware_detector)
+        || (selector != 1 && selector != 2)
+        || (kind == MillenniumDosVideoDriverKind::ega640) != (selector == 1)
+        || (selector_source == MillenniumDosVideoSelectorSource::command_tail
+            && ((observed_command != 'e' && observed_command != 'E'
+                    && observed_command != 'm' && observed_command != 'M')
+                || (observed_command == 'e' || observed_command == 'E') != (selector == 1)
+                || raw_detector_result != 0))
+        || (selector_source == MillenniumDosVideoSelectorSource::hardware_detector
+            && (observed_command != 0 || raw_detector_result > 2
+                || ((raw_detector_result == 1) != (selector == 1)))) ) {
+        throw std::runtime_error("Millennium DOS video selector and driver identity disagree");
+    }
     const auto flow = parse_millennium_dos_title_flow(titles_executable, mill_com);
-    if (flow.launcher_private_interrupt_handler_loader_entry != 0x02cf
+    if (flow.launcher_private_interrupt_loader_call_address != 0x0204
+        || flow.launcher_private_interrupt_loader_call_target != 0x02cf
+        || flow.launcher_private_interrupt_handler_loader_entry != 0x02cf
         || flow.launcher_private_interrupt_handler_open_service != 0x3d
         || flow.launcher_private_interrupt_handler_seek_end_service != 0x42
         || flow.launcher_private_interrupt_handler_allocate_service != 0x48

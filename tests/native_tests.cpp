@@ -1534,6 +1534,10 @@ int main(int argc, char** argv) {
     assert(!runtime_host.tick_millennium_dos_compatibility_runner());
     assert(!runtime_host.observe_millennium_dos_sound_driver_load(
         eon::MillenniumDosSoundDriverLoadEntryObservation{1,0x2222}).accepted);
+    assert(!runtime_host.millennium_dos_video_driver_load_checkpoint());
+    assert(!runtime_host.observe_millennium_dos_video_driver_load(
+        eon::MillenniumDosVideoSelectorObservation{1,0x0204,
+            eon::MillenniumDosVideoSelectorSource::command_tail,'e',0}).accepted);
     const auto rejected_tagged_continuation = runtime_host.observe_millennium_dos_title_continuation(
         eon::MillenniumDosTitleFarByteObservation{1,0x1428,0x5050,0x0023,0xd7});
     assert(!rejected_tagged_continuation.accepted
@@ -4252,6 +4256,76 @@ int main(int argc, char** argv) {
     assert(admitted_dos_runtime.acquire(admitted_dos_launch));
     assert(eon::release_runtime_admission_label(admitted_dos_runtime.admission()) == "READY");
     assert(admitted_dos_runtime.active() && admitted_dos_runtime.millennium_dos_presentation());
+    {
+        eon::ReleaseRuntimeCoordinator video_runtime;
+        assert(video_runtime.acquire(admitted_dos_launch));
+        assert(!video_runtime.observe_millennium_dos_video_driver_load(
+            eon::MillenniumDosVideoSelectorObservation{1,0x0204,
+                eon::MillenniumDosVideoSelectorSource::command_tail,'x',0}).accepted);
+        assert(!video_runtime.millennium_dos_video_driver_load_checkpoint());
+        assert(video_runtime.observe_millennium_dos_video_driver_load(
+            eon::MillenniumDosVideoSelectorObservation{1,0x0204,
+                eon::MillenniumDosVideoSelectorSource::hardware_detector,0,0}).accepted);
+        auto video_checkpoint=video_runtime.millennium_dos_video_driver_load_checkpoint();
+        assert(video_checkpoint && video_checkpoint->selector==2
+            && video_checkpoint->driver_kind==eon::MillenniumDosVideoDriverKind::mcga
+            && video_checkpoint->selector_source==eon::MillenniumDosVideoSelectorSource::hardware_detector);
+        const auto before_out_of_order=video_runtime.native_runtime_memory_diagnostics();
+        assert(!video_runtime.observe_millennium_dos_video_driver_load(
+            eon::MillenniumDosVideoDriverDosObservation{2,0x02eb,false,0x77,4366,0}).accepted);
+        const auto after_out_of_order=video_runtime.native_runtime_memory_diagnostics();
+        const auto checkpoint_after_out_of_order=video_runtime.millennium_dos_video_driver_load_checkpoint();
+        assert(before_out_of_order && after_out_of_order && checkpoint_after_out_of_order
+            && checkpoint_after_out_of_order->last_sequence==1
+            && checkpoint_after_out_of_order->state==eon::MillenniumDosVideoDriverLoadState::awaiting_open_result
+            && after_out_of_order->checksum==before_out_of_order->checksum
+            && after_out_of_order->applied_batch_count==before_out_of_order->applied_batch_count);
+        constexpr std::uint16_t video_handle=0x77, video_segment=0xa000;
+        const auto video_step=[&](eon::MillenniumDosVideoDriverLoadObservation observation) {
+            return video_runtime.observe_millennium_dos_video_driver_load(std::move(observation)).accepted;
+        };
+        assert(video_step(eon::MillenniumDosVideoDriverDosObservation{2,0x02d2,false,0,video_handle,0}));
+        const auto after_video_open=video_runtime.native_runtime_memory_diagnostics();
+        const auto accepted_open=video_runtime.millennium_dos_video_driver_load_checkpoint();
+        assert(!video_step(eon::MillenniumDosVideoDriverDosObservation{2,0x02d2,false,0,video_handle,0}));
+        const auto after_duplicate_open=video_runtime.native_runtime_memory_diagnostics();
+        const auto rejected_duplicate_open=video_runtime.millennium_dos_video_driver_load_checkpoint();
+        assert(after_video_open && after_duplicate_open && accepted_open && rejected_duplicate_open
+            && rejected_duplicate_open->last_sequence==accepted_open->last_sequence
+            && rejected_duplicate_open->state==accepted_open->state
+            && after_duplicate_open->checksum==after_video_open->checksum
+            && after_duplicate_open->applied_batch_count==after_video_open->applied_batch_count);
+        assert(video_step(eon::MillenniumDosVideoDriverDosObservation{3,0x02eb,false,video_handle,4366,0}));
+        assert(video_step(eon::MillenniumDosVideoDriverDosObservation{4,0x02fa,false,0,video_segment,0}));
+        assert(video_step(eon::MillenniumDosVideoDriverDosObservation{5,0x0309,false,video_handle,0,0}));
+        const auto before_video_read=video_runtime.native_runtime_memory_diagnostics();
+        assert(video_step(eon::MillenniumDosVideoDriverDosObservation{6,0x0313,false,video_handle,4366,0}));
+        const auto after_video_read=video_runtime.native_runtime_memory_diagnostics();
+        assert(before_video_read && after_video_read
+            && after_video_read->initialized_byte_count
+                ==before_video_read->initialized_byte_count+4366
+            && after_video_read->applied_batch_count==before_video_read->applied_batch_count+1);
+        video_checkpoint=video_runtime.millennium_dos_video_driver_load_checkpoint();
+        assert(video_checkpoint && video_checkpoint->loaded_byte_count==4366
+            && video_checkpoint->state==eon::MillenniumDosVideoDriverLoadState::awaiting_close_result);
+        assert(video_step(eon::MillenniumDosVideoDriverDosObservation{7,0x0319,false,video_handle,0,0}));
+        assert(video_step(eon::MillenniumDosVideoDriverSetVectorRequestObservation{8,0x020c,0x2591,0,0x21}));
+        assert(video_step(eon::MillenniumDosVideoDriverSetVectorResultObservation{9,0x020c,0x0001,true}));
+        video_checkpoint=video_runtime.millennium_dos_video_driver_load_checkpoint();
+        assert(video_checkpoint && video_checkpoint->set_vector_result_observed
+            && video_checkpoint->set_vector_carry && video_checkpoint->set_vector_ax==1
+            && video_checkpoint->state==eon::MillenniumDosVideoDriverLoadState::set_vector_result_observed);
+        video_runtime.reset();
+        assert(!video_runtime.millennium_dos_video_driver_load_checkpoint());
+        assert(video_runtime.acquire(admitted_dos_launch));
+        assert(video_runtime.observe_millennium_dos_video_driver_load(
+            eon::MillenniumDosVideoSelectorObservation{1,0x0204,
+                eon::MillenniumDosVideoSelectorSource::command_tail,'E',0}).accepted);
+        video_checkpoint=video_runtime.millennium_dos_video_driver_load_checkpoint();
+        assert(video_checkpoint && video_checkpoint->generation==1
+            && video_checkpoint->last_sequence==1 && video_checkpoint->selector==1
+            && video_checkpoint->observed_command=='E');
+    }
     const auto prepared_native_process =
         admitted_dos_runtime.millennium_dos_native_process_checkpoint();
     assert(prepared_native_process && prepared_native_process->static_recovery_entry
@@ -4338,6 +4412,23 @@ int main(int argc, char** argv) {
     assert(controlled_dos_runtime.state() == eon::NativeSessionState::returning_to_menu);
     controlled_dos_runtime.finish_return_to_menu();
     assert(controlled_dos_runtime.is_menu() && !controlled_dos_runtime.active());
+    {
+        eon::RuntimeHost hosted_video_runtime;
+        assert(hosted_video_runtime.launch_direct(controlled_dos_request, releases).accepted());
+        assert(hosted_video_runtime.state() == eon::NativeSessionState::millennium_dos_title);
+        assert(hosted_video_runtime.observe_millennium_dos_video_driver_load(
+            eon::MillenniumDosVideoSelectorObservation{1,0x0204,
+                eon::MillenniumDosVideoSelectorSource::command_tail,'e',0}).accepted);
+        const auto hosted_video_active=hosted_video_runtime.millennium_dos_video_driver_load_checkpoint();
+        assert(hosted_video_active && hosted_video_active->generation==1
+            && hosted_video_active->selector==1);
+        hosted_video_runtime.begin_source_revocation();
+        assert(!hosted_video_runtime.observe_millennium_dos_video_driver_load(
+            eon::MillenniumDosVideoDriverDosObservation{2,0x02d2,false,0,5,0}).accepted);
+        assert(!hosted_video_runtime.millennium_dos_video_driver_load_checkpoint());
+        hosted_video_runtime.finish_source_revocation();
+        assert(hosted_video_runtime.is_menu());
+    }
     // The coordinator admits only the literal source-level observations for
     // the English sound chooser. It rejects an availability result while that
     // chooser is active, rejects an unknown ASCII byte, then stops at the
@@ -9045,7 +9136,10 @@ int main(int argc, char** argv) {
                                          const char* expected_filename,
                                          const std::uint16_t expected_filename_address) {
         eon::MillenniumDosVideoDriverLoadSession video_load(
-            *titles_bytes, *mill_bytes, driver_bytes, kind);
+            *titles_bytes, *mill_bytes, driver_bytes, kind,
+            eon::MillenniumDosVideoSelectorSource::command_tail,
+            kind == eon::MillenniumDosVideoDriverKind::ega640 ? 1 : 2,
+            kind == eon::MillenniumDosVideoDriverKind::ega640 ? 'e' : 'm', 0);
         assert(std::string(video_load.filename()) == expected_filename);
         auto boundary = video_load.boundary();
         assert(boundary.kind == eon::MillenniumDosVideoDriverLoadBoundaryKind::dos_result
@@ -9108,7 +9202,8 @@ int main(int argc, char** argv) {
         "mcga.bin", 0x05f9);
     {
         eon::MillenniumDosVideoDriverLoadSession short_read(
-            *titles_bytes, *mill_bytes, *ega640, eon::MillenniumDosVideoDriverKind::ega640);
+            *titles_bytes, *mill_bytes, *ega640, eon::MillenniumDosVideoDriverKind::ega640,
+            eon::MillenniumDosVideoSelectorSource::command_tail,1,'e',0);
         short_read.observe_open_result(0x02d2, false, 7);
         short_read.observe_seek_end_result(0x02eb, false, 7,
             static_cast<std::uint16_t>(ega640->size()), 0);
@@ -9128,7 +9223,8 @@ int main(int argc, char** argv) {
         bool rejected_spanish_route = false;
         try {
             static_cast<void>(eon::MillenniumDosVideoDriverLoadSession(
-                *titles_bytes, *mill_bytes, *ega640, eon::MillenniumDosVideoDriverKind::mcga));
+                *titles_bytes, *mill_bytes, *ega640, eon::MillenniumDosVideoDriverKind::mcga,
+                eon::MillenniumDosVideoSelectorSource::hardware_detector,2,0,0));
         } catch (const std::runtime_error&) {
             rejected_spanish_route = true;
         }

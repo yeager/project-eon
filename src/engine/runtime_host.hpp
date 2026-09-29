@@ -85,6 +85,8 @@ public:
     millennium_dos_startup_input() const;
     [[nodiscard]] MillenniumDosSoundDriverLoadObservationResult observe_millennium_dos_sound_driver_load(MillenniumDosSoundDriverLoadObservation);
     [[nodiscard]] std::optional<MillenniumDosSoundDriverLoadCheckpoint> millennium_dos_sound_driver_load_checkpoint() const;
+    [[nodiscard]] MillenniumDosVideoDriverLoadObservationResult observe_millennium_dos_video_driver_load(MillenniumDosVideoDriverLoadObservation);
+    [[nodiscard]] std::optional<MillenniumDosVideoDriverLoadCheckpoint> millennium_dos_video_driver_load_checkpoint() const;
     [[nodiscard]] std::optional<MillenniumDosCompatibilityRunnerCheckpoint> tick_millennium_dos_compatibility_runner();
     [[nodiscard]] MillenniumDosSessionDriveResult
     drive_millennium_dos_session(std::uint32_t step_limit = 64);

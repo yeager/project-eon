@@ -423,6 +423,9 @@ void ReleaseRuntimeCoordinator::reset() {
     millennium_dos_post_overlay_loop_.reset();
     millennium_dos_native_process_.reset();
     millennium_dos_sound_driver_load_.reset();
+    millennium_dos_video_driver_load_.reset();
+    millennium_dos_video_driver_load_generation_ = 0;
+    millennium_dos_video_driver_load_last_sequence_ = 0;
     millennium_dos_compatibility_runner_.reset();
     millennium_dos_title_exec_entry_.reset();
     millennium_dos_title_child_compatibility_.reset();
@@ -1066,6 +1069,112 @@ ReleaseRuntimeCoordinator::millennium_dos_sound_driver_load_checkpoint()const{
     const auto code_segment = millennium_dos_compatibility_runner_
         ? millennium_dos_compatibility_runner_->code_segment() : std::uint16_t{0};
     return MillenniumDosSoundDriverLoadCheckpoint{millennium_dos_sound_driver_load_generation_,millennium_dos_sound_driver_load_last_sequence_,s.state(),s.boundary(),s.driver().kind,s.memory_effects().size(),s.file_handle(),s.load_segment(),code_segment,millennium_dos_sound_driver_code_segment_provenance_,s.runtime_word_effects(),s.runtime_byte_effects()};
+}
+
+MillenniumDosVideoDriverLoadObservationResult
+ReleaseRuntimeCoordinator::observe_millennium_dos_video_driver_load(
+    const MillenniumDosVideoDriverLoadObservation observation) {
+    MillenniumDosVideoDriverLoadObservationResult rejected;
+    if (!active_ || !session_snapshot_ || !millennium_dos_ || !active_media_
+        || !native_runtime_memory_
+        || (session_snapshot_->kind != RuntimeSessionKind::millennium_dos_sound_driver_boundary
+            && session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title)
+        || !millennium_dos_->title_flow || millennium_dos_->language != "en") {
+        rejected.error = "Video-driver observations require the active English Millennium DOS boundary";
+        return rejected;
+    }
+    const auto sequence = std::visit([](const auto& value) { return value.sequence; }, observation);
+    if (sequence == 0 || sequence <= millennium_dos_video_driver_load_last_sequence_) {
+        rejected.error = "Video-driver observation sequence is stale or duplicated";
+        return rejected;
+    }
+    try {
+        auto memory = *native_runtime_memory_;
+        auto next_session = millennium_dos_video_driver_load_;
+        auto next_generation = millennium_dos_video_driver_load_generation_;
+        if (const auto* selector = std::get_if<MillenniumDosVideoSelectorObservation>(&observation)) {
+            if (next_session || selector->instruction_address != 0x0204)
+                throw std::runtime_error("Video-driver loader entry is detached or already admitted");
+            std::uint8_t selected = 0;
+            if (selector->source == MillenniumDosVideoSelectorSource::command_tail) {
+                switch (selector->command) {
+                case 'e': case 'E': selected = 1; break;
+                case 'm': case 'M': selected = 2; break;
+                default: throw std::runtime_error("Unrecognized Millennium DOS video command-tail selector");
+                }
+            } else if (selector->source == MillenniumDosVideoSelectorSource::hardware_detector) {
+                if (selector->raw_detector_result > 2)
+                    throw std::runtime_error("Millennium DOS hardware detector result is outside 0..2");
+                selected = selector->raw_detector_result == 1 ? 1 : 2;
+            } else {
+                throw std::runtime_error("Unknown Millennium DOS video selector provenance");
+            }
+            constexpr std::string_view mill_sha = "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e";
+            constexpr std::string_view titles_sha = "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
+            constexpr std::string_view ega_sha = "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a";
+            constexpr std::string_view mcga_sha = "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228";
+            const auto mill = active_media_->borrow(mill_sha);
+            const auto titles = active_media_->borrow(titles_sha);
+            const auto driver = active_media_->borrow(selected == 1 ? ega_sha : mcga_sha);
+            if (!mill || !titles || !driver) throw std::runtime_error("Exact active video-loader media is unavailable");
+            MillenniumDosVideoDriverLoadSession next(*titles, *mill, *driver,
+                selected == 1 ? MillenniumDosVideoDriverKind::ega640 : MillenniumDosVideoDriverKind::mcga,
+                selector->source, selected, selector->command, selector->raw_detector_result);
+            next_session = std::move(next);
+            ++next_generation;
+        } else {
+            if (!next_session)
+                throw std::runtime_error("Video-driver selector observation at $0204 is required first");
+            auto next = *next_session;
+            if (const auto* dos = std::get_if<MillenniumDosVideoDriverDosObservation>(&observation)) {
+                switch (next.state()) {
+                case MillenniumDosVideoDriverLoadState::awaiting_open_result: next.observe_open_result(dos->instruction,dos->carry,dos->ax); break;
+                case MillenniumDosVideoDriverLoadState::awaiting_seek_end_result: next.observe_seek_end_result(dos->instruction,dos->carry,dos->bx,dos->ax,dos->dx); break;
+                case MillenniumDosVideoDriverLoadState::awaiting_allocation_result: next.observe_allocation_result(dos->instruction,dos->carry,dos->ax); break;
+                case MillenniumDosVideoDriverLoadState::awaiting_seek_start_result: next.observe_seek_start_result(dos->instruction,dos->carry,dos->bx,dos->ax,dos->dx); break;
+                case MillenniumDosVideoDriverLoadState::awaiting_read_result: next.observe_read_result(dos->instruction,dos->carry,dos->bx,dos->ax); break;
+                case MillenniumDosVideoDriverLoadState::awaiting_close_result: next.observe_close_result(dos->instruction,dos->carry,dos->bx); break;
+                default: throw std::runtime_error("Video-driver loader is not awaiting a DOS result");
+                }
+            } else if (const auto* request = std::get_if<MillenniumDosVideoDriverSetVectorRequestObservation>(&observation)) {
+                next.observe_set_vector_request(request->instruction,request->interrupt,request->ax,request->dx);
+            } else if (const auto* result = std::get_if<MillenniumDosVideoDriverSetVectorResultObservation>(&observation)) {
+                next.observe_set_vector_dos_result(result->instruction,result->carry,result->ax);
+            }
+            if (next.memory_effects().size() != next_session->memory_effects().size()) {
+                NativeRuntimeEffectBatch batch{"millennium-dos-video-driver-" + std::to_string(next_generation) + "-image",true,{}};
+                batch.effects.reserve(next.memory_effects().size());
+                for (std::size_t i=0;i<next.memory_effects().size();++i) {
+                    const auto& effect=next.memory_effects()[i];
+                    batch.effects.push_back({i+1,{NativeRuntimeAddressSpace::dos_segmented,effect.segment,effect.offset},MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::little_endian,effect.value});
+                }
+                const auto applied=memory.apply(batch);
+                if (!applied.accepted) throw std::runtime_error(applied.error);
+            }
+            next_session = std::move(next);
+        }
+        millennium_dos_video_driver_load_ = std::move(next_session);
+        millennium_dos_video_driver_load_generation_ = next_generation;
+        *native_runtime_memory_ = std::move(memory);
+        millennium_dos_video_driver_load_last_sequence_ = sequence;
+        return {true,{}};
+    } catch (const std::exception& e) { rejected.error = e.what(); return rejected; }
+}
+
+std::optional<MillenniumDosVideoDriverLoadCheckpoint>
+ReleaseRuntimeCoordinator::millennium_dos_video_driver_load_checkpoint() const {
+    if (!session_snapshot_
+        || (session_snapshot_->kind != RuntimeSessionKind::millennium_dos_sound_driver_boundary
+            && session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title)
+        || !millennium_dos_video_driver_load_) return std::nullopt;
+    const auto& s = *millennium_dos_video_driver_load_;
+    const auto b = s.boundary();
+    return MillenniumDosVideoDriverLoadCheckpoint{millennium_dos_video_driver_load_generation_,
+        millennium_dos_video_driver_load_last_sequence_,s.state(),b,s.driver().kind,
+        s.selector_source(),s.selector(),s.observed_command(),s.raw_detector_result(),
+        s.driver().byte_size,s.memory_effects().size(),
+        s.file_handle(),s.load_segment(),s.set_vector_carry(),
+        s.state()==MillenniumDosVideoDriverLoadState::set_vector_result_observed,s.set_vector_ax()};
 }
 
 std::optional<MillenniumDosCompatibilityRunnerCheckpoint>
