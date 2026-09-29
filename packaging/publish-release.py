@@ -41,6 +41,18 @@ def digest(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def check_artifacts(artifacts: list[dict]) -> None:
+    names = [item["name"] for item in artifacts]
+    packages = [item for item in artifacts if item["name"] in ARTIFACTS]
+    # Gitleaks uploads its scan report alongside the five package groups.
+    # The report is not a distributable and must never enter release assets.
+    require(len(names) == len(set(names))
+            and set(names) <= set(ARTIFACTS) | {"gitleaks-results.sarif"}
+            and {item["name"] for item in packages} == set(ARTIFACTS)
+            and not any(item["expired"] for item in packages),
+            "Complete, unexpired platform artifacts required")
+
+
 def main() -> None:
     require(os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch",
             "Release requires an explicit manual workflow dispatch")
@@ -70,10 +82,7 @@ def main() -> None:
             and all(job["conclusion"] == "success" for job in jobs),
             "Every required test and packaging job must succeed")
     artifacts = api(endpoint + "/artifacts?per_page=100")["artifacts"]
-    require(len(artifacts) == len(ARTIFACTS)
-            and {item["name"] for item in artifacts} == set(ARTIFACTS)
-            and not any(item["expired"] for item in artifacts),
-            "Complete, unexpired platform artifacts required")
+    check_artifacts(artifacts)
     cache = Path.home() / ".cache/project-eon-tools/release" / os.environ["GITHUB_RUN_ID"]
     cache.mkdir(parents=True, exist_ok=False)
     files: list[Path] = []

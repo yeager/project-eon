@@ -61,3 +61,15 @@ class ReleasePublicationTests(unittest.TestCase):
         with patch.object(MODULE, "api", side_effect=[self.build, jobs, {"artifacts": []}]), \
                 self.assertRaisesRegex(RuntimeError, "Complete"):
             MODULE.main()
+
+    def test_gitleaks_report_is_not_a_release_package(self):
+        packages = [{"name": name, "expired": False} for name in MODULE.ARTIFACTS]
+        MODULE.check_artifacts(packages)
+        MODULE.check_artifacts(packages + [{"name": "gitleaks-results.sarif", "expired": False}])
+        with self.assertRaises(RuntimeError):
+            MODULE.check_artifacts(packages + [{"name": "unexpected", "expired": False}])
+        with self.assertRaises(RuntimeError):
+            MODULE.check_artifacts(packages + [packages[0]])
+        packages[0]["expired"] = True
+        with self.assertRaises(RuntimeError):
+            MODULE.check_artifacts(packages)
