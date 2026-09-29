@@ -4715,6 +4715,20 @@ return. It does not synthesize BIOS results or infer hardware behavior.
 Spanish driver parsing retains its separate identity and has not been extended
 by this English-only instruction check.
 
+A separately hash-bound step advances from the mode-match target using only
+the raw verify-query `CX`. EGA640's continuation prefix
+`[$01eb,$01fd)` (18 bytes, SHA-256
+`8dd5795f1822c4eda3f039dd2409feeafe139770e4aa782bbbbdfc70bb46cd95`) writes
+zero to driver-local `$0192`, sets `BX=$72`, clamps `CX` to four, copies `CX`
+to `SI`, and stops before `PUSH SI` at `$01fd`. MCGA's prefix
+`[$0209,$021f)` (22 bytes, SHA-256
+`a661c390d71832a868a237e975ba4a181d32e4914bd1b5bc0a86b1fb8ee4b0fc`) sets
+`DI=$84`, clamps `CX` to eight, and decrements it into `SI`. Only `CX=$0001`
+branches to `$023d`, where execution stops before the target. For every other
+value, including zero, it sets `BX=$fa00` and `AX=$0001`, then stops before
+the private `INT $92` opcode at `$021f`. No stack write, video I/O, INT $92
+dispatch, handler result, or graphics effect is modeled.
+
 The read-in-place loader audit additionally binds `$02cf..$031b` (file
 `+$01cf`, 77 bytes, SHA-256
 `5c7f7ec03aa3109d4df2fbdec457ca7e2be412fc9d818bd07252a039fb8c6671`)

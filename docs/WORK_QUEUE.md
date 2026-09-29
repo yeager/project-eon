@@ -27,6 +27,10 @@ RET opcode after applying the proven local zero-AX operation. Focused real-
 media tests cover both original leaves and rejected/reordered results. No BIOS
 behavior, caller return, successful postlude, IVT contents, or private-handler
 dispatch is established.
+The separate success-postlude step models EGA's local `$0192` write and
+register clamp only up to pre-`PUSH SI` `$01fd`; MCGA's branch step stops at
+the `$023d` single-count target or before INT `$92` at `$021f`. It grants no
+graphics or private-service behavior.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,
 respectively. The existing global-mode-2 descriptor regression uses explicit
 arithmetic observations; it is not evidence that either supplied driver

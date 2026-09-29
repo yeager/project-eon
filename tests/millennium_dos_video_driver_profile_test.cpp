@@ -76,7 +76,7 @@ int main(const int argc, char** argv) {
     expect_rejected([&] { ega_unknown.observe_bios_result(
         Result{1,0x1d6,0x11,0x560e,0,0,0,0}); });
     ega_unknown.observe_bios_result(ega_query);
-    const eon::MillenniumDosVideoFunctionZeroCacheWrite ega_cache_write{0x1d8,0x8c,0x0e};
+    const eon::MillenniumDosVideoFunctionZeroLocalWrite ega_cache_write{0x1d8,0x8c,0x0e};
     assert(ega_unknown.cache_write() == ega_cache_write);
     boundary = ega_unknown.boundary();
     assert(boundary && boundary->kind == eon::MillenniumDosVideoFunctionZeroBoundaryKind::set_mode
@@ -99,6 +99,17 @@ int main(const int argc, char** argv) {
         && ega_outcome->ax_after_local_effect == ega_verified.ax
         && !ega_outcome->ax_is_routine_return);
     expect_rejected([&] { ega_unknown.observe_bios_result(ega_verified); });
+    ega_unknown.advance_success_postlude_prefix();
+    const auto ega_postlude = ega_unknown.postlude_prefix_outcome();
+    const eon::MillenniumDosVideoFunctionZeroLocalWrite ega_postlude_write{0x1eb,0x0192,0};
+    assert(ega_postlude
+        && ega_postlude->endpoint
+            == eon::MillenniumDosVideoFunctionZeroPostludeEndpoint::ega_pre_push
+        && ega_postlude->instruction_address == 0x1fd
+        && ega_postlude->ax == ega_verified.ax && ega_postlude->bx == 0x72
+        && ega_postlude->cx == 4 && ega_postlude->si == 4 && !ega_postlude->di
+        && ega_postlude->local_write == ega_postlude_write);
+    expect_rejected([&] { ega_unknown.advance_success_postlude_prefix(); });
 
     Session ega_known(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640, 0x0e);
     assert(ega_known.state() == State::awaiting_set_mode_result && !ega_known.cache_write()
@@ -110,12 +121,13 @@ int main(const int argc, char** argv) {
         && ega_mismatch->instruction_address == 0x1ea
         && ega_mismatch->verify_result.ax == 0x1234
         && ega_mismatch->ax_after_local_effect == 0 && !ega_mismatch->ax_is_routine_return);
+    expect_rejected([&] { ega_known.advance_success_postlude_prefix(); });
 
     const auto mcga_bytes = read_driver(root / "MCGA.BIN");
     Session mcga_unknown(mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga, 0xff);
     assert(mcga_unknown.boundary()->instruction_address == 0x1f4);
     mcga_unknown.observe_bios_result(Result{1,0x1f4,0x10,0x0013,0,0,0,0});
-    const eon::MillenniumDosVideoFunctionZeroCacheWrite mcga_cache_write{0x1f6,0xae,0x13};
+    const eon::MillenniumDosVideoFunctionZeroLocalWrite mcga_cache_write{0x1f6,0xae,0x13};
     assert(mcga_unknown.cache_write() == mcga_cache_write);
     mcga_unknown.observe_bios_result(Result{2,0x1fc,0x10,0x0013,0,0,0,0});
     mcga_unknown.observe_bios_result(Result{3,0x200,0x10,0x8813,0,0,0,0});
@@ -123,6 +135,29 @@ int main(const int argc, char** argv) {
     assert(mcga_match && mcga_match->endpoint == Endpoint::mode_match_continuation
         && mcga_match->instruction_address == 0x209
         && mcga_match->verify_result.ax == 0x8813 && !mcga_match->ax_is_routine_return);
+    mcga_unknown.advance_success_postlude_prefix();
+    const auto mcga_postlude = mcga_unknown.postlude_prefix_outcome();
+    assert(mcga_postlude
+        && mcga_postlude->endpoint
+            == eon::MillenniumDosVideoFunctionZeroPostludeEndpoint::mcga_int92_request
+        && mcga_postlude->instruction_address == 0x021f
+        && mcga_postlude->ax == 1 && mcga_postlude->bx == 0xfa00
+        && mcga_postlude->cx == 0 && mcga_postlude->si == 0xffff
+        && mcga_postlude->di == 0x0084 && mcga_postlude->interrupt_number == 0x92
+        && !mcga_postlude->local_write);
+
+    Session mcga_single_count(mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga, 0x13);
+    mcga_single_count.observe_bios_result(Result{1,0x1fc,0x10,0x0013,0,1,0,0});
+    mcga_single_count.observe_bios_result(Result{2,0x0200,0x10,0x0013,0,1,0,0});
+    mcga_single_count.advance_success_postlude_prefix();
+    const auto mcga_single_postlude = mcga_single_count.postlude_prefix_outcome();
+    assert(mcga_single_postlude
+        && mcga_single_postlude->endpoint
+            == eon::MillenniumDosVideoFunctionZeroPostludeEndpoint::mcga_single_count_branch
+        && mcga_single_postlude->instruction_address == 0x023d
+        && mcga_single_postlude->ax == 0x0013 && mcga_single_postlude->cx == 1
+        && mcga_single_postlude->si == 0 && mcga_single_postlude->di == 0x0084
+        && mcga_single_postlude->interrupt_number == 0);
 
     Session mcga_known(mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga, 0x13);
     mcga_known.observe_bios_result(Result{1,0x1fc,0x10,0xbeef,0,0,0,0});

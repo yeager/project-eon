@@ -15,8 +15,9 @@ MillenniumDosVideoFunctionZeroSession::MillenniumDosVideoFunctionZeroSession(
           ? MillenniumDosVideoFunctionZeroState::awaiting_cached_mode_query_result
           : MillenniumDosVideoFunctionZeroState::awaiting_set_mode_result) {
     const bool ega = kind == MillenniumDosVideoDriverKind::ega640;
-    // End at the first byte of the successful continuation. The continuation
-    // itself is never decoded or executed by this session.
+    // The primary mode-check span ends at the first successful-continuation
+    // byte; a second independently hash-bound prefix is advanced only by the
+    // explicit continuation step below.
     constexpr auto span_size = static_cast<std::size_t>(0x24);
     const auto span_offset = static_cast<std::size_t>(driver_.function_zero_address);
     const auto span_hash = ega
@@ -37,6 +38,18 @@ MillenniumDosVideoFunctionZeroSession::MillenniumDosVideoFunctionZeroSession(
         || driver_.function_zero_mode_mismatch_return != driver_.function_zero_address + 0x22
         || driver_.function_zero_mode_match_branch_target != driver_.function_zero_address + 0x23) {
         throw std::runtime_error("Unsupported Millennium DOS function-zero instruction profile");
+    }
+    const auto continuation_offset = static_cast<std::size_t>(
+        driver_.function_zero_mode_match_branch_target);
+    const auto continuation_size = static_cast<std::size_t>(ega ? 0x12 : 0x16);
+    const auto continuation_hash = ega
+        ? "8dd5795f1822c4eda3f039dd2409feeafe139770e4aa782bbbbdfc70bb46cd95"
+        : "a661c390d71832a868a237e975ba4a181d32e4914bd1b5bc0a86b1fb8ee4b0fc";
+    if (continuation_offset > english_driver.size()
+        || english_driver.size() - continuation_offset < continuation_size
+        || to_hex(sha256(english_driver.subspan(continuation_offset, continuation_size)))
+            != continuation_hash) {
+        throw std::runtime_error("Unsupported Millennium DOS function-zero success postlude prefix");
     }
 }
 
@@ -64,6 +77,7 @@ MillenniumDosVideoFunctionZeroSession::boundary() const {
             static_cast<std::uint16_t>(0x0f00 | al), 0xffff};
     }
     case MillenniumDosVideoFunctionZeroState::mode_match_continuation_boundary:
+    case MillenniumDosVideoFunctionZeroState::mode_success_postlude_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_mismatch_ret_boundary:
         return std::nullopt;
     }
@@ -85,7 +99,7 @@ void MillenniumDosVideoFunctionZeroSession::observe_bios_result(
     bios_results_.push_back(result);
     switch (state_) {
     case MillenniumDosVideoFunctionZeroState::awaiting_cached_mode_query_result:
-        cache_write_ = MillenniumDosVideoFunctionZeroCacheWrite{
+        cache_write_ = MillenniumDosVideoFunctionZeroLocalWrite{
             driver_.function_zero_cached_mode_store_instruction,
             driver_.function_zero_cached_mode_address,
             static_cast<std::uint8_t>(result.ax & 0xff)};
@@ -110,10 +124,48 @@ void MillenniumDosVideoFunctionZeroSession::observe_bios_result(
         }
         break;
     case MillenniumDosVideoFunctionZeroState::mode_match_continuation_boundary:
+    case MillenniumDosVideoFunctionZeroState::mode_success_postlude_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_mismatch_ret_boundary:
         throw std::runtime_error("Millennium DOS function-zero session has stopped");
     }
     ++next_sequence_;
+}
+
+void MillenniumDosVideoFunctionZeroSession::advance_success_postlude_prefix() {
+    if (state_ != MillenniumDosVideoFunctionZeroState::mode_match_continuation_boundary
+        || !outcome_
+        || outcome_->endpoint != MillenniumDosVideoFunctionZeroEndpoint::mode_match_continuation) {
+        throw std::runtime_error("Millennium DOS function-zero success continuation is not pending");
+    }
+    const auto& profile = driver_;
+    const auto& returned = outcome_->verify_result;
+    const auto cx = returned.cx;
+    if (profile.kind == MillenniumDosVideoDriverKind::ega640) {
+        const auto bounded_cx = cx > 4 ? std::uint16_t{4} : cx;
+        postlude_prefix_outcome_ = MillenniumDosVideoFunctionZeroPostludeOutcome{
+            MillenniumDosVideoFunctionZeroPostludeEndpoint::ega_pre_push,
+            static_cast<std::uint16_t>(profile.function_zero_address + 0x35),
+            returned.ax, 0x0072, bounded_cx, returned.dx, bounded_cx, std::nullopt,
+            MillenniumDosVideoFunctionZeroLocalWrite{
+                static_cast<std::uint16_t>(profile.function_zero_mode_match_branch_target),
+                0x0192, 0},
+            0};
+    } else {
+        const auto bounded_cx = cx > 8 ? std::uint16_t{8} : cx;
+        const auto si = static_cast<std::uint16_t>(bounded_cx - 1);
+        if (si == 0) {
+            postlude_prefix_outcome_ = MillenniumDosVideoFunctionZeroPostludeOutcome{
+                MillenniumDosVideoFunctionZeroPostludeEndpoint::mcga_single_count_branch,
+                0x023d, returned.ax, returned.bx, bounded_cx, returned.dx, si, 0x0084,
+                std::nullopt, 0};
+        } else {
+            postlude_prefix_outcome_ = MillenniumDosVideoFunctionZeroPostludeOutcome{
+                MillenniumDosVideoFunctionZeroPostludeEndpoint::mcga_int92_request,
+                0x021f, 0x0001, 0xfa00, bounded_cx, returned.dx, si, 0x0084,
+                std::nullopt, 0x92};
+        }
+    }
+    state_ = MillenniumDosVideoFunctionZeroState::mode_success_postlude_prefix_recorded;
 }
 
 } // namespace eon

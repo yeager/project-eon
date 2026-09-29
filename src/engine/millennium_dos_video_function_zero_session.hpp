@@ -14,6 +14,7 @@ enum class MillenniumDosVideoFunctionZeroState {
     awaiting_set_mode_result,
     awaiting_verify_mode_result,
     mode_match_continuation_boundary,
+    mode_success_postlude_prefix_recorded,
     mode_mismatch_ret_boundary,
 };
 
@@ -49,11 +50,11 @@ struct MillenniumDosVideoFunctionZeroBoundary {
     constexpr bool operator==(const MillenniumDosVideoFunctionZeroBoundary&) const = default;
 };
 
-struct MillenniumDosVideoFunctionZeroCacheWrite {
+struct MillenniumDosVideoFunctionZeroLocalWrite {
     std::uint16_t instruction_address = 0;
     std::uint16_t driver_local_address = 0;
     std::uint8_t value = 0;
-    constexpr bool operator==(const MillenniumDosVideoFunctionZeroCacheWrite&) const = default;
+    constexpr bool operator==(const MillenniumDosVideoFunctionZeroLocalWrite&) const = default;
 };
 
 enum class MillenniumDosVideoFunctionZeroEndpoint {
@@ -61,6 +62,25 @@ enum class MillenniumDosVideoFunctionZeroEndpoint {
     mode_match_continuation,
     // The mismatch code's XOR AX,AX has been modeled; stop at RET itself.
     mode_mismatch_ret_boundary,
+};
+
+enum class MillenniumDosVideoFunctionZeroPostludeEndpoint {
+    // EGA640 stops before PUSH SI; no stack effect has been applied.
+    ega_pre_push,
+    // MCGA's DEC/JZ selects the single-count path; stop before its target.
+    mcga_single_count_branch,
+    // Stop before DOS-private INT 92h; no handler result is inferred.
+    mcga_int92_request,
+};
+
+struct MillenniumDosVideoFunctionZeroPostludeOutcome {
+    MillenniumDosVideoFunctionZeroPostludeEndpoint endpoint{};
+    std::uint16_t instruction_address = 0;
+    std::uint16_t ax = 0, bx = 0, cx = 0, dx = 0, si = 0;
+    std::optional<std::uint16_t> di;
+    std::optional<MillenniumDosVideoFunctionZeroLocalWrite> local_write;
+    std::uint8_t interrupt_number = 0;
+    constexpr bool operator==(const MillenniumDosVideoFunctionZeroPostludeOutcome&) const = default;
 };
 
 struct MillenniumDosVideoFunctionZeroOutcome {
@@ -73,9 +93,10 @@ struct MillenniumDosVideoFunctionZeroOutcome {
 };
 
 // Standalone, hash-bound execution of English EGA640/MCGA function $00.
-// It stops at the successful mode-match continuation and does not execute its
-// postlude. The caller supplies the driver-local cache byte as observed input
-// and must supply every INT 10h result explicitly.
+// It first stops at the successful mode-match continuation. A separate bounded
+// step can advance only the verified local prefix, stopping before EGA's PUSH
+// or MCGA's branch target/INT 92h. The caller supplies the driver-local cache
+// byte as observed input and every INT 10h result explicitly.
 class MillenniumDosVideoFunctionZeroSession {
 public:
     MillenniumDosVideoFunctionZeroSession(std::span<const std::uint8_t> english_driver,
@@ -88,14 +109,17 @@ public:
     [[nodiscard]] const std::vector<MillenniumDosVideoFunctionZeroBiosResult>& bios_results() const {
         return bios_results_;
     }
-    [[nodiscard]] const std::optional<MillenniumDosVideoFunctionZeroCacheWrite>& cache_write() const {
+    [[nodiscard]] const std::optional<MillenniumDosVideoFunctionZeroLocalWrite>& cache_write() const {
         return cache_write_;
     }
     [[nodiscard]] std::optional<MillenniumDosVideoFunctionZeroOutcome> outcome() const {
         return outcome_;
     }
+    [[nodiscard]] std::optional<MillenniumDosVideoFunctionZeroPostludeOutcome>
+    postlude_prefix_outcome() const { return postlude_prefix_outcome_; }
 
     void observe_bios_result(const MillenniumDosVideoFunctionZeroBiosResult& result);
+    void advance_success_postlude_prefix();
 
 private:
     MillenniumDosVideoDriverProfile driver_;
@@ -103,8 +127,9 @@ private:
     std::uint64_t next_sequence_ = 1;
     std::optional<std::uint8_t> set_mode_result_al_;
     std::vector<MillenniumDosVideoFunctionZeroBiosResult> bios_results_;
-    std::optional<MillenniumDosVideoFunctionZeroCacheWrite> cache_write_;
+    std::optional<MillenniumDosVideoFunctionZeroLocalWrite> cache_write_;
     std::optional<MillenniumDosVideoFunctionZeroOutcome> outcome_;
+    std::optional<MillenniumDosVideoFunctionZeroPostludeOutcome> postlude_prefix_outcome_;
 };
 
 } // namespace eon
