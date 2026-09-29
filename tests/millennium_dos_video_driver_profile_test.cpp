@@ -1,5 +1,6 @@
 #include "data/millennium_dos_video_driver.hpp"
 #include "engine/millennium_dos_video_function_31_session.hpp"
+#include "engine/millennium_dos_video_function_13_session.hpp"
 #include "engine/millennium_dos_video_function_zero_session.hpp"
 
 #include <cassert>
@@ -88,6 +89,45 @@ int main(const int argc, char** argv) {
         0x0251,mcga_function_31_read,0x01ab};
     assert(mcga_function_31.state() == Function31State::ret_boundary
         && mcga_function_31.outcome() == mcga_function_31_outcome);
+
+    using Function13Session = eon::MillenniumDosVideoFunction13Session;
+    using Function13State = eon::MillenniumDosVideoFunction13State;
+    Function13Session ega_function_13(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640);
+    const eon::MillenniumDosVideoFunction13Boundary ega_first_poll{0x0d3a,0x03da};
+    assert(ega_function_13.state() == Function13State::awaiting_retrace_clear
+        && ega_function_13.next_sequence() == 1
+        && ega_function_13.boundary() == ega_first_poll);
+    expect_rejected([&] { ega_function_13.observe_status({1,0x0d3b,0x03da,0}); });
+    expect_rejected([&] { ega_function_13.observe_status({1,0x0d3a,0x03d8,0}); });
+    assert(ega_function_13.reads().empty() && ega_function_13.next_sequence() == 1);
+    ega_function_13.observe_status({1,0x0d3a,0x03da,0x08});
+    ega_function_13.observe_status({2,0x0d3a,0x03da,0x09});
+    assert(ega_function_13.state() == Function13State::awaiting_retrace_clear
+        && ega_function_13.boundary() == ega_first_poll);
+    ega_function_13.observe_status({3,0x0d3a,0x03da,0x01});
+    const eon::MillenniumDosVideoFunction13Boundary ega_second_poll{0x0d3f,0x03da};
+    assert(ega_function_13.state() == Function13State::awaiting_retrace_set
+        && ega_function_13.boundary() == ega_second_poll);
+    ega_function_13.observe_status({4,0x0d3f,0x03da,0x00});
+    assert(ega_function_13.state() == Function13State::awaiting_retrace_set
+        && ega_function_13.boundary() == ega_second_poll);
+    ega_function_13.observe_status({5,0x0d3f,0x03da,0x08});
+    const auto ega_retrace = ega_function_13.outcome();
+    assert(ega_function_13.state() == Function13State::ret_boundary
+        && !ega_function_13.boundary() && ega_retrace
+        && ega_retrace->ret_instruction_address == 0x0d44
+        && ega_retrace->reads.size() == 5 && ega_function_13.next_sequence() == 6);
+    expect_rejected([&] { ega_function_13.observe_status({6,0x0d3f,0x03da,0x08}); });
+
+    Function13Session mcga_function_13(mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga);
+    const eon::MillenniumDosVideoFunction13Boundary mcga_first_poll{0x0908,0x03da};
+    assert(mcga_function_13.boundary() == mcga_first_poll);
+    mcga_function_13.observe_status({1,0x0908,0x03da,0});
+    mcga_function_13.observe_status({2,0x090d,0x03da,0x08});
+    const auto mcga_retrace = mcga_function_13.outcome();
+    assert(mcga_function_13.state() == Function13State::ret_boundary
+        && mcga_retrace && mcga_retrace->ret_instruction_address == 0x0912
+        && mcga_retrace->reads.size() == 2);
 
     using Session = eon::MillenniumDosVideoFunctionZeroSession;
     using State = eon::MillenniumDosVideoFunctionZeroState;

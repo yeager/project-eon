@@ -4764,7 +4764,10 @@ Both identified drivers' function `$13` contains the same 14-byte routine
 (EGA file `+$0d37`, MCGA file `+$0905`, SHA-256
 `3bc140d91abbde582da6b63df063ad9ca92aeea2fd74d285d5eda8e9aa24f440`).
 It polls status port `$03da` until bit `$08` clears and then sets. These reads
-remain external device inputs. The MCGA dispatcher also has a conditional
+remain external device inputs. A standalone session now hash-binds this span,
+accepts ordered raw port-byte observations only at the reached first/second
+poll addresses, and stops before the function's RET. It neither reads the
+VGA port nor manufactures a value. The MCGA dispatcher also has a conditional
 postlude at file `+$0012`, 19 bytes, SHA-256
 `b730298f05c412e926887cdef49cfed19e5c4aac7e211cecdaa95a1d17fac316`:
 nonzero driver cell `$01e5` invokes `$0d22` before IRET. A completed retrace

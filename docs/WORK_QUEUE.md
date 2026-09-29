@@ -40,6 +40,9 @@ The standalone English function `$1f` session now requires the explicit
 runtime DS-local byte and stops at its hash-bound RET instruction for EGA640
 and MCGA. It does not use either file's initialized zero or establish caller
 reachability.
+Function `$13` also has a standalone poll-loop session; continue it only with
+ordered raw reads from VGA status port `$03da`. A completed poll does not prove
+an MCGA interrupt postlude or select an installed driver.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,
 respectively. The existing global-mode-2 descriptor regression uses explicit
 arithmetic observations; it is not evidence that either supplied driver
