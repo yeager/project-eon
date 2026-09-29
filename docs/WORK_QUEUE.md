@@ -2,6 +2,20 @@
 
 ## Current DOS descriptor continuation
 
+Mode one's palette source is now corrected to TITLE.LIB `[$25f9,$28f9)`.
+The original LDS restores library-base:$0006; the former `$4865` overread
+was a relocated-pointer error. The complete 768-byte copy now reaches its
+real BIOS request at `$0fd8`, AX=$1012/CX=$00ff. A separate typed BIOS result
+permits return to the shared setup. The graphics-driver selection/load and
+INT $91 installation still need native ownership before any private service
+can be selected from the available EGA640/MCGA profiles. Title mode alone
+does not establish which driver is installed.
+Successful original MCGA/EGA640 initialization returns title mode 1/4,
+respectively. The existing global-mode-2 descriptor regression uses explicit
+arithmetic observations; it is not evidence that either supplied driver
+reaches that path. Prioritize the corrected mode-one palette and remaining
+mode-one descriptor postprocessing alongside graphics-loader ownership.
+
 The owned mode-two path now addresses the complete 37-record loop using the
 actual relocated directory at TITLE.LIB+$4813. The first record is
 $3294:$0001; the former $5050 mapping and lookup alias are rejected.
@@ -22,8 +36,8 @@ stops and historical source assumptions are superseded by the current
 The Millennium DOS non-mode-1 title path now observes both external vector
 pairs and atomically installs the exact timer and video hooks. Its verified
 caller continuation enters the repeated mode call `$1c02->$1ada`. Mode one
-remains independently stopped at `$0fc6` because that requested source exceeds
-verified `TITLE.LIB`. The repeated `$1ada` call now consumes a fresh typed
+has a distinct BIOS boundary at `$0fd8` after its corrected palette copy.
+The repeated `$1ada` call now consumes a fresh typed
 INT `$91` result and sixteen fresh typed BIOS palette results, returns through
 the caller setup, and stops before `$1c0e->$135e`. The next DOS evidence job
 is recovering that callee without inventing setup or driver behaviour.

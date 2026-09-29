@@ -1653,6 +1653,13 @@ ReleaseRuntimeCoordinator::drive_millennium_dos_session(
     if (bios_state && continuation == checkpoint.setup_bios_boundary.interrupt_address)
       return {{MillenniumDosTitleExternalObservationKind::setup_bios_result,
           continuation, 0, 0, 0}};
+    const auto palette_state = checkpoint.state
+        == MillenniumDosTitleInitializationState::bios_palette_interrupt_boundary
+        || checkpoint.state
+            == MillenniumDosTitleInitializationState::library_palette_bios_interrupt_boundary;
+    if (palette_state && continuation == checkpoint.bios_boundary.interrupt_address)
+      return {{MillenniumDosTitleExternalObservationKind::palette_bios_result,
+          continuation, 0, 0, 0}};
     if (continuation == checkpoint.far_byte_boundary.instruction_address
         && continuation != 0)
       return {{MillenniumDosTitleExternalObservationKind::far_byte,
@@ -1881,6 +1888,11 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_bios_result(
         const auto prior_effect_count=next.checkpoint().memory_effects.size();
         next.observe_bios_palette_result(observation,*titles);
         if(next.checkpoint().state
+            ==MillenniumDosTitleInitializationState::post_library_setup_call_boundary){
+            const auto reached=next.checkpoint();
+            next.execute_post_library_setup(reached.last_sequence+1,0x1bef,0x1aac);
+        }
+        if(next.checkpoint().state
             ==MillenniumDosTitleInitializationState::post_video_setup_call_boundary){
             const auto reached=next.checkpoint();
             next.execute_post_video_setup(reached.last_sequence+1,0x1c0e,0x135e);
@@ -1991,16 +2003,23 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_dos_file_result(
             "millennium-dos-title-file-service-"
                 +std::to_string(millennium_dos_sound_driver_load_generation_)
                 +"-"+std::to_string(observation.sequence),true,{}};
+        // The original palette setup clears and then fills the same bytes.
+        // Publish the final sequential byte state as one non-overlapping batch.
+        std::map<NativeRuntimeLocation,std::uint8_t> final_bytes;
         for(std::size_t i=prior_effect_count;i<checkpoint.memory_effects.size();++i){
             const auto& effect=checkpoint.memory_effects[i];
-            batch.effects.push_back({batch.effects.size()+1,
-                {NativeRuntimeAddressSpace::dos_segmented,
-                    effect.explicit_segment?effect.segment:checkpoint.child_code_segment,
-                    effect.offset},
-                effect.width==MillenniumDosTitleInitializationEffectWidth::byte
-                    ?MemoryTransferElementWidth::byte:MemoryTransferElementWidth::word,
-                NativeRuntimeByteOrder::little_endian,effect.value});
+            auto location=NativeRuntimeLocation{NativeRuntimeAddressSpace::dos_segmented,
+                effect.explicit_segment?effect.segment:checkpoint.child_code_segment,
+                effect.offset};
+            final_bytes[location]=static_cast<std::uint8_t>(effect.value);
+            if(effect.width==MillenniumDosTitleInitializationEffectWidth::word){
+                ++location.offset;
+                final_bytes[location]=static_cast<std::uint8_t>(effect.value>>8U);
+            }
         }
+        for(const auto& [location,value]:final_bytes)
+            batch.effects.push_back({batch.effects.size()+1,location,
+                MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::little_endian,value});
         const auto applied=memory.apply(batch);
         if(!applied.accepted){result.error=applied.error;return result;}
     }
@@ -2042,6 +2061,7 @@ MillenniumDosTitleInitializationObservationResult ReleaseRuntimeCoordinator::obs
         ReleaseRuntimeCoordinator& coordinator;
         MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleDosVectorResultObservation value) const { return coordinator.observe_millennium_dos_title_dos_vector_result(value); }
         MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleSetupBiosResultObservation value) const { return coordinator.observe_millennium_dos_title_setup_bios_result(value); }
+        MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleBiosResultObservation value) const { return coordinator.observe_millennium_dos_title_bios_result(value); }
         MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleFarWordsObservation value) const { return coordinator.observe_millennium_dos_title_far_words(value); }
         MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleFarWordObservation value) const { return coordinator.observe_millennium_dos_title_far_word(value); }
         MillenniumDosTitleInitializationObservationResult operator()(const MillenniumDosTitleFarByteObservation value) const { return coordinator.observe_millennium_dos_title_far_byte(value); }

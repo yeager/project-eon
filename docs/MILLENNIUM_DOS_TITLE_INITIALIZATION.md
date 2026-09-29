@@ -261,24 +261,44 @@ source revocation or any bound failure leaves the prior checkpoint unchanged.
 
 Mode one continues locally from `$0f6b`. The genuine directory record at
 `TITLE.LIB+$4813` produces far pointer `base:$0006`, which is stored at
-`$0e59`, and the original clears 768 child bytes at `$014c..$044b`. It then
-derives source offset `$4865` and reaches `REP MOVSW` at `$0fc6` requesting
-another 768 bytes. That range extends beyond the 18,907-byte verified leaf, so
-Eon stops at `$0fc6` instead of inventing the DOS buffer tail. The other mode
+`$0e59`, and the original clears 768 child bytes at `$014c..$044b`. The LDS
+at `$0f9e` restores this pointer before reading the header at file `+$0020`.
+Its delta `$25d7` selects the complete palette at `[$25f9,$28f9)`, inside
+the verified leaf. The earlier `$4865` overread diagnosis incorrectly kept
+the directory-relative pointer after LDS and has been removed.
+
+The recovered `REP MOVSW` copies all 768 original bytes into the cleared
+child range. Their SHA-256 is
+`b6dd34314102e429fdd98390b1fda27d3ea94d16bfcefa2983e3e319a2a20eae`.
+Runtime batches preserve the final sequential clear-and-copy state. Setup
+requires the first DOS read to have loaded both the directory and palette;
+later reads at higher destination addresses cannot fill a missing prefix.
+The descriptor driver applies the same loaded-extent rule to its operands.
+The palette path then reaches BIOS INT `$10` at `$0fd8` with AX=$1012, BX=0, CX=$00ff,
+ES=child CS and DX=$014c. Copying 768 bytes does not change the original
+BIOS count of 255. The palette path at file `+$0e6b` (115 bytes) hashes to
+`ae8442b1bbef14712cd11183209f523f1d37b861d0d01ee2c60df7eabfbbef86`;
+the 22-byte setup/return span at `+$0ec8` hashes to
+`82a8f977cb2d26c2699e362afb25e7472edc50abc5359152327a765d54322215`.
+Only a separately supplied, correctly sequenced BIOS result at `$0fda`
+allows the return to `$1bef`. No BIOS success or visible palette is inferred.
+
+The other mode
 follows the exact 14-byte epilogue through `RET $0f6a` (SHA-256
 `66c5cf6c6a51f92ec93650c960546e562bd382e96d85f93ab15df8b5a82982b0`).
 That return is owned by the still-active `$1bec -> $0e5f` call, so execution
 resumes at `$1bef` and stops before call `$1bef -> $1aac` (call-byte SHA-256
 `802c3d3da0e9eebe7f5ccfaac938d6c4eba76d4dc6ffb190ef9d719d0a0c4044`).
 The `$1aac` title/driver setup remains opaque. No BIOS or private ABI result is
-claimed, and the mode-one `$0fc6` boundary is unchanged.
+claimed by the local continuation.
 
 The non-mode-1 path now enters `$1aac`: it restores DS/ES from CS and calls
 `$10ec`. That callee's exact ten-byte prefix (SHA-256
 `a00fdf978777b8b563efc5c4d39f3e3fbafea0ef764f134c6ee308d9927b6e73`)
 clears DF, loads `AX=$3500`, and reaches DOS `INT $21` at `$10f4`. Eon stops
 before the get-vector result; vector BX/ES, later interrupt replacement and
-the two BIOS calls remain unobserved. Mode one still stops only at `$0fc6`.
+the two BIOS calls remain unobserved. Mode one reaches this same setup only
+after its distinct `$0fd8` palette BIOS result has been admitted.
 An exact typed `$10f4->$10f6` result retains raw AX, BX, ES and FLAGS. The
 18-byte continuation (SHA-256
 `2b274ecea07db05da2e4f091e648ba5bbec8132d34d60668d47fd57681ae854b`)
@@ -350,8 +370,8 @@ callee contract: function `$0004` through INT `$91`, followed by the `$0487`
 palette routine and its sixteen individually typed BIOS INT `$10` results.
 Its exact return re-applies the mode-2 `$b800` video segment when selected,
 takes caller jump `$1c05->$1c0a`, restores DS/ES from CS, and stops before
-call `$1c0e->$135e`. The separate mode-1 palette-copy boundary at `$0fc6` is
-unchanged.
+call `$1c0e->$135e`. Mode one's preceding palette BIOS boundary at `$0fd8`
+remains distinct from these repeated palette calls.
 The 42-byte `$135e` callee (file `+$125e`, SHA-256
 `c35f93db0d58443d76374684ed2c54ce78ddb7fc8e01ffa809026382450b4868`)
 selects the already-owned second DOS allocation for non-mode-1, stores its
@@ -446,8 +466,16 @@ the full 18,907-byte library identity:
 6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678.
 No physical-equivalent segment aliases are accepted.
 
-All 37 original records use the already recovered mode-two route and produce
-368 payload bytes. The independent bounded source audit observed lookup and
+All 37 original records select payload decoder branch two and produce
+368 payload bytes. This record selector is distinct from the title's global
+display mode. The complete-loop regression explicitly supplies global mode
+two to exercise its recovered postprocessing; neither supplied English video
+driver establishes that mode. A successful MCGA function-zero return has
+AH=1, while EGA640 returns AH=4. Their mode-one and other-mode postprocessing
+remain separate recovery work, and the 37-record regression does not prove
+either supplied driver's complete title path.
+
+The independent bounded source audit observed lookup and
 ordinary-run branches only; synthetic arithmetic regressions retain escape,
 extended-run and wrapping coverage on correctly normalized record contexts.
 Synthetic register/byte inputs are never described as captured observations.
@@ -496,6 +524,7 @@ single-observation resumption, hash rejection and transactional rollback.
 After the admitted `TITLE.LIB` file transaction, front ends submit a single
 tagged continuation observation instead of selecting an untyped runtime step.
 The tag admits only the already recovered DOS-vector result, setup-BIOS result,
+palette-BIOS result,
 far-words, far-word, and far-byte observation forms. Dispatch is a direct
 route to the corresponding state-machine observer; it never creates runtime
 memory, supplies a value, advances a program counter, or converts a failed
@@ -509,8 +538,8 @@ The deterministic session driver also reports a value-only requirement when
 its current stop is one of those typed continuation boundaries. The report
 contains the kind, instruction address and, for a far read, exact source
 segment, offset and element width. It never contains a byte, word, register,
-or BIOS/DOS return result. Stops outside this recovered tagged set, including
-the `library_palette_copy_boundary`, deliberately report no requirement.
+or BIOS/DOS return result. The library palette BIOS boundary reports its own
+palette-result kind; stops outside this recovered tagged set report no requirement.
 
 
 ## Retained executable span identities

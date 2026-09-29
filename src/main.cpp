@@ -652,6 +652,9 @@ struct ModernRuntimeDiagnostics {
     case eon::MillenniumDosTitleExternalObservationKind::setup_bios_result:
         kind = "SETUP-BIOS";
         break;
+    case eon::MillenniumDosTitleExternalObservationKind::palette_bios_result:
+        kind = "PALETTE-BIOS";
+        break;
     case eon::MillenniumDosTitleExternalObservationKind::far_words:
         kind = "FAR-WORDS";
         break;

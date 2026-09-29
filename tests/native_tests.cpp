@@ -4656,16 +4656,24 @@ int main() {
             ==eon::MillenniumDosSessionStopReason::external_observation
         &&title_session_drive.title_state);
     assert(*title_session_drive.title_state
-        ==eon::MillenniumDosTitleInitializationState::library_palette_copy_boundary);
-    assert(title_session_drive.stop_before_address==0x0fc6);
-    assert(!title_session_drive.external_observation_requirement);
+        ==eon::MillenniumDosTitleInitializationState::library_palette_bios_interrupt_boundary);
+    assert(title_session_drive.stop_before_address==0x0fd8);
+    assert(title_session_drive.external_observation_requirement
+        &&title_session_drive.external_observation_requirement->kind
+            ==eon::MillenniumDosTitleExternalObservationKind::palette_bios_result
+        &&title_session_drive.external_observation_requirement->instruction_address==0x0fd8);
     assert(title_entry&&title_entry->title_initialization);
     assert(title_entry->title_initialization->state
-        ==eon::MillenniumDosTitleInitializationState::library_palette_copy_boundary);
-    assert(title_entry->title_initialization->last_sequence==59);
+        ==eon::MillenniumDosTitleInitializationState::library_palette_bios_interrupt_boundary);
+    const auto palette_sequence=title_entry->title_initialization->last_sequence;
+    assert(palette_sequence!=std::numeric_limits<std::uint64_t>::max());
     assert(title_entry->title_initialization->title_library_cursor==0x49db);
     assert(title_entry->title_initialization->title_library_read_count==9);
-    assert(title_entry->title_initialization->continuation_address==0x0fc6);
+    assert(title_entry->title_initialization->continuation_address==0x0fd8);
+    assert(title_entry->title_initialization->bios_boundary.interrupt_address==0x0fd8
+        &&title_entry->title_initialization->bios_boundary.ax==0x1012
+        &&title_entry->title_initialization->bios_boundary.cx==0x00ff
+        &&!title_entry->title_initialization->bios_boundary.result_observed);
     assert(title_entry->title_initialization->dos_file_results.size()==14);
     assert(title_entry->title_initialization->dos_results.size()==9);
     assert(title_entry->title_initialization->dos_results[1].carry);
@@ -4703,6 +4711,50 @@ int main() {
     assert(has_loaded_byte(0xe33f,0x0e4a,3));
     assert(has_loaded_byte(0xe33f,0x0e4c,0x22));
     assert(has_loaded_byte(0xe33f,0x0e4d,0x54));
+    assert(borrowed_title&&borrowed_title->size()==18'907);
+    const auto palette_record=static_cast<std::size_t>((*borrowed_title)[0x4813]
+        |static_cast<std::uint16_t>((*borrowed_title)[0x4814])<<8U);
+    const auto palette_delta=static_cast<std::size_t>((*borrowed_title)[palette_record+0x1a]
+        |static_cast<std::uint16_t>((*borrowed_title)[palette_record+0x1b])<<8U);
+    const auto palette_source=palette_record+palette_delta+0x1cU;
+    assert(palette_source+0x300<=borrowed_title->size());
+    for(std::size_t index=0;index<0x300;++index)
+        assert(has_loaded_byte(0xe33f,static_cast<std::uint16_t>(0x014c+index),
+            (*borrowed_title)[palette_source+index]));
+    const auto before_library_palette_result=
+        admitted_dos_runtime.native_runtime_memory_diagnostics();
+    assert(before_library_palette_result);
+    assert(!admitted_dos_runtime.observe_millennium_dos_title_dos_file_result(
+        {palette_sequence+1,0x0fd8,0x0fda,false,0,0,0,0,0}).accepted);
+    assert(admitted_dos_runtime.native_runtime_memory_diagnostics()->checksum
+        ==before_library_palette_result->checksum);
+    // This synthetic result tests the typed dispatch contract only; the BIOS
+    // return values are not claimed as a captured gameplay observation.
+    assert(admitted_dos_runtime.observe_millennium_dos_title_continuation(
+        eon::MillenniumDosTitleBiosResultObservation{
+            palette_sequence+1,0x0fd8,0x0fda,0x1357,0x2468}).accepted);
+    title_entry=admitted_dos_runtime.millennium_dos_title_exec_entry_checkpoint();
+    assert(title_entry&&title_entry->title_initialization
+        &&title_entry->title_initialization->state
+            ==eon::MillenniumDosTitleInitializationState::dos_get_vector_zero_result_boundary
+        &&title_entry->title_initialization->last_sequence==palette_sequence+2
+        &&title_entry->title_initialization->continuation_address==0x10f4
+        &&title_entry->title_initialization->dos_boundary.interrupt_address==0x10f4
+        &&title_entry->title_initialization->dos_boundary.return_address==0x10f6
+        &&title_entry->title_initialization->bios_results.back().sequence==palette_sequence+1
+        &&title_entry->title_initialization->bios_results.back().ax==0x1357
+        &&title_entry->title_initialization->bios_results.back().flags==0x2468);
+    const auto after_library_palette_result=
+        admitted_dos_runtime.native_runtime_memory_diagnostics();
+    assert(after_library_palette_result
+        &&after_library_palette_result->checksum==before_library_palette_result->checksum
+        &&after_library_palette_result->applied_batch_count
+            ==before_library_palette_result->applied_batch_count);
+    assert(!admitted_dos_runtime.observe_millennium_dos_title_continuation(
+        eon::MillenniumDosTitleBiosResultObservation{
+            palette_sequence+2,0x0fd8,0x0fda,0,0}).accepted);
+    assert(admitted_dos_runtime.native_runtime_memory_diagnostics()->checksum
+        ==before_library_palette_result->checksum);
     const auto repeated_title_session_drive=
         admitted_dos_runtime.drive_millennium_dos_session();
     assert(repeated_title_session_drive.accepted
@@ -4741,6 +4793,10 @@ int main() {
     assert(!admitted_spanish_runtime.millennium_dos_title_to_game_checkpoint());
     assert(!admitted_spanish_runtime.observe_millennium_dos_title_to_game_call_return(
         {1, 0x1c54, 0x1c57}).accepted);
+    assert(!admitted_spanish_runtime.observe_millennium_dos_title_dos_file_result(
+        {1,0x0fd8,0x0fda,false,0,0,0,0,0}).accepted);
+    assert(!admitted_spanish_runtime.observe_millennium_dos_title_continuation(
+        eon::MillenniumDosTitleBiosResultObservation{1,0x0fd8,0x0fda,0,0}).accepted);
     assert(!admitted_spanish_runtime.native_runtime_memory_diagnostics());
     // Every recognised outer identity admits exactly one engine-owned startup
     // adapter. Reusing the coordinator also proves a prior platform's object

@@ -38,6 +38,7 @@ enum class MillenniumDosTitleInitializationState {
     dos_library_close_result_boundary,
     library_relocation_complete,
     library_palette_copy_boundary,
+    library_palette_bios_interrupt_boundary,
     post_library_setup_call_boundary,
     dos_get_vector_zero_result_boundary,
     dos_set_vector_zero_result_boundary,

@@ -359,6 +359,25 @@ int main(int argc, char** argv) {
     } catch(const std::runtime_error&) { oversized_library_read_rejected=true; }
     assert(oversized_library_read_rejected
         &&initialization.checkpoint().last_sequence==37);
+    for(const std::uint16_t prefix : {6U,0x4816U}){
+        auto partial_palette=initialization;
+        partial_palette.observe_dos_file_result(
+            {38,0x057c,0x057e,false,prefix,0x0055,0x8000,0,0x0202},title_library);
+        for(std::uint64_t sequence=39;sequence<=46;++sequence)
+            partial_palette.observe_dos_file_result(
+                {sequence,0x057c,0x057e,false,0,0x0055,0,0,0x0202},title_library);
+        partial_palette.observe_dos_file_result(
+            {47,0x059e,0x05a0,true,6,0x0055,0,0,0x0001},title_library);
+        const auto before=partial_palette.checkpoint();
+        rejected=false;
+        try{partial_palette.execute_post_relocation(48,title_library);}
+        catch(const std::runtime_error&){rejected=true;}
+        const auto after=partial_palette.checkpoint();
+        assert(rejected&&after.state==before.state&&after.last_sequence==before.last_sequence
+            &&after.continuation_address==before.continuation_address
+            &&after.memory_effects.size()==before.memory_effects.size()
+            &&after.register_effects.size()==before.register_effects.size());
+    }
     initialization.observe_dos_file_result(
         {38,0x057c,0x057e,false,0x49db,0x0055,0x8000,0,0x0202},
         title_library);
@@ -388,18 +407,45 @@ int main(int argc, char** argv) {
         &&relocation.memory_effects[18922].value==3
         &&relocation.memory_effects[18923].offset==0x0e4c
         &&relocation.memory_effects[18923].value==0x3481);
+    auto palette_bad=initialization;
+    auto damaged_palette_library=title_library;damaged_palette_library[0x25f9]^=1;
+    rejected=false;
+    try{palette_bad.execute_post_relocation(48,damaged_palette_library);}
+    catch(const std::runtime_error&){rejected=true;}
+    assert(rejected&&palette_bad.checkpoint().last_sequence==relocation.last_sequence
+        &&palette_bad.checkpoint().memory_effects.size()==relocation.memory_effects.size());
     initialization.execute_post_relocation(48,title_library);
     const auto palette=initialization.checkpoint();
     assert(palette.state==eon::MillenniumDosTitleInitializationState::
-            library_palette_copy_boundary
-        &&palette.last_sequence==48&&palette.continuation_address==0x0fc6
-        &&palette.memory_effects.size()==19694
+            library_palette_bios_interrupt_boundary
+        &&palette.last_sequence==48&&palette.continuation_address==0x0fd8
+        &&palette.memory_effects.size()==20462
         &&palette.memory_effects[18924].offset==0x0e59
         &&palette.memory_effects[18924].value==6
         &&palette.memory_effects[18925].offset==0x0e5b
         &&palette.memory_effects[18925].value==0x3000
         &&palette.memory_effects[18926].offset==0x014c
         &&palette.memory_effects[18926].value==0);
+    for(std::size_t i=0;i<768;++i){
+        const auto& clear=palette.memory_effects[18926+i];
+        const auto& copy=palette.memory_effects[19694+i];
+        assert(clear.offset==0x014c+i&&clear.value==0&&clear.instruction_address==0x0f9c);
+        assert(copy.offset==0x014c+i&&copy.value==title_library[0x25f9+i]
+            &&copy.instruction_address==0x0fc6);
+    }
+    assert(palette.bios_boundary.ax==0x1012&&palette.bios_boundary.bx==0
+        &&palette.bios_boundary.cx==0xff&&palette.bios_boundary.dx_known_value==0x014c
+        &&!palette.bios_boundary.result_observed);
+    // A detached synthetic return tests only the exact local caller tail.
+    auto palette_return=initialization;
+    rejected=false;
+    try{palette_return.observe_bios_palette_result({49,0x0fd8,0x0fdb,0,0},titles);}
+    catch(const std::runtime_error&){rejected=true;}
+    assert(rejected&&palette_return.checkpoint().last_sequence==48);
+    palette_return.observe_bios_palette_result({49,0x0fd8,0x0fda,0x1234,0x0246},titles);
+    assert(palette_return.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_library_setup_call_boundary
+        &&palette_return.checkpoint().continuation_address==0x1bef
+        &&palette_return.checkpoint().bios_boundary.result_observed);
     eon::MillenniumDosTitleInitializationSession other_mode(titles,0x2468,2);
     other_mode.execute_exact_startup(3,0x1b80,0x1b95,0x0122,0x91);
     other_mode.observe_private_interrupt_result({4,0x0127,0x0129,0x02ff,0});

@@ -4643,7 +4643,7 @@ effect from any of these bytes.
 
 MILL.COM's first private `INT 91h` boundary now has a proven source ABI without
 inventing a DOS segment. Before its `$0204` call to `$02cf`, selector `$01`
-keeps `DX=$0617` (`ega640.bin`) and selector `$02` selects `DX=$03ae`
+keeps `DX=$0617` (`ega640.bin`) and selector `$02` selects `DX=$05f9`
 (`mcga.bin`). `$02cf` opens that original file, seeks to the end, rounds its
 length to paragraphs, allocates a DOS segment, rewinds, and reads the original
 file length to `DS:$0000`, then closes it. There is no embedded blob, copy
@@ -4852,9 +4852,9 @@ engine results are never described as captured DOS observations.
 The public Millennium DOS session driver owns only recovered local calls and
 the hash-admitted compatibility service.  It reports `external_observation`,
 `step_limit`, `failed`, or `inactive` rather than fabricating a private ABI or
-BIOS return.  In particular, the admitted mode-1 title path reaches the
-external palette-copy boundary at `$0fc6`; it does not imply that the distinct
-post-library vector setup has executed.
+BIOS return. The mode-1 title path now copies its complete original palette
+and stops at the distinct BIOS request `$0fd8`; it does not imply that the
+post-library vector setup or the BIOS operation has executed.
 
 The next deterministic native continuation is documented in
 [Millennium DOS native title initialization](MILLENNIUM_DOS_TITLE_INITIALIZATION.md).
@@ -4931,12 +4931,25 @@ exact relocation stores count `$0026` and the normalized directory pointer
 `base+$0481:$0003`. The loader/relocation code hash is
 `63d5b5a645879a0a79ed0a7c880051e98ddf62b91f07616c0a72d035ee9581cf`.
 Mode one additionally stores the proven `$0e59` pointer and clears
-`$014c..$044b`, then stops before `$0fc6`: its requested `$4865..$4b64`
-source extends beyond the verified TITLE.LIB leaf. No missing tail is
-synthesized and the later BIOS palette request remains unreached.
+`$014c..$044b`. The original `$0f9e` LDS restores library-base:$0006;
+the header word at file `+$0020` is `$25d7`, so `$0fc6` copies the bounded
+768-byte range `[$25f9,$28f9)` into that child range. The earlier `$4865`
+overread claim came from retaining the directory pointer across LDS and is
+incorrect. The source palette SHA-256 is
+`b6dd34314102e429fdd98390b1fda27d3ea94d16bfcefa2983e3e319a2a20eae`.
+The palette path at TITLES.EXE file `+$0e6b`, 115 bytes, hashes to
+`ae8442b1bbef14712cd11183209f523f1d37b861d0d01ee2c60df7eabfbbef86`;
+file `+$0ec8`, 22 bytes, hashes to
+`82a8f977cb2d26c2699e362afb25e7472edc50abc5359152327a765d54322215`.
+The complete 116-byte `$0f6b..$0fde` span, including RET, has SHA-256
+`06323277c5dc901ffa5fa711f7e85ba1f4b27c71552f84440c5f4ba1f285b91e`
+and is required by the native session constructor.
+The native path stops at BIOS INT $10/$0fd8 with AX=$1012, BX=0, CX=$00ff,
+ES=child CS and DX=$014c. Only an external typed result at `$0fda` permits
+the original return to `$1bef`; no visible palette or BIOS success is claimed.
 For non-mode-1, the separately hash-bound epilogue returns to its proven
 `$1bec` caller and reaches call `$1bef -> $1aac`. Eon stops before that setup
-callee; it does not reuse or bypass the mode-one `$0fc6` overread boundary.
+callee; mode one reaches that caller only after its separate palette BIOS result.
 The non-mode-1 setup prefix is now hash-bound through DOS get-vector request
 `AX=$3500` at `$10f4`. Its returned ES:BX and all later vector/BIOS effects
 remain external typed boundaries.
@@ -4980,7 +4993,7 @@ typed BIOS INT `$10` results are required; earlier observations cannot be
 replayed as a second invocation. The deterministic return preserves the
 mode-2 `$b800` write when applicable, takes `$1c05->$1c0a`, restores DS/ES,
 and stops before `$1c0e->$135e`. That callee is the next opaque boundary.
-Mode 1 remains separately stopped at its verified `$0fc6` overread boundary.
+Mode 1 has a separate palette BIOS boundary at `$0fd8` before this setup.
 The `$135e..$1387` callee is now hash-bound as 42 bytes (file `+$125e`,
 SHA-256 `c35f93db0d58443d76374684ed2c54ce78ddb7fc8e01ffa809026382450b4868`).
 For the caller-connected non-mode-1 route it reads only the already-owned
@@ -5068,6 +5081,11 @@ f22c9595e6b1c590877b354721e6102d8107c5d6c7336b2d3491cfcaf3f8a627.
 All record headers, payload reads and bounded lookup ranges are within the
 hash-admitted library. Each record produces 368 payload bytes and 184 later
 mode-two output bytes, with the exact doubled 92-word destination clear.
+The latter count is conditional on the explicitly supplied global mode two
+used by the arithmetic regression. The records' own selector two is a
+different field: successful MCGA/EGA640 function-zero results select global
+title modes one/four. The complete 37-record regression therefore does not
+establish either supplied driver's full title execution or postprocessing.
 The source audit uses external metadata only; no original-derived table or
 output buffer is committed.
 

@@ -167,6 +167,7 @@ enum class MillenniumDosTitleExternalObservationKind {
     far_words,
     far_word,
     far_byte,
+    palette_bios_result,
 };
 // Value-only description of the next admitted title fact.  It intentionally
 // contains no register, memory, file or device result: diagnostics may name
@@ -426,7 +427,8 @@ using MillenniumDosTitleContinuationObservation = std::variant<
     MillenniumDosTitleSetupBiosResultObservation,
     MillenniumDosTitleFarWordsObservation,
     MillenniumDosTitleFarWordObservation,
-    MillenniumDosTitleFarByteObservation>;
+    MillenniumDosTitleFarByteObservation,
+    MillenniumDosTitleBiosResultObservation>;
 struct MillenniumDosTitleExecEntryRuntimeCheckpoint {
     std::uint64_t generation = 0;
     MillenniumDosTitleExecEntryCheckpoint entry;

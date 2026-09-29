@@ -164,7 +164,8 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
     next.descriptor_loop_owned_=true;
     next.descriptor_loop_driving_=true;
     const auto word=[&](const std::size_t offset){
-        if(offset+1>=library.size())throw std::runtime_error("Descriptor library word outside leaf");
+        if(offset+1>=library.size()||offset+1>=title_library_first_read_count_)
+            throw std::runtime_error("Descriptor library word outside loaded prefix");
         return static_cast<std::uint16_t>(library[offset]|static_cast<std::uint16_t>(library[offset+1])<<8U);
     };
     try{
@@ -177,7 +178,8 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
             const auto segment=static_cast<std::uint16_t>(*base+(first>>4U));
             const auto offset=static_cast<std::uint16_t>(first&15U);
             const auto record=static_cast<std::size_t>(first);
-            if(record+28>library.size())throw std::runtime_error("Descriptor header exceeds leaf");
+            if(record+28>library.size()||record+28>title_library_first_read_count_)
+                throw std::runtime_error("Descriptor header exceeds loaded prefix");
             const auto prior=next.memory_effects_.size();
             const auto sequence=request.first_sequence+count;
             using S=MillenniumDosTitleInitializationState;
@@ -214,12 +216,15 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
                     if(read_segment!=segment||read_offset<offset)
                         throw std::runtime_error("Descriptor read lost exact normalized provenance");
                     const auto file_offset=record+read_offset-offset;
-                    if(file_offset>=library.size()||(!byte&&file_offset+1>=library.size()))
+                    if(file_offset>=library.size()||(!byte&&file_offset+1>=library.size())
+                        ||file_offset>=title_library_first_read_count_
+                        ||(!byte&&file_offset+1>=title_library_first_read_count_))
                         throw std::runtime_error("Descriptor operand exceeds library");
                     if(lookup){
                         const auto table=record+word(record+26)+28U
                             +((library[record]&1U)?0x300U:0U)+library[record+1]+1U;
-                        if(file_offset<table||file_offset>=table+256U||table+256U>library.size())
+                        if(file_offset<table||file_offset>=table+256U||table+256U>library.size()
+                            ||table+256U>title_library_first_read_count_)
                             throw std::runtime_error("Descriptor lookup exceeds verified table");
                     }
                     if(byte)next.observe_far_byte({sequence,next.far_byte_boundary_.instruction_address,
@@ -655,6 +660,8 @@ MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession
     constexpr std::size_t other_mode_followup_offset = 0x0387;
     constexpr std::size_t other_mode_followup_size = 18;
     if (titles_executable.size() != 7022
+        || to_hex(sha256(titles_executable.subspan(0x0e6b,116)))
+            != "06323277c5dc901ffa5fa711f7e85ba1f4b27c71552f84440c5f4ba1f285b91e"
         || to_hex(sha256(titles_executable.subspan(0x1b20,8)))
             != "941449ea637d026bfe0a0f813b5da7ce8848291f05ef524889cb8b09df0830a6"
         || to_hex(sha256(titles_executable.subspan(0x1831,9)))
@@ -847,6 +854,27 @@ void MillenniumDosTitleInitializationSession::execute_selected_followup_start(
 void MillenniumDosTitleInitializationSession::observe_bios_palette_result(
     const MillenniumDosTitleBiosResultObservation& observation,
     const std::span<const std::uint8_t> titles_executable) {
+    if(state_==MillenniumDosTitleInitializationState::library_palette_bios_interrupt_boundary){
+        if(last_sequence_==std::numeric_limits<std::uint64_t>::max()
+            ||observation.sequence!=last_sequence_+1
+            ||observation.interrupt_address!=0x0fd8||observation.return_address!=0x0fda
+            ||titles_executable.size()!=7022||to_hex(sha256(titles_executable))!=titles_sha)
+            throw std::runtime_error("Detached Millennium DOS library palette BIOS result");
+        auto next=*this;
+        next.bios_results_.push_back({observation.sequence,0x0fd8,0x0fda,
+            observation.ax,observation.flags});
+        next.bios_boundary_.result_observed=true;
+        next.effects_.insert(next.effects_.end(),{{0x0fdb,"DS",child_code_segment_},
+            {0x0fdd,"ES",child_code_segment_}});
+        next.last_sequence_=observation.sequence;
+        next.continuation_address_=0x1bef;
+        next.state_=MillenniumDosTitleInitializationState::post_library_setup_call_boundary;
+        *this=std::move(next);
+        return;
+    }
+    std::size_t palette_loop_results=0;
+    for(const auto& result:bios_results_)
+        if(result.interrupt_address!=0x0fd8)++palette_loop_results;
     if(state_!=MillenniumDosTitleInitializationState::bios_palette_interrupt_boundary
         ||observation.sequence!=last_sequence_+1
         ||observation.interrupt_address!=bios_boundary_.interrupt_address
@@ -855,14 +883,14 @@ void MillenniumDosTitleInitializationSession::observe_bios_palette_result(
                 selected_followup_call_target_==0x044c?0x046f:0x0499)
         ||titles_executable.size()!=7022
         ||to_hex(sha256(titles_executable))!=titles_sha
-        ||bios_results_.size()>=(post_video_repeat_?32U:16U)){
+        ||palette_loop_results>=(post_video_repeat_?32U:16U)){
         throw std::runtime_error("Detached Millennium DOS title BIOS result");
     }
     bios_results_.push_back({observation.sequence,observation.interrupt_address,
         observation.return_address,observation.ax,observation.flags});
     bios_boundary_.result_observed=true;
     last_sequence_=observation.sequence;
-    const auto next_index=bios_results_.size()%16U;
+    const auto next_index=(palette_loop_results+1U)%16U;
     if(next_index!=0){
         if(selected_followup_call_target_==0x044c){
             const auto source=static_cast<std::uint16_t>(0x014c+next_index*3);
@@ -1277,6 +1305,7 @@ void MillenniumDosTitleInitializationSession::execute_post_relocation(
     const std::uint64_t sequence,
     const std::span<const std::uint8_t> title_library){
     if(state_!=MillenniumDosTitleInitializationState::library_relocation_complete
+        ||last_sequence_==std::numeric_limits<std::uint64_t>::max()
         ||sequence!=last_sequence_+1||title_library.size()!=18907
         ||to_hex(sha256(title_library))
             !="6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678")
@@ -1295,25 +1324,60 @@ void MillenniumDosTitleInitializationSession::execute_post_relocation(
     if(continuation_address_!=0x0f6b)
         throw std::runtime_error("Detached Millennium DOS TITLE.LIB palette setup");
     constexpr std::size_t directory=0x4813;
+    // Later DOS reads target subsequent $8000-byte windows, not holes left
+    // by a short first read in the base-segment prefix.
+    if(title_library_first_read_count_<directory+4)
+        throw std::runtime_error("Millennium DOS palette directory was not loaded");
     const auto directory_delta=static_cast<std::uint16_t>(
         title_library[directory]|title_library[directory+1]<<8U);
+    const auto directory_segment=static_cast<std::uint16_t>(
+        title_library[directory+2]|title_library[directory+3]<<8U);
+    if(directory_delta!=6||directory_segment!=0)
+        throw std::runtime_error("Unsupported Millennium DOS palette record pointer");
+    // $0f9e reloads the constructed record pointer, replacing directory SI.
+    const auto record=static_cast<std::size_t>(directory_delta)
+        +static_cast<std::size_t>(directory_segment&0xffU)*0x1000U;
+    if(record>title_library.size()||title_library.size()-record<0x1c)
+        throw std::runtime_error("Millennium DOS palette record exceeds library");
     const auto palette_delta=static_cast<std::uint16_t>(
-        title_library[directory+4+0x1a]|title_library[directory+4+0x1b]<<8U);
-    memory_effects_.push_back({0x0f81,0x0e59,
+        title_library[record+0x1a]|title_library[record+0x1b]<<8U);
+    const auto source=record+palette_delta+0x1cU;
+    if(source>title_library.size()||title_library.size()-source<0x300
+        ||title_library_first_read_count_<source+0x300
+        ||directory_delta+static_cast<std::size_t>(palette_delta)+0x31cU>0x10000U)
+        throw std::runtime_error("Millennium DOS palette copy exceeds source");
+    auto next=*this;
+    next.memory_effects_.push_back({0x0f81,0x0e59,
         MillenniumDosTitleInitializationEffectWidth::word,directory_delta});
-    memory_effects_.push_back({0x0f8e,0x0e5b,
+    next.memory_effects_.push_back({0x0f8e,0x0e5b,
         MillenniumDosTitleInitializationEffectWidth::word,title_library_segment_});
     for(std::size_t index=0;index<0x300;++index)
-        memory_effects_.push_back({0x0f9c,static_cast<std::uint16_t>(0x014c+index),
+        next.memory_effects_.push_back({0x0f9c,static_cast<std::uint16_t>(0x014c+index),
             MillenniumDosTitleInitializationEffectWidth::byte,0});
-    effects_.insert(effects_.end(),{{0x0f93,"DI",0x014c},{0x0f97,"AX",0},
-        {0x0f99,"CX",0x0180},{0x0fba,"AX",palette_delta},
-        {0x0fbe,"SI",static_cast<std::uint16_t>(0x4817+palette_delta)},
-        {0x0fc0,"SI",static_cast<std::uint16_t>(0x4833+palette_delta)},
-        {0x0fc3,"CX",0x0180}});
-    last_sequence_=sequence;
-    continuation_address_=0x0fc6;
-    state_=MillenniumDosTitleInitializationState::library_palette_copy_boundary;
+    for(std::size_t index=0;index<0x300;++index)
+        next.memory_effects_.push_back({0x0fc6,static_cast<std::uint16_t>(0x014c+index),
+            MillenniumDosTitleInitializationEffectWidth::byte,title_library[source+index]});
+    next.effects_.insert(next.effects_.end(),{{0x0f93,"DI",0x014c},{0x0f96,"FLAGS.DF",0},{0x0f97,"AX",0},
+        {0x0f99,"CX",0x0180},{0x0f9c,"CX",0},{0x0f9c,"DI",0x044c},
+        {0x0f9e,"DS",title_library_segment_},{0x0f9e,"SI",directory_delta},
+        {0x0fa3,"DI",0x014c},
+        {0x0fac,"CX",static_cast<std::uint16_t>(title_library[record+2]+1U)},
+        {0x0fb1,"DX",static_cast<std::uint16_t>((title_library[record+2]+1U)*3U)},
+        {0x0fb9,"CX",static_cast<std::uint16_t>(title_library[record+1]+1U)},
+        {0x0fba,"AX",palette_delta},
+        {0x0fbe,"SI",static_cast<std::uint16_t>(directory_delta+palette_delta)},
+        {0x0fc0,"SI",static_cast<std::uint16_t>(source)},
+        {0x0fc3,"CX",0x0180},{0x0fc6,"CX",0},{0x0fc6,"DI",0x044c},
+        {0x0fc6,"SI",static_cast<std::uint16_t>(source+0x300)},
+        {0x0fc9,"DS",child_code_segment_},{0x0fca,"AX",0x1012},
+        {0x0fce,"ES",child_code_segment_},{0x0fcf,"DX",0x014c},
+        {0x0fd2,"BX",0},{0x0fd5,"CX",0x00ff}});
+    next.bios_boundary_={0x1bec,0x0e5f,0x0fd8,0x10,0x1012,0,0x00ff,
+        0xffff,0x014c,0x014c,false};
+    next.last_sequence_=sequence;
+    next.continuation_address_=0x0fd8;
+    next.state_=MillenniumDosTitleInitializationState::library_palette_bios_interrupt_boundary;
+    *this=std::move(next);
 }
 
 void MillenniumDosTitleInitializationSession::execute_post_library_setup(
