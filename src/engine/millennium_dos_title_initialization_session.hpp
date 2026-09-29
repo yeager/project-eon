@@ -91,7 +91,7 @@ enum class MillenniumDosTitleInitializationState {
     post_descriptor_first_loop_mode_two_second_source_byte_boundary,
     post_descriptor_first_loop_mode_two_second_lookup_byte_boundary,
     post_descriptor_first_loop_mode_two_returned,
-    post_descriptor_loop_private_interrupt_result_boundary,
+    post_descriptor_loop_return_boundary,
     post_descriptor_next_loop_far_read_boundary,
     post_descriptor_next_loop_record_word_read_boundary,
     post_descriptor_next_loop_payload_byte_boundary,
@@ -399,8 +399,6 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::uint16_t post_descriptor_observed_ax = 0;
     std::uint16_t post_descriptor_observed_flags = 0;
     std::vector<std::uint8_t> post_descriptor_observed_record;
-    std::uint16_t descriptor_loop_observed_ax = 0;
-    std::uint16_t descriptor_loop_observed_flags = 0;
     std::uint32_t title_library_cursor = 0;
     std::uint16_t title_library_read_count = 0;
 };
@@ -451,6 +449,8 @@ public:
     void execute_followup_setup(std::uint64_t sequence,
         std::uint16_t call_address, std::uint16_t call_target);
     void observe_far_words(const MillenniumDosTitleFarWordsObservation&);
+    void consume_next_descriptor_mode_two_header(std::uint64_t sequence,
+        std::span<const std::uint8_t> title_library);
     void consume_next_descriptor_pair(std::uint64_t sequence,
         std::span<const std::uint8_t> title_library);
     void observe_far_word(const MillenniumDosTitleFarWordObservation&);
@@ -475,15 +475,11 @@ public:
 
 private:
     void advance_encoded_record_complete();
-    void advance_first_descriptor_mode_two_return();
+    void advance_descriptor_mode_two_return();
     MillenniumDosTitleInitializationState state_ =
         MillenniumDosTitleInitializationState::awaiting_entry;
     std::uint64_t last_sequence_ = 0;
     std::uint16_t child_code_segment_ = 0;
-    // Exact words embedded in the hash-admitted TITLES.EXE caller table at
-    // runtime $170c/$170e (file offsets $160c/$160e).
-    std::uint16_t first_descriptor_caller_word_ = 0;
-    std::uint16_t first_descriptor_caller_second_word_ = 0;
     std::vector<MillenniumDosTitleInitializationRegisterEffect> effects_;
     std::vector<MillenniumDosTitleInitializationMemoryEffect> memory_effects_;
     MillenniumDosTitlePrivateInterruptBoundary boundary_;
@@ -499,6 +495,7 @@ private:
     std::uint16_t selected_followup_call_target_ = 0;
     bool post_video_repeat_ = false;
     bool second_descriptor_payload_ = false;
+    unsigned descriptor_loop_iteration_ = 0;
     std::uint16_t descriptor_lookup_base_ = 0x0008;
     std::uint16_t descriptor_output_offset_ = 0x0170;
     std::uint16_t descriptor_output_segment_ = 0;
@@ -534,8 +531,6 @@ private:
     std::uint16_t post_descriptor_observed_ax_ = 0;
     std::uint16_t post_descriptor_observed_flags_ = 0;
     std::vector<std::uint8_t> post_descriptor_observed_record_;
-    std::uint16_t descriptor_loop_observed_ax_ = 0;
-    std::uint16_t descriptor_loop_observed_flags_ = 0;
 };
 
 } // namespace eon

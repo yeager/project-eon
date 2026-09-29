@@ -1185,49 +1185,19 @@ int main(int argc, char** argv) {
         assert(driven.accepted&&driven.returned&&driven.observation_count>0);
         const auto caller_connected=owned_mode_two.checkpoint();
         assert(caller_connected.state
-            ==eon::MillenniumDosTitleInitializationState::post_descriptor_loop_private_interrupt_result_boundary);
-        assert(caller_connected.continuation_address==0x0127);
-        assert(caller_connected.boundary.call_address==0x1764
-            &&caller_connected.boundary.wrapper_address==0x0122
-            &&caller_connected.boundary.interrupt_address==0x0127
-            &&caller_connected.boundary.function==0x0006
-            &&caller_connected.boundary.record_segment==caller_connected.child_code_segment
-            &&caller_connected.boundary.record_offset==0x1349);
-        assert(caller_connected.memory_effects[caller_connected.memory_effects.size()-4].offset==0x1351
-            &&caller_connected.memory_effects[caller_connected.memory_effects.size()-4].value==0x0000);
-        assert(caller_connected.memory_effects[caller_connected.memory_effects.size()-3].offset==0x134f
-            &&caller_connected.memory_effects[caller_connected.memory_effects.size()-3].value==0x0000);
-        assert(caller_connected.memory_effects[caller_connected.memory_effects.size()-2].offset==0x133d
-            &&caller_connected.memory_effects[caller_connected.memory_effects.size()-2].value==0x0001);
-        assert(caller_connected.memory_effects.back().offset==0x133f
-            &&caller_connected.memory_effects.back().value==0x0002);
-        assert(owned_memory.checkpoint().applied_batch_count>before.applied_batch_count);
-
-        const auto loop_sequence=caller_connected.last_sequence+1;
-        auto contradictory_loop_result=owned_mode_two;
-        bool contradictory_loop_result_rejected=false;
-        try {
-            contradictory_loop_result.observe_private_interrupt_result(
-                {loop_sequence,0x0127,0x0129,0x7777,0x0246,
-                    caller_connected.child_code_segment,0x1349,{0}});
-        } catch(const std::runtime_error&) { contradictory_loop_result_rejected=true; }
-        assert(contradictory_loop_result_rejected
-            &&contradictory_loop_result.checkpoint().state
-                ==eon::MillenniumDosTitleInitializationState::post_descriptor_loop_private_interrupt_result_boundary
-            &&contradictory_loop_result.checkpoint().memory_effects.size()
-                ==caller_connected.memory_effects.size());
-        owned_mode_two.observe_private_interrupt_result(
-            {loop_sequence,0x0127,0x0129,0x7777,0x0246});
-        const auto next_loop=owned_mode_two.checkpoint();
-        assert(next_loop.state
             ==eon::MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary
-            &&next_loop.continuation_address==0x13aa
-            &&next_loop.descriptor_loop_observed_ax==0x7777
-            &&next_loop.descriptor_loop_observed_flags==0x0246
-            &&next_loop.far_read_boundary.instruction_address==0x13aa
-            &&next_loop.far_read_boundary.source_segment==0x3481
+            &&caller_connected.continuation_address==0x13aa);
+        assert(owned_memory.checkpoint().applied_batch_count>before.applied_batch_count);
+        auto phantom_result=owned_mode_two;
+        bool phantom_rejected=false;
+        try { phantom_result.observe_private_interrupt_result(
+            {caller_connected.last_sequence+1,0x0127,0x0129,0x7777,0x0246}); }
+        catch(const std::runtime_error&) { phantom_rejected=true; }
+        assert(phantom_rejected&&phantom_result.checkpoint().last_sequence==caller_connected.last_sequence
+            &&phantom_result.checkpoint().memory_effects.size()==caller_connected.memory_effects.size());
+        const auto next_loop=owned_mode_two.checkpoint();
+        assert(next_loop.far_read_boundary.source_segment==0x3481
             &&next_loop.far_read_boundary.source_offset==0x001b
-            &&next_loop.far_read_boundary.word_count==2
             &&next_loop.memory_effects[next_loop.memory_effects.size()-2].offset==0x010c
             &&next_loop.memory_effects[next_loop.memory_effects.size()-2].value==0x02e0
             &&next_loop.memory_effects.back().offset==0x0110
@@ -1289,6 +1259,76 @@ int main(int argc, char** argv) {
             &&complete_checkpoint.far_byte_boundary.source_segment==0x32a1
             &&complete_checkpoint.far_byte_boundary.source_offset==0x0006
             &&complete_checkpoint.state==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_header_byte_boundary);
+        for(std::size_t index=automatic_pair.memory_effects.size();index<complete_checkpoint.memory_effects.size();++index){
+            const auto& effect=complete_checkpoint.memory_effects[index];
+            if(effect.explicit_segment&&effect.width==eon::MillenniumDosTitleInitializationEffectWidth::byte)
+                assert(effect.segment==0x4000);
+        }
+        auto canonical_mode_two=complete_genuine_stream;
+        auto rejected_header=canonical_mode_two;
+        bool header_rejected=false;
+        try { rejected_header.consume_next_descriptor_mode_two_header(complete_checkpoint.last_sequence+1,{}); }
+        catch(const std::runtime_error&){header_rejected=true;}
+        assert(header_rejected&&rejected_header.checkpoint().last_sequence==complete_checkpoint.last_sequence
+            &&rejected_header.checkpoint().memory_effects.size()==complete_checkpoint.memory_effects.size());
+        canonical_mode_two.consume_next_descriptor_mode_two_header(complete_checkpoint.last_sequence+1,title_library);
+        const auto canonical_header=canonical_mode_two.checkpoint();
+        assert(canonical_header.continuation_address==0x16b3
+            &&canonical_header.far_byte_boundary.source_segment==0x4000
+            &&canonical_header.far_byte_boundary.source_offset==0x02e0
+            &&canonical_header.memory_effects.size()==complete_checkpoint.memory_effects.size()+95);
+        std::size_t canonical_clear_words=0;
+        for(std::size_t index=complete_checkpoint.memory_effects.size();
+            index<canonical_header.memory_effects.size();++index){
+            const auto& effect=canonical_header.memory_effects[index];
+            if(effect.instruction_address!=0x16a6)continue;
+            assert(effect.explicit_segment&&effect.segment==0x5000
+                &&effect.width==eon::MillenniumDosTitleInitializationEffectWidth::word
+                &&effect.value==0
+                &&effect.offset==0x02e0+2*canonical_clear_words);
+            ++canonical_clear_words;
+        }
+        assert(canonical_clear_words==92
+            &&canonical_header.memory_effects.back().offset==0x0396);
+        bool canonical_clear_count_seen=false;
+        for(std::size_t index=complete_checkpoint.register_effects.size();
+            index<canonical_header.register_effects.size();++index){
+            const auto& effect=canonical_header.register_effects[index];
+            if(effect.instruction_address==0x16a2&&effect.register_name=="CX"){
+                assert(effect.value==92);
+                canonical_clear_count_seen=true;
+            }
+        }
+        assert(canonical_clear_count_seen);
+        std::map<eon::NativeRuntimeLocation,std::uint8_t> canonical_bytes;
+        for(const auto& effect:canonical_header.memory_effects){
+            const auto segment=effect.explicit_segment?effect.segment:canonical_header.child_code_segment;
+            auto location=eon::NativeRuntimeLocation{eon::NativeRuntimeAddressSpace::dos_segmented,segment,effect.offset};
+            canonical_bytes[location]=static_cast<std::uint8_t>(effect.value);
+            if(effect.width==eon::MillenniumDosTitleInitializationEffectWidth::word){
+                ++location.offset;canonical_bytes[location]=static_cast<std::uint8_t>(effect.value>>8U);
+            }
+        }
+        for(unsigned index=0;index<256;++index)
+            canonical_bytes[{eon::NativeRuntimeAddressSpace::dos_segmented,0x32a1,0x00d8+index}]
+                =title_library.at(0x2ae8+index);
+        eon::NativeRuntimeMemory canonical_memory;
+        eon::NativeRuntimeEffectBatch canonical_seed{"canonical-mode-two-source",true,{}};
+        for(const auto& [location,value]:canonical_bytes)
+            canonical_seed.effects.push_back({canonical_seed.effects.size()+1,location,
+                eon::MemoryTransferElementWidth::byte,eon::NativeRuntimeByteOrder::little_endian,value});
+        assert(canonical_memory.apply(canonical_seed).accepted);
+        std::size_t mode_two_observations=0;
+        bool caller_returned=false;
+        for(unsigned quantum=0;quantum<256&&!caller_returned;++quantum){
+            const auto driven=canonical_mode_two.drive_mode_two_from_owned_memory(canonical_memory,
+                {canonical_mode_two.checkpoint().last_sequence+1,4});
+            if(!driven.accepted)throw std::runtime_error(driven.error);
+            mode_two_observations+=driven.observation_count;caller_returned=driven.returned;
+        }
+        assert(caller_returned&&mode_two_observations==736
+            &&canonical_mode_two.checkpoint().continuation_address==0x1963
+            &&canonical_mode_two.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_descriptor_loop_return_boundary);
         const auto same_checkpoint=[](const auto& left,const auto& right){
             assert(left.state==right.state&&left.last_sequence==right.last_sequence
                 &&left.continuation_address==right.continuation_address

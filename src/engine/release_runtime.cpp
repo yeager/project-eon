@@ -1477,6 +1477,7 @@ bool ReleaseRuntimeCoordinator::advance_millennium_dos_title_local_continuation(
   auto memory = native_runtime_memory_ ? std::optional{*native_runtime_memory_}
                                        : std::nullopt;
   const auto prior_effects = next.checkpoint().memory_effects.size();
+  bool memory_effects_applied = false;
   try {
     const auto checkpoint = next.checkpoint();
     switch (checkpoint.state) {
@@ -1496,6 +1497,52 @@ bool ReleaseRuntimeCoordinator::advance_millennium_dos_title_local_continuation(
           checkpoint.last_sequence + 1, checkpoint.title_main_call_address,
           checkpoint.title_main_call_target);
       break;
+    case MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary: {
+      constexpr std::string_view library_sha =
+          "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
+      if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
+      const auto library = active_media_->borrow(library_sha);
+      if (!library) throw std::runtime_error("Exact TITLE.LIB descriptor source is unavailable");
+      next.consume_next_descriptor_pair(checkpoint.last_sequence + 1, *library);
+      for (const std::size_t expected : {256U, 256U, 106U}) {
+        const auto reached = next.checkpoint();
+        const auto driven = next.drive_next_descriptor_stream_from_title_library(
+            *library, {reached.last_sequence + 1, 256});
+        if (!driven.accepted || driven.observation_count != expected
+            || driven.stopped_at_boundary != (expected == 106))
+          throw std::runtime_error(driven.error.empty()
+              ? "TITLE.LIB stream did not reach its verified header boundary"
+              : driven.error);
+      }
+      break;
+    }
+    case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_header_byte_boundary: {
+      // Only this independently proven relocation is admitted here. Other
+      // record headers remain typed external observations.
+      if (checkpoint.far_byte_boundary.source_segment != 0x32a1
+          || checkpoint.far_byte_boundary.source_offset != 0x0006 || !memory)
+        return false;
+      constexpr std::string_view library_sha =
+          "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
+      if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
+      const auto library = active_media_->borrow(library_sha);
+      if (!library) throw std::runtime_error("Exact TITLE.LIB header source is unavailable");
+      next.consume_next_descriptor_mode_two_header(checkpoint.last_sequence + 1, *library);
+      // The header admission proves $32a1:$00d8 == TITLE.LIB+$2ae8.
+      NativeRuntimeEffectBatch table{
+          "millennium-dos-title-canonical-lookup-"
+              + std::to_string(millennium_dos_sound_driver_load_generation_)
+              + "-" + std::to_string(checkpoint.last_sequence), true, {}};
+      for (std::size_t i = 0; i < 256; ++i)
+        table.effects.push_back({i + 1,
+            {NativeRuntimeAddressSpace::dos_segmented, 0x32a1,
+             static_cast<std::uint16_t>(0x00d8 + i)},
+            MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::little_endian,
+            (*library)[0x2ae8 + i]});
+      const auto applied = memory->apply(table);
+      if (!applied.accepted) { error = applied.error; return false; }
+      break;
+    }
     case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_source_byte_boundary:
     case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_first_lookup_byte_boundary:
     case MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_source_byte_boundary:
@@ -1535,6 +1582,7 @@ bool ReleaseRuntimeCoordinator::advance_millennium_dos_title_local_continuation(
         error = driven.error;
         return false;
       }
+      memory_effects_applied = true;
       break;
     }
     default:
@@ -1545,7 +1593,7 @@ bool ReleaseRuntimeCoordinator::advance_millennium_dos_title_local_continuation(
     return false;
   }
   const auto checkpoint = next.checkpoint();
-  if (checkpoint.memory_effects.size() > prior_effects) {
+  if (!memory_effects_applied && checkpoint.memory_effects.size() > prior_effects) {
     if (!memory) {
       error = "Millennium title local continuation requires native memory";
       return false;
@@ -1787,43 +1835,6 @@ ReleaseRuntimeCoordinator::observe_millennium_dos_title_private_interrupt_result
     const auto prior_effect_count=next.checkpoint().memory_effects.size();
     try {
         next.observe_private_interrupt_result(observation);
-        if(next.checkpoint().state==MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary){
-            constexpr std::string_view library_sha=
-                "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
-            if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
-            const auto& media=*active_media_;
-            const auto library=media.borrow(library_sha);
-            if(!library)throw std::runtime_error("Exact TITLE.LIB descriptor source is unavailable");
-            const auto reached=next.checkpoint();
-            next.consume_next_descriptor_pair(reached.last_sequence+1,*library);
-            const auto stream=next.checkpoint();
-            const auto driven=next.drive_next_descriptor_stream_from_title_library(
-                // Two finite canonical TITLE.LIB transactions drive the
-                // proven decoder prefix without becoming DOS memory emulation
-                // or a general stream decoder.
-                *library,{stream.last_sequence+1,256});
-            if(!driven.accepted || driven.stopped_at_boundary
-                || driven.observation_count!=256)
-                throw std::runtime_error(driven.error.empty()
-                    ? "TITLE.LIB descriptor stream did not complete its verified continuation"
-                    : driven.error);
-            const auto next_stream=next.checkpoint();
-            const auto next_driven=next.drive_next_descriptor_stream_from_title_library(
-                *library,{next_stream.last_sequence+1,256});
-            if(!next_driven.accepted || next_driven.stopped_at_boundary
-                || next_driven.observation_count!=256)
-                throw std::runtime_error(next_driven.error.empty()
-                    ? "TITLE.LIB descriptor stream did not complete its second verified continuation"
-                    : next_driven.error);
-            const auto final_stream=next.checkpoint();
-            const auto final_driven=next.drive_next_descriptor_stream_from_title_library(
-                *library,{final_stream.last_sequence+1,256});
-            if(!final_driven.accepted || !final_driven.stopped_at_boundary
-                || final_driven.observation_count!=106)
-                throw std::runtime_error(final_driven.error.empty()
-                    ? "TITLE.LIB descriptor stream did not stop at its verified header boundary"
-                    : final_driven.error);
-        }
         if(next.checkpoint().state==MillenniumDosTitleInitializationState::post_video_followup_call_boundary){
             const auto reached=next.checkpoint();
             next.execute_post_video_followup(reached.last_sequence+1,0x1c17,0x1725);

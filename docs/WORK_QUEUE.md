@@ -2,6 +2,14 @@
 
 ## Current DOS descriptor continuation
 
+The canonical route now corrects the loop's return to `$1963`, removes the
+fictitious intervening function-six result, and reaches the next descriptor
+directly. Its genuine-library header and complete owned-memory mode-two loop
+end at the second `$1963` return. Recover that caller's next iteration before
+advancing further. Payload output uses `$010c/$010e`; setup preserves the
+original doubled clear count. These corrections supersede earlier references
+to a `$16e8->$1740` return for this loop invocation.
+
 The second title descriptor can now enter the existing payload decoder using
 its own source, destination and lookup BX. It stops before postprocessing at
 `$1488`, or before `RET $1405` when the observed selector is neither one nor

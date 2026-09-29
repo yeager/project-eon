@@ -605,16 +605,12 @@ segment, offset and element width. It never contains a byte, word, register,
 or BIOS/DOS return result. Stops outside this recovered tagged set, including
 the `library_palette_copy_boundary`, deliberately report no requirement.
 
-The terminal `$16e8` RET is now caller-connected without another runtime
-observation. The exact 36 bytes at `$1740..$1763` (file
-`TITLES.EXE+$1640`, SHA-256
-`d1e04fba870ff3677e495d131b994bfdc1dc6f95af7ea9f7cc4316d48568f115`)
-restore the caller's saved zero table displacement, read the two genuine
-embedded words at `$170c/$170e`, copy the two raw callee-produced words from
-`CS:$1357/$1359` to `CS:$133d/$133f`, and form the original function-six
-request at `$1764->$0122`. All caller writes join the owned-memory drive's
-transaction. The private `INT $91` result remains external, and none of these
-raw words is assigned pixel or field semantics.
+The loop invocation at `$1960->$1390` returns from `$16e8` directly to
+`$1963`. Earlier documentation incorrectly connected it to `$1740`, which
+belongs to the separate `$173d` call. The loop now restores its proven local
+saved DX/CX, advances the pointers and enters the next descriptor without a
+private-interrupt result. The former intervening function-six result is
+rejected. The genuine initial graphics-record request remains distinct.
 
 The ordered second-record word at `$3c80:$0016` now enters `$13d0`. Exact
 bytes `$13d0..$13e1` perform the unsigned multiplication and atomically store
@@ -671,7 +667,7 @@ of the former fixed `$0008`. Its arithmetic also retains the latest raw
 The second invocation shares the already hash-bound escape, repetition and
 lookup transitions through `$1487`, retaining its own output segment and
 offset. Completion stops at an explicit `$1488` boundary before mode-specific
-postprocessing. It cannot take the first descriptor's `$16e8->$1740` caller
+postprocessing. It cannot take the separate `$173d->$1740` caller
 continuation or infer another loop iteration. Supplied-media tests use a
 clearly synthetic compact record to exercise both nibble halves and reject
 the former lookup address. These tests establish instruction arithmetic,
@@ -687,3 +683,21 @@ mandatory. The supplied-media regression compares the complete 618-observation
 route, every memory/register effect and the `$1647` endpoint across budgets
 1, 2, 3, 7 and 256. This changes scheduling only, with no new external result
 or decoder operation admitted.
+
+The canonical `$32a1:$0006` record now advances through all three mode-two
+header reads from the verified library at file offsets `$2a16/$2a17/$2a30`.
+Its 28-byte header hashes to
+`712ac8e1ed83e6beb18680960f1d44899a812c0d5271c0ad68016aebf2440d10`.
+The exact setup `$163b..$16b2` (120 bytes, SHA-256
+`9a18a2349e46afad9b814befcaf0a7ddd715f446f21845453a4e4f6a72ad65b7`)
+derives lookup pointer `$32a1:$00d8`, corresponding to file `$2ae8`.
+The bounded 256-byte lookup range lies wholly inside the supplied leaf.
+
+Payload bytes consistently belong to the `$010c/$010e` buffer, including all
+618 observations of this canonical stream; `$0110/$0112` is the later
+mode-two destination. Setup now includes the original `$16a2` count doubling:
+the canonical raw product 46 at `$14dd` clears 92 words, not 46. Sixteen-bit
+wrapping is retained before the height shift and after count doubling.
+The existing owned-memory loop then consumes 736 byte observations and stops
+at the second invocation's real `$1963` return boundary. No third iteration,
+private result or rendered-frame meaning is inferred.
