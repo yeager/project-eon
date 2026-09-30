@@ -74,6 +74,27 @@ int main() {
     assert(same_memory.diagnostics().initialized_byte_count==8
         && same_memory.diagnostics().applied_batch_count==1);
 
+    eon::NativeRuntimeMemory overwrite_memory;
+    const eon::NativeRuntimeEffectBatch initial_byte{"initial-byte",true,{{
+        1,{eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x800},
+        eon::MemoryTransferElementWidth::byte,eon::NativeRuntimeByteOrder::little_endian,0x11}}};
+    assert(overwrite_memory.apply(initial_byte).accepted);
+    const eon::NativeRuntimeEffectBatch overwrite_and_add{"overwrite-and-add",true,{
+        {1,{eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x800},
+            eon::MemoryTransferElementWidth::byte,eon::NativeRuntimeByteOrder::little_endian,0x22},
+        {2,{eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x801},
+            eon::MemoryTransferElementWidth::byte,eon::NativeRuntimeByteOrder::little_endian,0x33},
+    }};
+    assert(overwrite_memory.apply(overwrite_and_add).accepted);
+    assert(overwrite_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x800})==0x22
+        &&overwrite_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x801})==0x33);
+    const auto before_replay=overwrite_memory.checkpoint();
+    assert(!overwrite_memory.apply(overwrite_and_add).accepted);
+    const auto after_replay=overwrite_memory.checkpoint();
+    assert(after_replay.initialized_bytes==before_replay.initialized_bytes
+        &&after_replay.applied_batch_count==before_replay.applied_batch_count
+        &&after_replay.checksum==before_replay.checksum);
+
     eon::MillenniumDosExternalTransferAdmission bdf_transfer(
         eon::MillenniumDosExternalTransferKind::bdf_mode_two_jump);
     assert(bdf_transfer.observe_entry({10,0x0c4b,0x11f7}).accepted);
