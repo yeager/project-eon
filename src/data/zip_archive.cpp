@@ -306,7 +306,7 @@ std::vector<std::uint8_t> ZipArchive::extract(const ZipEntry& entry) const {
         [](const ZipEntry& candidate, const ZipEntry* requested) {
             return std::less<const ZipEntry*>{}(&candidate, requested);
         });
-    if (admitted == entries_.end()) {
+    if (admitted == entries_.end() || &*admitted != &entry) {
         throw std::runtime_error("ZIP entry was not admitted by this archive");
     }
     if (entry.compressed_size > maximum_entry_size || entry.uncompressed_size > maximum_entry_size) {
