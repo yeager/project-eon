@@ -4813,13 +4813,22 @@ title-runtime observations. At `$0d54`, a second typed far pointer from
 CS:`$0d1e` loads ES:DI. The callback span `[$0d54,$0d69)` (21 bytes, SHA-256
 `46bff2ad876711a99fe2de1331a888ba00255f5a3fcf1e5eb5b8e385af5c96cc`) then
 reads the byte at DS:SI at `$0d59`: 1 selects `$0dcd`, 2 or 3 selects `$0dcb`,
-and 0 or 4..255 selects `$0dad`. The session stops at these branch targets;
-the copy and VGA-port bodies remain unmodeled. These inputs are not captured
-title-runtime observations. These on-disk bytes do not establish the runtime
-values. The caller frame's IP must be `$0129`; its CS and FLAGS
-remain explicit inputs and are returned verbatim only on the separate IRET
-path. The outcome records only direct local register effects and supplied
-port reads. The standalone session does not authenticate an IVT vector, assert
+and 0 or 4..255 selects `$0dad`. The authenticated loop body
+`[$0dad,$0db5)` (8 bytes, SHA-256
+`04de57200f0abc417bc2ed36052791161e8430819c378f87db5f2a8878a102a6`)
+decrements the typed word at DS:`SI+8`, advances SI by `$0c`, and decrements
+CX. The model records these as explicit memory/register effects and reaches
+`$0d4e` for a nonzero CX or `$0db5` for zero. The two-byte span
+`[$0dcb,$0dcd)` (SHA-256
+`576c81f81d170ff0d2580e411b96e98c074321d8ff24b5d9d9a9f311b8a30d39`) jumps
+to `$0e46`, also recorded as a boundary. These scenario inputs do not establish
+runtime values. The model stops at `$0dcd`, `$0db5`, and `$0e46`; it does not
+execute the copy body, VGA port I/O, or saved-register epilogue.
+These inputs are not captured title-runtime observations. These on-disk bytes
+do not establish the runtime values. The caller frame's IP must be `$0129`; its
+CS and FLAGS remain explicit inputs and are returned verbatim only on the
+separate IRET path. The outcome records only direct local register effects and
+supplied port reads. The standalone session does not authenticate an IVT vector, assert
 which profile was installed, or establish that title execution reached this
 handler or a real handler return.
 

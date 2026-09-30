@@ -57,6 +57,10 @@ pushes. It accepts a fresh CS:`$0d18` word at `$0d44`, a far pointer from
 CS:`$0d1a` at `$0d49`, then DS:`SI+8` at `$0d4e`, stopping at `$0d54` or
 `$0dad`. From `$0d54`, it reads the video pointer at CS:`$0d1e` and the byte at
 DS:SI, selecting `$0dcd` for 1, `$0dcb` for 2/3, or `$0dad` for 0/4..255.
+The bounded `$0dad` model applies one authenticated decrement/`SI += $0c`/`LOOP`
+iteration and accepts a fresh typed word at `$0d4e`; it stops at `$0db5` when
+CX reaches zero. The `$0dcb` route records its jump to `$0e46`. Copy operations,
+VGA port I/O, and the saved-register epilogue remain outside the model.
 These are scenario inputs, not captured runtime evidence; the copy and VGA
 port bodies remain outside the session. `$0d10`'s unknown return destination
 and `$0ca2` remain outside this session. The zero `$01e5` path

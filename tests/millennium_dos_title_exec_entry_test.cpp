@@ -128,8 +128,9 @@ int main(int argc, char** argv) {
         if (entry.path().filename() == "MILL.COM") mill_path = entry.path();
         if (entry.path().filename() == "TITLES.EXE") titles_path = entry.path();
         if (entry.path().filename() == "TITLE.LIB") title_library_path = entry.path();
-        if (!mill_path.empty() && !titles_path.empty()
-            && mill_path.parent_path() == titles_path.parent_path()) break;
+        if (!mill_path.empty() && !titles_path.empty() && !title_library_path.empty()
+            && mill_path.parent_path() == titles_path.parent_path()
+            && mill_path.parent_path() == title_library_path.parent_path()) break;
     }
     if (mill_path.empty() || titles_path.empty() || title_library_path.empty()
         || mill_path.parent_path() != titles_path.parent_path()) return 3;

@@ -313,6 +313,7 @@ int main(const int argc, char** argv) {
     assert(mcga_callback_nonzero.next_sequence() == 9
         && mcga_callback_nonzero.callback_reads().size() == 2
         && mcga_callback_nonzero.callback_register_effects().empty());
+    auto mcga_callback_repeated_loop = mcga_callback_nonzero;
     mcga_callback_nonzero.observe_mcga_callback_alternate_cx_read(
         {9,0x0d44,0x3456,0x0d18,1,eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
     assert(mcga_callback_nonzero.boundary()
@@ -334,6 +335,25 @@ int main(const int argc, char** argv) {
                 {0x0d49,eon::MillenniumDosVideoFunction13McgaCallbackRegister::ds,0x2000},
                 {0x0d49,eon::MillenniumDosVideoFunction13McgaCallbackRegister::si,0xfffc}}));
     auto mcga_callback_alternate_nonzero = mcga_callback_nonzero;
+    mcga_callback_repeated_loop.observe_mcga_callback_alternate_cx_read(
+        {9,0x0d44,0x3456,0x0d18,2,eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
+    mcga_callback_repeated_loop.observe_mcga_callback_alternate_pointer(
+        {10,0x0d49,0x3456,0x0d1a,0x2000,0xfffc});
+    mcga_callback_repeated_loop.observe_mcga_callback_alternate_indirect_word(
+        {11,0x0d4e,0x2000,0x0004,1});
+    mcga_callback_repeated_loop.execute_mcga_callback_loop_iteration(12,0x0dad);
+    assert(mcga_callback_repeated_loop.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d4e}
+        && mcga_callback_repeated_loop.callback_memory_word_effects()
+            == (std::vector<eon::MillenniumDosVideoFunction13McgaCallbackMemoryWordEffect>{{
+                0x0dad,0x2000,0x0004,0}})
+        && mcga_callback_repeated_loop.callback_register_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
+                0x0db3,eon::MillenniumDosVideoFunction13McgaCallbackRegister::cx,1}));
+    mcga_callback_repeated_loop.observe_mcga_callback_alternate_indirect_word(
+        {13,0x0d4e,0x2000,0x0010,0});
+    assert(mcga_callback_repeated_loop.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d54});
     expect_rejected([&] { mcga_callback_nonzero.observe_mcga_callback_alternate_indirect_word(
         {11,0x0d4e,0x2000,0x0005,0}); });
     assert(mcga_callback_nonzero.next_sequence() == 11
@@ -399,6 +419,24 @@ int main(const int argc, char** argv) {
         && mcga_callback_nonzero.callback_register_effects().back()
             == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
                 0x0d59,eon::MillenniumDosVideoFunction13McgaCallbackRegister::al,2}));
+    mcga_callback_nonzero.execute_mcga_callback_copy_route(14,0x0dcb);
+    assert(mcga_callback_nonzero.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0e46});
+    mcga_callback_alternate_nonzero.execute_mcga_callback_loop_iteration(12,0x0dad);
+    assert(mcga_callback_alternate_nonzero.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0db5}
+        && mcga_callback_alternate_nonzero.callback_memory_word_effects()
+            == (std::vector<eon::MillenniumDosVideoFunction13McgaCallbackMemoryWordEffect>{{
+                0x0dad,0x2000,0x0004,0}})
+        && mcga_callback_alternate_nonzero.callback_register_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
+                0x0db3,eon::MillenniumDosVideoFunction13McgaCallbackRegister::cx,0}));
+    mcga_callback_selector_zero.execute_mcga_callback_loop_iteration(14,0x0dad);
+    assert(mcga_callback_selector_zero.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0db5}
+        && mcga_callback_selector_zero.callback_memory_word_effects()
+            == (std::vector<eon::MillenniumDosVideoFunction13McgaCallbackMemoryWordEffect>{{
+                0x0dad,0x2000,0x0004,0xffff}}));
 
     using Session = eon::MillenniumDosVideoFunctionZeroSession;
     using State = eon::MillenniumDosVideoFunctionZeroState;
