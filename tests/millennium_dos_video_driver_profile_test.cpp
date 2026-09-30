@@ -996,6 +996,23 @@ int main(const int argc, char** argv) {
         ega_multi_count.observe_ega_near_return({5,0x0234,0x2000,0x0100,0x5678});
     });
 
+    Session ega_wrapped_ret(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640, 0xff);
+    ega_wrapped_ret.observe_bios_result(Result{1,0x1d6,0x10,0x560e,0,0,0,0});
+    ega_wrapped_ret.observe_bios_result(Result{2,0x1de,0x10,0x000e,0,0,0,0});
+    ega_wrapped_ret.observe_bios_result(Result{3,0x1e2,0x10,0x700e,0,4,0,0});
+    ega_wrapped_ret.advance_success_postlude_prefix();
+    ega_wrapped_ret.advance_ega_success_stack_prefix(0x2000,0xfffe);
+    ega_wrapped_ret.advance_ega_multi_count_loop(0x4567);
+    ega_wrapped_ret.advance_ega_success_pop_prefix();
+    ega_wrapped_ret.advance_ega_success_store_prefix(0x4567);
+    ega_wrapped_ret.observe_ega_near_return({4,0x0234,0x2000,0xfffe,0x5678});
+    const auto ega_wrapped_near_ret = ega_wrapped_ret.ega_return_outcome();
+    assert(ega_wrapped_near_ret
+        && ega_wrapped_near_ret->observation.sp == 0xfffe
+        && ega_wrapped_near_ret->sp_after == 0x0000
+        && ega_wrapped_ret.ega_stack_outcome()->sp_after == 0x0000
+        && ega_wrapped_ret.state() == State::mode_success_returned_boundary);
+
     Session ega_zero_count(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640, 0xff);
     ega_zero_count.observe_bios_result(Result{1,0x1d6,0x10,0x560e,0,0,0,0});
     ega_zero_count.observe_bios_result(Result{2,0x1de,0x10,0x000e,0,0,0,0});
