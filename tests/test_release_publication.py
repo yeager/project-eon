@@ -2,6 +2,7 @@
 import importlib.util
 import os
 from pathlib import Path
+import re
 import unittest
 from unittest.mock import patch
 
@@ -9,9 +10,28 @@ SPEC = importlib.util.spec_from_file_location(
     "publish_release", Path(__file__).resolve().parents[1] / "packaging/publish-release.py")
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
+WORKFLOW = (Path(__file__).resolve().parents[1] / ".github/workflows/build.yml").read_text(
+    encoding="utf-8"
+)
 
 
 class ReleasePublicationTests(unittest.TestCase):
+    def test_required_release_jobs_match_workflow_display_names(self):
+        workflow_names = re.findall(r"^    name: (.+)$", WORKFLOW, re.MULTILINE)
+        expected = set()
+        for name in workflow_names:
+            if name != "macOS app (${{ matrix.arch }})":
+                expected.add(name)
+                continue
+            matrix = re.search(
+                r"(?ms)^  package-macos:.*?^      matrix:\n(.*?)(?=^    steps:)",
+                WORKFLOW,
+            )
+            self.assertIsNotNone(matrix)
+            architectures = re.findall(r"^          - arch: (.+)$", matrix.group(1), re.MULTILINE)
+            expected.update(f"macOS app ({architecture})" for architecture in architectures)
+        self.assertEqual(MODULE.JOBS, expected)
+
     def setUp(self):
         self.environment = patch.dict(os.environ, {
             "GITHUB_EVENT_NAME": "workflow_dispatch",
