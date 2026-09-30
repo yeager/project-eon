@@ -493,23 +493,23 @@ if(BUILD_TESTING)
         target_compile_options(eon-deuteros-amiga-interrupt-worker-test PRIVATE -UNDEBUG)
     endif()
     add_test(NAME deuteros-amiga-interrupt-worker COMMAND eon-deuteros-amiga-interrupt-worker-test)
+    add_executable(eon-deuteros-amiga-interrupt-worker-media-test
+        tests/deuteros_amiga_interrupt_worker_media_test.cpp
+        src/data/amiga_adf.cpp
+        src/data/amiga_ofs.cpp
+        src/data/deuteros_amiga_data_disk.cpp
+        src/data/deuteros_amiga_interrupt_worker.cpp
+        src/data/deuteros_amiga_loader.cpp
+        src/data/sha256.cpp
+        src/data/zip_archive.cpp)
+    target_include_directories(eon-deuteros-amiga-interrupt-worker-media-test PRIVATE src)
+    target_link_libraries(eon-deuteros-amiga-interrupt-worker-media-test PRIVATE ZLIB::ZLIB)
+    if(MSVC)
+        target_compile_options(eon-deuteros-amiga-interrupt-worker-media-test PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(eon-deuteros-amiga-interrupt-worker-media-test PRIVATE -UNDEBUG)
+    endif()
     if(EON_REAL_DATA_DIR)
-        add_executable(eon-deuteros-amiga-interrupt-worker-media-test
-            tests/deuteros_amiga_interrupt_worker_media_test.cpp
-            src/data/amiga_adf.cpp
-            src/data/amiga_ofs.cpp
-            src/data/deuteros_amiga_data_disk.cpp
-            src/data/deuteros_amiga_interrupt_worker.cpp
-            src/data/deuteros_amiga_loader.cpp
-            src/data/sha256.cpp
-            src/data/zip_archive.cpp)
-        target_include_directories(eon-deuteros-amiga-interrupt-worker-media-test PRIVATE src)
-        target_link_libraries(eon-deuteros-amiga-interrupt-worker-media-test PRIVATE ZLIB::ZLIB)
-        if(MSVC)
-            target_compile_options(eon-deuteros-amiga-interrupt-worker-media-test PRIVATE /UNDEBUG)
-        else()
-            target_compile_options(eon-deuteros-amiga-interrupt-worker-media-test PRIVATE -UNDEBUG)
-        endif()
         add_test(NAME deuteros-amiga-interrupt-worker-real-media
             COMMAND eon-deuteros-amiga-interrupt-worker-media-test "${EON_REAL_DATA_DIR}")
     endif()
