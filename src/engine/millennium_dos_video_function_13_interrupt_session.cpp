@@ -3,6 +3,7 @@
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/sha256.hpp"
 
+#include <array>
 #include <stdexcept>
 
 namespace eon {
@@ -186,6 +187,27 @@ void MillenniumDosVideoFunction13InterruptSession::execute_mcga_callback_alterna
     callback_driver_effects_.push_back({0x0d35,driver_segment_,0x01e4,1});
     last_sequence_ = sequence;
     callback_next_instruction_ = 0x0d3b;
+}
+
+void MillenniumDosVideoFunction13InterruptSession::execute_mcga_callback_register_saves(
+    const MillenniumDosVideoFunction13McgaCallbackRegisterStackInput& input) {
+    if (state_ != MillenniumDosVideoFunction13InterruptState::callback_local_boundary
+        || callback_next_instruction_ != 0x0d3b
+        || input.sequence != last_sequence_ + 1
+        || input.instruction_address != 0x0d3b) {
+        throw std::runtime_error("Detached Millennium DOS MCGA callback register saves");
+    }
+    const std::array<std::uint16_t,9> values{
+        input.ds,input.es,input.di,input.si,input.dx,input.cx,input.ax,input.bx,input.bp};
+    callback_stack_effects_.reserve(callback_stack_effects_.size() + values.size());
+    auto stack_pointer = input.sp;
+    for (std::size_t i = 0; i < values.size(); ++i) {
+        stack_pointer = static_cast<std::uint16_t>(stack_pointer - 2U);
+        callback_stack_effects_.push_back({static_cast<std::uint16_t>(0x0d3bU + i),
+            input.ss,stack_pointer,values[i]});
+    }
+    last_sequence_ = input.sequence;
+    callback_next_instruction_ = 0x0d44;
 }
 
 void MillenniumDosVideoFunction13InterruptSession::execute_iret(

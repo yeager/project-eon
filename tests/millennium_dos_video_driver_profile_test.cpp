@@ -289,6 +289,25 @@ int main(const int argc, char** argv) {
         == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d3b}
         && mcga_callback_nonzero.callback_driver_effects()
             == (std::vector<eon::MillenniumDosVideoFunction13DriverByteEffect>{{0x0d35,0x3456,0x01e4,1}}));
+    expect_rejected([&] { mcga_callback_nonzero.execute_mcga_callback_register_saves(
+        {8,0x0d3c,0x4000,0x0008,0x1111,0x2222,0x3333,0x4444,0x5555,0x6666,0x7777,0x8888,0x9999}); });
+    assert(mcga_callback_nonzero.next_sequence() == 8
+        && mcga_callback_nonzero.callback_stack_effects().empty());
+    mcga_callback_nonzero.execute_mcga_callback_register_saves(
+        {8,0x0d3b,0x4000,0x0008,0x1111,0x2222,0x3333,0x4444,0x5555,0x6666,0x7777,0x8888,0x9999});
+    assert(mcga_callback_nonzero.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d44}
+        && mcga_callback_nonzero.callback_stack_effects()
+            == (std::vector<eon::MillenniumDosVideoFunction13CallbackStackWordEffect>{
+                {0x0d3b,0x4000,0x0006,0x1111},
+                {0x0d3c,0x4000,0x0004,0x2222},
+                {0x0d3d,0x4000,0x0002,0x3333},
+                {0x0d3e,0x4000,0x0000,0x4444},
+                {0x0d3f,0x4000,0xfffe,0x5555},
+                {0x0d40,0x4000,0xfffc,0x6666},
+                {0x0d41,0x4000,0xfffa,0x7777},
+                {0x0d42,0x4000,0xfff8,0x8888},
+                {0x0d43,0x4000,0xfff6,0x9999}}));
 
     using Session = eon::MillenniumDosVideoFunctionZeroSession;
     using State = eon::MillenniumDosVideoFunctionZeroState;

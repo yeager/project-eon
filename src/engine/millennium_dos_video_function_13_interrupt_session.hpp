@@ -74,6 +74,30 @@ struct MillenniumDosVideoFunction13DriverWordEffect {
     constexpr bool operator==(const MillenniumDosVideoFunction13DriverWordEffect&) const = default;
 };
 
+struct MillenniumDosVideoFunction13McgaCallbackRegisterStackInput {
+    std::uint64_t sequence = 0;
+    std::uint16_t instruction_address = 0x0d3b;
+    std::uint16_t ss = 0;
+    std::uint16_t sp = 0;
+    std::uint16_t ds = 0;
+    std::uint16_t es = 0;
+    std::uint16_t di = 0;
+    std::uint16_t si = 0;
+    std::uint16_t dx = 0;
+    std::uint16_t cx = 0;
+    std::uint16_t ax = 0;
+    std::uint16_t bx = 0;
+    std::uint16_t bp = 0;
+};
+
+struct MillenniumDosVideoFunction13CallbackStackWordEffect {
+    std::uint16_t instruction_address = 0;
+    std::uint16_t segment = 0;
+    std::uint16_t offset = 0;
+    std::uint16_t value = 0;
+    constexpr bool operator==(const MillenniumDosVideoFunction13CallbackStackWordEffect&) const = default;
+};
+
 struct MillenniumDosVideoFunction13InterruptOutcome {
     std::uint16_t ax = 0;
     std::uint16_t dx = 0x03da;
@@ -112,6 +136,8 @@ public:
     callback_driver_effects() const { return callback_driver_effects_; }
     [[nodiscard]] const std::vector<MillenniumDosVideoFunction13DriverWordEffect>&
     callback_driver_word_effects() const { return callback_driver_word_effects_; }
+    [[nodiscard]] const std::vector<MillenniumDosVideoFunction13CallbackStackWordEffect>&
+    callback_stack_effects() const { return callback_stack_effects_; }
 
     void observe_interrupt_request(const MillenniumDosVideoFunction13InterruptRequest& request);
     void observe_port_read(const MillenniumDosVideoFunction13PortRead& read);
@@ -120,6 +146,8 @@ public:
     void observe_mcga_callback_counter(const MillenniumDosVideoFunction13McgaCallbackRead& read);
     void execute_mcga_callback_alternate_flag(std::uint64_t sequence,
         std::uint16_t instruction_address);
+    void execute_mcga_callback_register_saves(
+        const MillenniumDosVideoFunction13McgaCallbackRegisterStackInput& input);
     void execute_iret(std::uint64_t sequence, std::uint16_t instruction_address);
 
 private:
@@ -135,6 +163,7 @@ private:
     std::vector<MillenniumDosVideoFunction13McgaCallbackRead> callback_reads_;
     std::vector<MillenniumDosVideoFunction13DriverByteEffect> callback_driver_effects_;
     std::vector<MillenniumDosVideoFunction13DriverWordEffect> callback_driver_word_effects_;
+    std::vector<MillenniumDosVideoFunction13CallbackStackWordEffect> callback_stack_effects_;
     std::uint16_t callback_next_instruction_ = 0;
 };
 
