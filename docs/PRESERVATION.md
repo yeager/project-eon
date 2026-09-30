@@ -3629,9 +3629,15 @@ register `$dff01f`, branches from `$224d8` to the register restore at `$224e0`
 when clear, and otherwise calls `$224ea`; both paths restore the saved
 registers and jump to `$10000` at `$224e4`. The parser hash-binds this exact
 prefix and verifies its source-to-runtime mapping. This is static structure
-only: it does not establish that the vector is invoked, what the `$224ea` body
-does, how often it runs, or any audio, DMA, or game-state effect. The remaining
-handler and caller timing remain explicit recovery boundaries.
+only: it does not establish that the vector is invoked, how often it runs, or
+any audio, DMA, or game-state effect. The local wrapper at `$224ea` calls
+`$22816`; its return-bounded `$22816..$229e7` span maps to ADF `+$8016`, is
+`$1d2` bytes, and has SHA-256
+`661854d6976ab520b0398e2545003d3fe59692fc0de54f0f810f379cf25ccaf8`. The
+parser hash-binds that exact span and verifies the source-to-runtime mapping.
+This extends the static control-flow record only. The span is not executed,
+and its state changes, custom-register writes, audio effects, and asynchronous
+cadence remain uninterpreted recovery boundaries.
 
 On the zero-pointer branch the full `$21342..$2137f` record-construction
 loop is native. Its 62 original bytes at ADF `$6b42` have SHA-256

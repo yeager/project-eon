@@ -789,6 +789,42 @@ parse_deuteros_amiga_installed_interrupt_prefix(
         0x224e0, 0x224e4, 0x10000, expected_hash};
 }
 
+DeuterosAmigaInstalledInterruptWorker
+parse_deuteros_amiga_installed_interrupt_worker(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const DeuterosAmigaInstalledInterruptPrefix& prefix) {
+    constexpr std::uint32_t caller = 0x224ea;
+    constexpr std::uint32_t entry = 0x22816;
+    constexpr std::size_t length = 0x1d2;
+    const auto& stage = plan.main_stage;
+    if (prefix.entry_address != 0x224cc || prefix.worker_address != caller
+        || prefix.raw_sha256 !=
+            "67858c74d3f4e217fd0797f2415989c7a309d385479512ac7b57759a557b2663"
+        || stage.disk_offset != 0x5800 || stage.destination != 0x20000
+        || stage.length != 0x4200 || entry < stage.destination
+        || entry - stage.destination > stage.length
+        || length > stage.length - (entry - stage.destination)) {
+        throw std::runtime_error("Unexpected Deuteros installed interrupt worker placement");
+    }
+    const auto disk_offset = stage.disk_offset + entry - stage.destination;
+    const auto bytes = disk.bytes(disk_offset, length);
+    const auto call_offset = stage.disk_offset + caller - stage.destination;
+    constexpr std::array<std::uint8_t, 4> expected_call{0x61, 0x00, 0x03, 0x2a};
+    constexpr std::array<std::uint8_t, 2> expected_return{0x4e, 0x75};
+    constexpr auto expected_hash =
+        "661854d6976ab520b0398e2545003d3fe59692fc0de54f0f810f379cf25ccaf8";
+    if (disk_offset != 0x8016 || to_hex(sha256(bytes)) != expected_hash) {
+        throw std::runtime_error("Unexpected Deuteros installed interrupt worker bytes");
+    }
+    if (call_offset != 0x7cea
+        || !std::ranges::equal(disk.bytes(call_offset, expected_call.size()), expected_call)
+        || !std::ranges::equal(bytes.last(expected_return.size()), expected_return)) {
+        throw std::runtime_error("Unexpected Deuteros installed interrupt call or return");
+    }
+    return {caller, entry, disk_offset, static_cast<std::uint32_t>(length),
+        0x229e6, expected_hash};
+}
+
 std::optional<DeuterosAmigaMainResourceTransfer>
 read_deuteros_amiga_main_resource(const AmigaAdf& disk,
     const DeuterosAmigaLoadPlan& plan, std::uint16_t resource_index) {

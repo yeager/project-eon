@@ -17739,6 +17739,47 @@ int main(int argc, char** argv) {
     }
     assert(rejected_altered_installed_interrupt_prefix);
 
+    const auto installed_interrupt_worker =
+        eon::parse_deuteros_amiga_installed_interrupt_worker(
+            system_disk, load_plan, installed_interrupt_prefix);
+    assert(installed_interrupt_worker.caller_address == 0x224ea);
+    assert(installed_interrupt_worker.entry_address == 0x22816);
+    assert(installed_interrupt_worker.source_disk_offset == 0x8016);
+    assert(installed_interrupt_worker.source_length == 0x1d2);
+    assert(installed_interrupt_worker.return_instruction_address == 0x229e6);
+    assert(installed_interrupt_worker.raw_sha256
+        == "661854d6976ab520b0398e2545003d3fe59692fc0de54f0f810f379cf25ccaf8");
+    auto altered_installed_interrupt_worker_system_adf = *amiga_disk1;
+    altered_installed_interrupt_worker_system_adf[0x8016] ^= 0x01;
+    bool rejected_altered_installed_interrupt_worker = false;
+    try {
+        const eon::AmigaAdf altered_disk(altered_installed_interrupt_worker_system_adf);
+        const auto altered_plan = eon::parse_deuteros_amiga_load_plan(altered_disk);
+        const auto altered_prefix = eon::parse_deuteros_amiga_installed_interrupt_prefix(
+            altered_disk, altered_plan);
+        static_cast<void>(eon::parse_deuteros_amiga_installed_interrupt_worker(
+            altered_disk, altered_plan, altered_prefix));
+    } catch (const std::runtime_error&) {
+        rejected_altered_installed_interrupt_worker = true;
+    }
+    assert(rejected_altered_installed_interrupt_worker);
+    for (const auto altered_offset : {std::size_t{0x7cea}, std::size_t{0x81e6}}) {
+        auto altered_call_or_return_system_adf = *amiga_disk1;
+        altered_call_or_return_system_adf[altered_offset] ^= 0x01;
+        bool rejected_altered_call_or_return = false;
+        try {
+            const eon::AmigaAdf altered_disk(altered_call_or_return_system_adf);
+            const auto altered_plan = eon::parse_deuteros_amiga_load_plan(altered_disk);
+            const auto altered_prefix = eon::parse_deuteros_amiga_installed_interrupt_prefix(
+                altered_disk, altered_plan);
+            static_cast<void>(eon::parse_deuteros_amiga_installed_interrupt_worker(
+                altered_disk, altered_plan, altered_prefix));
+        } catch (const std::runtime_error&) {
+            rejected_altered_call_or_return = true;
+        }
+        assert(rejected_altered_call_or_return);
+    }
+
     const auto first_bundle = eon::parse_deuteros_amiga_bundle(
         system_disk, load_plan.resource_disk_offsets[0]);
     assert(first_bundle.length == 0x2f3f4);

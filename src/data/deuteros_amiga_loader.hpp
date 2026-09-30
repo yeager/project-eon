@@ -355,6 +355,18 @@ struct DeuterosAmigaInstalledInterruptPrefix {
     std::string raw_sha256;
 };
 
+// Hash-bound static span reached by the prefix's BSR at $224dc. This records
+// only that control-flow edge; it does not execute the span or assign meanings
+// to its state and custom-register accesses.
+struct DeuterosAmigaInstalledInterruptWorker {
+    std::uint32_t caller_address = 0;
+    std::uint32_t entry_address = 0;
+    std::uint32_t source_disk_offset = 0;
+    std::uint32_t source_length = 0;
+    std::uint32_t return_instruction_address = 0;
+    std::string raw_sha256;
+};
+
 // A read-only representation of one completed pass through the main stage's
 // resource loader at $21932. `payload` is a non-owning view into the supplied
 // ADF, which must outlive this transfer. The host models only the proven
@@ -449,6 +461,11 @@ parse_deuteros_amiga_channel_request_adjacent_entry(
 [[nodiscard]] DeuterosAmigaInstalledInterruptPrefix
 parse_deuteros_amiga_installed_interrupt_prefix(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
+
+[[nodiscard]] DeuterosAmigaInstalledInterruptWorker
+parse_deuteros_amiga_installed_interrupt_worker(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    const DeuterosAmigaInstalledInterruptPrefix& prefix);
 
 // Models one exact, successful loader pass in memory. A zero probe is the
 // original retry path, so it returns std::nullopt instead of inventing a
