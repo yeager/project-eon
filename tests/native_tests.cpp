@@ -17710,6 +17710,35 @@ int main(int argc, char** argv) {
     } catch (const std::runtime_error&) { rejected_altered_channel_request_adjacent_entry = true; }
     assert(rejected_altered_channel_request_adjacent_entry);
 
+    const auto installed_interrupt_prefix =
+        eon::parse_deuteros_amiga_installed_interrupt_prefix(system_disk, load_plan);
+    assert(installed_interrupt_prefix.entry_address == 0x224cc);
+    assert(installed_interrupt_prefix.source_disk_offset == 0x7ccc);
+    assert(installed_interrupt_prefix.source_length == 0x1e);
+    assert(installed_interrupt_prefix.custom_register_address == 0xdff01f);
+    assert(installed_interrupt_prefix.tested_bit == 5);
+    assert(installed_interrupt_prefix.zero_branch_address == 0x224d8);
+    assert(installed_interrupt_prefix.zero_branch_target == 0x224e0);
+    assert(installed_interrupt_prefix.worker_call_address == 0x224dc);
+    assert(installed_interrupt_prefix.worker_address == 0x224ea);
+    assert(installed_interrupt_prefix.register_restore_address == 0x224e0);
+    assert(installed_interrupt_prefix.final_jump_instruction_address == 0x224e4);
+    assert(installed_interrupt_prefix.jump_target_address == 0x10000);
+    assert(installed_interrupt_prefix.raw_sha256
+        == "67858c74d3f4e217fd0797f2415989c7a309d385479512ac7b57759a557b2663");
+    auto altered_installed_interrupt_system_adf = *amiga_disk1;
+    altered_installed_interrupt_system_adf[0x7ccc] ^= 0x01;
+    bool rejected_altered_installed_interrupt_prefix = false;
+    try {
+        const eon::AmigaAdf altered_disk(altered_installed_interrupt_system_adf);
+        const auto altered_plan = eon::parse_deuteros_amiga_load_plan(altered_disk);
+        static_cast<void>(eon::parse_deuteros_amiga_installed_interrupt_prefix(
+            altered_disk, altered_plan));
+    } catch (const std::runtime_error&) {
+        rejected_altered_installed_interrupt_prefix = true;
+    }
+    assert(rejected_altered_installed_interrupt_prefix);
+
     const auto first_bundle = eon::parse_deuteros_amiga_bundle(
         system_disk, load_plan.resource_disk_offsets[0]);
     assert(first_bundle.length == 0x2f3f4);

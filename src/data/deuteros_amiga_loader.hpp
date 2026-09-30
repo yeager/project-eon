@@ -335,6 +335,26 @@ struct DeuterosAmigaChannelRequestAdjacentEntry {
     std::string raw_sha256;
 };
 
+// Exact static prologue of the handler installed at vector $6c by the
+// optional-resource initializer. It records the first custom-register probe
+// and its local branch shape only; it does not prove interrupt invocation,
+// cadence, or the meaning of the called body.
+struct DeuterosAmigaInstalledInterruptPrefix {
+    std::uint32_t entry_address = 0;
+    std::uint32_t source_disk_offset = 0;
+    std::uint32_t source_length = 0;
+    std::uint32_t custom_register_address = 0;
+    std::uint8_t tested_bit = 0;
+    std::uint32_t zero_branch_address = 0;
+    std::uint32_t zero_branch_target = 0;
+    std::uint32_t worker_call_address = 0;
+    std::uint32_t worker_address = 0;
+    std::uint32_t register_restore_address = 0;
+    std::uint32_t final_jump_instruction_address = 0;
+    std::uint32_t jump_target_address = 0;
+    std::string raw_sha256;
+};
+
 // A read-only representation of one completed pass through the main stage's
 // resource loader at $21932. `payload` is a non-owning view into the supplied
 // ADF, which must outlive this transfer. The host models only the proven
@@ -423,6 +443,12 @@ parse_deuteros_amiga_channel_request_following_service(
 parse_deuteros_amiga_channel_request_adjacent_entry(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     const DeuterosAmigaChannelRequestFollowingService& service);
+
+// Hash-validates the installed-vector target's exact 30-byte static prologue.
+// No interrupt execution, register effect, or timing is inferred.
+[[nodiscard]] DeuterosAmigaInstalledInterruptPrefix
+parse_deuteros_amiga_installed_interrupt_prefix(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan);
 
 // Models one exact, successful loader pass in memory. A zero probe is the
 // original retry path, so it returns std::nullopt instead of inventing a

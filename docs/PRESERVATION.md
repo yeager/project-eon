@@ -3620,6 +3620,19 @@ executed or assigned semantics. Every access and write remains in cloned
 owned memory until the full operation and state transition commit; invalid,
 missing, stale, repeated, odd, or out-of-range input publishes nothing.
 
+The main-stage loader contract proves disk `+$5800` is loaded at `$20000` for
+`$4200` bytes. Using that exact mapping, `$224cc` corresponds to ADF `+$7ccc`.
+The 30-byte prefix `$224cc..$224e9` is SHA-256
+`67858c74d3f4e217fd0797f2415989c7a309d385479512ac7b57759a557b2663`.
+Its decoded instruction shape saves D0-D7/A0-A6, tests bit 5 at custom
+register `$dff01f`, branches from `$224d8` to the register restore at `$224e0`
+when clear, and otherwise calls `$224ea`; both paths restore the saved
+registers and jump to `$10000` at `$224e4`. The parser hash-binds this exact
+prefix and verifies its source-to-runtime mapping. This is static structure
+only: it does not establish that the vector is invoked, what the `$224ea` body
+does, how often it runs, or any audio, DMA, or game-state effect. The remaining
+handler and caller timing remain explicit recovery boundaries.
+
 On the zero-pointer branch the full `$21342..$2137f` record-construction
 loop is native. Its 62 original bytes at ADF `$6b42` have SHA-256
 `0f6c9cbfd143d0540aeb4caa006c61840bc342237d219e77f4b59d9d5f3029c0`.

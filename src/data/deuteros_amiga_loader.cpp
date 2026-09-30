@@ -765,6 +765,30 @@ parse_deuteros_amiga_channel_request_adjacent_entry(
         0x22be8, expected_hash};
 }
 
+DeuterosAmigaInstalledInterruptPrefix
+parse_deuteros_amiga_installed_interrupt_prefix(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
+    constexpr std::uint32_t entry = 0x224cc;
+    constexpr std::size_t length = 0x1e;
+    const auto& stage = plan.main_stage;
+    if (stage.disk_offset != 0x5800 || stage.destination != 0x20000
+        || stage.length != 0x4200 || plan.main_stage_entry.entry_address != 0x21734
+        || entry < stage.destination || entry - stage.destination > stage.length
+        || length > stage.length - (entry - stage.destination)) {
+        throw std::runtime_error("Unexpected Deuteros installed interrupt prefix placement");
+    }
+    const auto disk_offset = stage.disk_offset + entry - stage.destination;
+    const auto bytes = disk.bytes(disk_offset, length);
+    constexpr auto expected_hash =
+        "67858c74d3f4e217fd0797f2415989c7a309d385479512ac7b57759a557b2663";
+    if (disk_offset != 0x7ccc || to_hex(sha256(bytes)) != expected_hash) {
+        throw std::runtime_error("Unexpected Deuteros installed interrupt prefix bytes");
+    }
+    return {entry, disk_offset, static_cast<std::uint32_t>(length),
+        0xdff01f, 5, 0x224d8, 0x224e0, 0x224dc, 0x224ea,
+        0x224e0, 0x224e4, 0x10000, expected_hash};
+}
+
 std::optional<DeuterosAmigaMainResourceTransfer>
 read_deuteros_amiga_main_resource(const AmigaAdf& disk,
     const DeuterosAmigaLoadPlan& plan, std::uint16_t resource_index) {
