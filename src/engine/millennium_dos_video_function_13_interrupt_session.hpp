@@ -153,6 +153,14 @@ struct MillenniumDosVideoFunction13CallbackStackWordEffect {
     constexpr bool operator==(const MillenniumDosVideoFunction13CallbackStackWordEffect&) const = default;
 };
 
+struct MillenniumDosVideoFunction13McgaCallbackEpilogueStackRead {
+    std::uint64_t sequence = 0;
+    std::uint16_t instruction_address = 0;
+    std::uint16_t ss = 0;
+    std::uint16_t sp = 0;
+    std::uint16_t value = 0;
+};
+
 struct MillenniumDosVideoFunction13InterruptOutcome {
     std::uint16_t ax = 0;
     std::uint16_t dx = 0x03da;
@@ -237,6 +245,14 @@ public:
     void observe_mcga_callback_copy_current_byte(const MillenniumDosVideoFunction13McgaCallbackRead& read);
     void execute_mcga_callback_copy_store(std::uint64_t sequence,
         std::uint16_t instruction_address);
+    void observe_mcga_callback_epilogue_stack_read(
+        const MillenniumDosVideoFunction13McgaCallbackEpilogueStackRead& read);
+    void observe_mcga_callback_epilogue_descriptor(
+        const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void execute_mcga_callback_epilogue_clear(std::uint64_t sequence,
+        std::uint16_t instruction_address);
+    void execute_mcga_callback_epilogue_jump(std::uint64_t sequence,
+        std::uint16_t instruction_address);
     void execute_iret(std::uint64_t sequence, std::uint16_t instruction_address);
 
 private:
@@ -269,6 +285,10 @@ private:
     std::optional<std::uint16_t> callback_copy_di_;
     std::optional<std::uint16_t> callback_copy_segment_;
     std::optional<std::uint8_t> callback_copy_density_;
+    std::optional<std::uint16_t> callback_epilogue_ss_;
+    std::optional<std::uint16_t> callback_epilogue_sp_;
+    std::optional<std::uint16_t> callback_epilogue_si_;
+    std::optional<std::uint16_t> callback_epilogue_ds_;
     std::uint16_t callback_next_instruction_ = 0;
 };
 

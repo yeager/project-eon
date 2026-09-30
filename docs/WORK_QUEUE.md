@@ -64,10 +64,13 @@ hash-bound local setup now accepts typed descriptor bytes/word at `$0e49`,
 `$0e55`, and `$0e62`, computes the row count and 16-bit source/destination
 registers. The hash-bound pixel loop accepts its ordered source/destination
 reads, conditionally applies the threshold reduction, records memory writes,
-and stops at `$0e71` for the next pixel or `$0e8f` before its saved-register
-epilogue. Those values remain scenario inputs, not captured runtime
-observations. The saved-register epilogue and other VGA port I/O routes remain
-outside the model. `$0d10`'s unknown return destination and `$0ca2` remain
+and returns to `$0e71` between pixels or reaches the final-pixel epilogue at
+`$0e8f`. Explicit ordered SS:SP reads
+restore SI/DS, then the descriptor count is decremented; its zero branch clears
+the descriptor byte, and both branches reach the jump boundary `$0d6a`. These
+stack and memory values are scenario inputs, not captured runtime observations.
+The `$0d6a` target and other VGA port I/O routes remain outside the model.
+`$0d10`'s unknown return destination and `$0ca2` remain
 outside this session. The zero `$01e5` path still stops at IRET. These scenario
 inputs do not authenticate the installed vector or prove title execution
 selected this handler.

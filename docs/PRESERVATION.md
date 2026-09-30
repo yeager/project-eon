@@ -4841,7 +4841,16 @@ DS:`SI` at `$0e83`. It adds the supplied density byte, subtracts `DX` from
 records ES:`DI`, then advances `DI` by two, `SI` by one, and decrements `CX`
 through the `$0e8d` LOOP. Each transition is bounded; the model returns to
 `$0e71` for another pixel or stops at `$0e8f` before the saved-register pops.
-These are scenario inputs, not captured title-runtime observations. The caller
+These are scenario inputs, not captured title-runtime observations. The local
+epilogue `[$0e8f,$0e9c)` (13 bytes, SHA-256
+`814984d5a32a5352b29097d23ace8eece29207312cf71f8e9d8ed494c6d217ff`)
+accepts the two SS:SP words consumed by POP SI/POP DS as explicit observations,
+then accepts the descriptor word at restored DS:`SI+0x0a`. It records the
+16-bit decrement; a zero result clears DS:`SI` before the local JMP at `$0e99`
+reaches boundary `$0d6a`. This does not claim a relationship between these
+explicit stack words and the earlier `$0d3b` register save, nor does it execute
+the `$0d6a` target. These are scenario inputs, not captured title-runtime
+observations. The caller
 frame's IP must be `$0129`; its
 CS and FLAGS remain explicit inputs and are returned verbatim only on the
 separate IRET path. The outcome records only direct local register effects and
