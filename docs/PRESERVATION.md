@@ -3650,9 +3650,9 @@ the resulting owned-memory copy and ordered custom-register write intents; it
 does not apply device effects or run from the game runtime. Scenario tests cover
 the four pointer branches, zero/nonzero pointer cells, word wrap, the low-word
 multiply/shift result, and rejection without publishing a partial result when
-an accessed range is outside supplied memory. These results are instruction
-translation only: they do not establish custom-register device effects, audio
-meaning, real invocation, caller cadence, or captured game state.
+an accessed range is unaligned or outside supplied memory. These results are
+instruction translation only: they do not establish custom-register device
+effects, audio meaning, real invocation, caller cadence, or captured game state.
 
 On the zero-pointer branch the full `$21342..$2137f` record-construction
 loop is native. Its 62 original bytes at ADF `$6b42` have SHA-256

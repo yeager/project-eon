@@ -162,6 +162,20 @@ int main() {
         assert(rejected && memory == input);
     }
     {
+        auto memory = fixture();
+        memory[0x229e8 - base] = 0x01;
+        put_long(memory, 0x229f2, 0x23001);
+        const auto input = memory;
+        bool rejected = false;
+        try {
+            static_cast<void>(eon::evaluate_deuteros_amiga_installed_interrupt_worker(
+                worker, base, memory));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected && memory == input);
+    }
+    {
         auto altered = worker;
         altered.raw_sha256[0] = '0';
         const auto memory = fixture();

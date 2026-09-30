@@ -12,8 +12,9 @@ namespace {
     const std::size_t size, const std::uint32_t address, const std::size_t width) {
     const auto end = static_cast<std::uint64_t>(base) + size;
     const auto access_end = static_cast<std::uint64_t>(address) + width;
-    if (end > (std::uint64_t{1} << 32U) || address < base || access_end > end) {
-        throw std::runtime_error("Deuteros interrupt worker scenario read/write is out of bounds");
+    if ((width > 1 && (address & 1U) != 0)
+        || end > (std::uint64_t{1} << 32U) || address < base || access_end > end) {
+        throw std::runtime_error("Deuteros interrupt worker scenario access is unaligned or out of bounds");
     }
     return static_cast<std::size_t>(address - base);
 }
