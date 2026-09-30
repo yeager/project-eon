@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 project(project_eon VERSION 0.1.1 LANGUAGES C CXX)
 
+option(EON_DEVELOPER_RESOURCE_FALLBACKS
+    "Allow launcher resource lookup to fall back to the source checkout" OFF)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -105,6 +108,7 @@ add_executable(project-eon
     src/main.cpp
     src/display_geometry.cpp
     src/launcher_text.cpp
+    src/platform/resource_paths.cpp
     src/i18n.cpp
     src/game_text_localization.cpp
     src/launcher.cpp
@@ -238,11 +242,13 @@ add_executable(project-eon
 )
 target_include_directories(project-eon PRIVATE src)
 target_compile_definitions(project-eon PRIVATE
-    EON_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
-    EON_FONT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts"
-    EON_LOCALE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/po"
     EON_PROJECT_VERSION="${PROJECT_VERSION}"
     EON_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+if(EON_DEVELOPER_RESOURCE_FALLBACKS)
+    target_compile_definitions(project-eon PRIVATE
+        EON_DEVELOPER_RESOURCE_FALLBACKS=1
+        EON_LOCALE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/po")
+endif()
 target_link_libraries(project-eon PRIVATE SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf ZLIB::ZLIB)
 
 # The native preservation suite exercises every runtime module except the SDL
@@ -467,6 +473,7 @@ if(BUILD_TESTING)
         tests/game_text_localization_tests.cpp
         src/game_text_localization.cpp
         src/i18n.cpp
+        src/platform/resource_paths.cpp
         src/data/sha256.cpp)
     target_include_directories(eon-game-text-localization-tests PRIVATE src)
     target_compile_definitions(eon-game-text-localization-tests PRIVATE
@@ -476,6 +483,21 @@ if(BUILD_TESTING)
             EON_DIRECT_DATA_DIR="${EON_DIRECT_DATA_DIR}")
     endif()
     add_test(NAME game-text-localization COMMAND eon-game-text-localization-tests)
+    add_executable(eon-resource-paths-test
+        tests/resource_paths_test.cpp
+        src/i18n.cpp
+        src/platform/resource_paths.cpp)
+    target_include_directories(eon-resource-paths-test PRIVATE src)
+    if(EON_DEVELOPER_RESOURCE_FALLBACKS)
+        target_compile_definitions(eon-resource-paths-test PRIVATE
+            EON_DEVELOPER_RESOURCE_FALLBACKS=1
+            EON_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+            EON_LOCALE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/po")
+    endif()
+    add_test(NAME relocated-resource-paths
+        COMMAND eon-resource-paths-test "${EON_TEST_TMPDIR}")
+    set_tests_properties(relocated-resource-paths PROPERTIES
+        ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
     add_executable(eon-native-runtime-memory-tests
         tests/native_runtime_memory_tests.cpp
         src/engine/bounded_memory_transfer.cpp

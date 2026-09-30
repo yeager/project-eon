@@ -102,9 +102,11 @@ class IosPackagingTests(unittest.TestCase):
     def test_ios_resource_locations_match_runtime_lookups(self):
         main = (ROOT / "src" / "main.cpp").read_text(encoding="utf-8")
         i18n = (ROOT / "src" / "i18n.cpp").read_text(encoding="utf-8")
-        self.assertIn('base / "Resources" / "assets" / directory / filename', main)
+        paths = (ROOT / "src" / "platform" / "resource_paths.cpp").read_text(encoding="utf-8")
+        self.assertIn('bundle_resources / "assets" / category / filename', paths)
         self.assertIn('load_branding_texture(renderer, "project-eon-logo-v2.png")', main)
-        self.assertIn('executable_directory / "Resources" / "po"', i18n)
+        self.assertIn("launcher_locale_paths(executable_path)", i18n)
+        self.assertIn('bundle_resources / "po"', paths)
 
     def test_ios_keeps_user_media_out_of_the_ipa_but_files_visible_at_runtime(self):
         launcher = (ROOT / "src" / "launcher.cpp").read_text(encoding="utf-8")

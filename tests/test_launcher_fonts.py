@@ -68,8 +68,9 @@ class LauncherFontTests(unittest.TestCase):
         self.assertIn("TTF_DIRECTION_RTL", source)
         self.assertIn('TTF_StringToTag("Deva")', source)
         self.assertIn("find_font_directory", main)
-        self.assertIn('base / "assets" / "fonts"', main)
-        self.assertIn('base / "Resources" / "assets" / "fonts"', main)
+        paths = (ROOT / "src" / "platform" / "resource_paths.cpp").read_text(encoding="utf-8")
+        self.assertIn('base / "assets" / "fonts"', paths)
+        self.assertIn('bundle_resources / "assets" / "fonts"', paths)
         self.assertNotIn("/usr/share/fonts", source)
 
 

@@ -1,4 +1,5 @@
 #include "i18n.hpp"
+#include "platform/resource_paths.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -162,16 +163,13 @@ Translator Translator::from_language(
     if (canonical == "en") return {};
 
     std::vector<std::filesystem::path> roots;
+    if (!executable_path.empty()) {
+        const auto package_roots = launcher_locale_paths(executable_path);
+        roots.insert(roots.end(), package_roots.begin(), package_roots.end());
+    }
 #ifdef EON_LOCALE_DIR
     roots.emplace_back(EON_LOCALE_DIR);
 #endif
-    if (!executable_path.empty()) {
-        const auto executable_directory = executable_path.parent_path();
-        roots.push_back(executable_directory / "po");
-        roots.push_back(executable_directory / ".." / "share" / "project-eon" / "po");
-        roots.push_back(executable_directory / ".." / "Resources" / "po");
-        roots.push_back(executable_directory / "Resources" / "po");
-    }
     // The catalog set intentionally contains region-specific Portuguese and
     // Chinese translations. The launcher accepts generic POSIX/BCP-47 input
     // too, so resolve those language families to their supplied catalog.

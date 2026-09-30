@@ -3,6 +3,7 @@
 #include "presentation_preferences.hpp"
 #include "presentation/modern_presentation_pipeline.hpp"
 #include "i18n.hpp"
+#include "platform/resource_paths.hpp"
 #include "game_text_localization.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
 #include "engine/release_runtime.hpp"
@@ -1863,15 +1864,15 @@ bool inside(const SDL_FRect& rectangle, float x, float y) {
 
 SDL_Texture* load_launcher_asset(SDL_Renderer* renderer, const char* directory,
     const char* filename) {
-    const auto base = std::filesystem::path(SDL_GetBasePath());
-    const std::array<std::filesystem::path, 5> candidates{{
-        base / "assets" / directory / filename,
-        base / "Resources" / "assets" / directory / filename,
-        base / ".." / "share" / "project-eon" / "assets" / directory / filename,
-        std::filesystem::path(EON_ASSET_DIR) / directory / filename,
-        std::filesystem::path("assets") / directory / filename,
-    }};
+    const auto candidates = eon::launcher_asset_paths(SDL_GetBasePath(), directory, filename,
+#ifdef EON_DEVELOPER_RESOURCE_FALLBACKS
+        EON_SOURCE_DIR
+#else
+        std::filesystem::path{}
+#endif
+    );
     for (const auto& path : candidates) {
+        if (path.empty()) continue;
         if (SDL_Texture* texture = IMG_LoadTexture(renderer, path.string().c_str())) return texture;
     }
     std::cerr << "Unable to load launcher asset " << directory << '/' << filename << ": "
@@ -1888,15 +1889,15 @@ SDL_Texture* load_branding_texture(SDL_Renderer* renderer, const char* filename)
 }
 
 std::optional<std::filesystem::path> find_font_directory() {
-    const auto base = std::filesystem::path(SDL_GetBasePath());
-    const std::array<std::filesystem::path, 5> candidates{{
-        base / "assets" / "fonts",
-        base / "Resources" / "assets" / "fonts",
-        base / ".." / "share" / "project-eon" / "assets" / "fonts",
-        std::filesystem::path(EON_FONT_DIR),
-        std::filesystem::path("assets") / "fonts",
-    }};
+    const auto candidates = eon::launcher_font_paths(SDL_GetBasePath(),
+#ifdef EON_DEVELOPER_RESOURCE_FALLBACKS
+        EON_SOURCE_DIR
+#else
+        std::filesystem::path{}
+#endif
+    );
     for (const auto& candidate : candidates) {
+        if (candidate.empty()) continue;
         if (std::filesystem::is_regular_file(candidate / "NotoSans-Regular.ttf")) return candidate;
     }
     return std::nullopt;
