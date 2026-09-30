@@ -31,6 +31,23 @@ int main() {
     assert(!memory.read_linear_range(0xffffffffULL,2));
     assert(!memory.apply(*batch).accepted);
     const auto before_rejection=memory.checkpoint();
+    const auto assert_rejected_atomically=[&](const eon::NativeRuntimeEffectBatch& candidate) {
+        assert(!memory.apply(candidate).accepted);
+        const auto after=memory.checkpoint();
+        assert(after.initialized_bytes==before_rejection.initialized_bytes);
+        assert(after.applied_batch_count==before_rejection.applied_batch_count);
+        assert(after.checksum==before_rejection.checksum);
+    };
+
+    eon::NativeRuntimeEffectBatch invalid_address_space{"invalid-address-space",true,{{
+        1,{static_cast<eon::NativeRuntimeAddressSpace>(2),std::nullopt,0x600},
+        eon::MemoryTransferElementWidth::byte,eon::NativeRuntimeByteOrder::little_endian,0x12}}};
+    assert_rejected_atomically(invalid_address_space);
+
+    eon::NativeRuntimeEffectBatch invalid_byte_order{"invalid-byte-order",true,{{
+        1,{eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x600},
+        eon::MemoryTransferElementWidth::word,static_cast<eon::NativeRuntimeByteOrder>(2),0x1234}}};
+    assert_rejected_atomically(invalid_byte_order);
 
     eon::NativeRuntimeEffectBatch overlap{"overlap",true,{
         {1,{eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x400},

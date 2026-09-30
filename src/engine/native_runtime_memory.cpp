@@ -77,6 +77,14 @@ NativeRuntimeMemoryApplyResult NativeRuntimeMemory::apply(const NativeRuntimeEff
         if (width==0 || effect.value>width_maximum(effect.width)) {
             return {false,"Runtime memory effect value exceeds its explicit width"};
         }
+        if (effect.location.address_space!=NativeRuntimeAddressSpace::linear
+            && effect.location.address_space!=NativeRuntimeAddressSpace::dos_segmented) {
+            return {false,"Runtime memory effect address space is invalid"};
+        }
+        if (effect.byte_order!=NativeRuntimeByteOrder::little_endian
+            && effect.byte_order!=NativeRuntimeByteOrder::big_endian) {
+            return {false,"Runtime memory effect byte order is invalid"};
+        }
         const auto limit=effect.location.address_space==NativeRuntimeAddressSpace::linear
             ? linear_limit_exclusive_ : segmented_offset_limit_exclusive_;
         if ((effect.location.address_space==NativeRuntimeAddressSpace::dos_segmented)
