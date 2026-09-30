@@ -247,7 +247,10 @@ class DesktopPackagingTests(unittest.TestCase):
         self.assertIn("project-eon.6.gz", source)
         self.assertIn("gzip -t", source)
 
-        import tomllib
+        try:
+            import tomllib
+        except ModuleNotFoundError:
+            import tomli as tomllib
         config = tomllib.loads((ROOT / "packaging" / "rpmlint.toml").read_text(encoding="utf-8"))
         self.assertEqual(config["Filters"], [
             "no-signature$",
