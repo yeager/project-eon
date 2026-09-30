@@ -141,6 +141,22 @@ int main(int argc, char** argv) {
     assert(session.state()
         == eon::MillenniumDosTitleExecEntryState::awaiting_child_process_entry);
 
+    bool rejected_unknown_provenance = false;
+    try {
+        session.observe_child_process_entry({1, 0x0336, 0x4b00, 0x068f, 0x067a,
+            0x0100, 0x2468,
+            static_cast<eon::MillenniumDosTitleExecEntryProvenance>(0xff)});
+    } catch (const std::runtime_error&) { rejected_unknown_provenance = true; }
+    const auto unchanged_entry = session.checkpoint();
+    assert(rejected_unknown_provenance
+        && unchanged_entry.state
+            == eon::MillenniumDosTitleExecEntryState::awaiting_child_process_entry
+        && unchanged_entry.last_sequence == 0
+        && unchanged_entry.child_code_segment == 0
+        && unchanged_entry.provenance
+            == eon::MillenniumDosTitleExecEntryProvenance::observed_process_entry
+        && unchanged_entry.register_effects.empty());
+
     session.observe_child_process_entry({1, 0x0336, 0x4b00, 0x068f, 0x067a,
         0x0100, 0x2468,
         eon::MillenniumDosTitleExecEntryProvenance::eon_dos_compatibility_service});

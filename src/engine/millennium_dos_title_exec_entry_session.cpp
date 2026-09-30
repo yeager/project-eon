@@ -27,11 +27,16 @@ MillenniumDosTitleExecEntrySession::MillenniumDosTitleExecEntrySession(
 
 void MillenniumDosTitleExecEntrySession::observe_child_process_entry(
     const MillenniumDosTitleExecProcessEntry& entry) {
+    const bool known_provenance =
+        entry.provenance == MillenniumDosTitleExecEntryProvenance::observed_process_entry
+        || entry.provenance
+            == MillenniumDosTitleExecEntryProvenance::eon_dos_compatibility_service;
     if (state_ != MillenniumDosTitleExecEntryState::awaiting_child_process_entry
         || entry.sequence == 0 || entry.sequence <= last_sequence_
         || entry.parent_exec_instruction != 0x0336 || entry.ax != 0x4b00
         || entry.dx != 0x068f || entry.parameter_block != 0x067a
-        || entry.child_entry_ip != 0x0100 || entry.child_code_segment == 0) {
+        || entry.child_entry_ip != 0x0100 || entry.child_code_segment == 0
+        || !known_provenance) {
         throw std::runtime_error("Detached Millennium DOS TITLES.EXE process entry");
     }
     last_sequence_ = entry.sequence;
