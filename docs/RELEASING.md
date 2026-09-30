@@ -10,7 +10,7 @@ release request and a manual **Release** workflow dispatch.
    until that build completes because the build workflow cancels obsolete runs.
 3. Dispatch **Release** on `main`, supplying that `build_run_id` and `version`.
    It can wait for a running build. The selected build must belong to this
-   repository's main Build workflow and all nine required jobs must succeed.
+   repository's main Build workflow and all ten required jobs must succeed.
 4. Publication requires all five artifact groups: Linux DEB/RPM/AppImage,
    macOS arm64 and x86_64 ZIPs, Windows x64 installer, and unsigned iPadOS IPA.
    Every package manifest must match the selected source commit, file sizes,
