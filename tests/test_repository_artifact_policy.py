@@ -1,3 +1,4 @@
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,8 +9,27 @@ from tools.verify_repository_artifacts import (
     main,
 )
 
+WORKFLOW = (
+    Path(__file__).resolve().parents[1] / ".github" / "workflows" / "build.yml"
+).read_text(encoding="utf-8")
+
 
 class RepositoryArtifactPolicyTests(unittest.TestCase):
+    def test_github_actions_runs_repository_artifact_policy(self) -> None:
+        match = re.search(
+            r"(?ms)^  repository-policy:\n(.*?)(?=^  [A-Za-z0-9_-]+:|\Z)",
+            WORKFLOW,
+        )
+        self.assertIsNotNone(match)
+        job = match.group(1)
+        self.assertIn("runs-on: ubuntu-24.04", job)
+        self.assertIn(
+            "uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            job,
+        )
+        self.assertIn("run: python3 tools/verify_repository_artifacts.py", job)
+        self.assertNotIn("matrix:", job)
+
     def test_rejects_original_media_and_generated_reports(self) -> None:
         paths = [
             "local/game.adf",

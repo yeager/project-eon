@@ -35,6 +35,15 @@ env:
   LIBPNG_REF: 2b978915d82377df13fcbb1fb56660195ded868a
 
 jobs:
+  repository-policy:
+    name: Repository artifact policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Reject tracked original media and generated reverse-engineering output
+        run: python3 tools/verify_repository_artifacts.py
+
   gitleaks:
     name: Gitleaks
     runs-on: ubuntu-24.04
