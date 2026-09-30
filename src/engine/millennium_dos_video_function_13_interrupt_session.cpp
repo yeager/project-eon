@@ -15,11 +15,29 @@ MillenniumDosVideoFunction13InterruptSession::MillenniumDosVideoFunction13Interr
     if (kind_ == MillenniumDosVideoDriverKind::mcga) {
         constexpr std::size_t callback_offset = 0x0d22;
         constexpr std::size_t callback_size = 0x13;
+        constexpr std::size_t counter_path_offset = 0x0c94;
+        constexpr std::size_t counter_path_size = 0x0e;
+        constexpr std::size_t counter_update_offset = 0x0d11;
+        constexpr std::size_t counter_update_size = 0x07;
+        constexpr std::size_t callback_epilogue_offset = 0x0d04;
+        constexpr std::size_t callback_epilogue_size = 0x0d;
         if (callback_offset > english_driver.size()
             || english_driver.size() - callback_offset < callback_size
             || to_hex(sha256(english_driver.subspan(callback_offset, callback_size)))
-                != "4a470e322e180bdecc72bee6717ea0452be755951694ef22cfdd85c76763de56") {
-            throw std::runtime_error("Unsupported Millennium MCGA function-$13 callback prefix");
+                != "4a470e322e180bdecc72bee6717ea0452be755951694ef22cfdd85c76763de56"
+            || counter_path_offset > english_driver.size()
+            || english_driver.size() - counter_path_offset < counter_path_size
+            || to_hex(sha256(english_driver.subspan(counter_path_offset, counter_path_size)))
+                != "91446b8b0a3831742642aa0595e2f78301c3e35f5eb6bebf33afa0189070e0ed"
+            || counter_update_offset > english_driver.size()
+            || english_driver.size() - counter_update_offset < counter_update_size
+            || to_hex(sha256(english_driver.subspan(counter_update_offset, counter_update_size)))
+                != "ac86356c47ac73bde697d8ca755674ac5b0847c8f18a82e5bc8b821140359ef4"
+            || callback_epilogue_offset > english_driver.size()
+            || english_driver.size() - callback_epilogue_offset < callback_epilogue_size
+            || to_hex(sha256(english_driver.subspan(callback_epilogue_offset, callback_epilogue_size)))
+                != "e8dfe66cd147eb9087b4d06a5f7b2d1923da7f5a7878663a97dbd0e09cd98473") {
+            throw std::runtime_error("Unsupported Millennium MCGA function-$13 callback spans");
         }
     }
 }
@@ -123,6 +141,31 @@ void MillenniumDosVideoFunction13InterruptSession::observe_mcga_callback_read(
         ? 0x0c94
         : (read.value == 0 ? 0x0d10 : 0x0d35);
     state_ = MillenniumDosVideoFunction13InterruptState::callback_local_boundary;
+}
+
+void MillenniumDosVideoFunction13InterruptSession::observe_mcga_callback_counter(
+    const MillenniumDosVideoFunction13McgaCallbackRead& read) {
+    if (state_ != MillenniumDosVideoFunction13InterruptState::callback_local_boundary
+        || callback_next_instruction_ != 0x0c94
+        || read.sequence != last_sequence_ + 1
+        || read.instruction_address != 0x0c9a
+        || read.segment != driver_segment_
+        || read.offset != 0x0c92
+        || read.width != MillenniumDosVideoFunction13McgaCallbackReadWidth::word) {
+        throw std::runtime_error("Detached Millennium DOS MCGA callback counter read");
+    }
+    callback_reads_.push_back(read);
+    last_sequence_ = read.sequence;
+    callback_driver_effects_.push_back({0x0c94,driver_segment_,0x01e4,1});
+    if (read.value == 0) {
+        callback_next_instruction_ = 0x0ca2;
+        return;
+    }
+    callback_driver_word_effects_.push_back({0x0d11,driver_segment_,0x0c92,
+        static_cast<std::uint16_t>(read.value - 1U)});
+    callback_driver_effects_.push_back({0x0d04,driver_segment_,0x01e4,0});
+    callback_driver_effects_.push_back({0x0d0a,driver_segment_,0x01e5,0});
+    callback_next_instruction_ = 0x0d10;
 }
 
 void MillenniumDosVideoFunction13InterruptSession::execute_iret(

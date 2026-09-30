@@ -193,6 +193,57 @@ int main(const int argc, char** argv) {
     assert(mcga_callback.state() == Function13InterruptState::callback_local_boundary
         && mcga_callback.boundary() == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0c94}
         && mcga_callback.callback_reads().size() == 1);
+    expect_rejected([&] { mcga_callback.observe_mcga_callback_counter({7,0x0c9a,0x3456,0x0c92,1,
+        eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word}); });
+    expect_rejected([&] { mcga_callback.observe_mcga_callback_counter({6,0x0c9a,0x3456,0x0c90,1,
+        eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word}); });
+    assert(mcga_callback.next_sequence() == 6 && mcga_callback.callback_reads().size() == 1
+        && mcga_callback.callback_driver_effects().empty()
+        && mcga_callback.callback_driver_word_effects().empty());
+    mcga_callback.observe_mcga_callback_counter({6,0x0c9a,0x3456,0x0c92,1,
+        eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
+    assert(mcga_callback.state() == Function13InterruptState::callback_local_boundary
+        && mcga_callback.boundary() == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d10}
+        && mcga_callback.callback_driver_word_effects()
+            == (std::vector<eon::MillenniumDosVideoFunction13DriverWordEffect>{{0x0d11,0x3456,0x0c92,0}}));
+    assert(mcga_callback.callback_driver_effects()
+        == (std::vector<eon::MillenniumDosVideoFunction13DriverByteEffect>{
+            {0x0c94,0x3456,0x01e4,1},
+            {0x0d04,0x3456,0x01e4,0},
+            {0x0d0a,0x3456,0x01e5,0}}));
+    expect_rejected([&] { mcga_callback.execute_iret(7,0x0020); });
+
+    Function13Interrupt mcga_callback_empty_counter(mcga_bytes,
+        eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
+    mcga_callback_empty_counter.observe_interrupt_request({1,0x0127,0x0013,0x0129,0x5678,0x0302});
+    mcga_callback_empty_counter.observe_port_read({2,0x0908,0x03da,0x00});
+    mcga_callback_empty_counter.observe_port_read({3,0x090d,0x03da,0x08});
+    mcga_callback_empty_counter.observe_mcga_postlude_byte({4,0x001a,0x3456,0x01e5,1});
+    mcga_callback_empty_counter.observe_mcga_callback_read({5,0x0d22,0x3456,0x0c88,1,
+        eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    mcga_callback_empty_counter.observe_mcga_callback_counter({6,0x0c9a,0x3456,0x0c92,0,
+        eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
+    assert(mcga_callback_empty_counter.state() == Function13InterruptState::callback_local_boundary
+        && mcga_callback_empty_counter.boundary()
+            == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0ca2}
+        && mcga_callback_empty_counter.callback_driver_effects()
+            == (std::vector<eon::MillenniumDosVideoFunction13DriverByteEffect>{{0x0c94,0x3456,0x01e4,1}})
+        && mcga_callback_empty_counter.callback_driver_word_effects().empty());
+
+    Function13Interrupt mcga_callback_wrap_counter(mcga_bytes,
+        eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
+    mcga_callback_wrap_counter.observe_interrupt_request({1,0x0127,0x0013,0x0129,0x5678,0x0302});
+    mcga_callback_wrap_counter.observe_port_read({2,0x0908,0x03da,0x00});
+    mcga_callback_wrap_counter.observe_port_read({3,0x090d,0x03da,0x08});
+    mcga_callback_wrap_counter.observe_mcga_postlude_byte({4,0x001a,0x3456,0x01e5,1});
+    mcga_callback_wrap_counter.observe_mcga_callback_read({5,0x0d22,0x3456,0x0c88,1,
+        eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    mcga_callback_wrap_counter.observe_mcga_callback_counter({6,0x0c9a,0x3456,0x0c92,0xffff,
+        eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
+    assert(mcga_callback_wrap_counter.callback_driver_word_effects()
+        == (std::vector<eon::MillenniumDosVideoFunction13DriverWordEffect>{{0x0d11,0x3456,0x0c92,0xfffe}})
+        && mcga_callback_wrap_counter.boundary()
+            == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d10});
 
     Function13Interrupt mcga_callback_zero(mcga_bytes,
         eon::MillenniumDosVideoDriverKind::mcga, 0x3456);

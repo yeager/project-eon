@@ -66,6 +66,14 @@ struct MillenniumDosVideoFunction13DriverByteEffect {
     constexpr bool operator==(const MillenniumDosVideoFunction13DriverByteEffect&) const = default;
 };
 
+struct MillenniumDosVideoFunction13DriverWordEffect {
+    std::uint16_t instruction_address = 0;
+    std::uint16_t segment = 0;
+    std::uint16_t offset = 0;
+    std::uint16_t value = 0;
+    constexpr bool operator==(const MillenniumDosVideoFunction13DriverWordEffect&) const = default;
+};
+
 struct MillenniumDosVideoFunction13InterruptOutcome {
     std::uint16_t ax = 0;
     std::uint16_t dx = 0x03da;
@@ -100,11 +108,16 @@ public:
     [[nodiscard]] const std::vector<MillenniumDosVideoFunction13McgaCallbackRead>& callback_reads() const {
         return callback_reads_;
     }
+    [[nodiscard]] const std::vector<MillenniumDosVideoFunction13DriverByteEffect>&
+    callback_driver_effects() const { return callback_driver_effects_; }
+    [[nodiscard]] const std::vector<MillenniumDosVideoFunction13DriverWordEffect>&
+    callback_driver_word_effects() const { return callback_driver_word_effects_; }
 
     void observe_interrupt_request(const MillenniumDosVideoFunction13InterruptRequest& request);
     void observe_port_read(const MillenniumDosVideoFunction13PortRead& read);
     void observe_mcga_postlude_byte(const MillenniumDosVideoFunction13McgaPostludeByte& read);
     void observe_mcga_callback_read(const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void observe_mcga_callback_counter(const MillenniumDosVideoFunction13McgaCallbackRead& read);
     void execute_iret(std::uint64_t sequence, std::uint16_t instruction_address);
 
 private:
@@ -118,6 +131,8 @@ private:
     std::optional<MillenniumDosVideoFunction13Outcome> retrace_outcome_;
     std::optional<MillenniumDosVideoFunction13InterruptOutcome> outcome_;
     std::vector<MillenniumDosVideoFunction13McgaCallbackRead> callback_reads_;
+    std::vector<MillenniumDosVideoFunction13DriverByteEffect> callback_driver_effects_;
+    std::vector<MillenniumDosVideoFunction13DriverWordEffect> callback_driver_word_effects_;
     std::uint16_t callback_next_instruction_ = 0;
 };
 

@@ -48,10 +48,13 @@ dispatcher prefix and table route, carries the typed `$0129` interrupt frame,
 and models MCGA's `$01e4` clear plus explicit `$01e5` conditional byte. It
 continues the nonzero `$01e5` path through the hash-bound local callback
 prefix at `$0d22`. Its typed byte and word reads select only the proven branch
-destinations `$0c94`, `$0d10`, or fallthrough `$0d35`; code at those destinations
-remains outside this session. The zero `$01e5` path still stops at IRET. This
-does not authenticate the installed vector or prove title execution selected
-this handler.
+destinations `$0c94`, `$0d10`, or fallthrough `$0d35`. From `$0c94`, a typed
+nonzero `$0c92` counter is decremented and the local `$01e4/$01e5` flags are
+cleared before stopping at RET `$0d10`; a zero counter stops before the
+register-save block at `$0ca2`. Code at `$0d35`, `$0d10`'s unknown return
+destination, and `$0ca2` remains outside this session. The zero `$01e5` path
+still stops at IRET. This does not authenticate the installed vector or prove
+title execution selected this handler.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,
 respectively. The existing global-mode-2 descriptor regression uses explicit
 arithmetic observations; it is not evidence that either supplied driver

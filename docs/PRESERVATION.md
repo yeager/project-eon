@@ -4790,8 +4790,18 @@ bytes, SHA-256
 first typed read is the byte at CS:`$0c88`, requested by `$0d22`: nonzero
 branches to `$0c94`; zero reaches the word comparison at `$0d2d`, CS:`$0d18`.
 That second value branches to `$0d10` when zero and falls through to `$0d35`
-otherwise. The session records each supplied value and stops at the selected
-destination without executing its code. These on-disk bytes do not establish
+otherwise. The `$0c94` continuation is separately bound to `[$0c94,$0ca2)` (14
+bytes, SHA-256
+`91446b8b0a3831742642aa0595e2f78301c3e35f5eb6bebf33afa0189070e0ed`). It sets
+CS:`$01e4` to one and accepts a typed word read from CS:`$0c92` at `$0c9a`. A
+zero value stops at `$0ca2` before its register-save block. A nonzero value
+executes the hash-bound decrement/jump `[$0d11,$0d18)` (7 bytes, SHA-256
+`ac86356c47ac73bde697d8ca755674ac5b0847c8f18a82e5bc8b821140359ef4`), then
+the flag-clear/RET prefix `[$0d04,$0d11)` (13 bytes, SHA-256
+`e8dfe66cd147eb9087b4d06a5f7b2d1923da7f5a7878663a97dbd0e09cd98473`). The
+session records the 16-bit decremented counter, clears `$01e4/$01e5`, and stops
+at RET `$0d10`; its stack return destination remains unknown. The `$0d35`
+continuation remains outside the model. These on-disk bytes do not establish
 the runtime values. The caller frame's IP must be `$0129`; its CS and FLAGS
 remain explicit inputs and are returned verbatim only on the separate IRET
 path. The outcome records only direct local register effects and supplied
