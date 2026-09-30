@@ -187,9 +187,28 @@ jobs:
           if ($ctestExitCode -ne 0) {
             $failedTestsPath = Join-Path "build" "Testing/Temporary/LastTestsFailed.log"
             if (Test-Path $failedTestsPath) {
+              $lastTestLogPath = Join-Path "build" "Testing/Temporary/LastTest.log"
+              $lastTestLog = if (Test-Path $lastTestLogPath) {
+                Get-Content $lastTestLogPath -Raw
+              } else {
+                ""
+              }
               Get-Content $failedTestsPath | ForEach-Object {
                 if ($_ -match '^\d+:([A-Za-z0-9_.-]+)$') {
-                  Write-Output "::error title=Windows CTest failed::$($Matches[1])"
+                  $testName = $Matches[1]
+                  $testPattern = "(?ms)^\d+/\d+ Testing: $([regex]::Escape($testName))\r?\n.*?(?=^\d+/\d+ Testing: |\r?\nEnd testing:|\z)"
+                  $testLog = [regex]::Match($lastTestLog, $testPattern)
+                  $diagnostic = if ($testLog.Success) {
+                    $testLog.Value.Trim()
+                  } else {
+                    "CTest did not record a log section for this failed test."
+                  }
+                  if ($diagnostic.Length -gt 3000) {
+                    $diagnostic = $diagnostic.Substring(0, 3000) + " (truncated)"
+                  }
+                  $message = "$testName`n$diagnostic"
+                  $message = $message.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+                  Write-Output "::error title=Windows CTest failed::$message"
                 }
               }
             }

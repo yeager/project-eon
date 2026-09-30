@@ -89,7 +89,11 @@ class WindowsPackagingTests(unittest.TestCase):
     def test_windows_ctest_failure_names_are_visible_in_github_actions(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
         self.assertIn('Join-Path "build" "Testing/Temporary/LastTestsFailed.log"', workflow)
+        self.assertIn('Join-Path "build" "Testing/Temporary/LastTest.log"', workflow)
         self.assertIn("^\\d+:([A-Za-z0-9_.-]+)$", workflow)
+        self.assertIn("Testing: $([regex]::Escape($testName))", workflow)
+        self.assertIn("$testLog.Value.Trim()", workflow)
+        self.assertIn("$message.Replace('%', '%25')", workflow)
         self.assertIn("::error title=Windows CTest failed::", workflow)
         self.assertIn("exit $ctestExitCode", workflow)
 
