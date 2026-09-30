@@ -14,6 +14,7 @@ int main(const int argc, const char* const argv[]) {
     const auto asset = root / "share" / "project-eon" / "assets" / "cards" / "millennium.png";
     const auto font = root / "share" / "project-eon" / "assets" / "fonts" / "NotoSans-Regular.ttf";
     const auto locale = root / "share" / "project-eon" / "po" / "sv.po";
+    std::filesystem::create_directories(executable.parent_path());
     std::filesystem::create_directories(asset.parent_path());
     std::filesystem::create_directories(font.parent_path());
     std::filesystem::create_directories(locale.parent_path());
@@ -27,14 +28,16 @@ int main(const int argc, const char* const argv[]) {
 
     const auto asset_paths = eon::launcher_asset_paths(executable, "cards", "millennium.png");
     assert(asset_paths[0] == executable.parent_path() / "assets/cards/millennium.png");
-    assert(asset_paths[2] == root / "share/project-eon/assets/cards/millennium.png");
+    assert(asset_paths[2].lexically_normal()
+        == (root / "share/project-eon/assets/cards/millennium.png").lexically_normal());
     assert(asset_paths[3].empty());
     assert(asset_paths[4] == std::filesystem::path("assets/cards/millennium.png"));
     assert(std::filesystem::is_regular_file(asset));
     assert(std::filesystem::is_regular_file(asset_paths[2]));
 
     const auto font_paths = eon::launcher_font_paths(executable);
-    assert(font_paths[2] == root / "share/project-eon/assets/fonts");
+    assert(font_paths[2].lexically_normal()
+        == (root / "share/project-eon/assets/fonts").lexically_normal());
     assert(font_paths[3].empty());
     assert(std::filesystem::is_regular_file(font));
     assert(std::filesystem::is_regular_file(font_paths[2] / "NotoSans-Regular.ttf"));
@@ -43,7 +46,8 @@ int main(const int argc, const char* const argv[]) {
     assert(development_paths[3] == root / "checkout/assets/cards/millennium.png");
 
     const auto locale_paths = eon::launcher_locale_paths(executable);
-    assert(locale_paths[1] == root / "share/project-eon/po");
+    assert(locale_paths[1].lexically_normal()
+        == (root / "share/project-eon/po").lexically_normal());
     const auto translator = eon::Translator::from_language("sv", executable);
     assert(translator.translate("RESOURCE PATH PROBE") == "RESURS-SÖKVÄG");
 

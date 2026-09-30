@@ -488,6 +488,13 @@ if(BUILD_TESTING)
         src/i18n.cpp
         src/platform/resource_paths.cpp)
     target_include_directories(eon-resource-paths-test PRIVATE src)
+    # This test's path contract is expressed with assert(), so keep the checks
+    # active in Release builds just like the native preservation tests.
+    if(MSVC)
+        target_compile_options(eon-resource-paths-test PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(eon-resource-paths-test PRIVATE -UNDEBUG)
+    endif()
     if(EON_DEVELOPER_RESOURCE_FALLBACKS)
         target_compile_definitions(eon-resource-paths-test PRIVATE
             EON_DEVELOPER_RESOURCE_FALLBACKS=1

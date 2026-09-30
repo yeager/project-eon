@@ -3106,15 +3106,24 @@ int main(int argc, char** argv) {
         const eon::ZipArchive valid_zip(zip);
         assert(valid_zip.entries().size() == 1);
         assert(valid_zip.extract(valid_zip.entries().front()).empty());
+        const auto assert_unadmitted_entry_rejected = [&valid_zip](const eon::ZipEntry& candidate) {
+            bool rejected = false;
+            try {
+                static_cast<void>(valid_zip.extract(candidate));
+            } catch (const std::runtime_error& error) {
+                rejected = std::string_view(error.what())
+                    == "ZIP entry was not admitted by this archive";
+            }
+            assert(rejected);
+        };
         auto oversized_entry = valid_zip.entries().front();
         oversized_entry.uncompressed_size = 256U * 1024U * 1024U + 1U;
-        bool rejected_oversized_entry = false;
-        try {
-            static_cast<void>(valid_zip.extract(oversized_entry));
-        } catch (const std::runtime_error& error) {
-            rejected_oversized_entry = std::string_view(error.what()) == "ZIP entry exceeds safety limit";
-        }
-        assert(rejected_oversized_entry);
+        assert_unadmitted_entry_rejected(oversized_entry);
+
+        // Even identical metadata from a separate parse belongs to another
+        // archive instance and cannot be used to select this archive's bytes.
+        const eon::ZipArchive other_archive(zip);
+        assert_unadmitted_entry_rejected(other_archive.entries().front());
         // Inventory from an admitted in-memory archive must use the supplied
         // logical label only; it has no source path to reopen.
         const auto memory_inventory = valid_zip.inventory("admitted.zip");
