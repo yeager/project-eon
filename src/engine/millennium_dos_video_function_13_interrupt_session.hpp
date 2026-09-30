@@ -169,6 +169,14 @@ struct MillenniumDosVideoFunction13McgaCallbackEpilogueStackRead {
     std::uint16_t value = 0;
 };
 
+struct MillenniumDosVideoFunction13McgaCallbackPaletteStackRead {
+    std::uint64_t sequence = 0;
+    std::uint16_t instruction_address = 0;
+    std::uint16_t ss = 0;
+    std::uint16_t sp = 0;
+    std::uint16_t value = 0;
+};
+
 struct MillenniumDosVideoFunction13InterruptOutcome {
     std::uint16_t ax = 0;
     std::uint16_t dx = 0x03da;
@@ -214,6 +222,8 @@ public:
     callback_register_effects() const { return callback_register_effects_; }
     [[nodiscard]] const std::vector<MillenniumDosVideoFunction13McgaCallbackPortWrite>&
     callback_port_writes() const { return callback_port_writes_; }
+    [[nodiscard]] const std::vector<MillenniumDosVideoFunction13PortRead>&
+    callback_port_reads() const { return callback_port_reads_; }
     [[nodiscard]] const std::vector<MillenniumDosVideoFunction13McgaCallbackFarPointerRead>&
     callback_far_pointer_reads() const { return callback_far_pointer_reads_; }
     [[nodiscard]] const std::vector<MillenniumDosVideoFunction13McgaCallbackIndirectWordRead>&
@@ -276,6 +286,21 @@ public:
     void execute_mcga_callback_palette_out(std::uint64_t sequence,
         std::uint16_t instruction_address);
     void observe_mcga_callback_palette_retrace(const MillenniumDosVideoFunction13PortRead& read);
+    void observe_mcga_callback_palette_source_pointer(
+        const MillenniumDosVideoFunction13McgaCallbackFarPointerRead& read);
+    void observe_mcga_callback_palette_source_byte(const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void execute_mcga_callback_palette_data_out(std::uint64_t sequence,
+        std::uint16_t instruction_address);
+    void execute_mcga_callback_palette_loop(std::uint64_t sequence,
+        std::uint16_t instruction_address);
+    void observe_mcga_callback_palette_stack_read(
+        const MillenniumDosVideoFunction13McgaCallbackPaletteStackRead& read);
+    void observe_mcga_callback_palette_descriptor_word(
+        const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void observe_mcga_callback_palette_loop_count_stack(
+        const MillenniumDosVideoFunction13McgaCallbackPaletteStackRead& read);
+    void execute_mcga_callback_palette_descriptor_loop(std::uint64_t sequence,
+        std::uint16_t instruction_address);
     void execute_iret(std::uint64_t sequence, std::uint16_t instruction_address);
 
 private:
@@ -294,6 +319,7 @@ private:
     std::vector<MillenniumDosVideoFunction13CallbackStackWordEffect> callback_stack_effects_;
     std::vector<MillenniumDosVideoFunction13McgaCallbackRegisterEffect> callback_register_effects_;
     std::vector<MillenniumDosVideoFunction13McgaCallbackPortWrite> callback_port_writes_;
+    std::vector<MillenniumDosVideoFunction13PortRead> callback_port_reads_;
     std::vector<MillenniumDosVideoFunction13McgaCallbackFarPointerRead> callback_far_pointer_reads_;
     std::vector<MillenniumDosVideoFunction13McgaCallbackIndirectWordRead> callback_indirect_word_reads_;
     std::vector<MillenniumDosVideoFunction13McgaCallbackMemoryWordEffect> callback_memory_word_effects_;
@@ -313,6 +339,15 @@ private:
     std::optional<std::uint16_t> callback_epilogue_sp_;
     std::optional<std::uint16_t> callback_epilogue_si_;
     std::optional<std::uint16_t> callback_epilogue_ds_;
+    std::optional<std::uint16_t> callback_palette_source_si_;
+    std::optional<std::uint16_t> callback_palette_source_ds_;
+    std::uint8_t callback_palette_component_ = 0;
+    std::optional<std::uint16_t> callback_palette_cx_;
+    std::optional<std::uint16_t> callback_palette_ss_;
+    std::optional<std::uint16_t> callback_palette_sp_;
+    std::optional<std::uint16_t> callback_palette_si_;
+    std::optional<std::uint16_t> callback_palette_ds_;
+    std::optional<std::uint16_t> callback_palette_outer_cx_;
     std::uint16_t callback_next_instruction_ = 0;
 };
 

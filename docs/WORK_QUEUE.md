@@ -71,9 +71,13 @@ the descriptor byte, and both branches reach the jump boundary `$0d6a`. These
 stack and memory values are scenario inputs, not captured runtime observations.
 The palette-descriptor prefix from `$0d6a` now updates the index/count fields
 and records the first VGA `OUT DX,AL` effect at `$0d82`. Explicit status reads
-from `$03da` are accepted at `$0d94` until bit 0 is set, then the model stops at
-`$0d99`; intervening saved-register and pointer arithmetic is hash bound but
-not yet modeled. Other VGA port I/O remains outside the model.
+from `$03da` are accepted at `$0d94` until bit 0 is set. The palette pointer at
+CS:`$0d1e` is then observed, and all three byte/write pairs to `$03c9` are
+modeled per bounded step. The `$0da1` LOOP updates CX and either begins another
+triple or reaches `$0da3`; the hash-bound descriptor epilogue is modeled
+through `$0db5` with explicit SI/DS/CX stack words and a branch to `$0d4e` or
+`$0db5`. Register pops and callback return after `$0db5` remain. Other VGA port
+I/O remains outside the model.
 `$0d10`'s unknown return destination and `$0ca2` remain
 outside this session. The zero `$01e5` path still stops at IRET. These scenario
 inputs do not authenticate the installed vector or prove title execution

@@ -4861,7 +4861,25 @@ explicit VGA status-port `$03da` reads; bit 0 clear loops at `$0d94`, and bit 0
 set advances to `$0d99`. The saved-register and pointer-arithmetic span
 `[$0d83,$0d94)` (17 bytes, SHA-256
 `aa90f0362964c219d1d6f47b40f1c901ca310ea9b44333c748439b27c5954245`) is
-authenticated, but its state effects are not modeled. This does not claim a
+authenticated; PUSH DS/SI and the instruction-by-instruction arithmetic are
+not separately represented. On the set branch, the model records DX=`$03c9` and accepts the
+fresh far pointer from CS:`$0d1e` at `$0d87`. It computes SI as pointer offset
+plus three times the palette index, with 16-bit wrapping. At `$0d9b`, `$0d9d`,
+and `$0d9f`, source bytes are accepted per bounded step; `$0d9c`, `$0d9e`, and
+`$0da0` record the corresponding writes to port `$03c9`. The authenticated
+transfer span `[$0d99,$0da3)` (10 bytes, SHA-256
+`46b49bd4fcc7c6e76905a9e9ac35ee4af22d0419f698e5094e475b1a9054c014`) contains
+three source-byte/OUT pairs per CX iteration; the model currently records the
+three pairs per CX iteration. The `$0da1` LOOP records the CX decrement and
+returns to `$0d9b` or reaches `$0da3` when the descriptor count is exhausted.
+At `$0da3/$0da4`, the SI/DS POP words are explicit SS:SP observations. The
+word at restored DS:`SI+4` is accepted at `$0da5`, incremented, and recorded at
+DS:`SI+8`; the outer CX POP at `$0dac` is also explicit. `$0dad` decrements
+DS:`SI+8`, advances SI by `$0c`, and decrements CX, reaching `$0d4e` for another
+descriptor or `$0db5` when CX is zero. The authenticated restore span
+`[$0da3,$0db5)` (18 bytes, SHA-256
+`56a3162a4f2fa14b92c84e13bac182325373e8bade15a998f5dc82f2ed660e45`) does not
+include the register pops beginning at `$0db5`. This does not claim a
 relationship between the explicit stack words and the earlier `$0d3b` register
 save, nor does it execute the `$0d6a` palette code beyond this prefix. These
 are scenario inputs, not captured title-runtime observations. The caller
