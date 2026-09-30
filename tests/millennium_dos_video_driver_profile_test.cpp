@@ -281,6 +281,14 @@ int main(const int argc, char** argv) {
     assert(mcga_callback_nonzero.state() == Function13InterruptState::callback_local_boundary
         && mcga_callback_nonzero.boundary()
         == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d35});
+    expect_rejected([&] { mcga_callback_nonzero.execute_mcga_callback_alternate_flag(7,0x0d36); });
+    assert(mcga_callback_nonzero.next_sequence() == 7
+        && mcga_callback_nonzero.callback_driver_effects().empty());
+    mcga_callback_nonzero.execute_mcga_callback_alternate_flag(7,0x0d35);
+    assert(mcga_callback_nonzero.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d3b}
+        && mcga_callback_nonzero.callback_driver_effects()
+            == (std::vector<eon::MillenniumDosVideoFunction13DriverByteEffect>{{0x0d35,0x3456,0x01e4,1}}));
 
     using Session = eon::MillenniumDosVideoFunctionZeroSession;
     using State = eon::MillenniumDosVideoFunctionZeroState;

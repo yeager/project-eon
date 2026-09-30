@@ -21,6 +21,8 @@ MillenniumDosVideoFunction13InterruptSession::MillenniumDosVideoFunction13Interr
         constexpr std::size_t counter_update_size = 0x07;
         constexpr std::size_t callback_epilogue_offset = 0x0d04;
         constexpr std::size_t callback_epilogue_size = 0x0d;
+        constexpr std::size_t alternate_prefix_offset = 0x0d35;
+        constexpr std::size_t alternate_prefix_size = 0x1f;
         if (callback_offset > english_driver.size()
             || english_driver.size() - callback_offset < callback_size
             || to_hex(sha256(english_driver.subspan(callback_offset, callback_size)))
@@ -36,7 +38,11 @@ MillenniumDosVideoFunction13InterruptSession::MillenniumDosVideoFunction13Interr
             || callback_epilogue_offset > english_driver.size()
             || english_driver.size() - callback_epilogue_offset < callback_epilogue_size
             || to_hex(sha256(english_driver.subspan(callback_epilogue_offset, callback_epilogue_size)))
-                != "e8dfe66cd147eb9087b4d06a5f7b2d1923da7f5a7878663a97dbd0e09cd98473") {
+                != "e8dfe66cd147eb9087b4d06a5f7b2d1923da7f5a7878663a97dbd0e09cd98473"
+            || alternate_prefix_offset > english_driver.size()
+            || english_driver.size() - alternate_prefix_offset < alternate_prefix_size
+            || to_hex(sha256(english_driver.subspan(alternate_prefix_offset, alternate_prefix_size)))
+                != "64b62dfa3070346ec8c3be344e278d9da3196949f56c66fafb722d0f3314ad5d") {
             throw std::runtime_error("Unsupported Millennium MCGA function-$13 callback spans");
         }
     }
@@ -166,6 +172,20 @@ void MillenniumDosVideoFunction13InterruptSession::observe_mcga_callback_counter
     callback_driver_effects_.push_back({0x0d04,driver_segment_,0x01e4,0});
     callback_driver_effects_.push_back({0x0d0a,driver_segment_,0x01e5,0});
     callback_next_instruction_ = 0x0d10;
+}
+
+void MillenniumDosVideoFunction13InterruptSession::execute_mcga_callback_alternate_flag(
+    const std::uint64_t sequence,
+    const std::uint16_t instruction_address) {
+    if (state_ != MillenniumDosVideoFunction13InterruptState::callback_local_boundary
+        || callback_next_instruction_ != 0x0d35
+        || sequence != last_sequence_ + 1
+        || instruction_address != 0x0d35) {
+        throw std::runtime_error("Detached Millennium DOS MCGA alternate callback flag");
+    }
+    callback_driver_effects_.push_back({0x0d35,driver_segment_,0x01e4,1});
+    last_sequence_ = sequence;
+    callback_next_instruction_ = 0x0d3b;
 }
 
 void MillenniumDosVideoFunction13InterruptSession::execute_iret(

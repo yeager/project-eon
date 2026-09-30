@@ -118,6 +118,8 @@ public:
     void observe_mcga_postlude_byte(const MillenniumDosVideoFunction13McgaPostludeByte& read);
     void observe_mcga_callback_read(const MillenniumDosVideoFunction13McgaCallbackRead& read);
     void observe_mcga_callback_counter(const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void execute_mcga_callback_alternate_flag(std::uint64_t sequence,
+        std::uint16_t instruction_address);
     void execute_iret(std::uint64_t sequence, std::uint16_t instruction_address);
 
 private:

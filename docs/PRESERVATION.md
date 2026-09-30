@@ -4801,8 +4801,13 @@ the flag-clear/RET prefix `[$0d04,$0d11)` (13 bytes, SHA-256
 `e8dfe66cd147eb9087b4d06a5f7b2d1923da7f5a7878663a97dbd0e09cd98473`). The
 session records the 16-bit decremented counter, clears `$01e4/$01e5`, and stops
 at RET `$0d10`; its stack return destination remains unknown. The `$0d35`
-continuation remains outside the model. These on-disk bytes do not establish
-the runtime values. The caller frame's IP must be `$0129`; its CS and FLAGS
+continuation is now bound through its first flag write: `[$0d35,$0d54)` (31
+bytes, SHA-256
+`64b62dfa3070346ec8c3be344e278d9da3196949f56c66fafb722d0f3314ad5d`). The
+session records CS:`$01e4=1` and stops at `$0d3b`, before nine register pushes.
+Their values and initial SS:SP are unavailable, so no stack writes or later
+pointer reads are inferred. These on-disk bytes do not establish the runtime
+values. The caller frame's IP must be `$0129`; its CS and FLAGS
 remain explicit inputs and are returned verbatim only on the separate IRET
 path. The outcome records only direct local register effects and supplied
 port reads. The standalone session does not authenticate an IVT vector, assert

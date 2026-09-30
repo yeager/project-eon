@@ -51,8 +51,10 @@ prefix at `$0d22`. Its typed byte and word reads select only the proven branch
 destinations `$0c94`, `$0d10`, or fallthrough `$0d35`. From `$0c94`, a typed
 nonzero `$0c92` counter is decremented and the local `$01e4/$01e5` flags are
 cleared before stopping at RET `$0d10`; a zero counter stops before the
-register-save block at `$0ca2`. Code at `$0d35`, `$0d10`'s unknown return
-destination, and `$0ca2` remains outside this session. The zero `$01e5` path
+register-save block at `$0ca2`. The `$0d35` branch records its `$01e4=1` write
+and stops before nine register pushes at `$0d3b`; register values and `SS:SP`
+are needed to model their stack writes. `$0d10`'s unknown return destination
+and `$0ca2` remain outside this session. The zero `$01e5` path
 still stops at IRET. This does not authenticate the installed vector or prove
 title execution selected this handler.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,
