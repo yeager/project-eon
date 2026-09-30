@@ -809,16 +809,14 @@ parse_deuteros_amiga_installed_interrupt_worker(
     const auto disk_offset = stage.disk_offset + entry - stage.destination;
     const auto bytes = disk.bytes(disk_offset, length);
     const auto call_offset = stage.disk_offset + caller - stage.destination;
-    constexpr std::array<std::uint8_t, 4> expected_call{0x61, 0x00, 0x03, 0x2a};
-    constexpr std::array<std::uint8_t, 2> expected_return{0x4e, 0x75};
     constexpr auto expected_hash =
         "661854d6976ab520b0398e2545003d3fe59692fc0de54f0f810f379cf25ccaf8";
     if (disk_offset != 0x8016 || to_hex(sha256(bytes)) != expected_hash) {
         throw std::runtime_error("Unexpected Deuteros installed interrupt worker bytes");
     }
-    if (call_offset != 0x7cea
-        || !std::ranges::equal(disk.bytes(call_offset, expected_call.size()), expected_call)
-        || !std::ranges::equal(bytes.last(expected_return.size()), expected_return)) {
+    const auto call = disk.bytes(call_offset, 4);
+    if (call_offset != 0x7cea || big16(call, 0) != 0x6100 || big16(call, 2) != 0x032a
+        || big16(bytes, length - 2) != 0x4e75) {
         throw std::runtime_error("Unexpected Deuteros installed interrupt call or return");
     }
     return {caller, entry, disk_offset, static_cast<std::uint32_t>(length),
