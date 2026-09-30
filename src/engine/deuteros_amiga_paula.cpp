@@ -5,6 +5,16 @@
 #include <stdexcept>
 
 namespace eon {
+namespace {
+
+void validate_stereo_frame_count(const std::size_t frames) {
+    static const auto maximum_stereo_frames=std::vector<float>{}.max_size()/2U;
+    if(frames>maximum_stereo_frames) {
+        throw std::length_error("Deuteros audio frame count exceeds the stereo output limit");
+    }
+}
+
+} // namespace
 
 DeuterosAmigaPaulaMixer::DeuterosAmigaPaulaMixer(const DeuterosAmigaSoundBank& bank,
     std::uint32_t output_sample_rate)
@@ -28,6 +38,7 @@ bool DeuterosAmigaPaulaMixer::submit(const DeuterosAmigaSoundEvent& event) {
 
 std::vector<float> DeuterosAmigaPaulaMixer::render(std::size_t frames) {
     if (!has_active_channels()) return {};
+    validate_stereo_frame_count(frames);
     std::vector<float> result(frames * 2U, 0.0F);
     for (std::size_t frame = 0; frame < frames; ++frame) {
         for (std::size_t channel = 0; channel < channels_.size(); ++channel) {
@@ -88,6 +99,7 @@ bool DeuterosAmigaNativeAudioMixer::audible()const{
 }
 std::vector<float> DeuterosAmigaNativeAudioMixer::render(const std::size_t frames){
     if(!audible())return {};
+    validate_stereo_frame_count(frames);
     std::vector<float> output(frames*2U,0.0F);
     for(std::size_t frame=0;frame<frames;++frame){
         for(auto& voice:voices_){

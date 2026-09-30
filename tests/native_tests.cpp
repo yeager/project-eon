@@ -3322,11 +3322,36 @@ int main(int argc, char** argv) {
                 =="67abcb5793d679b6c43b443f36cddbfff43b3b6cb8a83e39ae81c47af84bd48c");
         eon::DeuterosAmigaNativeAudioMixer mixer;
         assert(mixer.install(prepared.voices));
+        bool oversized_native_audio_rejected=false;
+        try {
+            static_cast<void>(mixer.render(std::numeric_limits<std::size_t>::max()/2U+1U));
+        } catch(const std::length_error&) {
+            oversized_native_audio_rejected=true;
+        }
+        assert(oversized_native_audio_rejected&&mixer.audible());
         const auto rendered=mixer.render(1);
         assert(rendered.size()==2&&rendered[0]==0.0F&&rendered[1]==0.0F);
         receipts[1].channel_registers[0].pointer=0x600;
         const auto missing=eon::prepare_deuteros_amiga_native_audio(receipts,memory,8,100);
         assert(!missing.accepted&&missing.error=="Deuteros native audio range is not owned");
+    }
+    {
+        std::array<std::uint8_t,1> pcm{{0x20}};
+        eon::DeuterosAmigaSoundBank bank;
+        bank.sounds.resize(2);
+        bank.sounds[1].period=128;
+        bank.sounds[1].volume=64;
+        bank.sounds[1].pcm=std::span<const std::uint8_t>(pcm);
+        eon::DeuterosAmigaPaulaMixer mixer(bank);
+        assert(mixer.submit({1,1})&&mixer.has_active_channels());
+        bool oversized_paula_audio_rejected=false;
+        try {
+            static_cast<void>(mixer.render(std::numeric_limits<std::size_t>::max()/2U+1U));
+        } catch(const std::length_error&) {
+            oversized_paula_audio_rejected=true;
+        }
+        assert(oversized_paula_audio_rejected&&mixer.has_active_channels());
+        assert(mixer.channels()[0].sample_index==0);
     }
     const std::filesystem::path data_directory = EON_REAL_DATA_DIR;
     if (data_directory.empty() || !std::filesystem::is_directory(data_directory)) {
@@ -17824,6 +17849,14 @@ int main(int argc, char** argv) {
     eon::DeuterosAmigaPaulaMixer paula(sound_bank);
     assert(paula.submit({1, 1}));
     assert(paula.submit({2, 2}));
+    bool oversized_original_audio_rejected=false;
+    try {
+        static_cast<void>(paula.render(std::numeric_limits<std::size_t>::max()/2U+1U));
+    } catch(const std::length_error&) {
+        oversized_original_audio_rejected=true;
+    }
+    assert(oversized_original_audio_rejected&&paula.has_active_channels());
+    assert(paula.channels()[0].sample_index==0&&paula.channels()[1].sample_index==0);
     const auto opening_audio = paula.render(6);
     assert(opening_audio.size() == 12);
     const auto encoded_first_pcm = sound_bank.sounds[1].pcm[0];
