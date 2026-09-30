@@ -70,8 +70,10 @@ restore SI/DS, then the descriptor count is decremented; its zero branch clears
 the descriptor byte, and both branches reach the jump boundary `$0d6a`. These
 stack and memory values are scenario inputs, not captured runtime observations.
 The palette-descriptor prefix from `$0d6a` now updates the index/count fields
-and reaches the first VGA `OUT DX,AL` at `$0d82`, where execution stops.
-Other VGA port I/O remains outside the model.
+and records the first VGA `OUT DX,AL` effect at `$0d82`. Explicit status reads
+from `$03da` are accepted at `$0d94` until bit 0 is set, then the model stops at
+`$0d99`; intervening saved-register and pointer arithmetic is hash bound but
+not yet modeled. Other VGA port I/O remains outside the model.
 `$0d10`'s unknown return destination and `$0ca2` remain
 outside this session. The zero `$01e5` path still stops at IRET. These scenario
 inputs do not authenticate the installed vector or prove title execution

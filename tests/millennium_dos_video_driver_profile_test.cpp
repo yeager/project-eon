@@ -648,6 +648,20 @@ int main(const int argc, char** argv) {
             mcga_callback_palette_index.callback_register_effects().size() - 2]
             == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
                 0x0d7f,eon::MillenniumDosVideoFunction13McgaCallbackRegister::dx,0x03c8}));
+    expect_rejected([&] { mcga_callback_palette_index.observe_mcga_callback_palette_retrace(
+        {36,0x0d94,0x03da,1}); });
+    mcga_callback_palette_index.execute_mcga_callback_palette_out(36,0x0d82);
+    assert(mcga_callback_palette_index.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d94}
+        && mcga_callback_palette_index.callback_port_writes()
+            == (std::vector<eon::MillenniumDosVideoFunction13McgaCallbackPortWrite>{
+                {36,0x0d82,0x03c8,7}}));
+    mcga_callback_palette_index.observe_mcga_callback_palette_retrace({37,0x0d94,0x03da,0});
+    assert(mcga_callback_palette_index.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d94});
+    mcga_callback_palette_index.observe_mcga_callback_palette_retrace({38,0x0d94,0x03da,1});
+    assert(mcga_callback_palette_index.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d99});
 
     auto mcga_callback_palette_wrap = mcga_callback_copy_complete;
     mcga_callback_palette_wrap.observe_mcga_callback_palette_descriptor_count(

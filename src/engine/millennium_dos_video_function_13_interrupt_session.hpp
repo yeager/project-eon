@@ -78,6 +78,14 @@ struct MillenniumDosVideoFunction13McgaCallbackRegisterEffect {
     constexpr bool operator==(const MillenniumDosVideoFunction13McgaCallbackRegisterEffect&) const = default;
 };
 
+struct MillenniumDosVideoFunction13McgaCallbackPortWrite {
+    std::uint64_t sequence = 0;
+    std::uint16_t instruction_address = 0;
+    std::uint16_t port_address = 0;
+    std::uint8_t value = 0;
+    constexpr bool operator==(const MillenniumDosVideoFunction13McgaCallbackPortWrite&) const = default;
+};
+
 struct MillenniumDosVideoFunction13McgaCallbackFarPointerRead {
     std::uint64_t sequence = 0;
     std::uint16_t instruction_address = 0x0d49;
@@ -204,6 +212,8 @@ public:
     callback_stack_effects() const { return callback_stack_effects_; }
     [[nodiscard]] const std::vector<MillenniumDosVideoFunction13McgaCallbackRegisterEffect>&
     callback_register_effects() const { return callback_register_effects_; }
+    [[nodiscard]] const std::vector<MillenniumDosVideoFunction13McgaCallbackPortWrite>&
+    callback_port_writes() const { return callback_port_writes_; }
     [[nodiscard]] const std::vector<MillenniumDosVideoFunction13McgaCallbackFarPointerRead>&
     callback_far_pointer_reads() const { return callback_far_pointer_reads_; }
     [[nodiscard]] const std::vector<MillenniumDosVideoFunction13McgaCallbackIndirectWordRead>&
@@ -263,6 +273,9 @@ public:
         std::uint16_t instruction_address);
     void observe_mcga_callback_palette_source_index(
         const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void execute_mcga_callback_palette_out(std::uint64_t sequence,
+        std::uint16_t instruction_address);
+    void observe_mcga_callback_palette_retrace(const MillenniumDosVideoFunction13PortRead& read);
     void execute_iret(std::uint64_t sequence, std::uint16_t instruction_address);
 
 private:
@@ -280,6 +293,7 @@ private:
     std::vector<MillenniumDosVideoFunction13DriverWordEffect> callback_driver_word_effects_;
     std::vector<MillenniumDosVideoFunction13CallbackStackWordEffect> callback_stack_effects_;
     std::vector<MillenniumDosVideoFunction13McgaCallbackRegisterEffect> callback_register_effects_;
+    std::vector<MillenniumDosVideoFunction13McgaCallbackPortWrite> callback_port_writes_;
     std::vector<MillenniumDosVideoFunction13McgaCallbackFarPointerRead> callback_far_pointer_reads_;
     std::vector<MillenniumDosVideoFunction13McgaCallbackIndirectWordRead> callback_indirect_word_reads_;
     std::vector<MillenniumDosVideoFunction13McgaCallbackMemoryWordEffect> callback_memory_word_effects_;

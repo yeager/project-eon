@@ -39,6 +39,10 @@ MillenniumDosVideoFunction13InterruptSession::MillenniumDosVideoFunction13Interr
         constexpr std::size_t alternate_palette_prefix_offset = 0x0d6a;
         constexpr std::size_t alternate_palette_prefix_size = 0x18;
         constexpr std::size_t alternate_palette_out_offset = 0x0d82;
+        constexpr std::size_t alternate_palette_post_out_offset = 0x0d83;
+        constexpr std::size_t alternate_palette_post_out_size = 0x11;
+        constexpr std::size_t alternate_palette_poll_offset = 0x0d94;
+        constexpr std::size_t alternate_palette_poll_size = 0x05;
         if (callback_offset > english_driver.size()
             || english_driver.size() - callback_offset < callback_size
             || to_hex(sha256(english_driver.subspan(callback_offset, callback_size)))
@@ -88,7 +92,17 @@ MillenniumDosVideoFunction13InterruptSession::MillenniumDosVideoFunction13Interr
             || to_hex(sha256(english_driver.subspan(alternate_palette_prefix_offset, alternate_palette_prefix_size)))
                 != "a833f1826f7252c09cebd89a0ebbd5a80e11d0fd6e913e26f30383e3bb4be228"
             || alternate_palette_out_offset >= english_driver.size()
-            || english_driver[alternate_palette_out_offset] != 0xeeU) {
+            || english_driver[alternate_palette_out_offset] != 0xeeU
+            || alternate_palette_post_out_offset > english_driver.size()
+            || english_driver.size() - alternate_palette_post_out_offset < alternate_palette_post_out_size
+            || to_hex(sha256(english_driver.subspan(alternate_palette_post_out_offset,
+                alternate_palette_post_out_size)))
+                != "aa90f0362964c219d1d6f47b40f1c901ca310ea9b44333c748439b27c5954245"
+            || alternate_palette_poll_offset > english_driver.size()
+            || english_driver.size() - alternate_palette_poll_offset < alternate_palette_poll_size
+            || to_hex(sha256(english_driver.subspan(alternate_palette_poll_offset,
+                alternate_palette_poll_size)))
+                != "e18d42465d19b1d9e34ae1529f154742a8f6815863fa90a6f589099fab753594") {
             throw std::runtime_error("Unsupported Millennium MCGA function-$13 callback spans");
         }
     }
@@ -819,6 +833,34 @@ void MillenniumDosVideoFunction13InterruptSession::observe_mcga_callback_palette
         MillenniumDosVideoFunction13McgaCallbackRegister::al,read.value});
     last_sequence_ = read.sequence;
     callback_next_instruction_ = 0x0d82;
+}
+
+void MillenniumDosVideoFunction13InterruptSession::execute_mcga_callback_palette_out(
+    const std::uint64_t sequence, const std::uint16_t instruction_address) {
+    if (kind_ != MillenniumDosVideoDriverKind::mcga
+        || state_ != MillenniumDosVideoFunction13InterruptState::callback_local_boundary
+        || callback_next_instruction_ != 0x0d82 || sequence != last_sequence_ + 1
+        || instruction_address != 0x0d82 || callback_register_effects_.empty()
+        || callback_register_effects_.back().instruction_address != 0x0d7c
+        || callback_register_effects_.back().reg != MillenniumDosVideoFunction13McgaCallbackRegister::al) {
+        throw std::runtime_error("Detached Millennium DOS MCGA palette port write");
+    }
+    callback_port_writes_.push_back({sequence,0x0d82,0x03c8,
+        static_cast<std::uint8_t>(callback_register_effects_.back().value)});
+    last_sequence_ = sequence;
+    callback_next_instruction_ = 0x0d94;
+}
+
+void MillenniumDosVideoFunction13InterruptSession::observe_mcga_callback_palette_retrace(
+    const MillenniumDosVideoFunction13PortRead& read) {
+    if (kind_ != MillenniumDosVideoDriverKind::mcga
+        || state_ != MillenniumDosVideoFunction13InterruptState::callback_local_boundary
+        || callback_next_instruction_ != 0x0d94 || read.sequence != last_sequence_ + 1
+        || read.instruction_address != 0x0d94 || read.port_address != 0x03da) {
+        throw std::runtime_error("Detached Millennium DOS MCGA palette retrace observation");
+    }
+    last_sequence_ = read.sequence;
+    callback_next_instruction_ = (read.value & 1U) == 0 ? 0x0d94 : 0x0d99;
 }
 
 void MillenniumDosVideoFunction13InterruptSession::execute_iret(

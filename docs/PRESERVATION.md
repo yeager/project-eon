@@ -4852,8 +4852,16 @@ reaches boundary `$0d6a`. The hash-bound palette-descriptor prefix
 `a833f1826f7252c09cebd89a0ebbd5a80e11d0fd6e913e26f30383e3bb4be228`)
 increments DS:`SI+3`, clears it when the incremented byte exceeds the count at
 DS:`SI+2`, sets `CX=count+1`, loads the source index from DS:`SI+1`, and sets
-`DX=$03c8`. The session stops at `$0d82`; the following byte `$ee` is the
-authenticated `OUT DX,AL` boundary, which is not executed. This does not claim a
+`DX=$03c8`. The authenticated `$ee` at `$0d82` records an `OUT DX,AL`
+effect at port `$03c8` with the supplied AL value, without writing to hardware.
+The model then stops at `$0d94`, where the local poll span `[$0d94,$0d99)` (5
+bytes, SHA-256
+`e18d42465d19b1d9e34ae1529f154742a8f6815863fa90a6f589099fab753594`) accepts
+explicit VGA status-port `$03da` reads; bit 0 clear loops at `$0d94`, and bit 0
+set advances to `$0d99`. The saved-register and pointer-arithmetic span
+`[$0d83,$0d94)` (17 bytes, SHA-256
+`aa90f0362964c219d1d6f47b40f1c901ca310ea9b44333c748439b27c5954245`) is
+authenticated, but its state effects are not modeled. This does not claim a
 relationship between the explicit stack words and the earlier `$0d3b` register
 save, nor does it execute the `$0d6a` palette code beyond this prefix. These
 are scenario inputs, not captured title-runtime observations. The caller
