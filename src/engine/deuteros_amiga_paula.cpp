@@ -91,6 +91,11 @@ DeuterosAmigaNativeAudioMixer::DeuterosAmigaNativeAudioMixer(
     if(output_sample_rate_==0)throw std::runtime_error("Invalid native audio output sample rate");
 }
 bool DeuterosAmigaNativeAudioMixer::install(std::vector<Voice> voices){
+    for(const auto& voice:voices){
+        const auto threshold=static_cast<std::uint64_t>(voice.period)*output_sample_rate_;
+        if(voice.channel>=4||voice.period==0||voice.volume>64
+            ||voice.index>voice.pcm.size()||voice.phase>=threshold)return false;
+    }
     voices_=std::move(voices);return audible();
 }
 bool DeuterosAmigaNativeAudioMixer::audible()const{
@@ -133,6 +138,11 @@ DeuterosAmigaNativeAudioPreparation prepare_deuteros_amiga_native_audio(
         target.dma_writes=source.dma_writes;
         for(std::size_t channel=0;channel<source.channel_registers.size();++channel){
             const auto& registers=source.channel_registers[channel];auto& receipt=target.channels[channel];
+            const bool has_register_writes=registers.pointer_written||registers.length_written
+                ||registers.period_written||registers.volume_written;
+            if(has_register_writes&&registers.channel!=static_cast<std::uint8_t>(channel)){
+                prepared.error="Deuteros native audio channel slot is inconsistent";return prepared;
+            }
             receipt.channel=registers.channel;receipt.pointer=registers.pointer;
             receipt.length_words=registers.length_words;receipt.period=registers.period;
             receipt.volume=registers.volume;receipt.pointer_written=registers.pointer_written;

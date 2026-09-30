@@ -3320,8 +3320,17 @@ int main(int argc, char** argv) {
             &&prepared.checkpoint.invocations[1].channels[0].enabled_by_final_dma_intent
             &&prepared.checkpoint.invocations[1].channels[0].pcm_sha256
                 =="67abcb5793d679b6c43b443f36cddbfff43b3b6cb8a83e39ae81c47af84bd48c");
+        auto mismatched_channel_receipts=receipts;
+        mismatched_channel_receipts[1].channel_registers[0].channel=3;
+        const auto mismatched_channel=eon::prepare_deuteros_amiga_native_audio(
+            mismatched_channel_receipts,memory,7,99);
+        assert(!mismatched_channel.accepted
+            &&mismatched_channel.error=="Deuteros native audio channel slot is inconsistent");
         eon::DeuterosAmigaNativeAudioMixer mixer;
         assert(mixer.install(prepared.voices));
+        auto invalid_native_voices=prepared.voices;
+        invalid_native_voices[0].period=0;
+        assert(!mixer.install(std::move(invalid_native_voices))&&mixer.audible());
         bool oversized_native_audio_rejected=false;
         try {
             static_cast<void>(mixer.render(std::numeric_limits<std::size_t>::max()/2U+1U));
