@@ -4881,7 +4881,13 @@ descriptor or `$0db5` when CX is zero. The authenticated restore span
 `56a3162a4f2fa14b92c84e13bac182325373e8bade15a998f5dc82f2ed660e45`) does not
 include the register pops beginning at `$0db5`. This does not claim a
 relationship between the explicit stack words and the earlier `$0d3b` register
-save, nor does it execute the `$0d6a` palette code beyond this prefix. These
+save. The nine POPs at `[$0db5,$0dbe)` (9 bytes, SHA-256
+`d07d0c9e1774ee9e4716a0fcc0419979823a28305d91a8fa873b549dd395f076`) accept
+ordered SS:SP words for BP, BX, AX, CX, DX, SI, DI, ES, and DS. The following
+hash-bound span `[$0dbe,$0dca)` (12 bytes, SHA-256
+`e418fe4a6546f6a404ab3307dcb7440f50df2d24be4db85ca5db5f3fb0957e0c`) clears
+CS:`$01e4` and CS:`$01e5`, then stops at RET `$0dca`. The RET destination
+remains unobserved. These
 are scenario inputs, not captured title-runtime observations. The caller
 frame's IP must be `$0129`; its
 CS and FLAGS remain explicit inputs and are returned verbatim only on the

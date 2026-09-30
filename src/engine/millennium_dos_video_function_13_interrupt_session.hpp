@@ -61,7 +61,9 @@ struct MillenniumDosVideoFunction13McgaCallbackRead {
 enum class MillenniumDosVideoFunction13McgaCallbackRegister : std::uint8_t {
     al,
     ax,
+    bp,
     bl,
+    bx,
     cx,
     dx,
     ds,
@@ -162,6 +164,14 @@ struct MillenniumDosVideoFunction13CallbackStackWordEffect {
 };
 
 struct MillenniumDosVideoFunction13McgaCallbackEpilogueStackRead {
+    std::uint64_t sequence = 0;
+    std::uint16_t instruction_address = 0;
+    std::uint16_t ss = 0;
+    std::uint16_t sp = 0;
+    std::uint16_t value = 0;
+};
+
+struct MillenniumDosVideoFunction13McgaCallbackReturnStackRead {
     std::uint64_t sequence = 0;
     std::uint16_t instruction_address = 0;
     std::uint16_t ss = 0;
@@ -301,6 +311,10 @@ public:
         const MillenniumDosVideoFunction13McgaCallbackPaletteStackRead& read);
     void execute_mcga_callback_palette_descriptor_loop(std::uint64_t sequence,
         std::uint16_t instruction_address);
+    void observe_mcga_callback_return_stack_read(
+        const MillenniumDosVideoFunction13McgaCallbackReturnStackRead& read);
+    void execute_mcga_callback_return_flag_clear(std::uint64_t sequence,
+        std::uint16_t instruction_address);
     void execute_iret(std::uint64_t sequence, std::uint16_t instruction_address);
 
 private:
@@ -348,6 +362,7 @@ private:
     std::optional<std::uint16_t> callback_palette_si_;
     std::optional<std::uint16_t> callback_palette_ds_;
     std::optional<std::uint16_t> callback_palette_outer_cx_;
+    std::uint8_t callback_return_pop_count_ = 0;
     std::uint16_t callback_next_instruction_ = 0;
 };
 
