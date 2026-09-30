@@ -52,10 +52,12 @@ destinations `$0c94`, `$0d10`, or fallthrough `$0d35`. From `$0c94`, a typed
 nonzero `$0c92` counter is decremented and the local `$01e4/$01e5` flags are
 cleared before stopping at RET `$0d10`; a zero counter stops before the
 register-save block at `$0ca2`. The `$0d35` branch records `$01e4=1`, accepts
-explicit register values and `SS:SP`, records the nine ordered stack pushes,
-and stops at `$0d44` before reading CS:`$0d18`. These are scenario inputs, not
-captured runtime evidence. `$0d10`'s unknown return destination and `$0ca2`
-remain outside this session. The zero `$01e5` path
+explicit register values and `SS:SP`, and records the nine ordered stack
+pushes. It accepts a fresh CS:`$0d18` word at `$0d44`, a far pointer from
+CS:`$0d1a` at `$0d49`, then DS:`SI+8` at `$0d4e`, stopping at `$0d54` or
+`$0dad`. These are scenario inputs, not captured runtime evidence. `$0d10`'s
+unknown return destination and `$0ca2` remain outside this session. The zero
+`$01e5` path
 still stops at IRET. This does not authenticate the installed vector or prove
 title execution selected this handler.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,

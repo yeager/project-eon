@@ -308,6 +308,47 @@ int main(const int argc, char** argv) {
                 {0x0d41,0x4000,0xfffa,0x7777},
                 {0x0d42,0x4000,0xfff8,0x8888},
                 {0x0d43,0x4000,0xfff6,0x9999}}));
+    expect_rejected([&] { mcga_callback_nonzero.observe_mcga_callback_alternate_cx_read(
+        {9,0x0d44,0x3456,0x0d1a,1,eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word}); });
+    assert(mcga_callback_nonzero.next_sequence() == 9
+        && mcga_callback_nonzero.callback_reads().size() == 2
+        && mcga_callback_nonzero.callback_register_effects().empty());
+    mcga_callback_nonzero.observe_mcga_callback_alternate_cx_read(
+        {9,0x0d44,0x3456,0x0d18,1,eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
+    assert(mcga_callback_nonzero.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d49}
+        && mcga_callback_nonzero.callback_register_effects()
+            == (std::vector<eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect>{
+                {0x0d44,eon::MillenniumDosVideoFunction13McgaCallbackRegister16::cx,1}}));
+    expect_rejected([&] { mcga_callback_nonzero.observe_mcga_callback_alternate_pointer(
+        {10,0x0d49,0x3456,0x0d1c,0x2000,0xfffc}); });
+    assert(mcga_callback_nonzero.next_sequence() == 10
+        && mcga_callback_nonzero.callback_far_pointer_reads().empty());
+    mcga_callback_nonzero.observe_mcga_callback_alternate_pointer(
+        {10,0x0d49,0x3456,0x0d1a,0x2000,0xfffc});
+    assert(mcga_callback_nonzero.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d4e}
+        && mcga_callback_nonzero.callback_register_effects()
+            == (std::vector<eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect>{
+                {0x0d44,eon::MillenniumDosVideoFunction13McgaCallbackRegister16::cx,1},
+                {0x0d49,eon::MillenniumDosVideoFunction13McgaCallbackRegister16::ds,0x2000},
+                {0x0d49,eon::MillenniumDosVideoFunction13McgaCallbackRegister16::si,0xfffc}}));
+    auto mcga_callback_alternate_nonzero = mcga_callback_nonzero;
+    expect_rejected([&] { mcga_callback_nonzero.observe_mcga_callback_alternate_indirect_word(
+        {11,0x0d4e,0x2000,0x0005,0}); });
+    assert(mcga_callback_nonzero.next_sequence() == 11
+        && mcga_callback_nonzero.callback_indirect_word_reads().empty());
+    mcga_callback_nonzero.observe_mcga_callback_alternate_indirect_word(
+        {11,0x0d4e,0x2000,0x0004,0});
+    mcga_callback_alternate_nonzero.observe_mcga_callback_alternate_indirect_word(
+        {11,0x0d4e,0x2000,0x0004,1});
+    assert(mcga_callback_nonzero.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d54}
+        && mcga_callback_nonzero.callback_indirect_word_reads()
+            == (std::vector<eon::MillenniumDosVideoFunction13McgaCallbackIndirectWordRead>{
+                {11,0x0d4e,0x2000,0x0004,0}})
+        && mcga_callback_alternate_nonzero.boundary()
+            == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0dad});
 
     using Session = eon::MillenniumDosVideoFunctionZeroSession;
     using State = eon::MillenniumDosVideoFunctionZeroState;

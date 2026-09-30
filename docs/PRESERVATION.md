@@ -4805,9 +4805,11 @@ continuation is now bound through its first flag write: `[$0d35,$0d54)` (31
 bytes, SHA-256
 `64b62dfa3070346ec8c3be344e278d9da3196949f56c66fafb722d0f3314ad5d`). The
 session records CS:`$01e4=1`, then accepts explicit register values and SS:SP
-at `$0d3b`. It records the nine ordered 16-bit stack writes and stops at
-`$0d44`, before reading CS:`$0d18`. These inputs describe a scenario and are not
-captured title-runtime values. No later pointer reads are inferred. These
+at `$0d3b`. It records the nine ordered 16-bit stack writes. A fresh word read
+at CS:`$0d18` loads CX at `$0d44`; a typed far pointer read at CS:`$0d1a` loads
+DS:SI at `$0d49`. The typed word at DS:`SI+8` at `$0d4e` selects `$0d54` when
+zero or `$0dad` when nonzero. These values are scenario inputs, not captured
+title-runtime observations; the session stops at either branch target. These
 on-disk bytes do not establish the runtime values. The caller frame's IP must
 be `$0129`; its CS and FLAGS
 remain explicit inputs and are returned verbatim only on the separate IRET

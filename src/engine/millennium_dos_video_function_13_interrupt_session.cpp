@@ -210,6 +210,64 @@ void MillenniumDosVideoFunction13InterruptSession::execute_mcga_callback_registe
     callback_next_instruction_ = 0x0d44;
 }
 
+void MillenniumDosVideoFunction13InterruptSession::observe_mcga_callback_alternate_cx_read(
+    const MillenniumDosVideoFunction13McgaCallbackRead& read) {
+    if (state_ != MillenniumDosVideoFunction13InterruptState::callback_local_boundary
+        || callback_next_instruction_ != 0x0d44
+        || read.sequence != last_sequence_ + 1
+        || read.instruction_address != 0x0d44
+        || read.segment != driver_segment_
+        || read.offset != 0x0d18
+        || read.width != MillenniumDosVideoFunction13McgaCallbackReadWidth::word) {
+        throw std::runtime_error("Detached Millennium DOS MCGA alternate CX read");
+    }
+    callback_reads_.reserve(callback_reads_.size() + 1);
+    callback_register_effects_.reserve(callback_register_effects_.size() + 1);
+    callback_reads_.push_back(read);
+    callback_register_effects_.push_back({0x0d44,
+        MillenniumDosVideoFunction13McgaCallbackRegister16::cx,read.value});
+    last_sequence_ = read.sequence;
+    callback_next_instruction_ = 0x0d49;
+}
+
+void MillenniumDosVideoFunction13InterruptSession::observe_mcga_callback_alternate_pointer(
+    const MillenniumDosVideoFunction13McgaCallbackFarPointerRead& read) {
+    if (state_ != MillenniumDosVideoFunction13InterruptState::callback_local_boundary
+        || callback_next_instruction_ != 0x0d49
+        || read.sequence != last_sequence_ + 1
+        || read.instruction_address != 0x0d49
+        || read.source_segment != driver_segment_
+        || read.source_offset != 0x0d1a) {
+        throw std::runtime_error("Detached Millennium DOS MCGA alternate far pointer");
+    }
+    callback_far_pointer_reads_.reserve(callback_far_pointer_reads_.size() + 1);
+    callback_register_effects_.reserve(callback_register_effects_.size() + 2);
+    callback_far_pointer_reads_.push_back(read);
+    callback_far_pointer_ = read;
+    callback_register_effects_.push_back({0x0d49,
+        MillenniumDosVideoFunction13McgaCallbackRegister16::ds,read.value_segment});
+    callback_register_effects_.push_back({0x0d49,
+        MillenniumDosVideoFunction13McgaCallbackRegister16::si,read.value_offset});
+    last_sequence_ = read.sequence;
+    callback_next_instruction_ = 0x0d4e;
+}
+
+void MillenniumDosVideoFunction13InterruptSession::observe_mcga_callback_alternate_indirect_word(
+    const MillenniumDosVideoFunction13McgaCallbackIndirectWordRead& read) {
+    if (state_ != MillenniumDosVideoFunction13InterruptState::callback_local_boundary
+        || callback_next_instruction_ != 0x0d4e
+        || !callback_far_pointer_
+        || read.sequence != last_sequence_ + 1
+        || read.instruction_address != 0x0d4e
+        || read.segment != callback_far_pointer_->value_segment
+        || read.offset != static_cast<std::uint16_t>(callback_far_pointer_->value_offset + 8U)) {
+        throw std::runtime_error("Detached Millennium DOS MCGA alternate indirect word");
+    }
+    callback_indirect_word_reads_.push_back(read);
+    last_sequence_ = read.sequence;
+    callback_next_instruction_ = read.value == 0 ? 0x0d54 : 0x0dad;
+}
+
 void MillenniumDosVideoFunction13InterruptSession::execute_iret(
     const std::uint64_t sequence, const std::uint16_t instruction_address) {
     const auto iret_address = static_cast<std::uint16_t>(
