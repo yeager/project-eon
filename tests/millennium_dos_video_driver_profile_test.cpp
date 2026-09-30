@@ -914,6 +914,59 @@ int main(const int argc, char** argv) {
         && ega_stack->dx == 0x03ce && !ega_stack->zero_flag);
     expect_rejected([&] { ega_unknown.advance_ega_success_stack_prefix(0x2000, 0x0100); });
 
+    Session ega_multi_count(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640, 0xff);
+    ega_multi_count.observe_bios_result(Result{1,0x1d6,0x10,0x560e,0,0,0,0});
+    ega_multi_count.observe_bios_result(Result{2,0x1de,0x10,0x000e,0,0,0,0});
+    ega_multi_count.observe_bios_result(Result{3,0x1e2,0x10,0x700e,0,4,0,0});
+    ega_multi_count.advance_success_postlude_prefix();
+    ega_multi_count.advance_ega_success_stack_prefix(0x2000, 0x0100);
+    ega_multi_count.advance_ega_multi_count_loop(0x4567);
+    const auto ega_loop = ega_multi_count.ega_loop_outcome();
+    assert((ega_multi_count.state() == State::mode_success_ega_loop_recorded
+        && ega_loop && ega_loop->instruction_address == 0x022e
+        && ega_loop->ds == 0x4567 && ega_loop->es == 0xac00
+        && ega_loop->ax == 0 && ega_loop->bx == 0x007e
+        && ega_loop->cx == 0 && ega_loop->dx == 0xb000 && ega_loop->si == 0
+        && ega_loop->di == 0x1f40
+        && ega_loop->ss == 0x2000 && ega_loop->sp_before == 0x0100
+        && ega_loop->sp_after == 0x00fe
+        && ega_loop->port_write
+            == eon::MillenniumDosVideoFunctionZeroEgaPortWriteIntent{0x0207,0x03ce,0xff08}
+        && ega_loop->writes.size() == 18
+        && ega_multi_count.ega_stack_outcome()->endpoint
+            == eon::MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_loop_pop
+        && ega_multi_count.ega_stack_outcome()->instruction_address == 0x022e));
+    assert((ega_loop->writes[0]
+        == eon::MillenniumDosVideoFunctionZeroEgaWriteIntent{0x020d,0x4567,0x008e,1,0}));
+    assert((ega_loop->writes[1]
+        == eon::MillenniumDosVideoFunctionZeroEgaWriteIntent{0x0212,0x4567,0x0091,1,3}));
+    assert((ega_loop->writes[2]
+        == eon::MillenniumDosVideoFunctionZeroEgaWriteIntent{0x0218,0x4567,0x0072,2,0}));
+    assert((ega_loop->writes[4]
+        == eon::MillenniumDosVideoFunctionZeroEgaWriteIntent{0x021a,0x4567,0x0075,1,0xa4}));
+    assert((ega_loop->writes[5]
+        == eon::MillenniumDosVideoFunctionZeroEgaWriteIntent{0x0225,0xa400,0,0x1f40,0}));
+    assert((ega_loop->writes[7]
+        == eon::MillenniumDosVideoFunctionZeroEgaWriteIntent{0x0212,0x4567,0x0090,1,2}));
+    assert((ega_loop->writes[11]
+        == eon::MillenniumDosVideoFunctionZeroEgaWriteIntent{0x0225,0xa800,0,0x1f40,0}));
+    assert((ega_loop->writes[13]
+        == eon::MillenniumDosVideoFunctionZeroEgaWriteIntent{0x0212,0x4567,0x008f,1,1}));
+    assert((ega_loop->writes[17]
+        == eon::MillenniumDosVideoFunctionZeroEgaWriteIntent{0x0225,0xac00,0,0x1f40,0}));
+    expect_rejected([&] { ega_multi_count.advance_ega_multi_count_loop(0x4567); });
+
+    Session ega_zero_count(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640, 0xff);
+    ega_zero_count.observe_bios_result(Result{1,0x1d6,0x10,0x560e,0,0,0,0});
+    ega_zero_count.observe_bios_result(Result{2,0x1de,0x10,0x000e,0,0,0,0});
+    ega_zero_count.observe_bios_result(Result{3,0x1e2,0x10,0x700e,0,0,0,0});
+    ega_zero_count.advance_success_postlude_prefix();
+    ega_zero_count.advance_ega_success_stack_prefix(0x2000, 0x0100);
+    expect_rejected([&] { ega_zero_count.advance_ega_multi_count_loop(0x4567); });
+    assert(ega_zero_count.state() == State::mode_success_stack_prefix_recorded
+        && !ega_zero_count.ega_loop_outcome()
+        && ega_zero_count.ega_stack_outcome()->si == 0xffff);
+
     Session ega_single_count(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640, 0xff);
     ega_single_count.observe_bios_result(Result{1,0x1d6,0x10,0x560e,0,0,0,0});
     ega_single_count.observe_bios_result(Result{2,0x1de,0x10,0x000e,0,0,0,0});

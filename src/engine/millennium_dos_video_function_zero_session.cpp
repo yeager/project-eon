@@ -4,6 +4,7 @@
 
 #include <limits>
 #include <stdexcept>
+#include <utility>
 
 namespace eon {
 
@@ -82,6 +83,16 @@ MillenniumDosVideoFunctionZeroSession::MillenniumDosVideoFunctionZeroSession(
                 != single_store_hash) {
             throw std::runtime_error("Unsupported Millennium DOS EGA single-count store prefix");
         }
+        constexpr auto multi_count_offset = static_cast<std::size_t>(0x207);
+        constexpr auto multi_count_size = static_cast<std::size_t>(0x27);
+        constexpr auto multi_count_hash =
+            "dab8f18d22093825280d90c323e994d8c1ee8a8cb3d8eb321cd4d4dc16a09a50";
+        if (multi_count_offset > english_driver.size()
+            || english_driver.size() - multi_count_offset < multi_count_size
+            || to_hex(sha256(english_driver.subspan(multi_count_offset, multi_count_size)))
+                != multi_count_hash) {
+            throw std::runtime_error("Unsupported Millennium DOS EGA multi-count loop");
+        }
     }
 }
 
@@ -111,6 +122,7 @@ MillenniumDosVideoFunctionZeroSession::boundary() const {
     case MillenniumDosVideoFunctionZeroState::mode_match_continuation_boundary:
     case MillenniumDosVideoFunctionZeroState::mode_success_postlude_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_stack_prefix_recorded:
+    case MillenniumDosVideoFunctionZeroState::mode_success_ega_loop_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_single_pop_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_single_store_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_mismatch_ret_boundary:
@@ -161,6 +173,7 @@ void MillenniumDosVideoFunctionZeroSession::observe_bios_result(
     case MillenniumDosVideoFunctionZeroState::mode_match_continuation_boundary:
     case MillenniumDosVideoFunctionZeroState::mode_success_postlude_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_stack_prefix_recorded:
+    case MillenniumDosVideoFunctionZeroState::mode_success_ega_loop_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_single_pop_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_single_store_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_mismatch_ret_boundary:
@@ -233,6 +246,53 @@ void MillenniumDosVideoFunctionZeroSession::advance_ega_success_stack_prefix(
             0xff08, prior.bx, prior.cx, 0x03ce, std::nullopt, std::nullopt, false};
     }
     state_ = MillenniumDosVideoFunctionZeroState::mode_success_stack_prefix_recorded;
+}
+
+void MillenniumDosVideoFunctionZeroSession::advance_ega_multi_count_loop(
+    const std::uint16_t ds) {
+    if (driver_.kind != MillenniumDosVideoDriverKind::ega640
+        || state_ != MillenniumDosVideoFunctionZeroState::mode_success_stack_prefix_recorded
+        || !ega_stack_outcome_
+        || ega_stack_outcome_->endpoint != MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_vga_out
+        || ega_stack_outcome_->si == 0 || ega_stack_outcome_->si > 3) {
+        throw std::runtime_error("Millennium DOS EGA multi-count loop is not pending");
+    }
+
+    const auto& stack = *ega_stack_outcome_;
+    auto si = stack.si;
+    auto bx = stack.bx;
+    auto dx = std::uint16_t{0xa400};
+    auto es = std::uint16_t{0};
+    std::vector<MillenniumDosVideoFunctionZeroEgaWriteIntent> writes;
+    writes.reserve(static_cast<std::size_t>(si) * 6U);
+    do {
+        writes.push_back({0x020d, ds, 0x008e, 1, 0});
+        writes.push_back({0x0212, ds, static_cast<std::uint16_t>(0x008e + si), 1,
+            static_cast<std::uint8_t>(si)});
+        es = dx;
+        writes.push_back({0x0218, ds, bx, 2, 0});
+        writes.push_back({0x021a, ds, static_cast<std::uint16_t>(bx + 2U), 1, 0});
+        writes.push_back({0x021a, ds, static_cast<std::uint16_t>(bx + 3U), 1,
+            static_cast<std::uint8_t>(es >> 8U)});
+        writes.push_back({0x0225, es, 0, 0x1f40, 0});
+        bx = static_cast<std::uint16_t>(bx + 4U);
+        dx = static_cast<std::uint16_t>(dx + 0x0400U);
+        --si;
+    } while (si != 0);
+
+    ega_loop_outcome_ = MillenniumDosVideoFunctionZeroEgaLoopOutcome{
+        0x022e, ds, es, 0, bx, 0, dx, 0, 0x1f40,
+        stack.ss, stack.sp_before, stack.sp_after, {0x0207,0x03ce,0xff08},
+        std::move(writes)};
+    ega_stack_outcome_->endpoint = MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_loop_pop;
+    ega_stack_outcome_->instruction_address = 0x022e;
+    ega_stack_outcome_->ds = ds;
+    ega_stack_outcome_->ax = 0;
+    ega_stack_outcome_->bx = bx;
+    ega_stack_outcome_->cx = 0;
+    ega_stack_outcome_->dx = dx;
+    ega_stack_outcome_->si = 0;
+    state_ = MillenniumDosVideoFunctionZeroState::mode_success_ega_loop_recorded;
 }
 
 void MillenniumDosVideoFunctionZeroSession::advance_ega_single_count_pop_prefix() {

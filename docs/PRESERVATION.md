@@ -4749,6 +4749,23 @@ session records the pending byte write of AL to DS:$008a, sets `AH=$04`, and
 stops at the RET opcode `$0234`. It does not mutate memory or read the caller
 stack/RET destination; no return is claimed.
 
+The EGA640 multi-count prefix `[$0207,$022e)` (39 bytes, SHA-256
+`dab8f18d22093825280d90c323e994d8c1ee8a8cb3d8eb321cd4d4dc16a09a50`)
+is now modeled for the bounded loop after an explicit `DS` input. It records
+the ordered `DS:$008e` and `DS:($008e+SI)` bytes, descriptor words at `DS:BX`,
+and the `ES:0000` `$1f40`-byte zero-fill for each selected plane. `ES` begins
+at `$a400` and advances by `$0400`; `BX` advances by four. At most three
+iterations are admitted for nonzero counts because the preceding function
+clamps the requested count to four and the stack prefix decrements it before
+this loop. `DI` ends at `$1f40`, `CX` at zero, and `SI` at zero. A zero `CX`
+decrements to `$ffff` and is rejected as outside the
+bounded step. The state
+stops at the balancing `POP AX` `$022e`, retaining the pending caller-stack
+word. The outcome records the outgoing `$ff08` write to VGA port `$03ce` at
+`$0207` as an I/O intent; no device response or graphics effect is inferred.
+These local effects are driven by the typed BIOS `CX` scenario input, not
+captured runtime observations.
+
 The read-in-place loader audit additionally binds `$02cf..$031b` (file
 `+$01cf`, 77 bytes, SHA-256
 `5c7f7ec03aa3109d4df2fbdec457ca7e2be412fc9d818bd07252a039fb8c6671`)

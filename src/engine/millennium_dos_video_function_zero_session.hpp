@@ -16,6 +16,7 @@ enum class MillenniumDosVideoFunctionZeroState {
     mode_match_continuation_boundary,
     mode_success_postlude_prefix_recorded,
     mode_success_stack_prefix_recorded,
+    mode_success_ega_loop_recorded,
     mode_success_single_pop_prefix_recorded,
     mode_success_single_store_prefix_recorded,
     mode_mismatch_ret_boundary,
@@ -85,6 +86,8 @@ enum class MillenniumDosVideoFunctionZeroEgaStackEndpoint {
     ega_ret,
     // Stop before the first VGA port write; no device I/O is modeled.
     ega_vga_out,
+    // The EGA multi-count loop has completed; stop before its balancing POP.
+    ega_loop_pop,
 };
 
 struct MillenniumDosVideoFunctionZeroEgaStackOutcome {
@@ -97,6 +100,35 @@ struct MillenniumDosVideoFunctionZeroEgaStackOutcome {
     std::optional<MillenniumDosVideoFunctionZeroLocalWrite> local_write;
     bool zero_flag = false;
     constexpr bool operator==(const MillenniumDosVideoFunctionZeroEgaStackOutcome&) const = default;
+};
+
+// A hash-bound EGA clear is represented as ordered, bounded write intents.
+// Fill intents avoid allocating thousands of bytes while preserving the exact
+// segment, offset, count, and value written by REP STOSB.
+struct MillenniumDosVideoFunctionZeroEgaWriteIntent {
+    std::uint16_t instruction_address = 0;
+    std::uint16_t segment = 0;
+    std::uint16_t offset = 0;
+    std::uint16_t count = 0;
+    std::uint8_t value = 0;
+    constexpr bool operator==(const MillenniumDosVideoFunctionZeroEgaWriteIntent&) const = default;
+};
+
+struct MillenniumDosVideoFunctionZeroEgaPortWriteIntent {
+    std::uint16_t instruction_address = 0;
+    std::uint16_t port = 0;
+    std::uint16_t value = 0;
+    constexpr bool operator==(const MillenniumDosVideoFunctionZeroEgaPortWriteIntent&) const = default;
+};
+
+struct MillenniumDosVideoFunctionZeroEgaLoopOutcome {
+    std::uint16_t instruction_address = 0;
+    std::uint16_t ds = 0;
+    std::uint16_t es = 0;
+    std::uint16_t ax = 0, bx = 0, cx = 0, dx = 0, si = 0, di = 0;
+    std::uint16_t ss = 0, sp_before = 0, sp_after = 0;
+    MillenniumDosVideoFunctionZeroEgaPortWriteIntent port_write{};
+    std::vector<MillenniumDosVideoFunctionZeroEgaWriteIntent> writes;
 };
 
 struct MillenniumDosVideoFunctionZeroPostludeOutcome {
@@ -145,10 +177,13 @@ public:
     postlude_prefix_outcome() const { return postlude_prefix_outcome_; }
     [[nodiscard]] std::optional<MillenniumDosVideoFunctionZeroEgaStackOutcome>
     ega_stack_outcome() const { return ega_stack_outcome_; }
+    [[nodiscard]] std::optional<MillenniumDosVideoFunctionZeroEgaLoopOutcome>
+    ega_loop_outcome() const { return ega_loop_outcome_; }
 
     void observe_bios_result(const MillenniumDosVideoFunctionZeroBiosResult& result);
     void advance_success_postlude_prefix();
     void advance_ega_success_stack_prefix(std::uint16_t ss, std::uint16_t sp);
+    void advance_ega_multi_count_loop(std::uint16_t ds);
     void advance_ega_single_count_pop_prefix();
     void advance_ega_single_count_store_prefix(std::uint16_t ds);
 
@@ -162,6 +197,7 @@ private:
     std::optional<MillenniumDosVideoFunctionZeroOutcome> outcome_;
     std::optional<MillenniumDosVideoFunctionZeroPostludeOutcome> postlude_prefix_outcome_;
     std::optional<MillenniumDosVideoFunctionZeroEgaStackOutcome> ega_stack_outcome_;
+    std::optional<MillenniumDosVideoFunctionZeroEgaLoopOutcome> ega_loop_outcome_;
 };
 
 } // namespace eon

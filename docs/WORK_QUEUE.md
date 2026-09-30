@@ -33,7 +33,13 @@ register clamp. Its next prefix records an explicit pending `PUSH SI` stack
 write, then stops before one-count `POP AX` `$022e` or VGA `OUT` `$0207`. The
 one-count path advances through its paired POP and, with explicit DS input,
 records the pending `$008a` store and stops at RET `$0234`; continue only with
-an exact caller/return observation.
+an exact caller/return observation. The multi-count EGA path now accepts
+explicit DS and records each bounded descriptor write and `$1f40`-byte plane
+clear through the balancing POP at `$022e`. It stops before that POP consumes
+the caller-stack word and retains the preceding VGA `OUT` as a port-write
+intent, without modeling device effects.
+The zero-count input decrements to `$ffff` in the original and is rejected by
+this bounded step rather than expanding into an unbounded clear loop.
 MCGA's branch step stops at the `$023d` single-count target or before INT
 `$92` at `$021f`. No graphics or private-service behavior is inferred.
 The standalone English function `$1f` session now requires the explicit
