@@ -1154,10 +1154,13 @@ void MillenniumDosVideoFunction13InterruptSession::execute_mcga_callback_return_
 
 void MillenniumDosVideoFunction13InterruptSession::execute_mcga_callback_return(
     const std::uint64_t sequence, const std::uint16_t instruction_address) {
+    const auto palette_return = instruction_address == 0x0dca
+        && callback_next_instruction_ == 0x0dca && callback_return_pop_count_ == 9;
+    const auto counter_return = instruction_address == 0x0d10
+        && callback_next_instruction_ == 0x0d10 && callback_return_pop_count_ == 0;
     if (kind_ != MillenniumDosVideoDriverKind::mcga
         || state_ != MillenniumDosVideoFunction13InterruptState::callback_local_boundary
-        || callback_next_instruction_ != 0x0dca || sequence != last_sequence_ + 1
-        || instruction_address != 0x0dca || callback_return_pop_count_ != 9) {
+        || (!palette_return && !counter_return) || sequence != last_sequence_ + 1) {
         throw std::runtime_error("Detached Millennium DOS MCGA callback RET");
     }
     callback_iret_pending_ = true;

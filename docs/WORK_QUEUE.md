@@ -80,8 +80,9 @@ through `$0db5` with explicit SI/DS/CX stack words and a branch to `$0d4e` or
 the RET at `$0dca` to the hash-bound `$0021` CALL return at `$0024`, then reaches
 the callback-path IRET boundary. This proves only the static route; runtime
 reachability remains unobserved. Other VGA port I/O remains outside the model.
-`$0d10`'s unknown return destination and `$0ca2` remain
-outside this session. The zero `$01e5` path still stops at IRET. These scenario
+The `$0d10` RET also returns to the hash-bound `$0024` CALL continuation;
+`$0ca2` still stops before its register-save block. The zero `$01e5` path still
+stops at IRET. These scenario
 inputs do not authenticate the installed vector or prove title execution
 selected this handler.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,

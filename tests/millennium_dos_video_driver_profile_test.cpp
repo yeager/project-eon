@@ -213,6 +213,11 @@ int main(const int argc, char** argv) {
             {0x0d04,0x3456,0x01e4,0},
             {0x0d0a,0x3456,0x01e5,0}}));
     expect_rejected([&] { mcga_callback.execute_iret(7,0x0020); });
+    mcga_callback.execute_mcga_callback_return(7,0x0d10);
+    assert(mcga_callback.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0024});
+    mcga_callback.execute_iret(8,0x0024);
+    assert(mcga_callback.state() == Function13InterruptState::returned);
 
     Function13Interrupt mcga_callback_empty_counter(mcga_bytes,
         eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
@@ -230,7 +235,6 @@ int main(const int argc, char** argv) {
         && mcga_callback_empty_counter.callback_driver_effects()
             == (std::vector<eon::MillenniumDosVideoFunction13DriverByteEffect>{{0x0c94,0x3456,0x01e4,1}})
         && mcga_callback_empty_counter.callback_driver_word_effects().empty());
-
     Function13Interrupt mcga_callback_wrap_counter(mcga_bytes,
         eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
     mcga_callback_wrap_counter.observe_interrupt_request({1,0x0127,0x0013,0x0129,0x5678,0x0302});
@@ -268,6 +272,9 @@ int main(const int argc, char** argv) {
     assert(mcga_callback_zero.state() == Function13InterruptState::callback_local_boundary
         && mcga_callback_zero.boundary()
         == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d10});
+    mcga_callback_zero.execute_mcga_callback_return(7,0x0d10);
+    mcga_callback_zero.execute_iret(8,0x0024);
+    assert(mcga_callback_zero.state() == Function13InterruptState::returned);
 
     Function13Interrupt mcga_callback_nonzero(mcga_bytes,
         eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
