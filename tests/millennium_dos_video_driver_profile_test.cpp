@@ -973,6 +973,28 @@ int main(const int argc, char** argv) {
         && ega_multi_ret->ds == 0x4567
         && ega_multi_ret->local_write
             == eon::MillenniumDosVideoFunctionZeroLocalWrite{0x022f,0x008a,4}));
+    expect_rejected([&] {
+        ega_multi_count.observe_ega_near_return({4,0x0234,0x2000,0x00fe,0x5678});
+    });
+    expect_rejected([&] {
+        ega_multi_count.observe_ega_near_return({5,0x0235,0x2000,0x0100,0x5678});
+    });
+    assert(ega_multi_count.state() == State::mode_success_store_prefix_recorded
+        && ega_multi_count.next_sequence() == 4 && !ega_multi_count.ega_return_outcome());
+    ega_multi_count.observe_ega_near_return({4,0x0234,0x2000,0x0100,0x5678});
+    const auto ega_near_ret = ega_multi_count.ega_return_outcome();
+    assert(ega_multi_count.state() == State::mode_success_returned_boundary
+        && ega_multi_count.next_sequence() == 5
+        && ega_near_ret
+        && ega_near_ret->observation.return_ip == 0x5678
+        && ega_near_ret->observation.ss == 0x2000
+        && ega_near_ret->observation.sp == 0x0100
+        && ega_near_ret->sp_after == 0x0102
+        && ega_multi_count.ega_stack_outcome()->endpoint
+            == eon::MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_returned);
+    expect_rejected([&] {
+        ega_multi_count.observe_ega_near_return({5,0x0234,0x2000,0x0100,0x5678});
+    });
 
     Session ega_zero_count(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640, 0xff);
     ega_zero_count.observe_bios_result(Result{1,0x1d6,0x10,0x560e,0,0,0,0});

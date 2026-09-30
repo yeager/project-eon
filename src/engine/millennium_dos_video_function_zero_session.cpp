@@ -125,6 +125,7 @@ MillenniumDosVideoFunctionZeroSession::boundary() const {
     case MillenniumDosVideoFunctionZeroState::mode_success_ega_loop_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_pop_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_store_prefix_recorded:
+    case MillenniumDosVideoFunctionZeroState::mode_success_returned_boundary:
     case MillenniumDosVideoFunctionZeroState::mode_mismatch_ret_boundary:
         return std::nullopt;
     }
@@ -176,6 +177,7 @@ void MillenniumDosVideoFunctionZeroSession::observe_bios_result(
     case MillenniumDosVideoFunctionZeroState::mode_success_ega_loop_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_pop_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_store_prefix_recorded:
+    case MillenniumDosVideoFunctionZeroState::mode_success_returned_boundary:
     case MillenniumDosVideoFunctionZeroState::mode_mismatch_ret_boundary:
         throw std::runtime_error("Millennium DOS function-zero session has stopped");
     }
@@ -334,6 +336,28 @@ void MillenniumDosVideoFunctionZeroSession::advance_ega_success_store_prefix(
     outcome.endpoint = MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_ret;
     outcome.instruction_address = 0x0234;
     state_ = MillenniumDosVideoFunctionZeroState::mode_success_store_prefix_recorded;
+}
+
+void MillenniumDosVideoFunctionZeroSession::observe_ega_near_return(
+    const MillenniumDosVideoFunctionZeroEgaReturnObservation& observation) {
+    if (driver_.kind != MillenniumDosVideoDriverKind::ega640
+        || state_ != MillenniumDosVideoFunctionZeroState::mode_success_store_prefix_recorded
+        || !ega_stack_outcome_
+        || ega_stack_outcome_->endpoint != MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_ret
+        || observation.sequence != next_sequence_
+        || observation.instruction_address != 0x0234
+        || observation.ss != ega_stack_outcome_->ss
+        || observation.sp != ega_stack_outcome_->sp_before
+        || next_sequence_ == std::numeric_limits<std::uint64_t>::max()) {
+        throw std::runtime_error("Detached Millennium DOS EGA near-RET stack observation");
+    }
+
+    ega_return_outcome_ = MillenniumDosVideoFunctionZeroEgaReturnOutcome{
+        observation, static_cast<std::uint16_t>(observation.sp + 2U)};
+    ega_stack_outcome_->endpoint = MillenniumDosVideoFunctionZeroEgaStackEndpoint::ega_returned;
+    ega_stack_outcome_->sp_after = ega_return_outcome_->sp_after;
+    state_ = MillenniumDosVideoFunctionZeroState::mode_success_returned_boundary;
+    ++next_sequence_;
 }
 
 } // namespace eon

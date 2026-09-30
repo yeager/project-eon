@@ -37,8 +37,10 @@ an exact caller/return observation. The multi-count EGA path now accepts
 explicit DS and records each bounded descriptor write and `$1f40`-byte plane
 clear through the balancing POP at `$022e`. The shared local-pop/store path
 then restores SP and records the `$008a` write through RET `$0234`; its RET
-destination remains unknown. The loop outcome retains the preceding VGA
-`OUT` as a port-write intent, without modeling device effects.
+destination is accepted only as a typed stack word at that exact `SS:SP`.
+The session records the near-RET IP/SP effect but does not execute the target.
+The loop outcome retains the preceding VGA `OUT` as a port-write intent,
+without modeling device effects.
 The zero-count input decrements to `$ffff` in the original and is rejected by
 this bounded step rather than expanding into an unbounded clear loop.
 MCGA's branch step stops at the `$023d` single-count target or before INT

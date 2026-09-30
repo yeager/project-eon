@@ -19,6 +19,7 @@ enum class MillenniumDosVideoFunctionZeroState {
     mode_success_ega_loop_recorded,
     mode_success_pop_prefix_recorded,
     mode_success_store_prefix_recorded,
+    mode_success_returned_boundary,
     mode_mismatch_ret_boundary,
 };
 
@@ -88,6 +89,8 @@ enum class MillenniumDosVideoFunctionZeroEgaStackEndpoint {
     ega_vga_out,
     // The EGA multi-count loop has completed; stop before its balancing POP.
     ega_loop_pop,
+    // RET consumed an explicitly observed near-return word at the caller SP.
+    ega_returned,
 };
 
 struct MillenniumDosVideoFunctionZeroEgaStackOutcome {
@@ -129,6 +132,21 @@ struct MillenniumDosVideoFunctionZeroEgaLoopOutcome {
     std::uint16_t ss = 0, sp_before = 0, sp_after = 0;
     MillenniumDosVideoFunctionZeroEgaPortWriteIntent port_write{};
     std::vector<MillenniumDosVideoFunctionZeroEgaWriteIntent> writes;
+};
+
+struct MillenniumDosVideoFunctionZeroEgaReturnObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t instruction_address = 0;
+    std::uint16_t ss = 0;
+    std::uint16_t sp = 0;
+    std::uint16_t return_ip = 0;
+    constexpr bool operator==(const MillenniumDosVideoFunctionZeroEgaReturnObservation&) const = default;
+};
+
+struct MillenniumDosVideoFunctionZeroEgaReturnOutcome {
+    MillenniumDosVideoFunctionZeroEgaReturnObservation observation{};
+    std::uint16_t sp_after = 0;
+    constexpr bool operator==(const MillenniumDosVideoFunctionZeroEgaReturnOutcome&) const = default;
 };
 
 struct MillenniumDosVideoFunctionZeroPostludeOutcome {
@@ -179,6 +197,8 @@ public:
     ega_stack_outcome() const { return ega_stack_outcome_; }
     [[nodiscard]] std::optional<MillenniumDosVideoFunctionZeroEgaLoopOutcome>
     ega_loop_outcome() const { return ega_loop_outcome_; }
+    [[nodiscard]] std::optional<MillenniumDosVideoFunctionZeroEgaReturnOutcome>
+    ega_return_outcome() const { return ega_return_outcome_; }
 
     void observe_bios_result(const MillenniumDosVideoFunctionZeroBiosResult& result);
     void advance_success_postlude_prefix();
@@ -186,6 +206,8 @@ public:
     void advance_ega_multi_count_loop(std::uint16_t ds);
     void advance_ega_success_pop_prefix();
     void advance_ega_success_store_prefix(std::uint16_t ds);
+    void observe_ega_near_return(
+        const MillenniumDosVideoFunctionZeroEgaReturnObservation& observation);
 
 private:
     MillenniumDosVideoDriverProfile driver_;
@@ -198,6 +220,7 @@ private:
     std::optional<MillenniumDosVideoFunctionZeroPostludeOutcome> postlude_prefix_outcome_;
     std::optional<MillenniumDosVideoFunctionZeroEgaStackOutcome> ega_stack_outcome_;
     std::optional<MillenniumDosVideoFunctionZeroEgaLoopOutcome> ega_loop_outcome_;
+    std::optional<MillenniumDosVideoFunctionZeroEgaReturnOutcome> ega_return_outcome_;
 };
 
 } // namespace eon

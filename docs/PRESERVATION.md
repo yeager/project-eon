@@ -4763,11 +4763,16 @@ bounded step. After the loop, execution stops at the balancing `POP AX`
 `$022e`. Both EGA count paths now
 consume their immediately preceding pushed value, restore the supplied `SP`,
 and, with explicit `DS`, record the `$008a` byte write and `AH=$04` through
-the RET opcode `$0234`. The RET destination remains unknown. The outcome
-records the outgoing `$ff08` write to VGA port `$03ce` at `$0207` as an I/O
-intent; no device response or graphics effect is inferred. These local
-effects are driven by the typed BIOS `CX` scenario input, not captured runtime
-observations.
+the RET opcode `$0234`. An exhaustive raw-byte scan of the hash-admitted
+EGA640 leaf found no `E8 rel16` encoding whose target is function-zero entry
+`$01c8`; this does not exclude indirect dispatch or callers outside this
+driver. The session accepts the near-RET word only as a typed stack
+observation at the exact `SS:SP` restored by the local POP, then records the
+16-bit `SP+2` effect without interpreting or executing the supplied return
+IP. The outcome records the outgoing `$ff08` write to VGA port `$03ce` at
+`$0207` as an I/O intent; no device response or graphics effect is inferred.
+These local effects are driven by the typed BIOS `CX` scenario input, not
+captured runtime observations.
 
 The read-in-place loader audit additionally binds `$02cf..$031b` (file
 `+$01cf`, 77 bytes, SHA-256
