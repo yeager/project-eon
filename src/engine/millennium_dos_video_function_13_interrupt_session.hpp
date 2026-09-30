@@ -60,7 +60,9 @@ struct MillenniumDosVideoFunction13McgaCallbackRead {
 
 enum class MillenniumDosVideoFunction13McgaCallbackRegister : std::uint8_t {
     al,
+    ax,
     cx,
+    dx,
     ds,
     si,
     es,
@@ -215,6 +217,9 @@ public:
         std::uint16_t instruction_address);
     void execute_mcga_callback_copy_route(std::uint64_t sequence,
         std::uint16_t instruction_address);
+    void observe_mcga_callback_copy_height(const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void observe_mcga_callback_copy_width(const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void observe_mcga_callback_copy_limit(const MillenniumDosVideoFunction13McgaCallbackRead& read);
     void execute_iret(std::uint64_t sequence, std::uint16_t instruction_address);
 
 private:
@@ -237,6 +242,8 @@ private:
     std::vector<MillenniumDosVideoFunction13McgaCallbackMemoryWordEffect> callback_memory_word_effects_;
     std::optional<MillenniumDosVideoFunction13McgaCallbackFarPointerRead> callback_far_pointer_;
     std::optional<std::uint16_t> callback_cx_;
+    std::optional<std::uint8_t> callback_copy_height_;
+    std::optional<std::uint8_t> callback_copy_width_;
     std::uint16_t callback_next_instruction_ = 0;
 };
 

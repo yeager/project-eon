@@ -4822,10 +4822,17 @@ CX. The model records these as explicit memory/register effects and reaches
 `[$0dcb,$0dcd)` (SHA-256
 `576c81f81d170ff0d2580e411b96e98c074321d8ff24b5d9d9a9f311b8a30d39`) jumps
 to `$0e46`, also recorded as a boundary. These scenario inputs do not establish
-runtime values. The model stops at `$0dcd`, `$0db5`, and `$0e46`; it does not
-execute the copy body, VGA port I/O, or saved-register epilogue.
-These inputs are not captured title-runtime observations. These on-disk bytes
-do not establish the runtime values. The caller frame's IP must be `$0129`; its
+runtime values. The authenticated setup span `[$0e46,$0e71)` (43 bytes, SHA-256
+`8e9f07aba6a866c0c1ebd9192f5191d9b9c13608d07c74927adf6f1731cf4a3d`) accepts
+the descriptor byte at DS:`SI+2` at `$0e49`, the byte at DS:`SI+1` at `$0e55`,
+and the word at DS:`SI+6` at `$0e62`. With `h` and `w` denoting those bytes,
+`limit` the word, and `video` the previously supplied ES:DI pointer, its local
+effects produce `CX=3*(h+1)`, `SI=video.offset+3*w`, `DI=SI+0x900+3*w`,
+`DX=limit`, and `DS=AX=video.segment`, with 16-bit register wrapping. It stops
+at `$0e71` before reading DS:`SI+0x600`; that read and the remainder of the
+copy body, VGA port I/O, and saved-register epilogue remain outside the model.
+These are scenario inputs, not captured title-runtime observations. The caller
+frame's IP must be `$0129`; its
 CS and FLAGS remain explicit inputs and are returned verbatim only on the
 separate IRET path. The outcome records only direct local register effects and
 supplied port reads. The standalone session does not authenticate an IVT vector, assert

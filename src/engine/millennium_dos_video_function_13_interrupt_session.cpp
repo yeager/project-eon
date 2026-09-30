@@ -30,6 +30,8 @@ MillenniumDosVideoFunction13InterruptSession::MillenniumDosVideoFunction13Interr
         constexpr std::size_t alternate_loop_size = 0x08;
         constexpr std::size_t alternate_copy_route_offset = 0x0dcb;
         constexpr std::size_t alternate_copy_route_size = 0x02;
+        constexpr std::size_t alternate_copy_prefix_offset = 0x0e46;
+        constexpr std::size_t alternate_copy_prefix_size = 0x2b;
         if (callback_offset > english_driver.size()
             || english_driver.size() - callback_offset < callback_size
             || to_hex(sha256(english_driver.subspan(callback_offset, callback_size)))
@@ -61,7 +63,11 @@ MillenniumDosVideoFunction13InterruptSession::MillenniumDosVideoFunction13Interr
             || alternate_copy_route_offset > english_driver.size()
             || english_driver.size() - alternate_copy_route_offset < alternate_copy_route_size
             || to_hex(sha256(english_driver.subspan(alternate_copy_route_offset, alternate_copy_route_size)))
-                != "576c81f81d170ff0d2580e411b96e98c074321d8ff24b5d9d9a9f311b8a30d39") {
+                != "576c81f81d170ff0d2580e411b96e98c074321d8ff24b5d9d9a9f311b8a30d39"
+            || alternate_copy_prefix_offset > english_driver.size()
+            || english_driver.size() - alternate_copy_prefix_offset < alternate_copy_prefix_size
+            || to_hex(sha256(english_driver.subspan(alternate_copy_prefix_offset, alternate_copy_prefix_size)))
+                != "8e9f07aba6a866c0c1ebd9192f5191d9b9c13608d07c74927adf6f1731cf4a3d") {
             throw std::runtime_error("Unsupported Millennium MCGA function-$13 callback spans");
         }
     }
@@ -374,6 +380,119 @@ void MillenniumDosVideoFunction13InterruptSession::execute_mcga_callback_copy_ro
     }
     last_sequence_ = sequence;
     callback_next_instruction_ = 0x0e46;
+}
+
+void MillenniumDosVideoFunction13InterruptSession::observe_mcga_callback_copy_height(
+    const MillenniumDosVideoFunction13McgaCallbackRead& read) {
+    if (state_ != MillenniumDosVideoFunction13InterruptState::callback_local_boundary
+        || callback_next_instruction_ != 0x0e46
+        || !callback_far_pointer_
+        || callback_far_pointer_reads_.size() != 2
+        || callback_stack_effects_.size() != 9
+        || read.sequence != last_sequence_ + 1
+        || read.instruction_address != 0x0e49
+        || read.segment != callback_far_pointer_->value_segment
+        || read.offset != static_cast<std::uint16_t>(callback_far_pointer_->value_offset + 2U)
+        || read.width != MillenniumDosVideoFunction13McgaCallbackReadWidth::byte
+        || read.value > 0x00ff) {
+        throw std::runtime_error("Detached Millennium DOS MCGA callback copy height");
+    }
+    callback_reads_.reserve(callback_reads_.size() + 1);
+    callback_register_effects_.reserve(callback_register_effects_.size() + 6);
+    callback_reads_.push_back(read);
+    callback_register_effects_.push_back({0x0e49,
+        MillenniumDosVideoFunction13McgaCallbackRegister::al,read.value});
+    callback_register_effects_.push_back({0x0e4c,
+        MillenniumDosVideoFunction13McgaCallbackRegister::ax,read.value});
+    const auto rows = static_cast<std::uint16_t>(read.value + 1U);
+    callback_register_effects_.push_back({0x0e4e,
+        MillenniumDosVideoFunction13McgaCallbackRegister::ax,rows});
+    callback_register_effects_.push_back({0x0e4f,
+        MillenniumDosVideoFunction13McgaCallbackRegister::cx,rows});
+    callback_register_effects_.push_back({0x0e51,
+        MillenniumDosVideoFunction13McgaCallbackRegister::ax,
+        static_cast<std::uint16_t>(rows << 1U)});
+    callback_register_effects_.push_back({0x0e53,
+        MillenniumDosVideoFunction13McgaCallbackRegister::cx,
+        static_cast<std::uint16_t>(rows * 3U)});
+    callback_copy_height_ = static_cast<std::uint8_t>(read.value);
+    last_sequence_ = read.sequence;
+    callback_next_instruction_ = 0x0e55;
+}
+
+void MillenniumDosVideoFunction13InterruptSession::observe_mcga_callback_copy_width(
+    const MillenniumDosVideoFunction13McgaCallbackRead& read) {
+    if (state_ != MillenniumDosVideoFunction13InterruptState::callback_local_boundary
+        || callback_next_instruction_ != 0x0e55
+        || !callback_far_pointer_
+        || read.sequence != last_sequence_ + 1
+        || read.instruction_address != 0x0e55
+        || read.segment != callback_far_pointer_->value_segment
+        || read.offset != static_cast<std::uint16_t>(callback_far_pointer_->value_offset + 1U)
+        || read.width != MillenniumDosVideoFunction13McgaCallbackReadWidth::byte
+        || read.value > 0x00ff) {
+        throw std::runtime_error("Detached Millennium DOS MCGA callback copy width");
+    }
+    callback_reads_.reserve(callback_reads_.size() + 1);
+    callback_register_effects_.reserve(callback_register_effects_.size() + 5);
+    callback_reads_.push_back(read);
+    callback_register_effects_.push_back({0x0e55,
+        MillenniumDosVideoFunction13McgaCallbackRegister::al,read.value});
+    callback_register_effects_.push_back({0x0e58,
+        MillenniumDosVideoFunction13McgaCallbackRegister::ax,read.value});
+    callback_register_effects_.push_back({0x0e5a,
+        MillenniumDosVideoFunction13McgaCallbackRegister::dx,read.value});
+    callback_register_effects_.push_back({0x0e5c,
+        MillenniumDosVideoFunction13McgaCallbackRegister::ax,
+        static_cast<std::uint16_t>(read.value << 1U)});
+    callback_register_effects_.push_back({0x0e5e,
+        MillenniumDosVideoFunction13McgaCallbackRegister::ax,
+        static_cast<std::uint16_t>(read.value * 3U)});
+    callback_copy_width_ = static_cast<std::uint8_t>(read.value);
+    last_sequence_ = read.sequence;
+    callback_next_instruction_ = 0x0e62;
+}
+
+void MillenniumDosVideoFunction13InterruptSession::observe_mcga_callback_copy_limit(
+    const MillenniumDosVideoFunction13McgaCallbackRead& read) {
+    if (state_ != MillenniumDosVideoFunction13InterruptState::callback_local_boundary
+        || callback_next_instruction_ != 0x0e62
+        || !callback_far_pointer_
+        || !callback_copy_height_ || !callback_copy_width_
+        || callback_far_pointer_reads_.size() != 2
+        || read.sequence != last_sequence_ + 1
+        || read.instruction_address != 0x0e62
+        || read.segment != callback_far_pointer_->value_segment
+        || read.offset != static_cast<std::uint16_t>(callback_far_pointer_->value_offset + 6U)
+        || read.width != MillenniumDosVideoFunction13McgaCallbackReadWidth::word) {
+        throw std::runtime_error("Detached Millennium DOS MCGA callback copy limit");
+    }
+    const auto video_pointer = callback_far_pointer_reads_.back();
+    const auto width_bytes = static_cast<std::uint16_t>(
+        static_cast<std::uint16_t>(*callback_copy_width_) * 3U);
+    const auto initial_di = video_pointer.value_offset;
+    const auto copy_start = static_cast<std::uint16_t>(initial_di + width_bytes);
+    const auto destination = static_cast<std::uint16_t>(copy_start + 0x0900U + width_bytes);
+    callback_reads_.reserve(callback_reads_.size() + 1);
+    callback_register_effects_.reserve(callback_register_effects_.size() + 9);
+    callback_reads_.push_back(read);
+    callback_register_effects_.push_back({0x0e60,
+        MillenniumDosVideoFunction13McgaCallbackRegister::di,copy_start});
+    callback_register_effects_.push_back({0x0e62,
+        MillenniumDosVideoFunction13McgaCallbackRegister::dx,read.value});
+    callback_register_effects_.push_back({0x0e65,
+        MillenniumDosVideoFunction13McgaCallbackRegister::si,copy_start});
+    callback_register_effects_.push_back({0x0e67,
+        MillenniumDosVideoFunction13McgaCallbackRegister::di,
+        static_cast<std::uint16_t>(copy_start + 0x0900U)});
+    callback_register_effects_.push_back({0x0e6b,
+        MillenniumDosVideoFunction13McgaCallbackRegister::di,destination});
+    callback_register_effects_.push_back({0x0e6d,
+        MillenniumDosVideoFunction13McgaCallbackRegister::ax,video_pointer.value_segment});
+    callback_register_effects_.push_back({0x0e6f,
+        MillenniumDosVideoFunction13McgaCallbackRegister::ds,video_pointer.value_segment});
+    last_sequence_ = read.sequence;
+    callback_next_instruction_ = 0x0e71;
 }
 
 void MillenniumDosVideoFunction13InterruptSession::execute_iret(
