@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cctype>
 #include <fstream>
+#include <functional>
 #include <limits>
 #include <stdexcept>
 #include <string_view>
@@ -301,8 +302,10 @@ std::vector<std::uint8_t> ZipArchive::extract(const ZipEntry& entry) const {
     // Extraction is allowed only through the exact descriptor owned by this
     // archive. ZipEntry is a public value type, so checking its fields or local
     // header alone would let a caller forge a descriptor for unadmitted bytes.
-    const auto admitted = std::find_if(entries_.begin(), entries_.end(),
-        [&entry](const ZipEntry& candidate) { return &candidate == &entry; });
+    const auto admitted = std::lower_bound(entries_.begin(), entries_.end(), &entry,
+        [](const ZipEntry& candidate, const ZipEntry* requested) {
+            return std::less<const ZipEntry*>{}(&candidate, requested);
+        });
     if (admitted == entries_.end()) {
         throw std::runtime_error("ZIP entry was not admitted by this archive");
     }
