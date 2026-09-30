@@ -124,6 +124,10 @@ The title continuation now uses the loaded palette and translates all 37
 mode-one image records. Graphics-driver loading and private interrupt handling
 remain incomplete; these packages do not claim a fully playable replacement.
 
+The Deuteros Amiga interrupt target and its local worker are now hash-bound to
+exact original-media spans. Their invocation cadence, state changes, and audio
+effects remain unproven; this evidence update adds no runtime behavior.
+
 Source: `{revision}`
 Verified build: {build['html_url']}
 

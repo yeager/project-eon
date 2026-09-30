@@ -1,3 +1,9 @@
+project-eon (0.1.1-1) unstable; urgency=medium
+
+  * Add hash-bound static evidence for the Deuteros Amiga interrupt worker.
+
+ -- Daniel Nylander <1206564+yeager@users.noreply.github.com>  Wed, 30 Sep 2026 00:00:00 +0000
+
 project-eon (0.1.0-1) unstable; urgency=medium
 
   * Initial Project Eon package.
