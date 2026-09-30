@@ -608,6 +608,8 @@ if(BUILD_TESTING)
         endif()
         add_test(NAME millennium-dos-title-exec-entry-real-media
             COMMAND eon-millennium-dos-title-exec-entry-test "${EON_DIRECT_DATA_DIR}")
+        set_tests_properties(millennium-dos-title-exec-entry-real-media PROPERTIES
+            TIMEOUT 120)
         add_test(NAME cli-real-direct-directory-start
             COMMAND "${Python3_EXECUTABLE}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_direct_directory_test.py"
