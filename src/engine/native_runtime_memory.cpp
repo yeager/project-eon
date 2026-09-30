@@ -104,14 +104,42 @@ NativeRuntimeMemoryApplyResult NativeRuntimeMemory::apply(const NativeRuntimeEff
         }
     }
 
-    // Commit through complete copies so allocation failure cannot leave a
-    // partially applied batch or a byte state detached from its batch ID.
-    auto next_bytes=bytes_;
-    auto next_batch_ids=applied_batch_ids_;
-    for (const auto& [location,value] : pending) next_bytes[location]=value;
-    next_batch_ids.insert(batch.id);
-    bytes_.swap(next_bytes);
-    applied_batch_ids_.swap(next_batch_ids);
+    struct PreviousByte {
+        NativeRuntimeLocation location;
+        std::uint8_t value=0;
+        bool existed=false;
+    };
+    std::vector<PreviousByte> previous;
+    previous.reserve(pending.size());
+    for (const auto& [location,value] : pending) {
+        static_cast<void>(value);
+        const auto found=bytes_.find(location);
+        previous.push_back({location, found==bytes_.end()?std::uint8_t{0}:found->second,
+            found!=bytes_.end()});
+    }
+
+    // Record the batch before touching memory. If any new map node allocation
+    // fails, restore prior values and erase inserted nodes before propagating
+    // the exception. Existing bytes are updated in place, so rollback needs
+    // no allocation and preserves the transaction guarantee without cloning
+    // the entire memory image on every small native write.
+    const auto [batch_id,inserted]=applied_batch_ids_.insert(batch.id);
+    if (!inserted) return {false,"Runtime memory effect batch was already applied"};
+    std::size_t applied=0;
+    try {
+        for (const auto& [location,value] : pending) {
+            bytes_.insert_or_assign(location,value);
+            ++applied;
+        }
+    } catch (...) {
+        while (applied>0) {
+            const auto& prior=previous[--applied];
+            if (prior.existed) bytes_.find(prior.location)->second=prior.value;
+            else bytes_.erase(prior.location);
+        }
+        applied_batch_ids_.erase(batch_id);
+        throw;
+    }
     return {true,{}};
 }
 
