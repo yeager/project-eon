@@ -253,6 +253,16 @@ public:
         std::uint16_t instruction_address);
     void execute_mcga_callback_epilogue_jump(std::uint64_t sequence,
         std::uint16_t instruction_address);
+    void observe_mcga_callback_palette_descriptor_count(
+        const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void observe_mcga_callback_palette_descriptor_index(
+        const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void execute_mcga_callback_palette_descriptor_clear(std::uint64_t sequence,
+        std::uint16_t instruction_address);
+    void execute_mcga_callback_palette_prefix(std::uint64_t sequence,
+        std::uint16_t instruction_address);
+    void observe_mcga_callback_palette_source_index(
+        const MillenniumDosVideoFunction13McgaCallbackRead& read);
     void execute_iret(std::uint64_t sequence, std::uint16_t instruction_address);
 
 private:

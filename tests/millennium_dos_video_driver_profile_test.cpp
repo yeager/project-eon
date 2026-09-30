@@ -621,6 +621,54 @@ int main(const int argc, char** argv) {
             == (eon::MillenniumDosVideoFunction13McgaCallbackMemoryByteEffect{
                 0x0e96,0x4000,0x2000,0}));
 
+    auto mcga_callback_palette_index = mcga_callback_copy_complete;
+    mcga_callback_palette_index.observe_mcga_callback_palette_descriptor_count(
+        {32,0x0d6a,0x4000,0x2002,2,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    mcga_callback_palette_index.observe_mcga_callback_palette_descriptor_index(
+        {33,0x0d6d,0x4000,0x2003,0,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    mcga_callback_palette_index.execute_mcga_callback_palette_prefix(34,0x0d79);
+    mcga_callback_palette_index.observe_mcga_callback_palette_source_index(
+        {35,0x0d7c,0x4000,0x2001,7,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    assert(mcga_callback_palette_index.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d82}
+        && mcga_callback_palette_index.callback_register_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
+                0x0d7c,eon::MillenniumDosVideoFunction13McgaCallbackRegister::al,7})
+        && mcga_callback_palette_index.callback_register_effects()[
+            mcga_callback_palette_index.callback_register_effects().size() - 3]
+            == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
+                0x0d79,eon::MillenniumDosVideoFunction13McgaCallbackRegister::cx,3})
+        && mcga_callback_palette_index.callback_memory_byte_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackMemoryByteEffect{
+                0x0d6d,0x4000,0x2003,1})
+        && mcga_callback_palette_index.callback_register_effects()[
+            mcga_callback_palette_index.callback_register_effects().size() - 2]
+            == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
+                0x0d7f,eon::MillenniumDosVideoFunction13McgaCallbackRegister::dx,0x03c8}));
+
+    auto mcga_callback_palette_wrap = mcga_callback_copy_complete;
+    mcga_callback_palette_wrap.observe_mcga_callback_palette_descriptor_count(
+        {32,0x0d6a,0x4000,0x2002,1,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    mcga_callback_palette_wrap.observe_mcga_callback_palette_descriptor_index(
+        {33,0x0d6d,0x4000,0x2003,1,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    assert(mcga_callback_palette_wrap.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d75});
+    mcga_callback_palette_wrap.execute_mcga_callback_palette_descriptor_clear(34,0x0d75);
+    mcga_callback_palette_wrap.execute_mcga_callback_palette_prefix(35,0x0d79);
+    mcga_callback_palette_wrap.observe_mcga_callback_palette_source_index(
+        {36,0x0d7c,0x4000,0x2001,9,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    assert(mcga_callback_palette_wrap.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0d82}
+        && mcga_callback_palette_wrap.callback_memory_byte_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackMemoryByteEffect{
+                0x0d75,0x4000,0x2003,0}));
+
     mcga_callback_copy.observe_mcga_callback_copy_source_byte(
         {18,0x0e71,0x3000,0x0600,0x70,
             eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});

@@ -4847,10 +4847,16 @@ epilogue `[$0e8f,$0e9c)` (13 bytes, SHA-256
 accepts the two SS:SP words consumed by POP SI/POP DS as explicit observations,
 then accepts the descriptor word at restored DS:`SI+0x0a`. It records the
 16-bit decrement; a zero result clears DS:`SI` before the local JMP at `$0e99`
-reaches boundary `$0d6a`. This does not claim a relationship between these
-explicit stack words and the earlier `$0d3b` register save, nor does it execute
-the `$0d6a` target. These are scenario inputs, not captured title-runtime
-observations. The caller
+reaches boundary `$0d6a`. The hash-bound palette-descriptor prefix
+`[$0d6a,$0d82)` (24 bytes, SHA-256
+`a833f1826f7252c09cebd89a0ebbd5a80e11d0fd6e913e26f30383e3bb4be228`)
+increments DS:`SI+3`, clears it when the incremented byte exceeds the count at
+DS:`SI+2`, sets `CX=count+1`, loads the source index from DS:`SI+1`, and sets
+`DX=$03c8`. The session stops at `$0d82`; the following byte `$ee` is the
+authenticated `OUT DX,AL` boundary, which is not executed. This does not claim a
+relationship between the explicit stack words and the earlier `$0d3b` register
+save, nor does it execute the `$0d6a` palette code beyond this prefix. These
+are scenario inputs, not captured title-runtime observations. The caller
 frame's IP must be `$0129`; its
 CS and FLAGS remain explicit inputs and are returned verbatim only on the
 separate IRET path. The outcome records only direct local register effects and
