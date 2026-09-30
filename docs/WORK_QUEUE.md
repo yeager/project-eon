@@ -55,9 +55,11 @@ register-save block at `$0ca2`. The `$0d35` branch records `$01e4=1`, accepts
 explicit register values and `SS:SP`, and records the nine ordered stack
 pushes. It accepts a fresh CS:`$0d18` word at `$0d44`, a far pointer from
 CS:`$0d1a` at `$0d49`, then DS:`SI+8` at `$0d4e`, stopping at `$0d54` or
-`$0dad`. These are scenario inputs, not captured runtime evidence. `$0d10`'s
-unknown return destination and `$0ca2` remain outside this session. The zero
-`$01e5` path
+`$0dad`. From `$0d54`, it reads the video pointer at CS:`$0d1e` and the byte at
+DS:SI, selecting `$0dcd` for 1, `$0dcb` for 2/3, or `$0dad` for 0/4..255.
+These are scenario inputs, not captured runtime evidence; the copy and VGA
+port bodies remain outside the session. `$0d10`'s unknown return destination
+and `$0ca2` remain outside this session. The zero `$01e5` path
 still stops at IRET. This does not authenticate the installed vector or prove
 title execution selected this handler.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,

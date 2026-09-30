@@ -4809,9 +4809,14 @@ at `$0d3b`. It records the nine ordered 16-bit stack writes. A fresh word read
 at CS:`$0d18` loads CX at `$0d44`; a typed far pointer read at CS:`$0d1a` loads
 DS:SI at `$0d49`. The typed word at DS:`SI+8` at `$0d4e` selects `$0d54` when
 zero or `$0dad` when nonzero. These values are scenario inputs, not captured
-title-runtime observations; the session stops at either branch target. These
-on-disk bytes do not establish the runtime values. The caller frame's IP must
-be `$0129`; its CS and FLAGS
+title-runtime observations. At `$0d54`, a second typed far pointer from
+CS:`$0d1e` loads ES:DI. The callback span `[$0d54,$0d69)` (21 bytes, SHA-256
+`46bff2ad876711a99fe2de1331a888ba00255f5a3fcf1e5eb5b8e385af5c96cc`) then
+reads the byte at DS:SI at `$0d59`: 1 selects `$0dcd`, 2 or 3 selects `$0dcb`,
+and 0 or 4..255 selects `$0dad`. The session stops at these branch targets;
+the copy and VGA-port bodies remain unmodeled. These inputs are not captured
+title-runtime observations. These on-disk bytes do not establish the runtime
+values. The caller frame's IP must be `$0129`; its CS and FLAGS
 remain explicit inputs and are returned verbatim only on the separate IRET
 path. The outcome records only direct local register effects and supplied
 port reads. The standalone session does not authenticate an IVT vector, assert

@@ -58,16 +58,19 @@ struct MillenniumDosVideoFunction13McgaCallbackRead {
     constexpr bool operator==(const MillenniumDosVideoFunction13McgaCallbackRead&) const = default;
 };
 
-enum class MillenniumDosVideoFunction13McgaCallbackRegister16 : std::uint8_t {
+enum class MillenniumDosVideoFunction13McgaCallbackRegister : std::uint8_t {
+    al,
     cx,
     ds,
     si,
+    es,
+    di,
 };
 
 struct MillenniumDosVideoFunction13McgaCallbackRegisterEffect {
     std::uint16_t instruction_address = 0;
-    MillenniumDosVideoFunction13McgaCallbackRegister16 reg =
-        MillenniumDosVideoFunction13McgaCallbackRegister16::cx;
+    MillenniumDosVideoFunction13McgaCallbackRegister reg =
+        MillenniumDosVideoFunction13McgaCallbackRegister::cx;
     std::uint16_t value = 0;
     constexpr bool operator==(const MillenniumDosVideoFunction13McgaCallbackRegisterEffect&) const = default;
 };
@@ -194,6 +197,10 @@ public:
         const MillenniumDosVideoFunction13McgaCallbackFarPointerRead& read);
     void observe_mcga_callback_alternate_indirect_word(
         const MillenniumDosVideoFunction13McgaCallbackIndirectWordRead& read);
+    void observe_mcga_callback_alternate_video_pointer(
+        const MillenniumDosVideoFunction13McgaCallbackFarPointerRead& read);
+    void observe_mcga_callback_alternate_selector_byte(
+        const MillenniumDosVideoFunction13McgaCallbackRead& read);
     void execute_iret(std::uint64_t sequence, std::uint16_t instruction_address);
 
 private:
