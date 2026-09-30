@@ -77,8 +77,9 @@ modeled per bounded step. The `$0da1` LOOP updates CX and either begins another
 triple or reaches `$0da3`; the hash-bound descriptor epilogue is modeled
 through `$0db5` with explicit SI/DS/CX stack words and a branch to `$0d4e` or
 `$0db5`. Nine final register pops and both CS flag clears are modeled through
-the RET boundary `$0dca`; its destination remains unknown. Other VGA port I/O
-remains outside the model.
+the RET at `$0dca` to the hash-bound `$0021` CALL return at `$0024`, then reaches
+the callback-path IRET boundary. This proves only the static route; runtime
+reachability remains unobserved. Other VGA port I/O remains outside the model.
 `$0d10`'s unknown return destination and `$0ca2` remain
 outside this session. The zero `$01e5` path still stops at IRET. These scenario
 inputs do not authenticate the installed vector or prove title execution

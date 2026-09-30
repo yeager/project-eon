@@ -4886,12 +4886,17 @@ save. The nine POPs at `[$0db5,$0dbe)` (9 bytes, SHA-256
 ordered SS:SP words for BP, BX, AX, CX, DX, SI, DI, ES, and DS. The following
 hash-bound span `[$0dbe,$0dca)` (12 bytes, SHA-256
 `e418fe4a6546f6a404ab3307dcb7440f50df2d24be4db85ca5db5f3fb0957e0c`) clears
-CS:`$01e4` and CS:`$01e5`, then stops at RET `$0dca`. The RET destination
-remains unobserved. These
+CS:`$01e4` and CS:`$01e5`, then reaches RET `$0dca`. The hash-bound MCGA
+dispatcher prefix `[$0000,$0025)` (37 bytes, SHA-256
+`e61647601d433d528ab51403c7a73371d58bdbfe0bd25789e936489844f3630f`) contains
+`CALL $0d22` at `$0021`, whose sequential return address is `$0024`. The model
+therefore reaches the callback-path IRET boundary at `$0024` after RET, and
+accepts IRET there. This static return path does not establish dynamic
+reachability or the scenario's SS:SP values as captured runtime state. These
 are scenario inputs, not captured title-runtime observations. The caller
 frame's IP must be `$0129`; its
-CS and FLAGS remain explicit inputs and are returned verbatim only on the
-separate IRET path. The outcome records only direct local register effects and
+CS and FLAGS remain explicit inputs and are returned verbatim on the IRET path.
+The outcome records only direct local register effects and
 supplied port reads. The standalone session does not authenticate an IVT vector, assert
 which profile was installed, or establish that title execution reached this
 handler or a real handler return.

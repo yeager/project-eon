@@ -52,7 +52,13 @@ MillenniumDosVideoFunction13InterruptSession::MillenniumDosVideoFunction13Interr
         constexpr std::size_t alternate_palette_pops_size = 0x09;
         constexpr std::size_t alternate_palette_clear_offset = 0x0dbe;
         constexpr std::size_t alternate_palette_clear_size = 0x0c;
-        if (callback_offset > english_driver.size()
+        constexpr std::size_t mcga_dispatch_offset = 0x0000;
+        constexpr std::size_t mcga_dispatch_size = 0x25;
+        if (mcga_dispatch_offset > english_driver.size()
+            || english_driver.size() - mcga_dispatch_offset < mcga_dispatch_size
+            || to_hex(sha256(english_driver.subspan(mcga_dispatch_offset, mcga_dispatch_size)))
+                != "e61647601d433d528ab51403c7a73371d58bdbfe0bd25789e936489844f3630f"
+            || callback_offset > english_driver.size()
             || english_driver.size() - callback_offset < callback_size
             || to_hex(sha256(english_driver.subspan(callback_offset, callback_size)))
                 != "4a470e322e180bdecc72bee6717ea0452be755951694ef22cfdd85c76763de56"
@@ -150,8 +156,9 @@ MillenniumDosVideoFunction13InterruptSession::boundary() const {
     case MillenniumDosVideoFunction13InterruptState::awaiting_mcga_postlude_byte:
         return MillenniumDosVideoFunction13InterruptBoundary{0x001a};
     case MillenniumDosVideoFunction13InterruptState::iret_boundary:
-        return MillenniumDosVideoFunction13InterruptBoundary{
-            static_cast<std::uint16_t>(kind_ == MillenniumDosVideoDriverKind::ega640 ? 0x0012 : 0x0020)};
+        return MillenniumDosVideoFunction13InterruptBoundary{static_cast<std::uint16_t>(
+            kind_ == MillenniumDosVideoDriverKind::ega640 ? 0x0012
+                : (callback_iret_pending_ ? 0x0024 : 0x0020))};
     case MillenniumDosVideoFunction13InterruptState::callback_boundary:
         return MillenniumDosVideoFunction13InterruptBoundary{0x0d22};
     case MillenniumDosVideoFunction13InterruptState::awaiting_mcga_callback_word:
@@ -1145,10 +1152,24 @@ void MillenniumDosVideoFunction13InterruptSession::execute_mcga_callback_return_
     callback_next_instruction_ = 0x0dca;
 }
 
+void MillenniumDosVideoFunction13InterruptSession::execute_mcga_callback_return(
+    const std::uint64_t sequence, const std::uint16_t instruction_address) {
+    if (kind_ != MillenniumDosVideoDriverKind::mcga
+        || state_ != MillenniumDosVideoFunction13InterruptState::callback_local_boundary
+        || callback_next_instruction_ != 0x0dca || sequence != last_sequence_ + 1
+        || instruction_address != 0x0dca || callback_return_pop_count_ != 9) {
+        throw std::runtime_error("Detached Millennium DOS MCGA callback RET");
+    }
+    callback_iret_pending_ = true;
+    last_sequence_ = sequence;
+    callback_next_instruction_ = 0x0024;
+    state_ = MillenniumDosVideoFunction13InterruptState::iret_boundary;
+}
+
 void MillenniumDosVideoFunction13InterruptSession::execute_iret(
     const std::uint64_t sequence, const std::uint16_t instruction_address) {
-    const auto iret_address = static_cast<std::uint16_t>(
-        kind_ == MillenniumDosVideoDriverKind::ega640 ? 0x0012 : 0x0020);
+    const auto iret_address = static_cast<std::uint16_t>(kind_ == MillenniumDosVideoDriverKind::ega640
+        ? 0x0012 : (callback_iret_pending_ ? 0x0024 : 0x0020));
     if (state_ != MillenniumDosVideoFunction13InterruptState::iret_boundary
         || sequence != last_sequence_ + 1 || instruction_address != iret_address
         || !request_ || !retrace_outcome_ || retrace_outcome_->reads.empty()) {

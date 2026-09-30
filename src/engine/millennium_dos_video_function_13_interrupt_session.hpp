@@ -315,6 +315,8 @@ public:
         const MillenniumDosVideoFunction13McgaCallbackReturnStackRead& read);
     void execute_mcga_callback_return_flag_clear(std::uint64_t sequence,
         std::uint16_t instruction_address);
+    void execute_mcga_callback_return(std::uint64_t sequence,
+        std::uint16_t instruction_address);
     void execute_iret(std::uint64_t sequence, std::uint16_t instruction_address);
 
 private:
@@ -363,6 +365,7 @@ private:
     std::optional<std::uint16_t> callback_palette_ds_;
     std::optional<std::uint16_t> callback_palette_outer_cx_;
     std::uint8_t callback_return_pop_count_ = 0;
+    bool callback_iret_pending_ = false;
     std::uint16_t callback_next_instruction_ = 0;
 };
 

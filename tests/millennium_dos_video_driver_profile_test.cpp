@@ -754,6 +754,14 @@ int main(const int argc, char** argv) {
             == (eon::MillenniumDosVideoFunction13DriverByteEffect{0x0dbe,0x3456,0x01e4,0})
         && mcga_callback_palette_index.callback_driver_effects().back()
             == (eon::MillenniumDosVideoFunction13DriverByteEffect{0x0dc4,0x3456,0x01e5,0}));
+    expect_rejected([&] { mcga_callback_palette_index.execute_iret(palette_sequence,0x0024); });
+    mcga_callback_palette_index.execute_mcga_callback_return(palette_sequence++,0x0dca);
+    assert(mcga_callback_palette_index.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0024});
+    mcga_callback_palette_index.execute_iret(palette_sequence++,0x0024);
+    assert(mcga_callback_palette_index.state() == Function13InterruptState::returned
+        && mcga_callback_palette_index.outcome()
+        && mcga_callback_palette_index.outcome()->return_ip == 0x0129);
 
     auto mcga_callback_palette_wrap = mcga_callback_copy_complete;
     mcga_callback_palette_wrap.observe_mcga_callback_palette_descriptor_count(
