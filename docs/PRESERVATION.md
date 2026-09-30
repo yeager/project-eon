@@ -3635,9 +3635,18 @@ any audio, DMA, or game-state effect. The local wrapper at `$224ea` calls
 `$1d2` bytes, and has SHA-256
 `661854d6976ab520b0398e2545003d3fe59692fc0de54f0f810f379cf25ccaf8`. The
 parser hash-binds that exact span and verifies the source-to-runtime mapping.
-This extends the static control-flow record only. The span is not executed,
-and its state changes, custom-register writes, audio effects, and asynchronous
-cadence remain uninterpreted recovery boundaries.
+The exact linear decode shows four ordered word additions from `$229ea..$229f0`
+into `$22a02..$22a08`, followed by raw word writes to `$dff0a6..$dff0d6`.
+Four branches test and clear bits 0..3 at `$229e8`; each taken path reads a
+pointer cell at `$229f2..$229fe`, writes the longword at pointer+8 and word at
+pointer+12 to the corresponding `$dff0a0..$dff0d4` addresses, then clears the
+pointer cell. A later pass rebuilds those flag bits and D3 bits from the four
+pointer cells and writes D3 to `$dff096`. The tail reads `$2229a`, multiplies
+it by each word at `$22a0a..$22a10`, shifts D0.W right by eight, and writes
+that word to `$dff0a8..$dff0d8`; the span ends at RTS `$229e6`.
+These are instruction and operand relationships only. No custom-register
+device effect, audio meaning, invocation, caller cadence, or game-state result
+is established, and the span is not executed by the runtime.
 
 On the zero-pointer branch the full `$21342..$2137f` record-construction
 loop is native. Its 62 original bytes at ADF `$6b42` have SHA-256

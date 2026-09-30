@@ -224,13 +224,9 @@ The other-value branch owns the second descriptor and first two raw words plus
 their product and subtraction; continue at `$13e9`, source `$3c80:$0001`. Do not assign
 graphics or codec semantics to these fields.
 
-The Millennium Atari config loop now owns the first taken DBF edge and its
-iteration-one setup through `$2b5de` (hash
-`9efa7511411f3ca6698746d8bac484420a14e67e35467be2909f3647b0612034`).
-Next work must verify the iteration-one indexed word and preserve D7 loop
-termination plus the saved MOVEM/BSR return chain.
-The three DBF iterations and deterministic epilogue are now native through
-RTS. The next exact boundary is the saved-register `MOVEM.L (A7)+` at
+The Millennium Atari config loop now has all three D0-indexed iterations, D7
+termination, and its deterministic epilogue native through RTS. The saved-
+register `MOVEM.L (A7)+` at
 `$2b562`; its external frame must be typed before caller execution continues.
 The typed frame now restores all 15 registers and returns through `$2aac8`.
 The caller-connected `$2aa68` prefix is native through XBIOS selector `$26`;
