@@ -4759,12 +4759,15 @@ iterations are admitted for nonzero counts because the preceding function
 clamps the requested count to four and the stack prefix decrements it before
 this loop. `DI` ends at `$1f40`, `CX` at zero, and `SI` at zero. A zero `CX`
 decrements to `$ffff` and is rejected as outside the
-bounded step. The state
-stops at the balancing `POP AX` `$022e`, retaining the pending caller-stack
-word. The outcome records the outgoing `$ff08` write to VGA port `$03ce` at
-`$0207` as an I/O intent; no device response or graphics effect is inferred.
-These local effects are driven by the typed BIOS `CX` scenario input, not
-captured runtime observations.
+bounded step. After the loop, execution stops at the balancing `POP AX`
+`$022e`. Both EGA count paths now
+consume their immediately preceding pushed value, restore the supplied `SP`,
+and, with explicit `DS`, record the `$008a` byte write and `AH=$04` through
+the RET opcode `$0234`. The RET destination remains unknown. The outcome
+records the outgoing `$ff08` write to VGA port `$03ce` at `$0207` as an I/O
+intent; no device response or graphics effect is inferred. These local
+effects are driven by the typed BIOS `CX` scenario input, not captured runtime
+observations.
 
 The read-in-place loader audit additionally binds `$02cf..$031b` (file
 `+$01cf`, 77 bytes, SHA-256

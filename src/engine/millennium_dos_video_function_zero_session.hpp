@@ -17,8 +17,8 @@ enum class MillenniumDosVideoFunctionZeroState {
     mode_success_postlude_prefix_recorded,
     mode_success_stack_prefix_recorded,
     mode_success_ega_loop_recorded,
-    mode_success_single_pop_prefix_recorded,
-    mode_success_single_store_prefix_recorded,
+    mode_success_pop_prefix_recorded,
+    mode_success_store_prefix_recorded,
     mode_mismatch_ret_boundary,
 };
 
@@ -184,8 +184,8 @@ public:
     void advance_success_postlude_prefix();
     void advance_ega_success_stack_prefix(std::uint16_t ss, std::uint16_t sp);
     void advance_ega_multi_count_loop(std::uint16_t ds);
-    void advance_ega_single_count_pop_prefix();
-    void advance_ega_single_count_store_prefix(std::uint16_t ds);
+    void advance_ega_success_pop_prefix();
+    void advance_ega_success_store_prefix(std::uint16_t ds);
 
 private:
     MillenniumDosVideoDriverProfile driver_;
