@@ -5,9 +5,11 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <string_view>
 
 int main(const int argc, const char* const argv[]) {
     assert(argc == 2);
+    constexpr std::string_view translated_probe = "RESURS-S\xC3\x96KV\xC3\x84G";
     const auto root = std::filesystem::path(argv[1]) / "relocated-resource-test";
     std::filesystem::remove_all(root);
     const auto executable = root / "bin" / "project-eon";
@@ -22,8 +24,8 @@ int main(const int argc, const char* const argv[]) {
     { std::ofstream(font).put('x'); }
     {
         std::ofstream po(locale);
-        po << "msgid \"RESOURCE PATH PROBE\"\n"
-              "msgstr \"RESURS-S\u00d6KV\u00c4G\"\n";
+        po << "msgid \"RESOURCE PATH PROBE\"\nmsgstr \""
+            << translated_probe << "\"\n";
     }
 
     const auto asset_paths = eon::launcher_asset_paths(executable, "cards", "millennium.png");
@@ -49,7 +51,7 @@ int main(const int argc, const char* const argv[]) {
     assert(locale_paths[1].lexically_normal()
         == (root / "share/project-eon/po").lexically_normal());
     const auto translator = eon::Translator::from_language("sv", executable);
-    assert(translator.translate("RESOURCE PATH PROBE") == "RESURS-SÖKVÄG");
+    assert(translator.translate("RESOURCE PATH PROBE") == translated_probe);
 
     const auto app_executable = root / "ProjectEon.app/Contents/MacOS/ProjectEon";
     const auto app_asset = root / "ProjectEon.app/Contents/Resources/assets/cards/deuteros.png";
@@ -62,7 +64,7 @@ int main(const int argc, const char* const argv[]) {
     std::filesystem::create_directories(app_locale.parent_path());
     std::filesystem::copy_file(locale, app_locale);
     const auto app_translator = eon::Translator::from_language("sv", app_executable);
-    assert(app_translator.translate("RESOURCE PATH PROBE") == "RESURS-SÖKVÄG");
+    assert(app_translator.translate("RESOURCE PATH PROBE") == translated_probe);
     const auto app_font = root
         / "ProjectEon.app/Contents/Resources/assets/fonts/NotoSans-Regular.ttf";
     std::filesystem::create_directories(app_font.parent_path());
@@ -89,7 +91,7 @@ int main(const int argc, const char* const argv[]) {
     assert(windows_font_paths[0] == windows_font.parent_path());
     assert(windows_locale_paths[0] == windows_locale.parent_path());
     assert(eon::Translator::from_language("sv", windows_executable)
-        .translate("RESOURCE PATH PROBE") == "RESURS-SÖKVÄG");
+        .translate("RESOURCE PATH PROBE") == translated_probe);
 
     std::filesystem::remove_all(root);
     std::cout << "Relocated resource lookup passed\n";
