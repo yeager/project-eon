@@ -56,6 +56,15 @@ class ReleasePublicationTests(unittest.TestCase):
                 self.assertRaisesRegex(RuntimeError, "Every required"):
             MODULE.main()
 
+    def test_repository_artifact_policy_job_is_required_for_release(self):
+        self.assertIn("Repository artifact policy", MODULE.JOBS)
+        jobs = {"jobs": [{"name": name, "conclusion": "success"}
+                         for name in MODULE.JOBS
+                         if name != "Repository artifact policy"]}
+        with patch.object(MODULE, "api", side_effect=[self.build, jobs]), \
+                self.assertRaisesRegex(RuntimeError, "Every required"):
+            MODULE.main()
+
     def test_missing_packages_cannot_publish(self):
         jobs = {"jobs": [{"name": name, "conclusion": "success"} for name in MODULE.JOBS]}
         with patch.object(MODULE, "api", side_effect=[self.build, jobs, {"artifacts": []}]), \

@@ -18,7 +18,7 @@ ARTIFACTS = {
     "windows-x64-installer": "project-eon-windows-artifacts.json",
     "ipados-arm64-unsigned-ipa": "project-eon-ipados-arm64-unsigned-artifacts.json",
 }
-JOBS = {"Gitleaks", "Linux", "macOS", "Windows", "Linux packages",
+JOBS = {"Repository artifact policy", "Gitleaks", "Linux", "macOS", "Windows", "Linux packages",
         "macOS app (arm64)", "macOS app (x86_64)", "Windows Inno Setup",
         "iPadOS sideload IPA"}
 
