@@ -86,6 +86,13 @@ class WindowsPackagingTests(unittest.TestCase):
         self.assertIn("Get-ChildItem -Path build -Recurse -File -Filter *.dll", workflow)
         self.assertIn("STATUS_DLL_NOT_FOUND", workflow)
 
+    def test_windows_ctest_failure_names_are_visible_in_github_actions(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
+        self.assertIn('Join-Path "build" "Testing/Temporary/LastTestsFailed.log"', workflow)
+        self.assertIn("^\\d+:([A-Za-z0-9_.-]+)$", workflow)
+        self.assertIn("::error title=Windows CTest failed::", workflow)
+        self.assertIn("exit $ctestExitCode", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

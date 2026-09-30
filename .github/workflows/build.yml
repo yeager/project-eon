@@ -183,6 +183,18 @@ jobs:
             "${{ github.workspace }}/zlib-install/bin",
             $env:PATH)) -join ';')
           ctest --test-dir build -C Release -j4 --output-on-failure
+          $ctestExitCode = $LASTEXITCODE
+          if ($ctestExitCode -ne 0) {
+            $failedTestsPath = Join-Path "build" "Testing/Temporary/LastTestsFailed.log"
+            if (Test-Path $failedTestsPath) {
+              Get-Content $failedTestsPath | ForEach-Object {
+                if ($_ -match '^\d+:([A-Za-z0-9_.-]+)$') {
+                  Write-Output "::error title=Windows CTest failed::$($Matches[1])"
+                }
+              }
+            }
+            exit $ctestExitCode
+          }
       - name: Install preservation analysis dependencies
         shell: pwsh
         run: python -m pip install --user --requirement requirements-analysis.txt
