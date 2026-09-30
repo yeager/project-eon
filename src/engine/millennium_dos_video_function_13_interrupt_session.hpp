@@ -61,6 +61,7 @@ struct MillenniumDosVideoFunction13McgaCallbackRead {
 enum class MillenniumDosVideoFunction13McgaCallbackRegister : std::uint8_t {
     al,
     ax,
+    bl,
     cx,
     dx,
     ds,
@@ -102,6 +103,14 @@ struct MillenniumDosVideoFunction13McgaCallbackMemoryWordEffect {
     std::uint16_t offset = 0;
     std::uint16_t value = 0;
     constexpr bool operator==(const MillenniumDosVideoFunction13McgaCallbackMemoryWordEffect&) const = default;
+};
+
+struct MillenniumDosVideoFunction13McgaCallbackMemoryByteEffect {
+    std::uint16_t instruction_address = 0;
+    std::uint16_t segment = 0;
+    std::uint16_t offset = 0;
+    std::uint8_t value = 0;
+    constexpr bool operator==(const MillenniumDosVideoFunction13McgaCallbackMemoryByteEffect&) const = default;
 };
 
 struct MillenniumDosVideoFunction13DriverByteEffect {
@@ -193,6 +202,8 @@ public:
     callback_indirect_word_reads() const { return callback_indirect_word_reads_; }
     [[nodiscard]] const std::vector<MillenniumDosVideoFunction13McgaCallbackMemoryWordEffect>&
     callback_memory_word_effects() const { return callback_memory_word_effects_; }
+    [[nodiscard]] const std::vector<MillenniumDosVideoFunction13McgaCallbackMemoryByteEffect>&
+    callback_memory_byte_effects() const { return callback_memory_byte_effects_; }
 
     void observe_interrupt_request(const MillenniumDosVideoFunction13InterruptRequest& request);
     void observe_port_read(const MillenniumDosVideoFunction13PortRead& read);
@@ -220,6 +231,12 @@ public:
     void observe_mcga_callback_copy_height(const MillenniumDosVideoFunction13McgaCallbackRead& read);
     void observe_mcga_callback_copy_width(const MillenniumDosVideoFunction13McgaCallbackRead& read);
     void observe_mcga_callback_copy_limit(const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void observe_mcga_callback_copy_source_byte(const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void observe_mcga_callback_copy_destination_word(const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void observe_mcga_callback_copy_density_byte(const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void observe_mcga_callback_copy_current_byte(const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void execute_mcga_callback_copy_store(std::uint64_t sequence,
+        std::uint16_t instruction_address);
     void execute_iret(std::uint64_t sequence, std::uint16_t instruction_address);
 
 private:
@@ -240,10 +257,18 @@ private:
     std::vector<MillenniumDosVideoFunction13McgaCallbackFarPointerRead> callback_far_pointer_reads_;
     std::vector<MillenniumDosVideoFunction13McgaCallbackIndirectWordRead> callback_indirect_word_reads_;
     std::vector<MillenniumDosVideoFunction13McgaCallbackMemoryWordEffect> callback_memory_word_effects_;
+    std::vector<MillenniumDosVideoFunction13McgaCallbackMemoryByteEffect> callback_memory_byte_effects_;
     std::optional<MillenniumDosVideoFunction13McgaCallbackFarPointerRead> callback_far_pointer_;
     std::optional<std::uint16_t> callback_cx_;
     std::optional<std::uint8_t> callback_copy_height_;
     std::optional<std::uint8_t> callback_copy_width_;
+    std::optional<std::uint16_t> callback_copy_ax_;
+    std::optional<std::uint16_t> callback_copy_cx_;
+    std::optional<std::uint16_t> callback_copy_dx_;
+    std::optional<std::uint16_t> callback_copy_si_;
+    std::optional<std::uint16_t> callback_copy_di_;
+    std::optional<std::uint16_t> callback_copy_segment_;
+    std::optional<std::uint8_t> callback_copy_density_;
     std::uint16_t callback_next_instruction_ = 0;
 };
 

@@ -62,14 +62,15 @@ iteration and accepts a fresh typed word at `$0d4e`; it stops at `$0db5` when
 CX reaches zero. The `$0dcb` route records its jump to `$0e46`. Its
 hash-bound local setup now accepts typed descriptor bytes/word at `$0e49`,
 `$0e55`, and `$0e62`, computes the row count and 16-bit source/destination
-registers, and stops at `$0e71` before the first source-data read. Those values
-remain scenario inputs, not captured runtime observations. The copy body, VGA
-port I/O, and saved-register epilogue remain outside the model.
-These are scenario inputs, not captured runtime evidence; the copy and VGA
-port bodies remain outside the session. `$0d10`'s unknown return destination
-and `$0ca2` remain outside this session. The zero `$01e5` path
-still stops at IRET. This does not authenticate the installed vector or prove
-title execution selected this handler.
+registers. The hash-bound pixel loop accepts its ordered source/destination
+reads, conditionally applies the threshold reduction, records memory writes,
+and stops at `$0e71` for the next pixel or `$0e8f` before its saved-register
+epilogue. Those values remain scenario inputs, not captured runtime
+observations. The saved-register epilogue and other VGA port I/O routes remain
+outside the model. `$0d10`'s unknown return destination and `$0ca2` remain
+outside this session. The zero `$01e5` path still stops at IRET. These scenario
+inputs do not authenticate the installed vector or prove title execution
+selected this handler.
 Successful original MCGA/EGA640 initialization returns title mode 1/4,
 respectively. The existing global-mode-2 descriptor regression uses explicit
 arithmetic observations; it is not evidence that either supplied driver

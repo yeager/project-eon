@@ -4829,8 +4829,18 @@ and the word at DS:`SI+6` at `$0e62`. With `h` and `w` denoting those bytes,
 `limit` the word, and `video` the previously supplied ES:DI pointer, its local
 effects produce `CX=3*(h+1)`, `SI=video.offset+3*w`, `DI=SI+0x900+3*w`,
 `DX=limit`, and `DS=AX=video.segment`, with 16-bit register wrapping. It stops
-at `$0e71` before reading DS:`SI+0x600`; that read and the remainder of the
-copy body, VGA port I/O, and saved-register epilogue remain outside the model.
+at `$0e71` before reading DS:`SI+0x600`. The authenticated loop span
+`[$0e71,$0e8f)` (30 bytes, SHA-256
+`23e2eb1588993fbf470114728fb5a7969573135dcd191a8812b82ea28d75fe51`) now
+accepts the byte at DS:`SI+0x600` at `$0e71` and the word at DS:`DI` at `$0e77`.
+A carry from their word addition, or a sum at least `DX`, selects the reduction
+route; a non-carrying sum below `DX` proceeds to the word write. The reduction
+route reads DS:`SI+0x300` at `$0e7f`, then accepts the byte read/modify/write at
+DS:`SI` at `$0e83`. It adds the supplied density byte, subtracts `DX` from
+`AX`, and repeats that byte update while `AX >= DX`. The word write at `$0e8b`
+records ES:`DI`, then advances `DI` by two, `SI` by one, and decrements `CX`
+through the `$0e8d` LOOP. Each transition is bounded; the model returns to
+`$0e71` for another pixel or stops at `$0e8f` before the saved-register pops.
 These are scenario inputs, not captured title-runtime observations. The caller
 frame's IP must be `$0129`; its
 CS and FLAGS remain explicit inputs and are returned verbatim only on the

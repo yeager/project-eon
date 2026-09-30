@@ -442,17 +442,17 @@ int main(const int argc, char** argv) {
         {16,0x0e55,0x2000,0xfffd,2,
             eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
     expect_rejected([&] { mcga_callback_copy.observe_mcga_callback_copy_limit(
-        {17,0x0e62,0x2000,0x0003,0xabcd,
+        {17,0x0e62,0x2000,0x0003,0x0040,
             eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word}); });
     mcga_callback_copy.observe_mcga_callback_copy_limit(
-        {17,0x0e62,0x2000,0x0002,0xabcd,
+        {17,0x0e62,0x2000,0x0002,0x0040,
             eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
     const auto& copy_registers = mcga_callback_copy.callback_register_effects();
     assert(mcga_callback_copy.boundary()
         == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0e71}
         && mcga_callback_copy.next_sequence() == 18
         && mcga_callback_copy.callback_reads().back()
-            == (eon::MillenniumDosVideoFunction13McgaCallbackRead{17,0x0e62,0x2000,0x0002,0xabcd,
+            == (eon::MillenniumDosVideoFunction13McgaCallbackRead{17,0x0e62,0x2000,0x0002,0x0040,
                 eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word})
         && copy_registers[copy_registers.size() - 1]
             == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
@@ -471,7 +471,7 @@ int main(const int argc, char** argv) {
                 0x0e65,eon::MillenniumDosVideoFunction13McgaCallbackRegister::si,0x0000})
         && copy_registers[copy_registers.size() - 6]
             == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
-                0x0e62,eon::MillenniumDosVideoFunction13McgaCallbackRegister::dx,0xabcd})
+                0x0e62,eon::MillenniumDosVideoFunction13McgaCallbackRegister::dx,0x0040})
         && copy_registers[copy_registers.size() - 7]
             == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
                 0x0e60,eon::MillenniumDosVideoFunction13McgaCallbackRegister::di,0x0000})
@@ -493,6 +493,115 @@ int main(const int argc, char** argv) {
         && copy_registers[copy_registers.size() - 13]
             == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
                 0x0e53,eon::MillenniumDosVideoFunction13McgaCallbackRegister::cx,0x0300}));
+    auto mcga_callback_copy_overflow = mcga_callback_copy;
+    mcga_callback_copy_overflow.observe_mcga_callback_copy_source_byte(
+        {18,0x0e71,0x3000,0x0600,2,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    mcga_callback_copy_overflow.observe_mcga_callback_copy_destination_word(
+        {19,0x0e77,0x3000,0x0906,0xffff,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
+    assert(mcga_callback_copy_overflow.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0e7f}
+        && mcga_callback_copy_overflow.callback_register_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
+                0x0e77,eon::MillenniumDosVideoFunction13McgaCallbackRegister::ax,1}));
+
+    auto mcga_callback_copy_direct = mcga_callback_copy;
+    mcga_callback_copy_direct.observe_mcga_callback_copy_source_byte(
+        {18,0x0e71,0x3000,0x0600,0x10,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    mcga_callback_copy_direct.observe_mcga_callback_copy_destination_word(
+        {19,0x0e77,0x3000,0x0906,0x10,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
+    assert(mcga_callback_copy_direct.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0e8b});
+    mcga_callback_copy_direct.execute_mcga_callback_copy_store(20,0x0e8b);
+    assert(mcga_callback_copy_direct.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0e71}
+        && mcga_callback_copy_direct.callback_memory_word_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackMemoryWordEffect{
+                0x0e8b,0x3000,0x0906,0x0020})
+        && mcga_callback_copy_direct.callback_register_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
+                0x0e8d,eon::MillenniumDosVideoFunction13McgaCallbackRegister::cx,0x02ff}));
+
+    auto mcga_callback_copy_complete = mcga_callback_selector_three;
+    mcga_callback_copy_complete.execute_mcga_callback_copy_route(14,0x0dcb);
+    mcga_callback_copy_complete.observe_mcga_callback_copy_height(
+        {15,0x0e49,0x2000,0xfffe,0,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    mcga_callback_copy_complete.observe_mcga_callback_copy_width(
+        {16,0x0e55,0x2000,0xfffd,0,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    mcga_callback_copy_complete.observe_mcga_callback_copy_limit(
+        {17,0x0e62,0x2000,0x0002,1,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
+    std::uint64_t copy_sequence = 18;
+    std::uint16_t copy_si = 0xfffa;
+    std::uint16_t copy_di = 0x08fa;
+    for (std::uint16_t pixel = 0; pixel < 3; ++pixel) {
+        mcga_callback_copy_complete.observe_mcga_callback_copy_source_byte(
+            {copy_sequence++,0x0e71,0x3000,
+                static_cast<std::uint16_t>(copy_si + 0x0600U),0,
+                eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+        mcga_callback_copy_complete.observe_mcga_callback_copy_destination_word(
+            {copy_sequence++,0x0e77,0x3000,copy_di,0,
+                eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
+        mcga_callback_copy_complete.execute_mcga_callback_copy_store(copy_sequence++,0x0e8b);
+        copy_si = static_cast<std::uint16_t>(copy_si + 1U);
+        copy_di = static_cast<std::uint16_t>(copy_di + 2U);
+    }
+    assert(mcga_callback_copy_complete.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0e8f}
+        && mcga_callback_copy_complete.next_sequence() == 27
+        && mcga_callback_copy_complete.callback_memory_word_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackMemoryWordEffect{
+                0x0e8b,0x3000,0x08fe,0})
+        && mcga_callback_copy_complete.callback_register_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
+                0x0e8d,eon::MillenniumDosVideoFunction13McgaCallbackRegister::cx,0}));
+
+    mcga_callback_copy.observe_mcga_callback_copy_source_byte(
+        {18,0x0e71,0x3000,0x0600,0x70,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    mcga_callback_copy.observe_mcga_callback_copy_destination_word(
+        {19,0x0e77,0x3000,0x0906,0x10,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
+    assert(mcga_callback_copy.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0e7f});
+    expect_rejected([&] { mcga_callback_copy.observe_mcga_callback_copy_density_byte(
+        {20,0x0e7f,0x3000,0x02ff,3,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte}); });
+    assert(mcga_callback_copy.next_sequence() == 20
+        && mcga_callback_copy.callback_memory_byte_effects().empty());
+    mcga_callback_copy.observe_mcga_callback_copy_density_byte(
+        {20,0x0e7f,0x3000,0x0300,3,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    mcga_callback_copy.observe_mcga_callback_copy_current_byte(
+        {21,0x0e83,0x3000,0x0000,0xfe,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    assert(mcga_callback_copy.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0e83}
+        && mcga_callback_copy.callback_memory_byte_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackMemoryByteEffect{
+                0x0e83,0x3000,0x0000,1}));
+    mcga_callback_copy.observe_mcga_callback_copy_current_byte(
+        {22,0x0e83,0x3000,0x0000,1,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    assert(mcga_callback_copy.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0e8b}
+        && mcga_callback_copy.callback_memory_byte_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackMemoryByteEffect{
+                0x0e83,0x3000,0x0000,4}));
+    mcga_callback_copy.execute_mcga_callback_copy_store(23,0x0e8b);
+    assert(mcga_callback_copy.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0e71}
+        && mcga_callback_copy.callback_memory_word_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackMemoryWordEffect{
+                0x0e8b,0x3000,0x0906,0x0000})
+        && mcga_callback_copy.callback_register_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
+                0x0e8d,eon::MillenniumDosVideoFunction13McgaCallbackRegister::cx,0x02ff}));
     mcga_callback_alternate_nonzero.execute_mcga_callback_loop_iteration(12,0x0dad);
     assert(mcga_callback_alternate_nonzero.boundary()
         == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0db5}
