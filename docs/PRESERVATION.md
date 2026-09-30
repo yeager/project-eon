@@ -3644,9 +3644,15 @@ pointer cell. A later pass rebuilds those flag bits and D3 bits from the four
 pointer cells and writes D3 to `$dff096`. The tail reads `$2229a`, multiplies
 it by each word at `$22a0a..$22a10`, shifts D0.W right by eight, and writes
 that word to `$dff0a8..$dff0d8`; the span ends at RTS `$229e6`.
-These are instruction and operand relationships only. No custom-register
-device effect, audio meaning, invocation, caller cadence, or game-state result
-is established, and the span is not executed by the runtime.
+The native `evaluate_deuteros_amiga_installed_interrupt_worker` translates this
+exact sequence over an explicit bounded memory scenario. It atomically returns
+the resulting owned-memory copy and ordered custom-register write intents; it
+does not apply device effects or run from the game runtime. Scenario tests cover
+the four pointer branches, zero/nonzero pointer cells, word wrap, the low-word
+multiply/shift result, and rejection without publishing a partial result when
+an accessed range is outside supplied memory. These results are instruction
+translation only: they do not establish custom-register device effects, audio
+meaning, real invocation, caller cadence, or captured game state.
 
 On the zero-pointer branch the full `$21342..$2137f` record-construction
 loop is native. Its 62 original bytes at ADF `$6b42` have SHA-256

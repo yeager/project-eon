@@ -187,6 +187,7 @@ add_executable(project-eon
     src/data/deuteros_amiga_bundle.cpp
     src/data/deuteros_amiga_data_disk.cpp
     src/data/deuteros_amiga_audio.cpp
+    src/data/deuteros_amiga_interrupt_worker.cpp
     src/data/deuteros_amiga_channel_vm.cpp
     src/data/deuteros_amiga_alternate_renderer.cpp
     src/data/deuteros_amiga_frame.cpp
@@ -482,6 +483,16 @@ if(BUILD_TESTING)
         src/engine/native_runtime_memory.cpp)
     target_include_directories(eon-native-runtime-memory-tests PRIVATE src)
     add_test(NAME native-runtime-memory COMMAND eon-native-runtime-memory-tests)
+    add_executable(eon-deuteros-amiga-interrupt-worker-test
+        tests/deuteros_amiga_interrupt_worker_test.cpp
+        src/data/deuteros_amiga_interrupt_worker.cpp)
+    target_include_directories(eon-deuteros-amiga-interrupt-worker-test PRIVATE src)
+    if(MSVC)
+        target_compile_options(eon-deuteros-amiga-interrupt-worker-test PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(eon-deuteros-amiga-interrupt-worker-test PRIVATE -UNDEBUG)
+    endif()
+    add_test(NAME deuteros-amiga-interrupt-worker COMMAND eon-deuteros-amiga-interrupt-worker-test)
     add_executable(eon-atari-st-prg-load-session-test
         tests/atari_st_prg_load_session_test.cpp
         src/engine/atari_st_prg_load_session.cpp
