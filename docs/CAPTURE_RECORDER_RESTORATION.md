@@ -827,3 +827,35 @@ serializer. The source also retains the previously rejected synchronous-I/O
 observer changes. Consequently this hash is an `OBSERVER_FIX_REQUIRED`
 development artifact, never a recorder locator value, capture target, or
 native-recovery evidence. No media was mounted or read during the rebuild.
+
+### 2026-10-01 experimental DOS title operand observer
+
+An external detached worktree at
+`~/.cache/project-eon-tools/operand-hook-prototype-20261001/` was based on
+upstream DOSBox-X commit `234797680781567e18c374c9e62da24de5423db0`. The
+development patch `operand-hook-prototype-20261001.patch` has SHA-256
+`edaca2e7034053fdfad2a52e945ed3a5056305ab6cefbc66073b5d6006f29f10`.
+Its existing COM loader identity check admits `TITLES.EXE` only after the
+complete 7,022-byte read succeeds and its SHA-256 matches the recorded leaf
+identity. MZ loads are excluded; this check identifies the loaded leaf and
+does not replace outer-archive verification.
+
+In the normal CPU core, a bounded POD slot retains the pre-fetch CS:IP and
+DS:SI context, collects the three instruction bytes from ordinary `Fetchb`
+calls, and observes the value returned by the existing `LoadMb` for the exact
+`8a 44 01` operand. It performs no additional guest-memory read or write and
+reports an operand read observed during instruction execution, not instruction
+retirement. The slot resets on DOS termination and each DOS execute attempt.
+Its const accessor returns a live pointer and must be copied at a quiescent CPU
+safe point. This prototype has no sidecar serializer, runner integration,
+capture, recorder pin, or native-evidence admission.
+
+The synthetic C++11 harness and source assertions passed; syntax-only builds of
+the normal-core and DOS loader translation units passed, as did
+`git diff --check`. An independent source review confirmed the identity gate,
+opcode, segment/address-size checks, existing operand read, and slot reset. Harness
+binary SHA-256: `7cd643888ce6945e50f031686bcb6550de582c5538509cd75962ed3c5e0ede07`;
+observer helper SHA-256:
+`1c1afff8d812ce8f86f97ffc44e790ee1de5826209450ecea5860a46db939bb4`.
+No emulator ran and no game media was accessed. All source and outputs remain
+in the external cache; this is experimental work, not a pinned recorder.
