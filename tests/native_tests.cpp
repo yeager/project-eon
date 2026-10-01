@@ -2154,6 +2154,9 @@ int main(int argc, char** argv) {
     assert((reconstruction_key != eon::ModernReconstructionCacheKey{
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "millennium.dos.title", 7, eon::ModernPixelReconstruction::scale2x}));
+    assert((reconstruction_key != eon::ModernReconstructionCacheKey{
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "deuteros.amiga.opening", 7, eon::ModernPixelReconstruction::scale2x, 1}));
     // Modern Scale2x is a renderer-only, in-memory reconstruction. This
     // asymmetric pattern proves it is not merely a texture filtering mode and
     // that it cannot write through its input span.
@@ -2175,6 +2178,17 @@ int main(int argc, char** argv) {
     assert(reconstructed.width == 6 && reconstructed.height == 6);
     assert(reconstructed.rgba.size() == 144);
     assert(reconstruction_source == source_copy);
+    // Sparse recovered surfaces keep unwritten source pixels transparent
+    // through renderer-only reconstruction.
+    std::vector<std::uint8_t> sparse_title(3U * 3U * 4U, 0);
+    sparse_title[4U * 4U + 0U] = 255;
+    sparse_title[4U * 4U + 3U] = 255;
+    const auto sparse_title_copy = sparse_title;
+    const auto sparse_title_scaled = eon::reconstruct_rgba_scale2x(sparse_title, 3, 3);
+    assert(sparse_title_scaled.width == 6 && sparse_title_scaled.height == 6);
+    assert(sparse_title_scaled.rgba[(2U * 6U + 2U) * 4U + 3U] == 255);
+    assert(sparse_title_scaled.rgba[3U] == 0);
+    assert(sparse_title == sparse_title_copy);
     const std::array<std::uint8_t, 4> expected_edge_pixel{{255, 0, 0, 255}};
     assert(std::equal(expected_edge_pixel.begin(), expected_edge_pixel.end(),
         reconstructed.rgba.begin() + (2U * 6U + 2U) * 4U));

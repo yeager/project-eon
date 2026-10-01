@@ -20,6 +20,9 @@ struct ModernReconstructionCacheKey {
     std::string source_id;
     std::uint64_t source_tick = 0;
     ModernPixelReconstruction reconstruction = ModernPixelReconstruction::off;
+    // Additional identity for sources whose pixels can change within one VM
+    // tick, such as a recovered surface rebuilt from runtime memory/palette.
+    std::uint64_t source_revision = 0;
     constexpr bool operator==(const ModernReconstructionCacheKey&) const = default;
 };
 
