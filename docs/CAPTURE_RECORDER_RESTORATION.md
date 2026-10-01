@@ -847,8 +847,8 @@ calls, and observes the value returned by the existing `LoadMb` for the exact
 reports an operand read observed during instruction execution, not instruction
 retirement. The slot resets on DOS termination and each DOS execute attempt.
 Its const accessor returns a live pointer and must be copied at a quiescent CPU
-safe point. This prototype has no sidecar serializer, runner integration,
-capture, recorder pin, or native-evidence admission.
+safe point. At this initial stage the prototype had no sidecar serializer,
+runner integration, capture, recorder pin, or native-evidence admission.
 
 The synthetic C++11 harness and source assertions passed; syntax-only builds of
 the normal-core and DOS loader translation units passed, as did
@@ -859,3 +859,54 @@ observer helper SHA-256:
 `1c1afff8d812ce8f86f97ffc44e790ee1de5826209450ecea5860a46db939bb4`.
 No emulator ran and no game media was accessed. All source and outputs remain
 in the external cache; this is experimental work, not a pinned recorder.
+
+### 2026-10-01 schema-25 serializer and runner progress
+
+The trv2 worktree now includes an opt-in schema-25 serializer and an external
+diagnostic runner. The normal CPU core copies the bounded observer slot only
+after the decoder returns; output serialization occurs at clean shutdown. A
+runtime flag stays false unless the schema-25 configuration, image identity,
+and absolute external-cache path validate. Other CPU decoder variants keep the
+original operand path. Independent review found one host-side flag branch in
+the disabled normal-core path; it found no guest memory, register, flag, or
+cycle-count changes. The event still means an operand read was observed during
+instruction execution, not instruction retirement or source/allocation
+provenance.
+
+The repo now has a separate schema-25 runner pinned to the exact experimental
+DOSBox-X executable recorded below. This pin permits only the explicitly
+experimental diagnostic protocol; it does not admit the binary as a
+preservation recorder. The runner requires an explicit experimental switch, a
+visible Linux session, manual operator input and close, a read-only archive
+mount, post-run source and executable revalidation, and successful unmount
+before publishing a receipt. A synthetic test covers cleanup when post-mount
+`findmnt` verification fails. The receipt currently authenticates only the
+bounded sidecar's bytes and state; its separate run context is diagnostic and
+does not authenticate source, executable, configuration, or operation
+provenance. The schema remains explicitly experimental and is not recovery
+evidence.
+
+All 11 touched/shared-decoder translation units passed syntax-only compilation
+on trv2, and the synthetic serializer harness passed. A full application build
+was still in progress at the time of this record. No emulator or capture was
+run and no original media was accessed. All source/build outputs remain in the
+scoped external cache.
+
+### 2026-10-01 schema-25 build identity
+
+After the decoder-variant and include-path fixes, the configured DOSBox-X
+application completed a full `make` successfully in the trv2 external build
+directory. The executable is
+`~/.cache/project-eon-tools/operand-hook-prototype-20261001/build-v25/src/dosbox-x`,
+125,297,584 bytes, SHA-256
+`58cbb12e9baaae22877908193fdf72b72ed3f3f42b5b76bb9a91bc0b093fd245`. The
+final source patch has SHA-256
+`8503299aae2d9fd541cfb668daadc9b4946984cc9e42981be22543dd895b4bb5`. The
+external bundle containing only that patch and executable is 46,282,676 bytes,
+SHA-256 `15b4c06bd3948eb4a908a34ac65b9e5e967137dee3b8ed5639daae005a2706b1`.
+The repo runner carries the executable hash and byte-count pin solely for
+schema-25 experimental diagnostics. The independent review confirms that the
+normal-core observer remains config-gated and other CPU decoder variants keep
+their original operand path. No executable invocation, emulator session,
+capture, or original-media access occurred; the build pin does not advance the
+recorder-restoration state machine or admit recovery evidence.
