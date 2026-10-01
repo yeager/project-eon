@@ -1864,7 +1864,9 @@ bool inside(const SDL_FRect& rectangle, float x, float y) {
 
 SDL_Texture* load_launcher_asset(SDL_Renderer* renderer, const char* directory,
     const char* filename) {
-    const auto candidates = eon::launcher_asset_paths(SDL_GetBasePath(), directory, filename,
+    const auto candidates = eon::launcher_asset_paths(
+        std::filesystem::path(SDL_GetBasePath()),
+        directory, filename,
 #ifdef EON_DEVELOPER_RESOURCE_FALLBACKS
         EON_SOURCE_DIR
 #else
@@ -1889,7 +1891,8 @@ SDL_Texture* load_branding_texture(SDL_Renderer* renderer, const char* filename)
 }
 
 std::optional<std::filesystem::path> find_font_directory() {
-    const auto candidates = eon::launcher_font_paths(SDL_GetBasePath(),
+    const auto candidates = eon::launcher_font_paths(
+        std::filesystem::path(SDL_GetBasePath()),
 #ifdef EON_DEVELOPER_RESOURCE_FALLBACKS
         EON_SOURCE_DIR
 #else
@@ -4262,7 +4265,7 @@ int main(int argc, char** argv) {
         request.language = saved_presentation_preferences->launcher_language;
     }
     auto translator = eon::Translator::from_language(request.language,
-        argc > 0 ? std::filesystem::path(argv[0]) : std::filesystem::path{});
+        argc > 0 ? std::filesystem::path(SDL_GetBasePath()) : std::filesystem::path{});
     active_translator = &translator;
     const auto tr = [&translator](std::string_view message) {
         return std::string(translator.translate(message));
@@ -4868,8 +4871,8 @@ int main(int argc, char** argv) {
     }
 
     std::array<Card, 2> cards{{
-        {eon::Game::millennium, "MILLENNIUM 2.2", "RETURN TO EARTH", "millennium.png", {64, 170, 552, 310}},
-        {eon::Game::deuteros, "DEUTEROS", "THE NEXT MILLENNIUM", "deuteros.png", {664, 170, 552, 310}},
+        {eon::Game::millennium, "MILLENNIUM 2.2", "RETURN TO EARTH", "millennium.png", {64, 218, 552, 310}},
+        {eon::Game::deuteros, "DEUTEROS", "THE NEXT MILLENNIUM", "deuteros.png", {664, 218, 552, 310}},
     }};
     for (auto& card : cards) card.texture = load_card(renderer, card.filename);
     std::array<PlatformCard, 3> platform_card_templates{{
@@ -5181,11 +5184,11 @@ int main(int argc, char** argv) {
             {{"{unique}", std::to_string(snapshot.unique_release_count)},
              {"{duplicates}", std::to_string(snapshot.report.duplicate_occurrences)}});
     };
-    // It intentionally has room for the longest shipped translation, rather
-    // than treating English text width as the launcher layout contract.
+    // Leave room for the localized language autonym in the bundled UI font;
+    // the setting stays clear of the original-data controls to its right.
     const SDL_FRect data_directory_picker_bounds{640.0F, 16.0F, 398.0F, 34.0F};
     const SDL_FRect data_archive_picker_bounds{640.0F, 56.0F, 398.0F, 34.0F};
-    const SDL_FRect launcher_language_bounds{230.0F, 16.0F, 170.0F, 34.0F};
+    const SDL_FRect launcher_language_bounds{230.0F, 16.0F, 370.0F, 34.0F};
     // These are Eon-shell controls, rendered in the same logical coordinate
     // space as cards. They contain no release identity and therefore cannot
     // select or launch original media by themselves.
@@ -6388,11 +6391,29 @@ int main(int argc, char** argv) {
         SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
 
         if (screen == Screen::menu) {
+            // A compact cockpit-style masthead makes the menu feel like a
+            // handoff into the two games. All ornaments are renderer-side UI;
+            // the original artwork remains exactly as shipped in the repo.
+            const SDL_FRect masthead_bounds{32.0F, 12.0F, 1216.0F, 142.0F};
+            SDL_SetRenderDrawColor(renderer, 5, 16, 28, 255);
+            SDL_RenderFillRect(renderer, &masthead_bounds);
+            SDL_SetRenderDrawColor(renderer, 66, 108, 132, 255);
+            SDL_RenderRect(renderer, &masthead_bounds);
+            SDL_SetRenderDrawColor(renderer, 236, 172, 64, 255);
+            SDL_RenderLine(renderer, 52.0F, 141.0F, 1054.0F, 141.0F);
+            SDL_SetRenderDrawColor(renderer, 57, 130, 159, 255);
+            for (int tick = 0; tick < 24; ++tick) {
+                const float x = 72.0F + static_cast<float>(tick) * 24.0F;
+                SDL_RenderLine(renderer, x, 25.0F, x, tick % 3 == 0 ? 37.0F : 31.0F);
+            }
+            SDL_SetRenderDrawColor(renderer, 236, 172, 64, 255);
+            draw_text(renderer, 76.0F, 50.0F, tr("PROJECT EON"));
+            SDL_SetRenderDrawColor(renderer, 197, 217, 222, 255);
+            draw_text(renderer, 76.0F, 82.0F, tr("SELECT A GAME"));
             if (project_eon_logo_texture) {
-                const SDL_FRect logo_bounds{1060.0F, 18.0F, 150.0F, 150.0F};
+                const SDL_FRect logo_bounds{1082.0F, 15.0F, 136.0F, 136.0F};
                 SDL_RenderTexture(renderer, project_eon_logo_texture, nullptr, &logo_bounds);
             }
-            draw_text(renderer, 64, 56, tr("PROJECT EON"));
             SDL_SetRenderDrawColor(renderer, 24, 55, 88, 255);
             SDL_RenderFillRect(renderer, &launcher_language_bounds);
             SDL_SetRenderDrawColor(renderer, 185, 210, 135, 255);
@@ -6429,8 +6450,8 @@ int main(int argc, char** argv) {
                     "<<");
             }
             if (launcher_page == LauncherPage::games) {
-                draw_text(renderer, 64, 82, tr("SELECT A GAME"));
-                draw_text(renderer, 64, 108, tr("CLICK A GAME CARD OR USE LEFT/RIGHT, THEN ENTER"));
+                draw_text(renderer, 64, 160,
+                    tr("CLICK A GAME CARD OR USE LEFT/RIGHT, THEN ENTER"));
                 for (std::size_t index = 0; index < cards.size(); ++index) {
                     auto& card = cards[index];
                     if (card.texture) SDL_RenderTexture(renderer, card.texture, nullptr, &card.bounds);
