@@ -62,6 +62,7 @@ class OperandCaptureRunnerTests(unittest.TestCase):
         self.assertIn("[project-eon-diagnostics-v25]\nenabled=true\n", config)
         self.assertIn(f"sidecar_path={output / TOOL.protocol.OBSERVATION_NAME}\n", config)
 
+    @unittest.skipUnless(os.name == "posix", "schema-25 output cache uses POSIX path semantics")
     def test_output_must_be_fresh_direct_child_of_external_cache(self):
         with temporary_directory() as temporary:
             root = Path(temporary).resolve()
