@@ -8,7 +8,6 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
-#include <iterator>
 #include <map>
 #include <stdexcept>
 #include <string>
@@ -17,12 +16,29 @@
 
 namespace {
 
-std::vector<std::uint8_t> read_driver(const std::filesystem::path& path) {
+std::vector<std::uint8_t> read_driver(const std::filesystem::path& path,
+    const std::size_t expected_size) {
+    if (expected_size == 0 || expected_size > 4'632) {
+        throw std::runtime_error("Invalid bound for Millennium DOS video-driver leaf");
+    }
     std::ifstream stream(path, std::ios::binary);
     if (!stream) {
         throw std::runtime_error("Missing real Millennium DOS video-driver leaf: " + path.filename().string());
     }
-    return {std::istreambuf_iterator<char>(stream), {}};
+    std::vector<std::uint8_t> bytes(expected_size);
+    stream.read(reinterpret_cast<char*>(bytes.data()),
+        static_cast<std::streamsize>(bytes.size()));
+    if (stream.gcount() != static_cast<std::streamsize>(bytes.size())) {
+        throw std::runtime_error("Millennium DOS video-driver leaf changed size while being read");
+    }
+    char trailing_byte = 0;
+    if (stream.get(trailing_byte)) {
+        throw std::runtime_error("Millennium DOS video-driver leaf exceeds its bounded size");
+    }
+    if (!stream.eof() || stream.bad()) {
+        throw std::runtime_error("Unable to finish reading Millennium DOS video-driver leaf");
+    }
+    return bytes;
 }
 
 struct DriverPairPaths {
@@ -74,8 +90,8 @@ DriverPairPaths find_hash_admitted_driver_pair(const std::filesystem::path& root
     for (const auto& [directory, candidate] : candidates) {
         static_cast<void>(directory);
         if (candidate.ega.empty() || candidate.mcga.empty()) continue;
-        auto ega_bytes = read_driver(candidate.ega);
-        auto mcga_bytes = read_driver(candidate.mcga);
+        auto ega_bytes = read_driver(candidate.ega, static_cast<std::size_t>(ega_size));
+        auto mcga_bytes = read_driver(candidate.mcga, static_cast<std::size_t>(mcga_size));
         try {
             static_cast<void>(eon::parse_millennium_dos_video_driver(
                 ega_bytes, eon::MillenniumDosVideoDriverKind::ega640));
@@ -109,8 +125,8 @@ int main(const int argc, char** argv) {
     }
     const auto root = std::filesystem::path(argv[1]);
     const auto driver_paths = find_hash_admitted_driver_pair(root);
-    const auto ega_bytes = read_driver(driver_paths.ega);
-    const auto mcga_bytes = read_driver(driver_paths.mcga);
+    const auto ega_bytes = read_driver(driver_paths.ega, 4'632);
+    const auto mcga_bytes = read_driver(driver_paths.mcga, 4'366);
     const auto ega = eon::parse_millennium_dos_video_driver(
         ega_bytes, eon::MillenniumDosVideoDriverKind::ega640);
     const auto mcga = eon::parse_millennium_dos_video_driver(
