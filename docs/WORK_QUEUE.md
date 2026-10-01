@@ -372,8 +372,11 @@ entries. Vector-9 tracing decrypts and executes the exact ADDX plus ten
 unconditional branch steps through `$411d8`, then the deterministic LEA,
 MOVEQ, table-word and ADD register prefix. A typed group-0 frame admits the
 24-bit bus-error route, and a typed custom-chip/ExecBase observation advances
-the deterministic setup. Continue at the custom-chip write at
-`$42546`; admit only the exact register and value.
+the deterministic setup. The typed graphics.library returns at `$41780`,
+`$417b4`, `$417c6`, and `$417d2` now commit the bounded bitmap/pointer setup;
+the exact custom-chip effects at `$42546` and `$4254c` are retained as typed
+records. Execution stops before `$42552 -> $41d4a`, whose device-call result
+and visible display remain unproven.
 
 | Rank | Work package | Exact current evidence | Required acceptance evidence | Status / boundary |
 | --- | --- | --- | --- | --- |
