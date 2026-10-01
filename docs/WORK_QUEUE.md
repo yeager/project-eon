@@ -736,9 +736,10 @@ Random audio modes require their original owned ROM byte at `$ff0000+index`.
 The `$2178e` native prefix now writes the four raw custom-register values,
 follows both owned graphics pointer chains and enters `$20994`. Three ordered
 Exec returns build the task/port/device request, then reach either the original
-error spin or `$217e4`'s CIA read/modify/write. Continue that CIA operation and
-the `$217f2 -> $21926` return to `$217f6`. Graphics roots must be produced by
-the earlier graphics setup; controlled unit fixtures are not a runtime fallback.
+error spin or the typed `$217e4` CIA observation. The CIA operation and
+`$217f2 -> $21926` return to `$217f6` are implemented below. Graphics roots
+must be produced by the earlier graphics setup; controlled unit fixtures are
+not a runtime fallback.
 The typed `$217e4` CIA sample now drives native byte BSET and the owned
 `$21704` selector read. Its retained `$217f6` return is recognized by the
 existing resource-0/1 transfer transaction, which resets loop-local receipts
