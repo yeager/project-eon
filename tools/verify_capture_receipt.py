@@ -11,7 +11,7 @@ import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24"}
+CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25"}
 
 
 def load_tool(name: str):
@@ -374,18 +374,25 @@ def verify_deuteros_source_contract(fields: dict[str, str], version: str, tool) 
                                                  tool.EXPECTED_DISK2_ARCHIVE_SIZE))
 
 
-def verify(kind: str, directory: Path, *, allow_experimental_observer: bool = False) -> None:
+def verify(kind: str, directory: Path, *, allow_experimental_observer: bool = False) -> str:
     if not directory.is_absolute() or directory.is_symlink() or not directory.is_dir():
         raise ValueError("capture directory must be an absolute non-symlink directory")
     fields = receipt(directory / "run-status.txt")
     version = require_receipt_schema(fields)
+    if version == "25":
+        if kind != "millennium-dos":
+            raise ValueError("operand DOS schema 25 is only supported for Millennium DOS")
+        operand = load_tool("millennium_dos_operand_protocol")
+        operand.verify_fields(fields, directory,
+                              allow_experimental_observer=allow_experimental_observer)
+        return version
     if version == "24":
         if kind != "millennium-dos":
             raise ValueError("terminal DOS schema 24 is only supported for Millennium DOS")
         terminal = load_tool("millennium_dos_terminal_protocol")
         terminal.verify_fields(fields, directory,
                                allow_experimental_observer=allow_experimental_observer)
-        return
+        return version
     if kind == "millennium-dos":
         if version == "23":
             raise ValueError("capture receipt schema 23 is only supported for Deuteros Amiga")
@@ -502,6 +509,7 @@ def verify(kind: str, directory: Path, *, allow_experimental_observer: bool = Fa
     actual = digest(config)
     if (fields.get("configuration_sha256"), fields.get("configuration_bytes")) != (actual[0], str(actual[1])):
         raise ValueError("configuration hash or size mismatch")
+    return version
 
 
 def main() -> int:
@@ -511,8 +519,9 @@ def main() -> int:
     parser.add_argument("--allow-experimental-observer", action="store_true",
                         help="Verify integrity of an unpinned observer run; never admits it for recovery")
     args = parser.parse_args()
-    try: verify(args.kind, args.capture,
-                allow_experimental_observer=args.allow_experimental_observer)
+    try:
+        verified_version = verify(args.kind, args.capture,
+                                  allow_experimental_observer=args.allow_experimental_observer)
     # The bounded grammar helpers are intentionally shared with the capture
     # runners. They reject malformed recorder lines with their own
     # RuntimeError-derived CaptureError, which must be a normal fail-closed
@@ -520,7 +529,10 @@ def main() -> int:
     except (OSError, ValueError, KeyError, RuntimeError) as error:
         print(f"CAPTURE RECEIPT REJECTED  {error}")
         return 2
-    print(f"CAPTURE RECEIPT VERIFIED  {args.kind}  {args.capture}")
+    if verified_version == "25":
+        print(f"EXPERIMENTAL CAPTURE RECEIPT VERIFIED; NOT ADMITTED FOR RECOVERY  {args.kind}  {args.capture}")
+    else:
+        print(f"CAPTURE RECEIPT VERIFIED  {args.kind}  {args.capture}")
     return 0
 
 
