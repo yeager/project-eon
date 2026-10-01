@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <map>
 
 namespace eon {
@@ -324,6 +325,11 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
         rejection_detail_ = "Unknown child-session construction failure";
         return false;
     }
+    if (runtime_generation_counter_ == std::numeric_limits<std::uint64_t>::max()) {
+        admission_ = ReleaseRuntimeAdmission::adapter_rejected;
+        rejection_ = ReleaseRuntimeRejection::lifecycle_transition;
+        return false;
+    }
     millennium_dos_ = std::move(millennium_dos);
     millennium_dos_sound_selection_ = std::move(millennium_dos_sound_selection);
     millennium_dos_title_ = std::move(millennium_dos_title);
@@ -340,6 +346,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
     active_ = launch;
     active_media_ = std::move(media);
     native_runtime_memory_=std::move(runtime_memory);
+    active_runtime_generation_ = ++runtime_generation_counter_;
     admission_ = ReleaseRuntimeAdmission::active;
     rejection_ = ReleaseRuntimeRejection::none;
     rejection_detail_.clear();
@@ -347,6 +354,7 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
 }
 
 void ReleaseRuntimeCoordinator::reset() {
+    active_runtime_generation_ = 0;
     deuteros_amiga_bootstrap_frame_.reset();
     deuteros_amiga_bootstrap_frame_generation_ = 0;
     deuteros_amiga_main_stage_palette_.reset();
@@ -3788,6 +3796,64 @@ ReleaseRuntimeCoordinator::drive_deuteros_amiga_session(const std::uint32_t step
         result.error=exception.what();
         return result;
     }
+}
+
+std::optional<std::uint64_t>
+ReleaseRuntimeCoordinator::deuteros_amiga_worker_scenario_generation() const {
+    if (active_runtime_generation_ == 0 || !active_ || !active_media_ || !deuteros_amiga_
+        || !session_snapshot_ || session_snapshot_->game != Game::deuteros
+        || session_snapshot_->platform != Platform::amiga
+        || session_snapshot_->release_sha256 != active_->release.sha256
+        || active_->release.game != Game::deuteros
+        || active_->release.platform != Platform::amiga) {
+        return std::nullopt;
+    }
+    return active_runtime_generation_;
+}
+
+DeuterosAmigaWorkerScenarioResult
+ReleaseRuntimeCoordinator::evaluate_deuteros_amiga_worker_scenario(
+    const std::uint64_t generation, std::string scenario_label,
+    const std::uint32_t memory_base_address,
+    const std::span<const std::uint8_t> hypothetical_memory) const {
+    DeuterosAmigaWorkerScenarioResult result;
+    constexpr std::size_t maximum_scenario_bytes = 64U * 1024U;
+    const auto current_generation = deuteros_amiga_worker_scenario_generation();
+    if (!current_generation || generation != *current_generation) {
+        result.error = "Deuteros worker scenario requires the current active runtime generation";
+        return result;
+    }
+    if (scenario_label.empty() || scenario_label.size() > 80
+        || !std::all_of(scenario_label.begin(), scenario_label.end(), [](const char value) {
+            const auto c = static_cast<unsigned char>(value);
+            return c >= 0x20U && c <= 0x7eU;
+        })) {
+        result.error = "Deuteros worker scenario requires a short printable hypothetical label";
+        return result;
+    }
+    if (hypothetical_memory.empty() || hypothetical_memory.size() > maximum_scenario_bytes) {
+        result.error = "Deuteros worker scenario memory is empty or exceeds its 64 KiB bound";
+        return result;
+    }
+    if (static_cast<std::uint64_t>(memory_base_address) + hypothetical_memory.size()
+        > (std::uint64_t{1} << 32U)) {
+        result.error = "Deuteros worker scenario range exceeds the 32-bit address space";
+        return result;
+    }
+    try {
+        const auto worker = deuteros_amiga_->installed_interrupt_worker();
+        const auto translated = evaluate_deuteros_amiga_installed_interrupt_worker(
+            worker, memory_base_address, hypothetical_memory);
+        result.accepted = true;
+        result.generation = generation;
+        result.scenario_label = std::move(scenario_label);
+        result.worker_sha256 = worker.raw_sha256;
+        result.memory_base_address = translated.memory_base_address;
+        result.register_writes = translated.register_writes;
+    } catch (const std::exception& exception) {
+        result.error = exception.what();
+    }
+    return result;
 }
 
 ActiveNativeSessionDriveResult

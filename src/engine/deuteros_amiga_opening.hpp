@@ -106,6 +106,11 @@ public:
     [[nodiscard]] const DeuterosAmigaTitleHandoffRoute& title_handoff_route() const {
         return title_handoff_route_;
     }
+    // Returns the hash-validated installed worker description from this
+    // opening's already admitted ADF without exposing disk bytes or runtime
+    // state. Parsing it does not imply that the vector was invoked.
+    [[nodiscard]] DeuterosAmigaInstalledInterruptWorker
+    installed_interrupt_worker() const;
     [[nodiscard]] const DeuterosAmigaSoundBank& sound_bank() const { return sound_bank_; }
     // Copy-only, hash-bound tokens for the recovered system prompt table.
     // Presentation mode never enters this source-to-catalogue boundary.

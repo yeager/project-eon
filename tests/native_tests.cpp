@@ -5671,6 +5671,75 @@ int main(int argc, char** argv) {
             opening_request.release_language = release.language;
             opening_request.release_sha256 = release.sha256;
 
+            // The worker scenario API is an explicit, generation-bound
+            // diagnostic. Its labeled input is hypothetical, and it must not
+            // alter the live opening memory or checkpoint.
+            eon::ReleaseRuntimeCoordinator worker_scenario_runtime;
+            const std::array<std::uint8_t, 1> empty_worker_scenario{0};
+            assert(!worker_scenario_runtime.deuteros_amiga_worker_scenario_generation());
+            assert(!worker_scenario_runtime.evaluate_deuteros_amiga_worker_scenario(
+                1, "hypothetical-empty-session", 0x22000, empty_worker_scenario).accepted);
+            assert(worker_scenario_runtime.acquire({opening_request, release}));
+            const auto scenario_generation =
+                worker_scenario_runtime.deuteros_amiga_worker_scenario_generation();
+            assert(scenario_generation);
+            static_cast<void>(worker_scenario_runtime.tick_deuteros_amiga_opening());
+            std::vector<std::uint8_t> worker_scenario_memory(0x2000, 0);
+            worker_scenario_memory[0x229e8 - 0x22000] = 1;
+            const auto put_scenario_word = [&worker_scenario_memory](
+                const std::uint32_t address, const std::uint16_t value) {
+                const auto offset = static_cast<std::size_t>(address - 0x22000);
+                worker_scenario_memory[offset] = static_cast<std::uint8_t>(value >> 8U);
+                worker_scenario_memory[offset + 1] = static_cast<std::uint8_t>(value);
+            };
+            const auto put_scenario_long = [&put_scenario_word](
+                const std::uint32_t address, const std::uint32_t value) {
+                put_scenario_word(address, static_cast<std::uint16_t>(value >> 16U));
+                put_scenario_word(address + 2, static_cast<std::uint16_t>(value));
+            };
+            put_scenario_long(0x229f2, 0x23000);
+            put_scenario_long(0x23008, 0x12345678);
+            put_scenario_word(0x2300c, 0x9abc);
+            const auto hypothetical_memory_before = worker_scenario_memory;
+            const auto memory_before_scenario = worker_scenario_runtime.native_runtime_memory_checkpoint();
+            const auto opening_before_scenario = worker_scenario_runtime.deuteros_amiga_opening_checkpoint();
+            assert(memory_before_scenario && opening_before_scenario);
+            const auto scenario_result = worker_scenario_runtime.evaluate_deuteros_amiga_worker_scenario(
+                *scenario_generation, "hypothetical-one-channel", 0x22000,
+                worker_scenario_memory);
+            assert(scenario_result.accepted && scenario_result.generation == *scenario_generation
+                && scenario_result.scenario_label == "hypothetical-one-channel"
+                && scenario_result.worker_sha256
+                    == "661854d6976ab520b0398e2545003d3fe59692fc0de54f0f810f379cf25ccaf8"
+                && scenario_result.memory_base_address == 0x22000
+                && scenario_result.register_writes.size() == 11
+                && scenario_result.register_writes[4].address == 0xdff0a0
+                && scenario_result.register_writes[4].value == 0x12345678);
+            const auto memory_after_scenario = worker_scenario_runtime.native_runtime_memory_checkpoint();
+            const auto opening_after_scenario = worker_scenario_runtime.deuteros_amiga_opening_checkpoint();
+            assert(memory_after_scenario && opening_after_scenario
+                && worker_scenario_memory == hypothetical_memory_before
+                && memory_after_scenario->initialized_bytes == memory_before_scenario->initialized_bytes
+                && memory_after_scenario->applied_batch_count == memory_before_scenario->applied_batch_count
+                && memory_after_scenario->checksum == memory_before_scenario->checksum
+                && opening_after_scenario->tick == opening_before_scenario->tick
+                && opening_after_scenario->vblank_counter == opening_before_scenario->vblank_counter
+                && opening_after_scenario->rgba_frame_sha256 == opening_before_scenario->rgba_frame_sha256);
+            assert(!worker_scenario_runtime.evaluate_deuteros_amiga_worker_scenario(
+                *scenario_generation + 1, "stale-hypothetical", 0x22000,
+                worker_scenario_memory).accepted);
+            worker_scenario_runtime.reset();
+            assert(!worker_scenario_runtime.deuteros_amiga_worker_scenario_generation());
+            assert(worker_scenario_runtime.acquire({opening_request, release}));
+            const auto relaunched_scenario_generation =
+                worker_scenario_runtime.deuteros_amiga_worker_scenario_generation();
+            assert(relaunched_scenario_generation
+                && *relaunched_scenario_generation != *scenario_generation
+                && !worker_scenario_runtime.evaluate_deuteros_amiga_worker_scenario(
+                    *scenario_generation, "prior-generation", 0x22000,
+                    worker_scenario_memory).accepted);
+            worker_scenario_runtime.reset();
+
             // Exercise the production host boundary with a real, admitted
             // release. A front-end modal must not let a physical held signal
             // leak through while it owns input, and its value-only snapshot

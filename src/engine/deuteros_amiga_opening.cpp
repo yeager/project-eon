@@ -66,6 +66,12 @@ DeuterosAmigaOpening::prepare_title_stage_program_entry(const std::uint16_t prof
     return candidate.execute_local_prefix();
 }
 
+DeuterosAmigaInstalledInterruptWorker
+DeuterosAmigaOpening::installed_interrupt_worker() const {
+    const auto prefix = parse_deuteros_amiga_installed_interrupt_prefix(disk_, load_plan_);
+    return parse_deuteros_amiga_installed_interrupt_worker(disk_, load_plan_, prefix);
+}
+
 std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
 DeuterosAmigaOpening::commit_title_stage_program_entry(const std::uint16_t profile) {
     if (profile != 1 && profile != 5) return std::nullopt;

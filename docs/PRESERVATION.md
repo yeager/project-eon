@@ -3647,7 +3647,14 @@ that word to `$dff0a8..$dff0d8`; the span ends at RTS `$229e6`.
 The native `evaluate_deuteros_amiga_installed_interrupt_worker` translates this
 exact sequence over an explicit bounded memory scenario. It atomically returns
 the resulting owned-memory copy and ordered custom-register write intents; it
-does not apply device effects or run from the game runtime. Scenario tests cover
+does not apply device effects or run from the game loop. The coordinator also
+offers an explicit diagnostic entry point that requires the active Deuteros
+Amiga runtime generation, a short caller label, and at most 64 KiB of supplied
+hypothetical memory. It reparses the worker from the active hash-verified ADF
+and returns only the ordered write intents and worker identity; it neither
+reads nor changes live runtime memory, devices, session, frame, input, or audio.
+The label records the caller's scenario description, not evidence of an
+observed interrupt. Scenario tests cover
 the four pointer branches, zero/nonzero pointer cells, word wrap, the low-word
 multiply/shift result, and rejection without publishing a partial result when
 an accessed range is unaligned or outside supplied memory. These results are

@@ -31,6 +31,7 @@
 #include "engine/millennium_dos_title_session.hpp"
 #include "engine/millennium_dos_title_to_game_session.hpp"
 #include "engine/native_runtime_memory.hpp"
+#include "data/deuteros_amiga_interrupt_worker.hpp"
 #include "data/millennium_dos_game_flow.hpp"
 #include "data/millennium_dos_sound_driver.hpp"
 #include "data/millennium_dos_title_flow.hpp"
@@ -40,6 +41,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -138,6 +140,19 @@ struct DeuterosAmigaMainStageDriveResult {
     // useful diagnostics without inspecting mutable coordinator internals.
     std::uint32_t stop_before_address = 0;
     std::string error;
+};
+
+// Result of an explicitly requested, hypothetical interrupt-worker scenario.
+// This is a copy-only diagnostic: the ordered writes are intents and are
+// never applied to native memory or hardware.
+struct DeuterosAmigaWorkerScenarioResult {
+    bool accepted = false;
+    std::string error;
+    std::uint64_t generation = 0;
+    std::string scenario_label;
+    std::string worker_sha256;
+    std::uint32_t memory_base_address = 0;
+    std::vector<DeuterosAmigaInterruptRegisterWrite> register_writes;
 };
 enum class DeuterosAmigaSessionStopReason {
     external_observation,
@@ -921,6 +936,16 @@ public:
     drive_deuteros_amiga_main_stage(std::uint32_t step_limit = 64);
     [[nodiscard]] DeuterosAmigaSessionDriveResult
     drive_deuteros_amiga_session(std::uint32_t step_limit = 64);
+    // Runs the hash-admitted worker translator only over caller-supplied,
+    // explicitly labeled hypothetical memory. It is generation-bound and
+    // has no effect on the active runtime session, memory, devices, frames,
+    // input, or audio. It does not imply that the original invoked the worker.
+    [[nodiscard]] std::optional<std::uint64_t>
+    deuteros_amiga_worker_scenario_generation() const;
+    [[nodiscard]] DeuterosAmigaWorkerScenarioResult
+    evaluate_deuteros_amiga_worker_scenario(std::uint64_t generation,
+        std::string scenario_label, std::uint32_t memory_base_address,
+        std::span<const std::uint8_t> hypothetical_memory) const;
     [[nodiscard]] ActiveNativeSessionDriveResult
     drive_active_native_session(std::uint32_t step_limit = 64);
     // Audio is mixed within the same owner as the recovered VM and is
@@ -1340,6 +1365,10 @@ private:
     // public bypass around the missing driver ABI.
     [[nodiscard]] bool prepare_millennium_dos_title_to_game_after_handoff();
     std::optional<ResolvedLaunchRequest> active_;
+    // Monotonic token prevents a scenario request from an earlier acquisition
+    // being accepted after reset/relaunch, including same-release relaunches.
+    std::uint64_t runtime_generation_counter_ = 0;
+    std::uint64_t active_runtime_generation_ = 0;
     // The exact archive/direct-media admission backing for this generation.
     // It is published only after every adapter succeeds and is cleared after
     // all span-based sessions during reset/revocation.
