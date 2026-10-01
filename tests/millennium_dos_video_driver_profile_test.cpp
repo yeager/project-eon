@@ -9,8 +9,10 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <map>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -21,6 +23,71 @@ std::vector<std::uint8_t> read_driver(const std::filesystem::path& path) {
         throw std::runtime_error("Missing real Millennium DOS video-driver leaf: " + path.filename().string());
     }
     return {std::istreambuf_iterator<char>(stream), {}};
+}
+
+struct DriverPairPaths {
+    std::filesystem::path ega;
+    std::filesystem::path mcga;
+};
+
+DriverPairPaths find_hash_admitted_driver_pair(const std::filesystem::path& root) {
+    constexpr std::uintmax_t ega_size = 4'632;
+    constexpr std::uintmax_t mcga_size = 4'366;
+    constexpr std::size_t max_entries = 10'000;
+    struct Candidate {
+        std::filesystem::path ega;
+        std::filesystem::path mcga;
+    };
+    std::map<std::filesystem::path, Candidate> candidates;
+    std::size_t visited = 0;
+    std::error_code error;
+    std::filesystem::recursive_directory_iterator entry(
+        root, std::filesystem::directory_options::skip_permission_denied, error);
+    const std::filesystem::recursive_directory_iterator end;
+    if (error) throw std::runtime_error("Unable to scan direct Millennium DOS media directory");
+    for (; entry != end; entry.increment(error)) {
+        if (error) throw std::runtime_error("Unable to continue scanning direct Millennium DOS media directory");
+        if (++visited > max_entries) {
+            throw std::runtime_error("Direct Millennium DOS media scan exceeds its entry bound");
+        }
+        const auto status = entry->symlink_status(error);
+        if (error) throw std::runtime_error("Unable to inspect direct Millennium DOS media entry");
+        if (std::filesystem::is_symlink(status)) {
+            if (entry->is_directory(error)) entry.disable_recursion_pending();
+            if (error) throw std::runtime_error("Unable to inspect direct Millennium DOS symlink");
+            continue;
+        }
+        if (!std::filesystem::is_regular_file(status)) continue;
+        const auto name = entry->path().filename().string();
+        const bool is_ega = name == "EGA640.BIN";
+        const bool is_mcga = name == "MCGA.BIN";
+        if (!is_ega && !is_mcga) continue;
+        const auto expected_size = is_ega ? ega_size : mcga_size;
+        const auto size = entry->file_size(error);
+        if (error) throw std::runtime_error("Unable to inspect direct Millennium DOS driver size");
+        if (size != expected_size) continue;
+        auto& candidate = candidates[entry->path().parent_path()];
+        (is_ega ? candidate.ega : candidate.mcga) = entry->path();
+    }
+    if (error) throw std::runtime_error("Unable to finish scanning direct Millennium DOS media directory");
+
+    for (const auto& [directory, candidate] : candidates) {
+        static_cast<void>(directory);
+        if (candidate.ega.empty() || candidate.mcga.empty()) continue;
+        auto ega_bytes = read_driver(candidate.ega);
+        auto mcga_bytes = read_driver(candidate.mcga);
+        try {
+            static_cast<void>(eon::parse_millennium_dos_video_driver(
+                ega_bytes, eon::MillenniumDosVideoDriverKind::ega640));
+            static_cast<void>(eon::parse_millennium_dos_video_driver(
+                mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga));
+            return {candidate.ega, candidate.mcga};
+        } catch (const std::exception&) {
+            // A collection can include unrelated files with the same leaf
+            // names. Continue until both hash-bound driver identities match.
+        }
+    }
+    throw std::runtime_error("No hash-admitted EGA640/MCGA driver pair found in direct media directory");
 }
 
 template<typename Function>
@@ -41,8 +108,9 @@ int main(const int argc, char** argv) {
         return 2;
     }
     const auto root = std::filesystem::path(argv[1]);
-    const auto ega_bytes = read_driver(root / "EGA640.BIN");
-    const auto mcga_bytes = read_driver(root / "MCGA.BIN");
+    const auto driver_paths = find_hash_admitted_driver_pair(root);
+    const auto ega_bytes = read_driver(driver_paths.ega);
+    const auto mcga_bytes = read_driver(driver_paths.mcga);
     const auto ega = eon::parse_millennium_dos_video_driver(
         ega_bytes, eon::MillenniumDosVideoDriverKind::ega640);
     const auto mcga = eon::parse_millennium_dos_video_driver(
