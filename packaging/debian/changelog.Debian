@@ -1,4 +1,4 @@
-project-eon (0.1.1-1) unstable; urgency=medium
+project-eon (0.1.2-1) unstable; urgency=medium
 
   * Add hash-bound static evidence for the Deuteros Amiga interrupt worker.
 

@@ -1,7 +1,7 @@
 ; The CI job fills dist/ with executable, SDL runtime and Project Eon's own
 ; cards. Original Millennium/Deuteros archives are intentionally excluded.
 #ifndef MyAppVersion
-  #define MyAppVersion "0.1.1"
+  #define MyAppVersion "0.1.2"
 #endif
 #define StagingDir "..\..\dist"
 
