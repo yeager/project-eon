@@ -5378,7 +5378,10 @@ An external, hash-checked linear-disassembly audit of the English DOS
 revisited the other-value branch's `$3c80:$0001` read. Capstone 5.0.7
 identified candidate allocation call `$1b64` (`INT $21`, AH=$48), whose
 carry-clear return stores AX at `CS:$0e48`; the candidate loader path at
-`$0e80` then issues its first `$3f` read at `$0e88`, returning to `$0e8b`.
+`$0e80` calls helper `$0570` at `$0e88`. The helper executes AH=$3f at
+`$057a`, with `INT $21` at `$057c`; it resumes at `$057e`, returns through
+`$05a2`, and reaches caller `$0e8b`. The `$0e88` call is the first read path
+only when the preceding open succeeds.
 A separate one-paragraph allocation at `$1b74` stores AX at `CS:$1a9e` and
 could own `$3c80:$0001` if its genuine return were `$3c80`. Neither the
 allocation return nor initialization or file provenance for that block is
@@ -5402,12 +5405,23 @@ The concise allocation/source report SHA-256 is
 `4fb3cf061befb473234aac14848c2cd4d2e3a8886bcdd0a85230f5067a0f9082`.
 On 2026-10-01, trv2's read-only locator checked 789 executable candidates
 for the pinned Millennium DOS v13 and v21 protocols and found no match.
-Neither protocol records the `$1b64`, `$1b74`, or `$0e88` DOS return. A future
-observation must bind the exact loaded image and instruction preimage and
-retain raw AX/FLAGS/carry at both allocations and each relevant file read,
-then establish ownership and writes to the byte at `$13e9`. Any returned read
-bytes and length must be bounded by the admitted file and allocation. No
-capture or new runtime admission is implied by this static audit.
+Neither protocol records the `$1b64` or `$1b74` allocation returns or the
+`$057c` DOS read interrupt and `$057e` result. A future observation must bind
+the exact loaded image and instruction preimage. The narrower input needed to
+advance the native byte boundary at `$13e9` is one sample immediately before
+fetch at that exact image/PC, bound to `TITLES.EXE+$12e9..+$12f1` (runtime
+`$13e9..$13f1`, nine bytes, SHA-256
+`ed46676eb54a03e725cbb96371e4fd13852a350ba5b027e5c59dda07c78b8ecf`). It
+retains DS:SI and the byte read by `MOV AL,[SI+1]` at
+`DS:((SI+1) & $ffff)`. This establishes only the byte observed at that
+boundary; a pre-fetch sample alone does not prove that the instruction then
+executed. If it reports `$3c80:$0001`, that byte may be admitted only as a
+typed runtime observation; its allocation owner and source remain unknown.
+Establishing file provenance requires separate raw AX/FLAGS/carry
+at both allocations and the relevant DOS reads, the `$0e88` caller and
+`$0e8b` continuation linked to helper INT `$21` at `$057c` and result `$057e`,
+plus handle, file position, allocation extent and destination-write evidence.
+No capture or new runtime admission is implied by this static audit.
 
 The owned mode-two loop now reads all 37 entries at +$4813+12*i, i=1..37,
 from the exact 18,907-byte leaf, reusing the recovered typed decoder.
