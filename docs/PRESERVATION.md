@@ -5403,20 +5403,27 @@ focused listing SHA-256
 `4b58e849c53d453c8ceec044781c889519509dc26a11e1afaf87034908da6a9d`.
 The concise allocation/source report SHA-256 is
 `4fb3cf061befb473234aac14848c2cd4d2e3a8886bcdd0a85230f5067a0f9082`.
-On 2026-10-01, trv2's read-only locator checked 789 executable candidates
-for the pinned Millennium DOS v13 and v21 protocols and found no match.
+On 2026-10-01, trv2's read-only locator first checked 789 executable
+candidates for the pinned Millennium DOS v13 and v21 protocols and found no
+match. A subsequent scan of the same external cache checked 1,000 executable
+candidates (999 hashes; one size rejection) and again found no match. The
+existing DOSBox-X prototype hashes to
+`776a02c687951fdc88a65834719ba7cf0124c879c371b278f8117f203cd4375f`, not the
+v21 pin; no matching v21 source patch or build record was found in that cache.
 Neither protocol records the `$1b64` or `$1b74` allocation returns or the
 `$057c` DOS read interrupt and `$057e` result. A future observation must bind
-the exact loaded image and instruction preimage. The narrower input needed to
-advance the native byte boundary at `$13e9` is one sample immediately before
-fetch at that exact image/PC, bound to `TITLES.EXE+$12e9..+$12f1` (runtime
+the exact loaded image and instruction preimage. A pre-fetch hook can capture
+the register context at `$13e9`, bound to `TITLES.EXE+$12e9..+$12f1` (runtime
 `$13e9..$13f1`, nine bytes, SHA-256
-`ed46676eb54a03e725cbb96371e4fd13852a350ba5b027e5c59dda07c78b8ecf`). It
-retains DS:SI and the byte read by `MOV AL,[SI+1]` at
-`DS:((SI+1) & $ffff)`. This establishes only the byte observed at that
-boundary; a pre-fetch sample alone does not prove that the instruction then
-executed. If it reports `$3c80:$0001`, that byte may be admitted only as a
-typed runtime observation; its allocation owner and source remain unknown.
+`ed46676eb54a03e725cbb96371e4fd13852a350ba5b027e5c59dda07c78b8ecf`), but
+the operand byte is read later by the instruction. Reading it in the pre-fetch
+hook would add a guest-memory read and is not admissible. A possible next
+design is to passively record the value returned by the instruction's existing
+operand read, linked to the pre-instruction DS:SI context; this would be an
+execution-time operand observation, not a pre-fetch sample, and needs separate
+hook and event-order review. If such a record reports `$3c80:$0001`, that byte
+may be admitted only as typed runtime observation; its allocation owner and
+source remain unknown.
 Establishing file provenance requires separate raw AX/FLAGS/carry
 at both allocations and the relevant DOS reads, the `$0e88` caller and
 `$0e8b` continuation linked to helper INT `$21` at `$057c` and result `$057e`,
