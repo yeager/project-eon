@@ -1042,6 +1042,91 @@ void assert_modern_asset_pack_admission() {
     std::filesystem::remove_all(root);
 }
 
+void verify_deuteros_worker_scenario_diagnostic(
+    const eon::ResolvedLaunchRequest& launch) {
+    eon::ReleaseRuntimeCoordinator runtime;
+    const std::array<std::uint8_t, 1> empty_scenario{0};
+    assert(!runtime.deuteros_amiga_worker_scenario_generation());
+    assert(!runtime.evaluate_deuteros_amiga_worker_scenario(
+        1, "hypothetical-empty-session", 0x22000, empty_scenario).accepted);
+    assert(runtime.acquire(launch));
+    const auto generation = runtime.deuteros_amiga_worker_scenario_generation();
+    assert(generation);
+    static_cast<void>(runtime.tick_deuteros_amiga_opening());
+
+    std::vector<std::uint8_t> scenario(0x2000, 0);
+    scenario[0x229e8 - 0x22000] = 1;
+    const auto put_word = [&scenario](const std::uint32_t address, const std::uint16_t value) {
+        const auto offset = static_cast<std::size_t>(address - 0x22000);
+        scenario[offset] = static_cast<std::uint8_t>(value >> 8U);
+        scenario[offset + 1] = static_cast<std::uint8_t>(value);
+    };
+    const auto put_long = [&put_word](const std::uint32_t address, const std::uint32_t value) {
+        put_word(address, static_cast<std::uint16_t>(value >> 16U));
+        put_word(address + 2, static_cast<std::uint16_t>(value));
+    };
+    put_long(0x229f2, 0x23000);
+    put_long(0x23008, 0x12345678);
+    put_word(0x2300c, 0x9abc);
+    const auto scenario_before = scenario;
+    const auto memory_before = runtime.native_runtime_memory_checkpoint();
+    const auto opening_before = runtime.deuteros_amiga_opening_checkpoint();
+    assert(memory_before && opening_before);
+
+    const auto result = runtime.evaluate_deuteros_amiga_worker_scenario(
+        *generation, "hypothetical-one-channel", 0x22000, scenario);
+    assert(result.accepted && result.generation == *generation
+        && result.scenario_label == "hypothetical-one-channel"
+        && result.worker_sha256
+            == "661854d6976ab520b0398e2545003d3fe59692fc0de54f0f810f379cf25ccaf8"
+        && result.memory_base_address == 0x22000
+        && result.register_writes.size() == 11
+        && result.register_writes[4].address == 0xdff0a0
+        && result.register_writes[4].value == 0x12345678);
+    const auto memory_after = runtime.native_runtime_memory_checkpoint();
+    const auto opening_after = runtime.deuteros_amiga_opening_checkpoint();
+    assert(memory_after && opening_after && scenario == scenario_before
+        && memory_after->initialized_bytes == memory_before->initialized_bytes
+        && memory_after->applied_batch_count == memory_before->applied_batch_count
+        && memory_after->checksum == memory_before->checksum
+        && opening_after->tick == opening_before->tick
+        && opening_after->vblank_counter == opening_before->vblank_counter
+        && opening_after->rgba_frame_sha256 == opening_before->rgba_frame_sha256);
+    assert(!runtime.evaluate_deuteros_amiga_worker_scenario(
+        *generation + 1, "stale-hypothetical", 0x22000, scenario).accepted);
+    runtime.reset();
+    assert(!runtime.deuteros_amiga_worker_scenario_generation());
+    assert(runtime.acquire(launch));
+    const auto relaunched_generation = runtime.deuteros_amiga_worker_scenario_generation();
+    assert(relaunched_generation && *relaunched_generation != *generation
+        && !runtime.evaluate_deuteros_amiga_worker_scenario(
+            *generation, "prior-generation", 0x22000, scenario).accepted);
+    runtime.reset();
+}
+
+int test_deuteros_worker_scenario(const std::filesystem::path& directory) {
+    constexpr std::string_view release_sha256 =
+        "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04";
+    const auto releases = eon::find_release_archives(directory);
+    const auto found = std::find_if(releases.begin(), releases.end(),
+        [release_sha256](const auto& release) {
+            return release.game == eon::Game::deuteros
+                && release.platform == eon::Platform::amiga
+                && release.sha256 == release_sha256;
+        });
+    if (found == releases.end()) {
+        std::cout << "SKIP: EON_DIRECT_DATA_DIR has no hash-recognized Deuteros Amiga archive\n";
+        return 77;
+    }
+    eon::LaunchRequest request;
+    request.game = found->game;
+    request.platform = found->platform;
+    request.release_language = found->language;
+    request.release_sha256 = found->sha256;
+    verify_deuteros_worker_scenario_diagnostic({request, *found});
+    return 0;
+}
+
 } // namespace
 
 int test_millennium_dos_title_runtime(const std::filesystem::path& root);
@@ -1049,6 +1134,8 @@ int test_millennium_dos_title_runtime(const std::filesystem::path& root);
 int main(int argc, char** argv) {
     if (argc == 3 && std::string_view(argv[1]) == "--direct-title-runtime")
         return test_millennium_dos_title_runtime(argv[2]);
+    if (argc == 3 && std::string_view(argv[1]) == "--deuteros-amiga-worker-scenario")
+        return test_deuteros_worker_scenario(argv[2]);
     if (argc != 1) return 2;
     {
         eon::MillenniumDosParagraphArena arena(7,0x0100,0x0110);
@@ -5670,75 +5757,7 @@ int main(int argc, char** argv) {
             opening_request.platform = release.platform;
             opening_request.release_language = release.language;
             opening_request.release_sha256 = release.sha256;
-
-            // The worker scenario API is an explicit, generation-bound
-            // diagnostic. Its labeled input is hypothetical, and it must not
-            // alter the live opening memory or checkpoint.
-            eon::ReleaseRuntimeCoordinator worker_scenario_runtime;
-            const std::array<std::uint8_t, 1> empty_worker_scenario{0};
-            assert(!worker_scenario_runtime.deuteros_amiga_worker_scenario_generation());
-            assert(!worker_scenario_runtime.evaluate_deuteros_amiga_worker_scenario(
-                1, "hypothetical-empty-session", 0x22000, empty_worker_scenario).accepted);
-            assert(worker_scenario_runtime.acquire({opening_request, release}));
-            const auto scenario_generation =
-                worker_scenario_runtime.deuteros_amiga_worker_scenario_generation();
-            assert(scenario_generation);
-            static_cast<void>(worker_scenario_runtime.tick_deuteros_amiga_opening());
-            std::vector<std::uint8_t> worker_scenario_memory(0x2000, 0);
-            worker_scenario_memory[0x229e8 - 0x22000] = 1;
-            const auto put_scenario_word = [&worker_scenario_memory](
-                const std::uint32_t address, const std::uint16_t value) {
-                const auto offset = static_cast<std::size_t>(address - 0x22000);
-                worker_scenario_memory[offset] = static_cast<std::uint8_t>(value >> 8U);
-                worker_scenario_memory[offset + 1] = static_cast<std::uint8_t>(value);
-            };
-            const auto put_scenario_long = [&put_scenario_word](
-                const std::uint32_t address, const std::uint32_t value) {
-                put_scenario_word(address, static_cast<std::uint16_t>(value >> 16U));
-                put_scenario_word(address + 2, static_cast<std::uint16_t>(value));
-            };
-            put_scenario_long(0x229f2, 0x23000);
-            put_scenario_long(0x23008, 0x12345678);
-            put_scenario_word(0x2300c, 0x9abc);
-            const auto hypothetical_memory_before = worker_scenario_memory;
-            const auto memory_before_scenario = worker_scenario_runtime.native_runtime_memory_checkpoint();
-            const auto opening_before_scenario = worker_scenario_runtime.deuteros_amiga_opening_checkpoint();
-            assert(memory_before_scenario && opening_before_scenario);
-            const auto scenario_result = worker_scenario_runtime.evaluate_deuteros_amiga_worker_scenario(
-                *scenario_generation, "hypothetical-one-channel", 0x22000,
-                worker_scenario_memory);
-            assert(scenario_result.accepted && scenario_result.generation == *scenario_generation
-                && scenario_result.scenario_label == "hypothetical-one-channel"
-                && scenario_result.worker_sha256
-                    == "661854d6976ab520b0398e2545003d3fe59692fc0de54f0f810f379cf25ccaf8"
-                && scenario_result.memory_base_address == 0x22000
-                && scenario_result.register_writes.size() == 11
-                && scenario_result.register_writes[4].address == 0xdff0a0
-                && scenario_result.register_writes[4].value == 0x12345678);
-            const auto memory_after_scenario = worker_scenario_runtime.native_runtime_memory_checkpoint();
-            const auto opening_after_scenario = worker_scenario_runtime.deuteros_amiga_opening_checkpoint();
-            assert(memory_after_scenario && opening_after_scenario
-                && worker_scenario_memory == hypothetical_memory_before
-                && memory_after_scenario->initialized_bytes == memory_before_scenario->initialized_bytes
-                && memory_after_scenario->applied_batch_count == memory_before_scenario->applied_batch_count
-                && memory_after_scenario->checksum == memory_before_scenario->checksum
-                && opening_after_scenario->tick == opening_before_scenario->tick
-                && opening_after_scenario->vblank_counter == opening_before_scenario->vblank_counter
-                && opening_after_scenario->rgba_frame_sha256 == opening_before_scenario->rgba_frame_sha256);
-            assert(!worker_scenario_runtime.evaluate_deuteros_amiga_worker_scenario(
-                *scenario_generation + 1, "stale-hypothetical", 0x22000,
-                worker_scenario_memory).accepted);
-            worker_scenario_runtime.reset();
-            assert(!worker_scenario_runtime.deuteros_amiga_worker_scenario_generation());
-            assert(worker_scenario_runtime.acquire({opening_request, release}));
-            const auto relaunched_scenario_generation =
-                worker_scenario_runtime.deuteros_amiga_worker_scenario_generation();
-            assert(relaunched_scenario_generation
-                && *relaunched_scenario_generation != *scenario_generation
-                && !worker_scenario_runtime.evaluate_deuteros_amiga_worker_scenario(
-                    *scenario_generation, "prior-generation", 0x22000,
-                    worker_scenario_memory).accepted);
-            worker_scenario_runtime.reset();
+            verify_deuteros_worker_scenario_diagnostic({opening_request, release});
 
             // Exercise the production host boundary with a real, admitted
             // release. A front-end modal must not let a physical held signal

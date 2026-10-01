@@ -448,6 +448,13 @@ if(BUILD_TESTING)
     set_tests_properties(native-data-detection PROPERTIES
         ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
     if(EON_DIRECT_DATA_DIR)
+        add_test(NAME deuteros-amiga-worker-scenario-real-media
+            COMMAND eon-native-tests --deuteros-amiga-worker-scenario
+                "${EON_DIRECT_DATA_DIR}")
+        set_tests_properties(deuteros-amiga-worker-scenario-real-media PROPERTIES
+            ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
+            SKIP_RETURN_CODE 77
+            TIMEOUT 180)
         add_executable(eon-millennium-dos-video-driver-profile-test
             tests/millennium_dos_video_driver_profile_test.cpp
             src/engine/millennium_dos_video_function_zero_session.cpp
