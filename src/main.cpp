@@ -7114,20 +7114,22 @@ int main(int argc, char** argv) {
                             + "; " + surface.provenance + "; T=1-82)");
                     }
                 }
-                if ((title_surface || texture == preview_texture || main_stage_frame) && modern
+                if ((title_surface || bootstrap_frame || texture == preview_texture || main_stage_frame) && modern
                     && modern_graphics_settings.pixel_reconstruction != PixelReconstruction::off
-                    && (title_surface || frame || main_stage_frame)) {
+                    && (title_surface || bootstrap_frame || frame || main_stage_frame)) {
                     if (const auto release = resolve_active_release(eon::Game::deuteros)) {
                         const auto reconstruction_tick = title_surface
                             ? title_surface->last_command_generation
+                            : bootstrap_frame ? bootstrap_frame->generation
                             : main_stage_frame ? main_stage_frame->generation : source_tick;
                         const auto reconstruction_revision = title_surface
                             ? title_surface->runtime_memory_checksum
                                 ^ (title_surface->applied_patch_count * 0x9e3779b97f4a7c15ULL)
                                 ^ std::hash<std::string>{}(title_surface->palette_rgb4_sha256)
-                            : 0;
+                            : bootstrap_frame ? bootstrap_frame->runtime_memory_checksum : 0;
                         const eon::ModernReconstructionCacheKey requested_key{release->sha256,
                             title_surface ? "deuteros.amiga.title-surface"
+                                : bootstrap_frame ? "deuteros.amiga.bootstrap-frame"
                                 : main_stage_frame ? "deuteros.amiga.main-stage" : "deuteros.amiga.opening",
                             reconstruction_tick,
                             modern_graphics_settings.pixel_reconstruction,
@@ -7143,12 +7145,15 @@ int main(int argc, char** argv) {
                         }
                         const auto source_rgba = title_surface
                             ? std::span<const std::uint8_t>(title_surface->rgba)
+                            : bootstrap_frame ? std::span<const std::uint8_t>(bootstrap_frame->rgba)
                             : main_stage_frame ? std::span<const std::uint8_t>(main_stage_frame->rgba)
                                 : std::span<const std::uint8_t>(*frame);
                         const auto source_width = title_surface ? int(title_surface->width)
+                            : bootstrap_frame ? int(bootstrap_frame->width)
                             : main_stage_frame ? int(main_stage_frame->width)
                                 : eon::DeuterosAmigaFrame::width;
                         const auto source_height = title_surface ? int(title_surface->height)
+                            : bootstrap_frame ? int(bootstrap_frame->height)
                             : main_stage_frame ? int(main_stage_frame->height)
                                 : eon::DeuterosAmigaFrame::height;
                         const auto* enhanced = deuteros_modern_pipeline.resolve(requested_key,

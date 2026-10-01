@@ -2157,6 +2157,13 @@ int main(int argc, char** argv) {
     assert((reconstruction_key != eon::ModernReconstructionCacheKey{
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "deuteros.amiga.opening", 7, eon::ModernPixelReconstruction::scale2x, 1}));
+    const eon::ModernReconstructionCacheKey bootstrap_reconstruction_key{
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "deuteros.amiga.bootstrap-frame", 7, eon::ModernPixelReconstruction::scale2x, 1};
+    assert(bootstrap_reconstruction_key != reconstruction_key);
+    assert((bootstrap_reconstruction_key != eon::ModernReconstructionCacheKey{
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "deuteros.amiga.bootstrap-frame", 7, eon::ModernPixelReconstruction::scale2x, 2}));
     // Modern Scale2x is a renderer-only, in-memory reconstruction. This
     // asymmetric pattern proves it is not merely a texture filtering mode and
     // that it cannot write through its input span.
