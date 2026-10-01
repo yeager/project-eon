@@ -5372,6 +5372,43 @@ admissions came from confusing file offsets with relocated offsets and have
 been removed. Their arithmetic regressions now use correctly normalized
 contexts with explicitly synthetic values.
 
+An external, hash-checked linear-disassembly audit of the English DOS
+`TITLES.EXE` (7,022 bytes, SHA-256
+`3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6`)
+revisited the other-value branch's `$3c80:$0001` read. Capstone 5.0.7
+identified candidate allocation call `$1b64` (`INT $21`, AH=$48), whose
+carry-clear return stores AX at `CS:$0e48`; the candidate loader path at
+`$0e80` then issues its first `$3f` read at `$0e88`, returning to `$0e8b`.
+A separate one-paragraph allocation at `$1b74` stores AX at `CS:$1a9e` and
+could own `$3c80:$0001` if its genuine return were `$3c80`. Neither the
+allocation return nor initialization or file provenance for that block is
+established. These are linear candidates, not a complete control-flow or
+runtime trace.
+The static audit found no literal `$3c80` or `$c800` reference in
+`TITLES.EXE`. A `$3c80` relation to that allocation would require the actual
+allocation base and later pointer derivation; neither is established by the
+static candidates. Even if the base were `$3000`, `$3c80:$0001` lies `$c801`
+bytes from it, beyond the admitted 18,907-byte `TITLE.LIB` and its rounded
+`$49e`-paragraph allocation. Therefore no byte at that address is admitted
+from `TITLE.LIB`; the `$13e9` source remains typed external input unless a
+separate allocation's ownership and write history are observed.
+
+The audit metadata and raw listing are retained only in the external cache
+`dos-title-provenance-20261001/`; candidate JSON SHA-256
+`e960865aa6077abc7f8c82da1272547fa6d6f8174d9a668974021ffc2d8f2554`,
+focused listing SHA-256
+`4b58e849c53d453c8ceec044781c889519509dc26a11e1afaf87034908da6a9d`.
+The concise allocation/source report SHA-256 is
+`4fb3cf061befb473234aac14848c2cd4d2e3a8886bcdd0a85230f5067a0f9082`.
+On 2026-10-01, trv2's read-only locator checked 789 executable candidates
+for the pinned Millennium DOS v13 and v21 protocols and found no match.
+Neither protocol records the `$1b64`, `$1b74`, or `$0e88` DOS return. A future
+observation must bind the exact loaded image and instruction preimage and
+retain raw AX/FLAGS/carry at both allocations and each relevant file read,
+then establish ownership and writes to the byte at `$13e9`. Any returned read
+bytes and length must be bounded by the admitted file and allocation. No
+capture or new runtime admission is implied by this static audit.
+
 The owned mode-two loop now reads all 37 entries at +$4813+12*i, i=1..37,
 from the exact 18,907-byte leaf, reusing the recovered typed decoder.
 Its complete $1941..$1967 code span (39 bytes at TITLES.EXE+$1841) hashes to
