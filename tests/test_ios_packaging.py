@@ -26,6 +26,14 @@ BRANDING = ("project-eon-logo-v2.png",)
                      "requires POSIX bash and unzip")
 class IosPackagingTests(unittest.TestCase):
     @staticmethod
+    def packaging_environment() -> dict[str, str]:
+        environment = os.environ.copy()
+        configured_scratch = environment.get("EON_TEST_TMPDIR")
+        if configured_scratch:
+            environment["EON_IPA_PACKAGE_TEST_TMPDIR"] = configured_scratch
+        return environment
+
+    @staticmethod
     def create_complete_app(root: pathlib.Path) -> pathlib.Path:
         app = root / "ProjectEon.app"
         app.mkdir()
@@ -129,7 +137,7 @@ class IosPackagingTests(unittest.TestCase):
             root = pathlib.Path(temporary)
             app = self.create_complete_app(root)
             subprocess.run(["bash", str(SCRIPT), str(app), "project-eon.ipa"],
-                           cwd=root, check=True)
+                           cwd=root, check=True, env=self.packaging_environment())
             ipa = root / "project-eon.ipa"
             self.assertTrue(ipa.is_file())
             listing = subprocess.check_output(["unzip", "-l", str(ipa)], text=True)
@@ -146,7 +154,8 @@ class IosPackagingTests(unittest.TestCase):
             root = pathlib.Path(temporary)
             app = self.create_complete_app(root)
             ipa = root / "project-eon.ipa"
-            subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=True)
+            subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=True,
+                           env=self.packaging_environment())
             with zipfile.ZipFile(ipa, "a") as archive:
                 archive.writestr("Payload/ProjectEon.app/Resources/original.adf", b"real media is forbidden")
             result = subprocess.run(["python3", str(VERIFY), str(ipa)], capture_output=True, text=True)
@@ -158,7 +167,8 @@ class IosPackagingTests(unittest.TestCase):
             root = pathlib.Path(temporary)
             app = self.create_complete_app(root)
             ipa = root / "project-eon.ipa"
-            subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=True)
+            subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=True,
+                           env=self.packaging_environment())
             with zipfile.ZipFile(ipa, "a") as archive:
                 archive.writestr(
                     "Payload/ProjectEon.app/Frameworks/unreviewed.dylib", b"not allowed"
@@ -173,7 +183,8 @@ class IosPackagingTests(unittest.TestCase):
             root = pathlib.Path(temporary)
             app = self.create_complete_app(root)
             ipa = root / "project-eon.ipa"
-            subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=True)
+            subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=True,
+                           env=self.packaging_environment())
             with zipfile.ZipFile(ipa, "a") as archive:
                 archive.writestr(
                     "Payload/ProjectEon.app/Resources/review-bypass.bin",
@@ -188,7 +199,8 @@ class IosPackagingTests(unittest.TestCase):
             root = pathlib.Path(temporary)
             app = self.create_complete_app(root)
             ipa = root / "project-eon.ipa"
-            subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=True)
+            subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=True,
+                           env=self.packaging_environment())
             with zipfile.ZipFile(ipa, "a") as archive:
                 archive.writestr("Payload/ProjectEon.app/Resources/unreviewed/", b"")
             result = subprocess.run(["python3", str(VERIFY), str(ipa)], capture_output=True, text=True)
@@ -202,7 +214,7 @@ class IosPackagingTests(unittest.TestCase):
             (app / "project-eon").write_bytes(b"not a Mach-O")
             ipa = root / "project-eon.ipa"
             subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=False,
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, env=self.packaging_environment())
             self.assertFalse(ipa.exists())
 
     def test_archive_verifier_rejects_arm64_header_without_executable_load_commands(self):
@@ -213,7 +225,7 @@ class IosPackagingTests(unittest.TestCase):
             (app / "project-eon").write_bytes(b"\xcf\xfa\xed\xfe\x0c\x00\x00\x01" + b"\0" * 24)
             ipa = root / "project-eon.ipa"
             subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)], check=False,
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, env=self.packaging_environment())
             self.assertFalse(ipa.exists())
 
     def test_archive_verifier_rejects_hidden_non_system_macho_dependency(self):
@@ -239,7 +251,8 @@ class IosPackagingTests(unittest.TestCase):
             (app / "project-eon").write_bytes(header + command)
             ipa = root / "bad.ipa"
             result = subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)],
-                                    capture_output=True, text=True)
+                                    capture_output=True, text=True,
+                                    env=self.packaging_environment())
             self.assertNotEqual(result.returncode, 0)
             self.assertFalse(ipa.exists())
             self.assertIn("non-system dynamic library", result.stderr)
@@ -266,7 +279,8 @@ class IosPackagingTests(unittest.TestCase):
             (app / "project-eon").write_bytes(header + command)
             ipa = root / "system-framework.ipa"
             result = subprocess.run(["bash", str(SCRIPT), str(app), str(ipa)],
-                                    capture_output=True, text=True)
+                                    capture_output=True, text=True,
+                                    env=self.packaging_environment())
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertTrue(ipa.is_file())
 
@@ -276,7 +290,8 @@ class IosPackagingTests(unittest.TestCase):
             app = root / "ProjectEon.app"
             app.mkdir()
             result = subprocess.run(["bash", str(SCRIPT), str(app), str(root / "bad.ipa")],
-                                    capture_output=True, text=True)
+                                    capture_output=True, text=True,
+                                    env=self.packaging_environment())
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("incomplete iPad application", result.stderr)
 
@@ -288,7 +303,8 @@ class IosPackagingTests(unittest.TestCase):
             data.mkdir(parents=True)
             (data / "original.adf").touch()
             result = subprocess.run(["bash", str(SCRIPT), str(app), str(root / "bad.ipa")],
-                                    capture_output=True, text=True)
+                                    capture_output=True, text=True,
+                                    env=self.packaging_environment())
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("refusing to package", result.stderr)
 
