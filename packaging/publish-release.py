@@ -112,7 +112,9 @@ def main() -> None:
     notes.write_text(f"""Project Eon {version}
 
 Preservation-first SDL3 reimplementation of Millennium 2.2 and Deuteros.
-This is an early development release; complete gameplay parity is not yet achieved.
+This is a maintenance rebuild of 0.1.3 with synchronized application and
+package version metadata. It contains no new gameplay behavior; complete
+gameplay parity is not yet achieved.
 
 Includes Linux x86_64 DEB, RPM and AppImage; macOS arm64 and x86_64 apps;
 Windows x64 installer; and an unsigned iPadOS arm64 IPA requiring sideload signing.
@@ -120,13 +122,8 @@ Desktop Apple bundles are not Developer ID notarized.
 Original commercial game media is not included.
 Supply your own supported media in the documented data directory.
 
-The title continuation now uses the loaded palette and translates all 37
-mode-one image records. Graphics-driver loading and private interrupt handling
-remain incomplete; these packages do not claim a fully playable replacement.
-
-The Deuteros Amiga interrupt target and its local worker are now hash-bound to
-exact original-media spans. Their invocation cadence, state changes, and audio
-effects remain unproven; this evidence update adds no runtime behavior.
+Millennium and Deuteros runtime boundaries remain as documented in the source
+and preservation records. These packages do not claim fully playable replacements.
 
 Source: `{revision}`
 Verified build: {build['html_url']}

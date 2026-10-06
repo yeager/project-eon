@@ -6,7 +6,7 @@ release request and a manual **Release** workflow dispatch.
 1. Confirm the project/package version and review release notes in
    `packaging/publish-release.py`, including current gameplay limitations.
 2. Dispatch **Build** on `main` with `package_version` set to that version
-   (for example `0.1.3`). Retain its numeric run ID. Avoid newer main pushes
+   (for example `0.1.4`). Retain its numeric run ID. Avoid newer main pushes
    until that build completes because the build workflow cancels obsolete runs.
 3. Dispatch **Release** on `main`, supplying that `build_run_id` and `version`.
    It can wait for a running build. The selected build must belong to this
