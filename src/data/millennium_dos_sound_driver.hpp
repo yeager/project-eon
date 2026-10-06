@@ -17,10 +17,9 @@ enum class MillenniumDosSoundEffectChoice : std::uint8_t {
     covox_sound_master = 2,
 };
 
-// The supplied English release has admissible original leaves only for the
-// two external choices below.  IBM speaker is selected in MILL.COM but has no
-// admitted driver leaf here; SROL is a referenced, missing table leaf.
-enum class MillenniumDosSoundDriverKind { sound_blaster, covox_sound_master };
+// Exact sound-driver leaves supplied by the English DOS release.  Admission
+// is content-addressed and does not imply that the driver's ABI is recovered.
+enum class MillenniumDosSoundDriverKind { ibm_speaker, sound_blaster, covox_sound_master };
 
 struct MillenniumDosSoundDriverLeaf {
     MillenniumDosSoundDriverKind kind{};
@@ -71,9 +70,9 @@ parse_millennium_dos_sound_selection(std::span<const std::uint8_t> mill_com);
     std::span<const std::uint8_t> mill_com,
     const MillenniumDosSoundSelectionEvidence& evidence);
 
-// Admit only the two supplied external sound-driver leaves by complete content
-// identity. A matching filename, SIBM.DRV, SROL.DRV, or another release is not
-// sufficient and is deliberately rejected.
+// Admit only the three selectable sound-driver leaves supplied by the English
+// release, by complete content identity. SROL.DRV and other releases remain
+// rejected.
 [[nodiscard]] MillenniumDosSoundDriverLeaf
 admit_millennium_dos_sound_driver_leaf(std::span<const std::uint8_t> bytes);
 

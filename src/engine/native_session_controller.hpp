@@ -90,6 +90,14 @@ public:
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_title_termination(MillenniumDosTitleToGameInterruptObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_parent_exec_return(MillenniumDosTitleToGameInterruptObservation);
     [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_child_status(MillenniumDosTitleToGameInterruptObservation);
+    [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_exec_request(MillenniumDosTitleToGameExecRequest);
+    [[nodiscard]] MillenniumDosTitleToGameObservationResult observe_millennium_dos_title_to_game_process_entry(MillenniumDosTitleToGameProcessEntry);
+    [[nodiscard]] MillenniumDosNativeProcessObservationResult
+    observe_millennium_dos_native_private_interrupt_return(
+        MillenniumDosNativePrivateInterruptReturnObservation);
+    [[nodiscard]] MillenniumDosNativeProcessObservationResult
+    observe_millennium_dos_native_bios_interrupt_return(
+        MillenniumDosNativeBiosInterruptReturnObservation);
     [[nodiscard]] std::optional<MillenniumDosTitleToGameCheckpoint> millennium_dos_title_to_game_checkpoint() const;
     [[nodiscard]] std::optional<MillenniumDosStaticDispatchDiagnostics>
     millennium_dos_static_dispatch_diagnostics() const;
@@ -191,6 +199,9 @@ public:
     drive_deuteros_amiga_main_stage(std::uint32_t step_limit = 64);
     [[nodiscard]] DeuterosAmigaSessionDriveResult
     drive_deuteros_amiga_session(std::uint32_t step_limit = 64);
+    [[nodiscard]] DeuterosAmigaInterruptWorkerObservationResult
+    observe_deuteros_amiga_interrupt_worker(
+        DeuterosAmigaInterruptWorkerEntryObservation observation);
     [[nodiscard]] ActiveNativeSessionDriveResult
     drive_active_native_session(std::uint32_t step_limit = 64);
     // The 50 Hz opening scheduler is native-session lifecycle state. SDL
@@ -243,6 +254,8 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_tail_source_table(DeuterosAmigaObservedTailSourceTable);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_tail_exec_return(DeuterosAmigaObservedTailExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_service_return(DeuterosAmigaObservedLocalCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_doio_return(DeuterosAmigaObservedTitleLoadDoIoReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_doio_status(DeuterosAmigaObservedTitleLoadDoIoStatus);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_selector(DeuterosAmigaObservedLoadSelector);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_copy_chunk(DeuterosAmigaObservedLoadCopyChunk);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_dispatch_table_base(DeuterosAmigaObservedLoadDispatchTableBase);
@@ -302,6 +315,13 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_1f9a4_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_1fe88_return(DeuterosAmigaObservedTitlePostAdjusted1fe88Return);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_final_gate(DeuterosAmigaObservedTitlePostAdjustedFinalGate);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    observe_deuteros_amiga_captured_title_selector_passage(std::uint64_t, std::uint32_t,
+        std::array<DeuterosAmigaObservedTitleSelectorHelperReturn,2>);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    observe_deuteros_amiga_captured_title_selector_dispatch(
+        DeuterosAmigaObservedTitleSelectorDispatchRead,
+        std::optional<DeuterosAmigaObservedTitleSelectorDispatchRead> = std::nullopt);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_input_return(DeuterosAmigaObservedTitlePostAdjustedInputReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_repeated_input_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_tail_copy(DeuterosAmigaObservedTitleTailCopy);
@@ -431,6 +451,17 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_post_config_fread(MillenniumAtariGemdosSelector63Observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_post_config_fclose(MillenniumAtariGemdosSelector62Observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_post_config_rts(MillenniumAtariGameInitSecondConfigRtsObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_entry_jump(MillenniumAtariPostConfigEntryJumpObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_status_register(MillenniumAtariStatusRegisterObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_xbios_26_return(MillenniumAtariPostConfigXbiosReturnObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_xbios_result(MillenniumAtariPostConfigXbiosResultObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_line_a_return(MillenniumAtariPostConfigLineAObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_local_call(MillenniumAtariPostConfigLocalCallObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_crawcin_branch(MillenniumAtariPostConfigCrawcinBranchObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_gemdos_fopen(MillenniumAtariPostConfigFopenObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_gemdos_fopen_return(MillenniumAtariPostConfigFopenReturnObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_gemdos_fcreate(MillenniumAtariPostConfigFcreateObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_gemdos_fcreate_return(MillenniumAtariPostConfigFcreateReturnObservation);
 
     // SDL must revoke borrowed textures, audio and text input before calling
     // this method. The explicit intermediate state makes that ordering

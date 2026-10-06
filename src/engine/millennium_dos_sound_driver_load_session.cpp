@@ -17,18 +17,22 @@ MillenniumDosSoundDriverLoadSession::MillenniumDosSoundDriverLoadSession(
     if (to_hex(sha256(mill_com))
             != "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e"
         || code_segment_ == 0
+        || (selected_character == '0'
+            && driver_.kind != MillenniumDosSoundDriverKind::ibm_speaker)
         || (selected_character == '1'
             && driver_.kind != MillenniumDosSoundDriverKind::sound_blaster)
         || (selected_character == '2'
             && driver_.kind != MillenniumDosSoundDriverKind::covox_sound_master)
-        || (selected_character != '1' && selected_character != '2')) {
+        || (selected_character != '0' && selected_character != '1' && selected_character != '2')) {
         throw std::runtime_error("Unsupported Millennium DOS selected sound-driver route");
     }
     const auto evidence = parse_millennium_dos_sound_selection(mill_com);
-    filename_address_ = driver_.kind == MillenniumDosSoundDriverKind::sound_blaster
-        ? 0x0645 : 0x064e;
-    const auto slot = driver_.kind == MillenniumDosSoundDriverKind::sound_blaster
-        ? evidence.sound_blaster_table_slot : evidence.covox_table_slot;
+    filename_address_ = driver_.kind == MillenniumDosSoundDriverKind::ibm_speaker
+        ? 0x062a : driver_.kind == MillenniumDosSoundDriverKind::sound_blaster
+            ? 0x0645 : 0x064e;
+    const auto slot = driver_.kind == MillenniumDosSoundDriverKind::ibm_speaker
+        ? evidence.ibm_speaker_table_slot : driver_.kind == MillenniumDosSoundDriverKind::sound_blaster
+            ? evidence.sound_blaster_table_slot : evidence.covox_table_slot;
     runtime_byte_effects_.push_back({0x0221,0x068a,
         static_cast<std::uint8_t>('0' + slot)});
 }

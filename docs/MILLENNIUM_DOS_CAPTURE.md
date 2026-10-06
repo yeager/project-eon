@@ -402,13 +402,31 @@ The callback PC is DOSBox-X's default exception-vector handler, not an
 original Millennium location. The three following stack words and all-zero
 four-byte read are raw callback-context values only; they do not establish a
 faulting instruction, a loaded driver segment, a return ABI, or a game result.
-The hash-bound linear byte inventory independently maps the observed
-`return_ip=$1900` to `TITLES.EXE` file offset `+$1800` under its stated
-COM-style candidate origin and renders the first four source bytes there as
-zero-valued, unclassified bytes. This corroborates only the recorder's
-four-byte value for that candidate mapping; it does not prove that the stack
-return uses that mapping, identify an invalid opcode, or explain why the
-original execution reaches the exception vector.
+The hash-bound flat-image mapping candidate places `return_ip=$1900` at
+`TITLES.EXE` file offset `+$1800`, but direct reinspection of the exact
+7,022-byte member shows the first bytes there are `18 25 ff 03`, not zero.
+The same mapping places the repeated `$18e4..$1900` fetch span at file
+`+$17e4..+$1800`; those 30 bytes hash to
+`fdd42cec5c9f4e3c90d2ac6eea81431102d76a6f83852087c72de6deaba76166` and
+are nonzero. In a complete linear candidate disassembly, `$18e4` falls on the
+second byte of the instruction beginning at `$18e3`, and `$1900` is the final
+displacement byte of the instruction beginning at `$18fd`. This is code/data-
+unclassified static evidence, not proof of instruction boundaries or a valid
+runtime mapping. By comparison, the same `+$17e4..+$1800` file span in the
+hash-bound `2200AD.EXE` (54,391 bytes) is all zero and hashes to
+`0679246d6c4216de0daa08e5523fb2674db2b6599c3b72ff946b488a15290b62`; that
+is compatible with the captured zero fetches but does not identify the image
+resident at `CS=0e70`. The raw linear report remains external at
+`~/.cache/project-eon-tools/titles-exe-context-20261007/titles-exe-linear.md`
+(SHA-256 `9142f2fe20bf8be4a60370610beb26368235f8b2f1f8f6cd0f2327b584123839`).
+Neither mapping proves the stack return target, a loaded image identity, an
+invalid opcode, or why execution reaches the exception vector. The next
+evidence needed is a reviewed observation binding the actual DOS-loaded image
+and entry segment to this return context. Under the `2200AD.EXE` candidate,
+the observed 15 two-byte zero steps disassemble as `ADD byte ptr [BX+SI],AL`,
+which is a valid 8086 instruction, not a no-op. Its possible guest-memory
+writes and flag effects were not captured; this candidate decode must not be
+turned into runtime behavior without operand and write evidence.
 This probe confirms that the `INT 6` loop happens after the existing title
 prefix and remains an emulator/driver boundary. Its 522-byte raw-result file
 SHA-256 is

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <cstddef>
 #include <span>
@@ -495,6 +496,10 @@ public:
 private:
     void advance_encoded_record_complete();
     void advance_descriptor_mode_two_return();
+    [[nodiscard]] std::optional<std::uint16_t> descriptor_cached_local_word(
+        std::uint16_t address) const;
+    [[nodiscard]] std::optional<std::uint16_t> descriptor_cached_local_effect(
+        std::uint16_t address, bool require_zero_segment) const;
     MillenniumDosTitleInitializationState state_ =
         MillenniumDosTitleInitializationState::awaiting_entry;
     std::uint64_t last_sequence_ = 0;
@@ -517,6 +522,10 @@ private:
     unsigned descriptor_loop_iteration_ = 0;
     bool descriptor_loop_owned_ = false;
     bool descriptor_loop_driving_ = false;
+    bool descriptor_loop_local_cache_enabled_ = false;
+    std::array<std::optional<std::uint16_t>, 15> descriptor_loop_local_words_{};
+    std::array<std::optional<std::uint16_t>, 15> descriptor_loop_local_effects_{};
+    std::array<std::optional<std::uint16_t>, 15> descriptor_loop_local_zero_segment_effects_{};
     std::optional<std::pair<std::uint16_t,std::uint16_t>> admitted_loop_pair_;
     std::uint16_t descriptor_lookup_base_ = 0x0008;
     std::uint16_t descriptor_output_offset_ = 0x0170;

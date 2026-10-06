@@ -67,8 +67,24 @@ RECORDER_PROTOCOLS = {
 # treat an experimental run as recovery-admissible evidence.
 EXPERIMENTAL_OBSERVER_SHA256 = "26acf29a06ef53abb876b04d155540e38370daf5beb85fc8c51ffcd08bb98fce"
 EXPERIMENTAL_OBSERVER_PROTOCOLS = {
-    "v21-int93-installation": EXPERIMENTAL_OBSERVER_SHA256,
+    "v21-int93-installation": frozenset({EXPERIMENTAL_OBSERVER_SHA256}),
+    "millennium-dos-en-driver-load-return-v1": frozenset({
+        # Separately built platform binaries from the same pinned source and
+        # patch. Both remain experimental-only and diagnostic-no-input.
+        "57020c1138879a6f53394f592b6f88bcd69875bfc06c98f7cd9b9a64372e8404",
+        "942f30f2199350a51d0ff1e7c024f4e226d29b5576dc6ea0d61b7556c12468e8",
+    }),
 }
+EXPERIMENTAL_OBSERVER_SIZES = {
+    "millennium-dos-en-driver-load-return-v1": {
+        "57020c1138879a6f53394f592b6f88bcd69875bfc06c98f7cd9b9a64372e8404": 15_809_768,
+        "942f30f2199350a51d0ff1e7c024f4e226d29b5576dc6ea0d61b7556c12468e8": 132_933_552,
+    },
+}
+EXPERIMENTAL_OBSERVER_RECEIPT_VERSIONS = {
+    "millennium-dos-en-driver-load-return-v1": "22",
+}
+EXPERIMENTAL_ONLY_PROTOCOLS = frozenset(EXPERIMENTAL_OBSERVER_RECEIPT_VERSIONS)
 GAME_ROOT = "millennium-return-to-earth-2-2"
 MACHINE_PROFILES = {"svga_s3", "ega"}
 # A new capture must state whether it is an intentionally no-input diagnostic
@@ -78,6 +94,7 @@ CAPTURE_INTENTS = {"diagnostic-no-input", "physical-input"}
 MIN_DURATION_SECONDS = 15
 MAX_DURATION_SECONDS = 600
 MAX_FOCUS_SETTLE_SECONDS = 120
+MAX_OPERATOR_SHUTDOWN_SECONDS = 120
 # The reviewed recorder caps host input at 256 short text records.  Keep a
 # generous, fixed ceiling here so a damaged or substituted recorder cannot
 # turn a receipt status check into unbounded host-side I/O.
@@ -107,6 +124,12 @@ MAX_TITLE_ENTRY_TRANSFER_BYTES = 512
 # small cap makes a substituted external recorder unable to turn the optional
 # diagnostic into an unbounded host-side input.
 MAX_INT93_INSTALLATION_BYTES = 384
+# Optional post-INT 21h loader observations are raw machine state only. The
+# guest buffer is represented by its address, bounded length, and digest.
+MAX_DRIVER_LOAD_RETURN_BYTES = 64 * 1024
+MAX_DRIVER_LOAD_RETURN_RECORDS = 128
+MAX_DRIVER_LOAD_BUFFER_BYTES = 4_366
+DRIVER_LOAD_RETURN_SITES = (0x02D4, 0x02ED, 0x02FC, 0x030B, 0x0315, 0x031B)
 RAW_RESULT_LINE = re.compile(
     r"raw-result\t([1-9][0-9]*) ([1-9][0-9]*) "
     r"(?:image=(mill\.com|titles\.exe) pc=0x(020e|0213|0129) "
@@ -170,6 +193,16 @@ INT93_INSTALLATION_LINE = re.compile(
     r"vector=0x93 ds=0x([0-9a-f]{4}) dx=0x([0-9a-f]{4}) "
     r"target_preimage=0x([0-9a-f]{8}) vector_ip=0x([0-9a-f]{4}) "
     r"vector_cs=0x([0-9a-f]{4})\n")
+DRIVER_LOAD_RETURN_LINE = re.compile(
+    r"driver-load-return-v1 ordinal=([1-9][0-9]{0,2}) image=mill\.com cs=([0-9a-f]{4}) "
+    r"pc=([0-9a-f]{4}) ax=([0-9a-f]{4}) bx=([0-9a-f]{4}) cx=([0-9a-f]{4}) "
+    r"dx=([0-9a-f]{4}) si=([0-9a-f]{4}) di=([0-9a-f]{4}) ds=([0-9a-f]{4}) "
+    r"es=([0-9a-f]{4}) ss=([0-9a-f]{4}) sp=([0-9a-f]{4}) flags=([0-9a-f]{4}) "
+    r"buffer=(none|ds0:(?:[1-9][0-9]{0,3}):[0-9a-f]{64})\n")
+DRIVER_LOAD_RETURN_OVERFLOW_LINE = re.compile(
+    r"driver-load-return-overflow cap=128\n")
+DRIVER_LOAD_RETURN_END_LINE = re.compile(
+    r"driver-load-return-end count=(0|[1-9][0-9]{0,2}) overflow=([01])\n")
 # The recorder emits SDL key data as opaque lowercase hexadecimal fields. The
 # grammar authenticates the bounded external receipt shape only; it does not
 # claim DOS accepted a key or assign its original-game meaning.
@@ -270,14 +303,19 @@ def validate_source_release(source: Path) -> tuple[str, int]:
     return digest, size
 
 
-def validate_recorder(path: Path, expected_sha256: str | None = None) -> tuple[str, int]:
+def validate_recorder(path: Path,
+                      expected_sha256: str | frozenset[str] | None = None) -> tuple[str, int]:
     if expected_sha256 is None:
         expected_sha256 = EXPECTED_RECORDER_SHA256
     digest, size = sha256_file(path)
-    if digest != expected_sha256:
+    accepted_hashes = ({expected_sha256} if isinstance(expected_sha256, str)
+                       else expected_sha256)
+    if digest not in accepted_hashes:
+        expected_display = (next(iter(accepted_hashes)) if len(accepted_hashes) == 1
+                            else sorted(accepted_hashes))
         raise CaptureError(
             "recorder hash does not match the reviewed DOSBox-X build "
-            f"(expected SHA-256 {expected_sha256}, got {digest}); select the reviewed "
+            f"(expected SHA-256 {expected_display}, got {digest}); select the reviewed "
             "external recorder for the requested --recorder-protocol")
     return digest, size
 
@@ -439,6 +477,15 @@ def capture_operator_instructions(intent: str) -> tuple[str, str, str]:
             "No host input, AUTOTYPE, debugger input, or guest-memory injection is permitted.",
         )
     raise CaptureError("capture intent is not in the reviewed finite set")
+
+
+def experimental_driver_return_operator_instructions() -> tuple[str, str, str]:
+    """The sidecar-only observer requires an orderly window close to flush."""
+    return (
+        "EXPERIMENTAL DIAGNOSTIC  no guest-input or gameplay evidence will be collected",
+        "Leave the emulator untouched during the capture window. When prompted, close DOSBox-X with the operating-system window controls so it can finalize the bounded sidecar; do not click the guest surface or press emulator keys.",
+        "No AUTOTYPE, debugger input, guest-memory injection, or guest-file writes are permitted.",
+    )
 
 
 def input_delivery_file_observed(path: Path) -> bool:
@@ -679,6 +726,97 @@ def int93_installation_status(path: Path, recorder_protocol: str) -> str:
             f"int93_installation_vector_cs=0x{vector_cs}\n")
 
 
+def driver_load_return_status(path: Path, recorder_protocol: str) -> str:
+    """Validate an optional bounded MILL.COM post-INT return sidecar.
+
+    Register values and the guest-buffer digest are preserved as opaque
+    observations. This parser does not infer DOS success or file identity.
+    """
+    if recorder_protocol != "millennium-dos-en-driver-load-return-v1":
+        return ""
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return "driver_load_return=absent\n"
+    except OSError as error:
+        raise CaptureError(f"driver-load return sidecar is unavailable: {error}") from error
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError("driver-load return sidecar is not a regular non-symlink file")
+    if info.st_size > MAX_DRIVER_LOAD_RETURN_BYTES:
+        raise CaptureError("driver-load return sidecar exceeds the bounded recorder contract")
+    if info.st_size == 0:
+        return "driver_load_return=empty\n"
+    try:
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                     | getattr(os, "O_NONBLOCK", 0))
+        with os.fdopen(fd, "rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise CaptureError("driver-load return sidecar changed to a non-regular file")
+            raw = stream.read(MAX_DRIVER_LOAD_RETURN_BYTES + 1)
+        if len(raw) > MAX_DRIVER_LOAD_RETURN_BYTES:
+            raise CaptureError("driver-load return sidecar exceeds the bounded recorder contract")
+        text = raw.decode("ascii")
+    except CaptureError:
+        raise
+    except OSError as error:
+        raise CaptureError(f"driver-load return sidecar is unavailable: {error}") from error
+    except UnicodeDecodeError as error:
+        raise CaptureError("driver-load return sidecar is not ASCII recorder output") from error
+    if not raw.endswith(b"\n") or b"\r" in raw:
+        raise CaptureError("driver-load return sidecar is not canonical LF recorder output")
+    records: list[tuple[int, int, str]] = []
+    footer: tuple[int, int] | None = None
+    overflow = False
+    lines = text.splitlines(keepends=True)
+    for expected, line in enumerate(lines, start=1):
+        end_match = DRIVER_LOAD_RETURN_END_LINE.fullmatch(line)
+        if end_match:
+            if expected != len(lines) or footer is not None:
+                raise CaptureError("driver-load return completion footer is not terminal")
+            footer = int(end_match.group(1)), int(end_match.group(2))
+            continue
+        if DRIVER_LOAD_RETURN_OVERFLOW_LINE.fullmatch(line):
+            overflow = True
+            continue
+        match = DRIVER_LOAD_RETURN_LINE.fullmatch(line)
+        if not match:
+            raise CaptureError("driver-load return sidecar contains an invalid recorder record")
+        ordinal = int(match.group(1))
+        site = int(match.group(3), 16)
+        buffer = match.group(15)
+        if ordinal != expected or ordinal > MAX_DRIVER_LOAD_RETURN_RECORDS:
+            raise CaptureError("driver-load return ordinals exceed the reviewed sample cap")
+        if site not in DRIVER_LOAD_RETURN_SITES:
+            raise CaptureError("driver-load return uses an unreviewed instruction site")
+        if buffer != "none":
+            if site != 0x0315:
+                raise CaptureError("driver-load buffer digest is detached from the read return site")
+            _, length_text, _digest = buffer.split(":", 2)
+            length = int(length_text)
+            if not 1 <= length <= MAX_DRIVER_LOAD_BUFFER_BYTES:
+                raise CaptureError("driver-load buffer digest exceeds the reviewed size bound")
+        records.append((ordinal, site, buffer))
+    if footer is None or footer[1] != 0 or overflow:
+        raise CaptureError("driver-load return sidecar is incomplete or overflowed")
+    if footer[0] != len(records):
+        raise CaptureError("driver-load return completion count does not match its records")
+    if len(records) > MAX_DRIVER_LOAD_RETURN_RECORDS:
+        raise CaptureError("driver-load return ordinals exceed the reviewed sample cap")
+    digest, size = hashlib.sha256(raw).hexdigest(), len(raw)
+    sites: dict[int, int] = {}
+    for _, site, _ in records:
+        sites[site] = sites.get(site, 0) + 1
+    site_counts = ",".join(f"0x{site:04x}:{sites[site]}"
+                            for site in DRIVER_LOAD_RETURN_SITES if site in sites)
+    buffer_records = sum(buffer != "none" for _, _, buffer in records)
+    return ("driver_load_return=present\n"
+            f"driver_load_return_sha256={digest}\n"
+            f"driver_load_return_bytes={size}\n"
+            f"driver_load_return_records={len(records)}\n"
+            f"driver_load_return_site_counts={site_counts}\n"
+            f"driver_load_return_buffer_digests={buffer_records}\n")
+
+
 def raw_result_labels(path: Path, recorder_protocol: str = "v11") -> list[str]:
     """Parse finite recorder diagnostics into non-semantic shape labels."""
     try:
@@ -721,10 +859,9 @@ def raw_result_labels(path: Path, recorder_protocol: str = "v11") -> list[str]:
 def experimental_observer_raw_status() -> str:
     """Describe deliberately uncollected legacy streams without fabricating them.
 
-    The v3 observer owns only the bounded INT 93h installer sidecar.  It does
-    not implement the unrelated historical event/results observers, so an
-    experimental protocol test must record their absence rather than fail as
-    though a pinned multi-stream recorder had omitted a required file.
+    Experimental observers may own only a separate finite sidecar and not the
+    historical event/results streams. Record those streams as uncollected
+    rather than failing as though a pinned multi-stream recorder omitted them.
     """
     return "events_raw=not-collected\nresults_raw=not-collected\n"
 
@@ -965,7 +1102,19 @@ def identity_status(name: str, identity: tuple[str, int]) -> str:
 def run_capture(args: argparse.Namespace) -> Path:
     source = require_absolute_regular_file(Path(args.source_release), "source release")
     recorder = require_absolute_regular_file(Path(args.recorder), "recorder", executable=True)
-    receipt_version, recorder_hash = RECORDER_PROTOCOLS[args.recorder_protocol]
+    if args.recorder_protocol in EXPERIMENTAL_ONLY_PROTOCOLS and not args.experimental_observer:
+        raise CaptureError("this DOSBox-X build is experimental-only and requires --experimental-observer")
+    if (args.recorder_protocol in EXPERIMENTAL_ONLY_PROTOCOLS
+            and args.capture_intent != "diagnostic-no-input"):
+        raise CaptureError("the sidecar-only experimental observer supports diagnostic-no-input only")
+    reviewed = RECORDER_PROTOCOLS.get(args.recorder_protocol)
+    if reviewed is None:
+        version = EXPERIMENTAL_OBSERVER_RECEIPT_VERSIONS.get(args.recorder_protocol)
+        if not args.experimental_observer or version is None:
+            raise CaptureError("recorder protocol is not available for an admitted capture")
+        receipt_version, recorder_hash = version, None
+    else:
+        receipt_version, recorder_hash = reviewed
     recorder_admission = "pinned"
     if args.experimental_observer:
         if args.recorder_protocol not in EXPERIMENTAL_OBSERVER_PROTOCOLS:
@@ -1012,7 +1161,12 @@ def run_capture(args: argparse.Namespace) -> Path:
             environment["PROJECT_EON_DOSBOX_X_TITLE_TRANSFER_RECORD"] = str(output / "title-entry-transfer.raw")
         if args.recorder_protocol == "v21-int93-installation":
             environment["PROJECT_EON_DOSBOX_X_INT93_INSTALL_RECORD"] = str(output / "int93-installation.raw")
-        for instruction in capture_operator_instructions(args.capture_intent):
+        if args.recorder_protocol == "millennium-dos-en-driver-load-return-v1":
+            environment["PROJECT_EON_DOS_DRIVER_LOAD_RETURN_RECORD"] = str(output / "driver-load-return.raw")
+        instructions = (experimental_driver_return_operator_instructions()
+                        if args.recorder_protocol == "millennium-dos-en-driver-load-return-v1"
+                        else capture_operator_instructions(args.capture_intent))
+        for instruction in instructions:
             print(instruction)
         print(f"The {args.focus_settle_seconds}-second focus-settle window begins now; the {args.duration_seconds}-second capture window follows.")
         started = time.time()
@@ -1035,6 +1189,7 @@ def run_capture(args: argparse.Namespace) -> Path:
         console_thread.start()
         settle_deadline = time.monotonic() + args.focus_settle_seconds
         deadline: float | None = None
+        operator_shutdown_deadline: float | None = None
         termination_reason = "emulator-exit"
         live_input_observed = False
         while True:
@@ -1065,6 +1220,12 @@ def run_capture(args: argparse.Namespace) -> Path:
                 break
             remaining = (settle_deadline - now if deadline is None else deadline - now)
             if remaining <= 0:
+                if (args.recorder_protocol == "millennium-dos-en-driver-load-return-v1"
+                        and operator_shutdown_deadline is None):
+                    operator_shutdown_deadline = now + MAX_OPERATOR_SHUTDOWN_SECONDS
+                    deadline = operator_shutdown_deadline
+                    print("OBSERVATION WINDOW COMPLETE  close the visible DOSBox-X window to finalize its sidecar.")
+                    continue
                 process.kill()
                 process.wait()
                 exit_status = 124
@@ -1099,6 +1260,11 @@ def run_capture(args: argparse.Namespace) -> Path:
             output / "results.raw", args.recorder_protocol, termination_reason)
         installation_status = int93_installation_status(output / "int93-installation.raw",
                                                         args.recorder_protocol)
+        driver_load_status = driver_load_return_status(
+            output / "driver-load-return.raw", args.recorder_protocol)
+        if (args.recorder_protocol == "millennium-dos-en-driver-load-return-v1"
+                and not driver_load_status.startswith("driver_load_return=present\n")):
+            raise CaptureError("experimental driver-load recorder did not produce a complete sidecar")
         title_checkpoint_status = ("title_input_checkpoint=not-collected\n" if args.experimental_observer else
                                    title_input_checkpoint_status(output / "results.raw",
                                        output / "host-input-receipt.raw", args.recorder_protocol))
@@ -1116,6 +1282,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                         + identity_status("configuration", configuration_identity)
                         + intent_status + receipt_status + observation_status + history_status + history_boundary_status
                         + anomaly_status + int93_status + title_transfer_status + installation_status
+                        + driver_load_status
                         + title_checkpoint_status
                         + recorder_console_status(console_result[0]))
         if console_result[0].over_limit:
@@ -1153,8 +1320,10 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
                         help="Required operator declaration: physical-input or diagnostic-no-input")
     parser.add_argument("--machine-profile", choices=tuple(sorted(MACHINE_PROFILES)), default="svga_s3",
                         help="Explicit DOSBox-X video-machine profile (default: svga_s3)")
-    parser.add_argument("--recorder-protocol", choices=tuple(sorted(RECORDER_PROTOCOLS)), default="v11",
-                        help="Reviewed recorder output grammar (default: v11)")
+    parser.add_argument("--recorder-protocol",
+                        choices=tuple(sorted(set(RECORDER_PROTOCOLS) | EXPERIMENTAL_ONLY_PROTOCOLS)),
+                        default="v11",
+                        help="Reviewed recorder output grammar, or an explicitly experimental protocol")
     parser.add_argument("--experimental-observer", action="store_true",
                         help=("Run only the separately reviewed, unpinned observer for a protocol test. "
                               "Its receipt is never recovery-admissible."))

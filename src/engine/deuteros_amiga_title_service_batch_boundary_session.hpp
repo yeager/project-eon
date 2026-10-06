@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <vector>
 
@@ -281,6 +282,154 @@ struct DeuterosAmigaTitleLoadServiceLocalPlan {
     std::uint32_t selector_read_address = 0;
     std::uint32_t selector_source_address = 0;
     std::uint32_t stop_before_address = 0;
+};
+
+// One exact Exec vector return from the raw title-data reader. Request fields
+// and disk offsets are captured facts; no disk identity or bytes are inferred.
+struct DeuterosAmigaObservedTitleLoadDoIoReturn {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t exec_base_source_address = 0;
+    std::uint32_t request_pointer_cell_address = 0;
+    std::uint32_t observed_exec_base = 0;
+    std::uint32_t call_address = 0;
+    std::uint32_t request_address = 0;
+    std::int16_t vector = 0;
+    std::uint32_t return_address = 0;
+    std::uint16_t request_command = 0;
+    std::uint32_t request_length = 0;
+    std::uint32_t request_buffer_address = 0;
+    std::uint32_t request_disk_offset = 0;
+    std::uint32_t result_d0 = 0;
+    std::uint16_t result_sr = 0;
+};
+
+struct DeuterosAmigaTitleLoadDoIoReturnPlan {
+    DeuterosAmigaObservedTitleLoadDoIoReturn observation;
+    std::uint32_t request_status_read_instruction = 0;
+    std::uint32_t request_status_address = 0;
+    std::uint32_t request_ordinal = 0;
+};
+
+struct DeuterosAmigaObservedTitleLoadDoIoStatus {
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t instruction_address = 0;
+    std::uint32_t source_address = 0;
+    std::uint8_t observed_io_error = 0;
+};
+
+struct DeuterosAmigaTitleLoadDoIoStatusPlan {
+    DeuterosAmigaObservedTitleLoadDoIoStatus observation;
+    std::uint32_t completed_request_count = 0;
+    std::uint32_t next_call_address = 0;
+    std::int16_t next_vector = 0;
+    std::uint32_t next_return_address = 0;
+    bool all_requests_succeeded = false;
+};
+
+// Ordered gate for the four statically recovered disk-read requests. It
+// admits only typed Exec returns and the subsequent observed successful
+// io_Error reads; payload bytes remain external observations at $38a28.
+class DeuterosAmigaTitleLoadDoIoGate {
+public:
+    explicit DeuterosAmigaTitleLoadDoIoGate(
+        const DeuterosAmigaTitlePostExecLoadServiceProfile& profile) : profile_(profile) {}
+
+    void begin(const std::uint32_t exec_base, const std::uint64_t trace_sequence) {
+        if (started_ || exec_base == 0 || trace_sequence == 0)
+            throw std::runtime_error("Deuteros raw-read gate requires one typed predecessor return");
+        started_ = true;
+        exec_base_ = exec_base;
+        last_sequence_ = trace_sequence;
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDoIoReturnPlan>
+    observe_return(const DeuterosAmigaObservedTitleLoadDoIoReturn& observation) {
+        if (failed_)
+            throw std::runtime_error("Deuteros raw-read gate is terminal after a failed observation");
+        if (!started_ || complete_ || pending_) return std::nullopt;
+        if (observation.trace_sequence <= last_sequence_)
+            throw std::runtime_error("Deuteros raw-read DoIO return is stale");
+        const auto total = profile_.read_full_chunk_count
+            + (profile_.read_tail_bytes != 0 ? 1U : 0U);
+        if (completed_ >= total
+            || observation.exec_base_source_address != profile_.read_exec_base_source_address
+            || observation.request_pointer_cell_address != profile_.read_request_pointer_cell_address
+            || observation.request_address == 0 || (observation.request_address & 1U) != 0
+            || observation.request_address > 0x1000000U - 0x30U
+            || (request_address_ != 0 && observation.request_address != request_address_)
+            || observation.observed_exec_base != exec_base_
+            || observation.call_address != profile_.read_vector_call_address
+            || observation.vector != profile_.read_vector
+            || observation.return_address != profile_.read_vector_return_address
+            || observation.request_command != profile_.read_command
+            || observation.request_buffer_address != profile_.read_buffer_address
+                + completed_ * profile_.read_chunk_bytes) {
+            failed_ = true;
+            last_sequence_ = observation.trace_sequence;
+            throw std::runtime_error("Deuteros raw-read DoIO return does not match the hash-bound request");
+        }
+        const auto expected_length = completed_ < profile_.read_full_chunk_count
+            ? profile_.read_chunk_bytes : profile_.read_tail_bytes;
+        const auto expected_offset = profile_.read_first_disk_offset
+            + completed_ * profile_.read_chunk_bytes;
+        if (expected_length == 0 || observation.request_length != expected_length
+            || observation.request_disk_offset != expected_offset) {
+            failed_ = true;
+            last_sequence_ = observation.trace_sequence;
+            throw std::runtime_error("Deuteros raw-read DoIO request extent is out of sequence");
+        }
+        pending_ = observation;
+        request_address_ = observation.request_address;
+        last_sequence_ = observation.trace_sequence;
+        return DeuterosAmigaTitleLoadDoIoReturnPlan{observation,
+            profile_.read_status_instruction_address,
+            observation.request_address + profile_.read_status_offset, completed_};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDoIoStatusPlan>
+    observe_status(const DeuterosAmigaObservedTitleLoadDoIoStatus& observation) {
+        if (failed_)
+            throw std::runtime_error("Deuteros raw-read gate is terminal after a failed observation");
+        if (!pending_) return std::nullopt;
+        if (observation.trace_sequence <= last_sequence_)
+            throw std::runtime_error("Deuteros raw-read status is stale");
+        if (observation.instruction_address != profile_.read_status_instruction_address
+            || observation.source_address != pending_->request_address + profile_.read_status_offset
+            || observation.observed_io_error != 0) {
+            // A new but contradictory status event consumes its trace sequence
+            // and makes the read path terminal. It cannot be replayed with a
+            // different io_Error value to convert failure into success.
+            last_sequence_ = observation.trace_sequence;
+            pending_.reset();
+            failed_ = true;
+            throw std::runtime_error("Deuteros raw-read status is stale, failed, or outside the success path");
+        }
+        pending_.reset();
+        ++completed_;
+        last_sequence_ = observation.trace_sequence;
+        const auto total = profile_.read_full_chunk_count
+            + (profile_.read_tail_bytes != 0 ? 1U : 0U);
+        complete_ = completed_ == total;
+        return DeuterosAmigaTitleLoadDoIoStatusPlan{observation, completed_,
+            complete_ ? 0U : profile_.read_vector_call_address,
+            static_cast<std::int16_t>(complete_ ? 0 : profile_.read_vector),
+            complete_ ? 0U : profile_.read_vector_return_address, complete_};
+    }
+
+    [[nodiscard]] bool complete() const noexcept { return complete_ && !pending_; }
+    [[nodiscard]] bool failed() const noexcept { return failed_; }
+    [[nodiscard]] std::uint64_t last_sequence() const noexcept { return last_sequence_; }
+
+private:
+    DeuterosAmigaTitlePostExecLoadServiceProfile profile_;
+    std::optional<DeuterosAmigaObservedTitleLoadDoIoReturn> pending_;
+    std::uint32_t completed_ = 0;
+    std::uint32_t exec_base_ = 0;
+    std::uint32_t request_address_ = 0;
+    std::uint64_t last_sequence_ = 0;
+    bool started_ = false;
+    bool complete_ = false;
+    bool failed_ = false;
 };
 
 enum class DeuterosAmigaTitleLoadServiceOutcome { zero_retry_boundary, one_exit, copy_boundary };
@@ -1157,6 +1306,45 @@ struct DeuterosAmigaTitlePostAdjustedFinalGatePlan {
     bool branches_to_join=false,jumps_to_external=false;
     std::uint32_t join_address=0,jump_instruction=0,jump_target=0;
 };
+// Receipt-shaped local observations for the title selector reached after an
+// input-linked capture. This records raw D0/SR returns only; it does not infer
+// a command meaning or admit the later $1fbe6 dispatch memory.
+struct DeuterosAmigaObservedTitleSelectorHelperReturn {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t call_address=0,call_target=0,return_address=0;
+    std::uint32_t result_d0=0;
+    std::uint16_t result_sr=0;
+    constexpr bool operator==(const DeuterosAmigaObservedTitleSelectorHelperReturn&) const = default;
+};
+struct DeuterosAmigaTitleSelectorPassagePlan {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t selector_address=0,incoming_d0=0;
+    std::array<DeuterosAmigaObservedTitleSelectorHelperReturn,2> helper_returns{};
+    std::uint32_t stop_before_dispatch_address=0;
+};
+// Raw RAM observations consumed after an input-linked passage. Values and
+// instruction PCs are retained as evidence; enum labels describe only the
+// original branch topology, not a title action or rendered result.
+struct DeuterosAmigaObservedTitleSelectorDispatchRead {
+    std::uint64_t trace_sequence=0;
+    std::uint32_t instruction_address=0,source_address=0;
+    std::uint8_t value=0;
+    constexpr bool operator==(const DeuterosAmigaObservedTitleSelectorDispatchRead&) const = default;
+};
+enum class DeuterosAmigaTitleSelectorDispatchRoute : std::uint8_t {
+    negative_helper_entry,
+    zero_clear_variant,
+    zero_set_variant,
+    positive_clear_variant,
+    positive_set_variant,
+};
+struct DeuterosAmigaTitleSelectorDispatchPlan {
+    DeuterosAmigaObservedTitleSelectorDispatchRead primary_read;
+    std::optional<DeuterosAmigaObservedTitleSelectorDispatchRead> secondary_read;
+    DeuterosAmigaTitleSelectorDispatchRoute route=
+        DeuterosAmigaTitleSelectorDispatchRoute::negative_helper_entry;
+    std::uint32_t next_instruction_address=0;
+};
 struct DeuterosAmigaObservedTitlePostAdjustedInputReturn {
     DeuterosAmigaObservedLocalCallReturn service_return;
     std::optional<std::uint32_t> toggle_source_address;
@@ -1260,6 +1448,10 @@ struct DeuterosAmigaObservedMainStageExecReturn {
     std::uint32_t call_address=0;
     std::int16_t vector=0;
     std::uint32_t return_address=0,result_d0=0;
+    // Register image immediately before the external call. These are
+    // mandatory at $209f0, where the call is specifically OpenDevice; other
+    // Exec return boundaries do not consume these fields.
+    std::uint32_t call_a0=0,call_a1=0,call_d0=0,call_d1=0;
 };
 struct DeuterosAmigaMainStageFirstExecReturnPlan {
     DeuterosAmigaObservedMainStageExecReturn observation;
@@ -2231,6 +2423,11 @@ public:
     main_stage_loop_prepare_body_plan() const { return main_stage_loop_prepare_body_plan_; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
     main_stage_loop_graphics_plan() const { return main_stage_loop_graphics_plan_; }
+    [[nodiscard]] std::span<const std::uint8_t> main_stage_cia_prefix_code() const noexcept {
+        constexpr std::size_t offset=0x17e4,length=14;
+        if(main_stage_source_bytes_.size()<offset+length)return {};
+        return std::span<const std::uint8_t>(main_stage_source_bytes_).subspan(offset,length);
+    }
 
     DeuterosAmigaTitleServiceBatchBoundarySession(
         const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
@@ -2998,7 +3195,10 @@ public:
             || observation.return_address != tail_return_.vector_return_address) {
             throw std::runtime_error("Deuteros tail Exec return does not match boundary");
         }
+        load_doio_gate_.emplace(load_service_);
+        load_doio_gate_->begin(observation.observed_exec_base, observation.trace_sequence);
         observed_tail_exec_return_ = observation;
+        last_command_sequence_ = observation.trace_sequence;
         return DeuterosAmigaTitleTailExecReturnLocalPlan{observation,
             tail_return_.vector_return_address, 0x404f0,
             0x404f0, 0x389e2, 0x404f0};
@@ -3007,16 +3207,41 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadServiceLocalPlan>
     observe_load_service_return(const DeuterosAmigaObservedLocalCallReturn& observation) {
         if (!observed_tail_exec_return_ || observed_load_service_return_) return std::nullopt;
-        if (observation.trace_sequence <= observed_tail_exec_return_->trace_sequence
+        if (!load_doio_gate_ || !load_doio_gate_->complete()) {
+            throw std::runtime_error("Deuteros load-service return precedes successful typed DoIO reads");
+        }
+        if (observation.trace_sequence <= last_command_sequence_
             || observation.call_address != load_service_.nested_call_address
             || observation.call_target != load_service_.nested_call_target
             || observation.return_address != load_service_.nested_return_address) {
             throw std::runtime_error("Deuteros load-service return does not match boundary");
         }
         observed_load_service_return_ = observation;
+        last_command_sequence_ = observation.trace_sequence;
         return DeuterosAmigaTitleLoadServiceLocalPlan{observation,
             load_service_.d7_value, load_service_.d1_value, load_service_.d0_value,
             0x389fa, load_service_.selector_word_address, 0x389fa};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDoIoReturnPlan>
+    observe_load_doio_return(const DeuterosAmigaObservedTitleLoadDoIoReturn& observation) {
+        if (!observed_tail_exec_return_ || observed_load_service_return_ || !load_doio_gate_)
+            return std::nullopt;
+        if (observation.trace_sequence <= last_command_sequence_)
+            throw std::runtime_error("Deuteros raw-read DoIO return is stale");
+        auto plan = load_doio_gate_->observe_return(observation);
+        if (plan) last_command_sequence_ = observation.trace_sequence;
+        return plan;
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDoIoStatusPlan>
+    observe_load_doio_status(const DeuterosAmigaObservedTitleLoadDoIoStatus& observation) {
+        if (!load_doio_gate_) return std::nullopt;
+        if (observation.trace_sequence <= last_command_sequence_)
+            throw std::runtime_error("Deuteros raw-read status is stale");
+        auto plan = load_doio_gate_->observe_status(observation);
+        if (plan) last_command_sequence_ = observation.trace_sequence;
+        return plan;
     }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadServiceSelectorPlan>
@@ -3039,7 +3264,17 @@ public:
                 DeuterosAmigaTitleLoadServiceOutcome::one_exit,
                 0, 0, 0, 0x404f6, 0x404f8};
         }
-        const auto source = selector == 2 ? 0x26cc0U : 0x29540U;
+        const auto source = selector == 2 ? load_service_.read_buffer_address
+            : load_service_.read_buffer_address + 0x2880U;
+        const auto read_begin = static_cast<std::uint64_t>(load_service_.read_buffer_address);
+        const auto read_end = read_begin + load_service_.read_total_bytes;
+        const auto copy_begin = static_cast<std::uint64_t>(source);
+        const auto copy_end = copy_begin
+            + static_cast<std::uint64_t>(load_service_.copy_longword_count) * 4U;
+        if (copy_begin < read_begin || copy_end > read_end) {
+            throw std::runtime_error(
+                "Deuteros load copy source is outside the completed disk-read buffer");
+        }
         load_copy_transfer_.emplace(BoundedMemoryTransferContract{
             0x38a28, source, load_service_.copy_destination, 4, 4,
             load_service_.copy_longword_count, 256,
@@ -4410,6 +4645,74 @@ public:
         return DeuterosAmigaTitlePostAdjusted1fe88ReturnPlan{o,0x405ea,0x1ffc8,
             0x405f0,0x1fe6c,0x405f6};
     }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleSelectorPassagePlan>
+    observe_captured_title_selector_passage(
+        const std::uint64_t sequence, const std::uint32_t incoming_d0,
+        const std::array<DeuterosAmigaObservedTitleSelectorHelperReturn,2>& returns) {
+        if (sequence == 0 || sequence <= last_captured_selector_sequence_
+            || captured_title_selector_passage_) return std::nullopt;
+        constexpr std::array<std::uint32_t,2> calls{{0x1fe84U,0x1fe92U}};
+        constexpr std::array<std::uint32_t,2> return_pcs{{0x1fe88U,0x1fe96U}};
+        std::uint64_t previous = 0;
+        for (std::size_t i=0;i<returns.size();++i) {
+            const auto& observed=returns[i];
+            if (observed.trace_sequence<=previous || observed.trace_sequence>sequence
+                || observed.call_address!=calls[i] || observed.call_target!=0x1fea8U
+                || observed.return_address!=return_pcs[i])
+                throw std::runtime_error("Deuteros captured title selector helper return mismatch");
+            previous=observed.trace_sequence;
+        }
+        captured_title_selector_passage_=DeuterosAmigaTitleSelectorPassagePlan{
+            sequence,0x1fe7aU,incoming_d0,returns,0x1fbe6U};
+        last_captured_selector_sequence_=sequence;
+        return captured_title_selector_passage_;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleSelectorDispatchPlan>
+    observe_captured_title_selector_dispatch(
+        const DeuterosAmigaObservedTitleSelectorDispatchRead& primary,
+        const std::optional<DeuterosAmigaObservedTitleSelectorDispatchRead>& secondary =
+            std::nullopt) {
+        if (!captured_title_selector_passage_ || captured_title_selector_dispatch_
+            || primary.trace_sequence <= captured_title_selector_passage_->trace_sequence
+            || primary.instruction_address != 0x1fbe6U
+            || primary.source_address != 0x1f98cU) return std::nullopt;
+        const auto signed_primary = static_cast<std::int8_t>(primary.value);
+        DeuterosAmigaTitleSelectorDispatchPlan plan;
+        plan.primary_read = primary;
+        if (signed_primary < 0) {
+            if (secondary) {
+                throw std::runtime_error(
+                    "Deuteros negative title selector must stop before secondary read");
+            }
+            plan.route = DeuterosAmigaTitleSelectorDispatchRoute::negative_helper_entry;
+            plan.next_instruction_address = 0x1fc24U;
+        } else {
+            const auto expected_pc = signed_primary == 0 ? 0x1fc22U : 0x1fc9cU;
+            if (!secondary || secondary->trace_sequence <= primary.trace_sequence
+                || secondary->instruction_address != expected_pc
+                || secondary->source_address != 0x1f98eU) {
+                throw std::runtime_error(
+                    "Deuteros title selector secondary read does not match branch");
+            }
+            plan.secondary_read = secondary;
+            const bool set = secondary->value != 0;
+            if (signed_primary == 0) {
+                plan.route = set
+                    ? DeuterosAmigaTitleSelectorDispatchRoute::zero_set_variant
+                    : DeuterosAmigaTitleSelectorDispatchRoute::zero_clear_variant;
+                plan.next_instruction_address = set ? 0x1fd0aU : 0x1fc2cU;
+            } else {
+                plan.route = set
+                    ? DeuterosAmigaTitleSelectorDispatchRoute::positive_set_variant
+                    : DeuterosAmigaTitleSelectorDispatchRoute::positive_clear_variant;
+                plan.next_instruction_address = set ? 0x1fd7aU : 0x1fca6U;
+            }
+        }
+        captured_title_selector_dispatch_ = plan;
+        last_captured_selector_sequence_ = secondary
+            ? secondary->trace_sequence : primary.trace_sequence;
+        return plan;
+    }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedFinalGatePlan> observe_post_adjusted_final_gate(const DeuterosAmigaObservedTitlePostAdjustedFinalGate&o){
         if(!post_adjusted_1fe88_return_||post_adjusted_final_gate_)return std::nullopt;
         const std::array<DeuterosAmigaObservedLocalCallReturn,3> expected{{
@@ -4715,6 +5018,13 @@ public:
         if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x209f0
             ||o.vector!=-0x1bc||o.return_address!=0x209f4)
             throw std::runtime_error("Deuteros main-stage $209f0 Exec return does not match boundary");
+        // Keep the call-site contract at the state-machine boundary as well
+        // as in ReleaseRuntimeCoordinator: callers of this session directly
+        // must not be able to attach an OpenDevice result to different input
+        // registers. The pointed-to string and IORequest ownership are checked
+        // by the coordinator, which owns native runtime memory.
+        if(o.call_a0!=0x20982||o.call_a1!=0x2091c||o.call_d0!=0||o.call_d1!=0)
+            throw std::runtime_error("Deuteros main-stage $209f0 OpenDevice call registers do not match");
         main_stage_209f0_exec_return_=o;last_command_sequence_=o.trace_sequence;
         const bool spin=o.result_d0!=0;
         main_stage_state_=spin?DeuterosAmigaMainStageState::terminal_209fa_spin:
@@ -5466,6 +5776,7 @@ private:
     std::optional<DeuterosAmigaObservedTailSourceTable> observed_tail_source_table_;
     std::optional<DeuterosAmigaObservedTailExecReturn> observed_tail_exec_return_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> observed_load_service_return_;
+    std::optional<DeuterosAmigaTitleLoadDoIoGate> load_doio_gate_;
     std::optional<DeuterosAmigaObservedLoadSelector> observed_load_selector_;
     std::optional<BoundedMemoryTransferSession> load_copy_transfer_;
     std::optional<DeuterosAmigaObservedLoadDispatchTableBase>
@@ -5542,6 +5853,9 @@ private:
     std::optional<DeuterosAmigaObservedLocalCallReturn> post_adjusted_1f9a4_return_;
     std::optional<DeuterosAmigaObservedTitlePostAdjusted1fe88Return> post_adjusted_1fe88_return_;
     std::optional<DeuterosAmigaObservedTitlePostAdjustedFinalGate> post_adjusted_final_gate_;
+    std::optional<DeuterosAmigaTitleSelectorPassagePlan> captured_title_selector_passage_;
+    std::optional<DeuterosAmigaTitleSelectorDispatchPlan> captured_title_selector_dispatch_;
+    std::uint64_t last_captured_selector_sequence_=0;
     std::optional<DeuterosAmigaObservedTitlePostAdjustedInputReturn> post_adjusted_input_return_;
     std::uint32_t post_adjusted_repeated_input_iteration_=0;
     bool post_adjusted_repeated_input_completed_=false;

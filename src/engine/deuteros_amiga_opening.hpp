@@ -123,6 +123,10 @@ public:
     [[nodiscard]] const std::optional<DeuterosAmigaTitleStageSession>& title_stage_session() const {
         return title_stage_session_;
     }
+    [[nodiscard]] std::span<const std::uint8_t> main_stage_cia_prefix_code() const noexcept {
+        return title_stage_session_ ? title_stage_session_->main_stage_cia_prefix_code()
+                                    : std::span<const std::uint8_t>{};
+    }
     // Prepare or rebuild title-stage execution receipts after an admitted
     // loader has returned to the loaded $13000 entry (profiles one or five).
     // The replacement is prepared completely before publication, so a
@@ -164,6 +168,8 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleTailSourceTableLocalPlan> observe_title_tail_source_table(const DeuterosAmigaObservedTailSourceTable& o) { return title_stage_session_ ? title_stage_session_->observe_tail_source_table(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleTailExecReturnLocalPlan> observe_title_tail_exec_return(const DeuterosAmigaObservedTailExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_tail_exec_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadServiceLocalPlan> observe_title_load_service_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_load_service_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDoIoReturnPlan> observe_title_load_doio_return(const DeuterosAmigaObservedTitleLoadDoIoReturn& o) { return title_stage_session_ ? title_stage_session_->observe_load_doio_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDoIoStatusPlan> observe_title_load_doio_status(const DeuterosAmigaObservedTitleLoadDoIoStatus& o) { return title_stage_session_ ? title_stage_session_->observe_load_doio_status(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadServiceSelectorPlan> observe_title_load_selector(const DeuterosAmigaObservedLoadSelector& o) { return title_stage_session_ ? title_stage_session_->observe_load_selector(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadCopyChunkPlan> observe_title_load_copy_chunk(const DeuterosAmigaObservedLoadCopyChunk& o) { return title_stage_session_ ? title_stage_session_->observe_load_copy_chunk(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDispatchTableBasePlan> observe_title_load_dispatch_table_base(const DeuterosAmigaObservedLoadDispatchTableBase& o) { return title_stage_session_ ? title_stage_session_->observe_load_dispatch_table_base(o) : std::nullopt; }
@@ -223,6 +229,21 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjusted1f9a4ReturnPlan> observe_title_post_adjusted_1f9a4_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_1f9a4_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjusted1fe88ReturnPlan> observe_title_post_adjusted_1fe88_return(const DeuterosAmigaObservedTitlePostAdjusted1fe88Return& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_1fe88_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedFinalGatePlan> observe_title_post_adjusted_final_gate(const DeuterosAmigaObservedTitlePostAdjustedFinalGate& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_final_gate(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleSelectorPassagePlan>
+    observe_captured_title_selector_passage(std::uint64_t sequence, std::uint32_t incoming_d0,
+        const std::array<DeuterosAmigaObservedTitleSelectorHelperReturn,2>& returns) {
+        return title_stage_session_ ? title_stage_session_->observe_captured_title_selector_passage(
+            sequence,incoming_d0,returns) : std::nullopt;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleSelectorDispatchPlan>
+    observe_captured_title_selector_dispatch(
+        const DeuterosAmigaObservedTitleSelectorDispatchRead& primary,
+        const std::optional<DeuterosAmigaObservedTitleSelectorDispatchRead>& secondary =
+            std::nullopt) {
+        return title_stage_session_
+            ? title_stage_session_->observe_captured_title_selector_dispatch(primary, secondary)
+            : std::nullopt;
+    }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedInputReturnPlan> observe_title_post_adjusted_input_return(const DeuterosAmigaObservedTitlePostAdjustedInputReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_input_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedRepeatedInputReturnPlan> observe_title_post_adjusted_repeated_input_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_adjusted_repeated_input_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleTailCopyPlan> observe_title_tail_copy(const DeuterosAmigaObservedTitleTailCopy& o) { return title_stage_session_ ? title_stage_session_->observe_title_tail_copy(o) : std::nullopt; }

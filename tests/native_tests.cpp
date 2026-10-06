@@ -11,6 +11,7 @@
 #include "engine/deuteros_amiga_owned_disk_transition.hpp"
 #include "engine/deuteros_amiga_owned_optional_resource.hpp"
 #include "engine/deuteros_amiga_title_program_entry_session.hpp"
+#include "engine/deuteros_amiga_title_stage_session.hpp"
 #include "engine/release_runtime.hpp"
 #include "engine/release_runtime_capability.hpp"
 #include "engine/menu_runtime_launch.hpp"
@@ -1127,6 +1128,282 @@ int test_deuteros_worker_scenario(const std::filesystem::path& directory) {
     return 0;
 }
 
+int test_deuteros_title_stage_selector_branches(const std::filesystem::path& directory) {
+    constexpr std::string_view release_sha256 =
+        "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04";
+    const auto releases = eon::find_release_archives(directory);
+    const auto found = std::find_if(releases.begin(), releases.end(),
+        [release_sha256](const auto& release) {
+            return release.game == eon::Game::deuteros
+                && release.platform == eon::Platform::amiga
+                && release.sha256 == release_sha256;
+        });
+    if (found == releases.end()) {
+        std::cout << "SKIP: EON_DIRECT_DATA_DIR has no hash-recognized Deuteros Amiga archive\n";
+        return 77;
+    }
+    const auto media = eon::VerifiedReleaseMedia::open(*found);
+    const auto bytes = media.extract(
+        "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38");
+    assert(bytes);
+    const eon::AmigaAdf disk{std::span<const std::uint8_t>(*bytes)};
+    const auto plan = eon::parse_deuteros_amiga_load_plan(disk);
+    const auto profile = eon::parse_deuteros_amiga_title_stage(disk, plan);
+    const auto read_profile = eon::parse_deuteros_amiga_title_post_exec_load_service_profile(
+        disk, plan);
+    assert(read_profile.read_vector_call_address == 0x20934);
+    assert(read_profile.read_vector_return_address == 0x20938);
+    assert(read_profile.read_vector == -0x1c8);
+    assert(read_profile.read_request_pointer_cell_address == 0x206a0);
+    assert(read_profile.read_exec_base_source_address == 0x0004);
+    assert(read_profile.read_buffer_address == 0x26cc0);
+    assert(read_profile.read_status_offset == 0x001f);
+    assert(read_profile.read_command == 0x8002);
+    assert(read_profile.read_first_disk_offset == 0x14000);
+    assert(read_profile.read_total_bytes == 0x5800);
+    assert(read_profile.read_chunk_bytes == 0x1600);
+    assert(read_profile.read_full_chunk_count == 4);
+    assert(read_profile.read_tail_bytes == 0);
+    assert(read_profile.read_loop_sha256
+        == "6bc0de31806f123a36a080c68dae72f50f064f8e52094ddc3f481126f1a0730d");
+    assert(read_profile.read_vector_helper_sha256
+        == "0e1972c887f8c8f010c37f16ca77926e92a839d36f0b7fc741e43832158262a3");
+    eon::DeuterosAmigaTitleLoadDoIoGate failed_read_gate(read_profile);
+    failed_read_gate.begin(0x00fedcba, 1);
+    const eon::DeuterosAmigaObservedTitleLoadDoIoReturn first_read_return{
+        2, 0x0004, 0x206a0, 0x00fedcba, 0x20934, 0x00300000, -0x1c8,
+        0x20938, 0x8002, 0x1600, 0x26cc0, 0x14000, 0x12345678, 0x2040};
+    assert(failed_read_gate.observe_return(first_read_return));
+    bool rejected_failed_status = false;
+    try {
+        static_cast<void>(failed_read_gate.observe_status({3, 0x2093e, 0x0030001f, 1}));
+    } catch (const std::runtime_error&) {
+        rejected_failed_status = true;
+    }
+    assert(rejected_failed_status && failed_read_gate.failed()
+        && !failed_read_gate.complete());
+    for (const auto sequence : {3U, 4U}) {
+        bool rejected_status_replay = false;
+        try {
+            static_cast<void>(failed_read_gate.observe_status(
+                {sequence, 0x2093e, 0x0030001f, 0}));
+        } catch (const std::runtime_error&) {
+            rejected_status_replay = true;
+        }
+        assert(rejected_status_replay && !failed_read_gate.complete());
+    }
+
+    eon::DeuterosAmigaTitleLoadDoIoGate malformed_read_gate(read_profile);
+    malformed_read_gate.begin(0x00fedcba, 1);
+    auto malformed_return = first_read_return;
+    malformed_return.request_disk_offset += 1;
+    bool rejected_malformed_return = false;
+    try {
+        static_cast<void>(malformed_read_gate.observe_return(malformed_return));
+    } catch (const std::runtime_error&) {
+        rejected_malformed_return = true;
+    }
+    assert(rejected_malformed_return && malformed_read_gate.failed());
+    bool rejected_return_replay = false;
+    try {
+        static_cast<void>(malformed_read_gate.observe_return(first_read_return));
+    } catch (const std::runtime_error&) {
+        rejected_return_replay = true;
+    }
+    assert(rejected_return_replay && !malformed_read_gate.complete());
+
+    eon::DeuterosAmigaTitleLoadDoIoGate read_gate(read_profile);
+    read_gate.begin(0x00fedcba, 1);
+    for (std::uint32_t ordinal = 0; ordinal < 4; ++ordinal) {
+        const auto sequence = 2U + ordinal * 2U;
+        const auto length = 0x1600U;
+        const auto offset = 0x14000U + ordinal * 0x1600U;
+        auto returned = eon::DeuterosAmigaObservedTitleLoadDoIoReturn{
+            sequence, 0x0004, 0x206a0, 0x00fedcba, 0x20934, 0x00300000, -0x1c8,
+            0x20938, 0x8002, length, 0x26cc0 + ordinal * 0x1600U,
+            offset, 0x12345678, 0x2040};
+        const auto vector_plan = read_gate.observe_return(returned);
+        assert(vector_plan && vector_plan->request_ordinal == ordinal
+            && vector_plan->request_status_read_instruction == 0x2093e
+            && vector_plan->request_status_address == 0x0030001f);
+        const auto status_plan = read_gate.observe_status(
+            {sequence + 1U, 0x2093e, 0x0030001f, 0});
+        assert(status_plan && status_plan->completed_request_count == ordinal + 1U
+            && status_plan->all_requests_succeeded == (ordinal == 3));
+    }
+    assert(read_gate.complete());
+    eon::DeuterosAmigaTitleLoadDoIoGate changed_request_gate(read_profile);
+    changed_request_gate.begin(0x00fedcba, 1);
+    auto first_chunk = first_read_return;
+    assert(changed_request_gate.observe_return(first_chunk));
+    assert(changed_request_gate.observe_status({3, 0x2093e, 0x0030001f, 0}));
+    auto changed_request = first_chunk;
+    changed_request.trace_sequence = 4;
+    changed_request.request_address += 4;
+    changed_request.request_buffer_address += 0x1600;
+    changed_request.request_disk_offset += 0x1600;
+    bool rejected_changed_request = false;
+    try {
+        static_cast<void>(changed_request_gate.observe_return(changed_request));
+    } catch (const std::runtime_error&) {
+        rejected_changed_request = true;
+    }
+    assert(rejected_changed_request && changed_request_gate.failed());
+    assert(profile.post_transition_dispatch_positive_branch_address == 0x1fc9c);
+    assert(profile.post_transition_dispatch_zero_set_variant_address == 0x1fd0a);
+    const auto selector_dispatch = [&](std::uint8_t primary_value,
+            std::optional<std::uint8_t> secondary_value) {
+        eon::DeuterosAmigaTitleStageSession session(disk, plan, 1);
+        const std::array<eon::DeuterosAmigaObservedTitleSelectorHelperReturn, 2> returns{{
+            {1, 0x1fe84, 0x1fea8, 0x1fe88, 0x00310000, 0},
+            {2, 0x1fe92, 0x1fea8, 0x1fe96, 0x00300000, 0},
+        }};
+        assert(session.observe_captured_title_selector_passage(3, 0x00300000, returns));
+        const eon::DeuterosAmigaObservedTitleSelectorDispatchRead primary{
+            4, 0x1fbe6, 0x1f98c, primary_value};
+        std::optional<eon::DeuterosAmigaObservedTitleSelectorDispatchRead> secondary;
+        if (secondary_value) {
+            const auto pc = static_cast<std::int8_t>(primary_value) == 0
+                ? 0x1fc22U : 0x1fc9cU;
+            secondary = eon::DeuterosAmigaObservedTitleSelectorDispatchRead{
+                5, pc, 0x1f98e, *secondary_value};
+        }
+        return session.observe_captured_title_selector_dispatch(primary, secondary);
+    };
+    const std::array dispatch_cases{
+        std::tuple{std::uint8_t{0xff}, std::optional<std::uint8_t>{},
+            eon::DeuterosAmigaTitleSelectorDispatchRoute::negative_helper_entry, 0x1fc24U},
+        std::tuple{std::uint8_t{0}, std::optional<std::uint8_t>{0},
+            eon::DeuterosAmigaTitleSelectorDispatchRoute::zero_clear_variant, 0x1fc2cU},
+        std::tuple{std::uint8_t{0}, std::optional<std::uint8_t>{1},
+            eon::DeuterosAmigaTitleSelectorDispatchRoute::zero_set_variant, 0x1fd0aU},
+        std::tuple{std::uint8_t{1}, std::optional<std::uint8_t>{0},
+            eon::DeuterosAmigaTitleSelectorDispatchRoute::positive_clear_variant, 0x1fca6U},
+        std::tuple{std::uint8_t{1}, std::optional<std::uint8_t>{1},
+            eon::DeuterosAmigaTitleSelectorDispatchRoute::positive_set_variant, 0x1fd7aU},
+    };
+    for (const auto& [primary, secondary, route, next_pc] : dispatch_cases) {
+        const auto result = selector_dispatch(primary, secondary);
+        assert(result && result->route == route && result->next_instruction_address == next_pc);
+    }
+    {
+        eon::DeuterosAmigaTitleStageSession session(disk, plan, 1);
+        const std::array<eon::DeuterosAmigaObservedTitleSelectorHelperReturn, 2> returns{{
+            {1, 0x1fe84, 0x1fea8, 0x1fe88, 0x00310000, 0},
+            {2, 0x1fe92, 0x1fea8, 0x1fe96, 0x00300000, 0},
+        }};
+        assert(session.observe_captured_title_selector_passage(3, 0x00300000, returns));
+        bool missing_secondary_rejected = false;
+        try {
+            static_cast<void>(session.observe_captured_title_selector_dispatch(
+                {4, 0x1fbe6, 0x1f98c, 0}));
+        } catch (const std::runtime_error&) {
+            missing_secondary_rejected = true;
+        }
+        assert(missing_secondary_rejected);
+    }
+    {
+        eon::DeuterosAmigaTitleStageSession session(disk, plan, 1);
+        const std::array<eon::DeuterosAmigaObservedTitleSelectorHelperReturn, 2> returns{{
+            {1, 0x1fe84, 0x1fea8, 0x1fe88, 0x00310000, 0},
+            {2, 0x1fe92, 0x1fea8, 0x1fe96, 0x00300000, 0},
+        }};
+        assert(session.observe_captured_title_selector_passage(3, 0x00300000, returns));
+        bool wrong_secondary_pc_rejected = false;
+        try {
+            static_cast<void>(session.observe_captured_title_selector_dispatch(
+                {4, 0x1fbe6, 0x1f98c, 0},
+                eon::DeuterosAmigaObservedTitleSelectorDispatchRead{
+                    5, 0x1fc9c, 0x1f98e, 0}));
+        } catch (const std::runtime_error&) {
+            wrong_secondary_pc_rejected = true;
+        }
+        assert(wrong_secondary_pc_rejected);
+    }
+    for (const auto offset : {0x7abeeU, 0x7ac2aU, 0x7aca4U}) {
+        auto altered = *bytes;
+        altered[offset] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered));
+            static_cast<void>(eon::parse_deuteros_amiga_title_stage(altered_disk, plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    return 0;
+}
+
+int test_millennium_dos_native_bios_return(const std::filesystem::path& root) {
+    eon::ReleaseScanner scanner(root);
+    while (!scanner.advance(64)) {
+    }
+    const auto release = std::find_if(scanner.releases().begin(), scanner.releases().end(),
+        [](const auto& candidate) {
+            return candidate.game == eon::Game::millennium
+                && candidate.platform == eon::Platform::dos && candidate.language == "en";
+        });
+    if (release == scanner.releases().end()) return 77;
+    const auto media = eon::VerifiedReleaseMedia::open(*release);
+    const auto game = media.borrow(
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57");
+    assert(game);
+    auto admission = eon::MillenniumDosNativeProcessAdmission::startup(
+        release->sha256, *game);
+    assert(admission.admitted());
+    // Synthetic return values exercise only the typed gate; they are not
+    // capture evidence and cause no modeled BIOS or palette side effects.
+    admission.observe_child_process_entry(10, 0x2345);
+    admission.observe_private_interrupt_return({11, 0x0129, 0x0201});
+    admission.observe_private_interrupt_return({12, 0x0129, 0});
+
+    const auto before_return = *admission.checkpoint();
+    assert(before_return.state
+            == eon::MillenniumDosNativeProcessState::startup_palette_interrupt_boundary
+        && before_return.boundary.kind == eon::MillenniumDosNativeBoundaryKind::bios_interrupt
+        && before_return.boundary.address == 0x0476
+        && before_return.boundary.interrupt == std::optional<std::uint8_t>{0x10}
+        && before_return.last_observation_sequence == 12);
+    for (const auto observation : {
+            eon::MillenniumDosNativeBiosInterruptReturnObservation{
+                12, 0x0476, 0x10, 0x2345, 0x0478, 0, 0},
+            eon::MillenniumDosNativeBiosInterruptReturnObservation{
+                13, 0x0475, 0x10, 0x2345, 0x0478, 0, 0},
+            eon::MillenniumDosNativeBiosInterruptReturnObservation{
+                13, 0x0476, 0x11, 0x2345, 0x0478, 0, 0},
+            eon::MillenniumDosNativeBiosInterruptReturnObservation{
+                13, 0x0476, 0x10, 0x2346, 0x0478, 0, 0},
+            eon::MillenniumDosNativeBiosInterruptReturnObservation{
+                13, 0x0476, 0x10, 0x2345, 0x0477, 0, 0}}) {
+        bool rejected = false;
+        try {
+            admission.observe_bios_interrupt_return(observation);
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+    const auto observed_return =
+        eon::MillenniumDosNativeBiosInterruptReturnObservation{
+            13, 0x0476, 0x10, 0x2345, 0x0478, 0, 0};
+    admission.observe_bios_interrupt_return(observed_return);
+    const auto after_return = *admission.checkpoint();
+    assert(after_return.state == eon::MillenniumDosNativeProcessState::
+        startup_palette_interrupt_return_observed);
+    assert(after_return.last_observation_sequence == observed_return.sequence
+        && after_return.startup_bios_return
+        && *after_return.startup_bios_return == observed_return);
+    bool duplicate_rejected = false;
+    try {
+        admission.observe_bios_interrupt_return({14, 0x0476, 0x10, 0x2345, 0x0478, 0, 0});
+    } catch (const std::runtime_error&) {
+        duplicate_rejected = true;
+    }
+    assert(duplicate_rejected);
+    return 0;
+}
+
 } // namespace
 
 int test_millennium_dos_title_runtime(const std::filesystem::path& root);
@@ -1136,6 +1413,10 @@ int main(int argc, char** argv) {
         return test_millennium_dos_title_runtime(argv[2]);
     if (argc == 3 && std::string_view(argv[1]) == "--deuteros-amiga-worker-scenario")
         return test_deuteros_worker_scenario(argv[2]);
+    if (argc == 3 && std::string_view(argv[1]) == "--deuteros-title-stage-selector-branches")
+        return test_deuteros_title_stage_selector_branches(argv[2]);
+    if (argc == 3 && std::string_view(argv[1]) == "--millennium-dos-native-bios-return")
+        return test_millennium_dos_native_bios_return(argv[2]);
     if (argc != 1) return 2;
     {
         eon::MillenniumDosParagraphArena arena(7,0x0100,0x0110);
@@ -3572,6 +3853,7 @@ int main(int argc, char** argv) {
     }
     assert(asset_count == 67);
     // Genuine clean Deuteros Amiga disk 1 and Spanish Millennium DOS image.
+    // Genuine clean Deuteros Amiga disk 1 and Spanish Millennium DOS image.
     assert(asset_hashes.contains("6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38"));
     assert(asset_hashes.contains("1cb7d399ab22110317b1c7486a575c00895f12a17268d0c984ac264a5695961d"));
     assert(kind_counts[eon::AssetKind::amiga_adf] == 17);
@@ -4376,7 +4658,8 @@ int main(int argc, char** argv) {
     // The executable selection table and each independently supplied driver
     // leaf are both exact-hash admissions. The runtime keeps descriptors, not
     // archive bytes or a host audio implementation.
-    assert(english_dos_runtime->sound_blaster_driver && english_dos_runtime->covox_driver);
+    assert(english_dos_runtime->ibm_speaker_driver
+        && english_dos_runtime->sound_blaster_driver && english_dos_runtime->covox_driver);
     assert(english_dos_runtime->static_game_data->celestial_labels.size() == 41);
     assert(english_dos_runtime->static_game_data->celestial_labels[4].text == "Earth ");
     assert(english_dos_runtime->admitted_celestial_text.size() == 41);
@@ -4386,6 +4669,7 @@ int main(int argc, char** argv) {
     assert(english_dos_runtime->static_data_evidence->pointer_count == 435);
     assert(english_dos_runtime->sound_blaster_driver->original_filename == "ssbl.drv");
     assert(english_dos_runtime->covox_driver->original_filename == "scvx.drv");
+    assert(english_dos_runtime->ibm_speaker_driver->original_filename == "sibm.drv");
     const auto spanish_dos = std::find_if(releases.begin(), releases.end(), [](const auto& release) {
         return release.game == eon::Game::millennium
             && release.platform == eon::Platform::dos && release.language == "es";
@@ -4557,6 +4841,21 @@ int main(int argc, char** argv) {
     eon::NativeSessionController controlled_dos_runtime;
     assert(controlled_dos_runtime.launch_direct(controlled_dos_request, releases).accepted());
     assert(controlled_dos_runtime.state() == eon::NativeSessionState::millennium_dos_title);
+    {
+        eon::RuntimeHost ibm_speaker_dos_runtime;
+        assert(ibm_speaker_dos_runtime.launch_direct(controlled_dos_request, releases).accepted());
+        assert(ibm_speaker_dos_runtime.observe_input(
+            eon::RuntimeInputObservation::ascii('0'))
+            == eon::RuntimeInputDisposition::boundary_reached);
+        const auto selected = ibm_speaker_dos_runtime.millennium_dos_startup_input();
+        const auto driver_load = ibm_speaker_dos_runtime.millennium_dos_sound_driver_load_checkpoint();
+        assert(selected && selected->selected_original_filename == "sibm.drv"
+            && selected->selected_driver_is_admitted);
+        assert(driver_load && driver_load->driver_kind
+            == eon::MillenniumDosSoundDriverKind::ibm_speaker
+            && driver_load->boundary.instruction_address == 0x02d2
+            && driver_load->boundary.dx == 0x062a);
+    }
     assert(controlled_dos_runtime.observe_input(eon::RuntimeInputObservation::ascii('1'))
         == eon::RuntimeInputDisposition::boundary_reached);
     assert(controlled_dos_runtime.state()
@@ -5436,7 +5735,10 @@ int main(int argc, char** argv) {
                 && presentation->config_consumer.entry_jump_target_address == 0x2aa88
                 && presentation->config_consumer.boundary_opcode == 0x40c0
                 && !presentation->config_consumer.status_register_read
-                && !presentation->config_consumer.hardware_write_executed);
+                && !presentation->config_consumer.hardware_write_executed
+                && presentation->post_config_entry
+                && presentation->post_config_entry->state
+                    == eon::MillenniumAtariPostConfigEntryState::entry_jump_boundary);
             const auto atari_memory = all_release_runtime.native_runtime_memory_diagnostics();
             assert(atari_memory && atari_memory->applied_batch_count == 2
                 && atari_memory->initialized_byte_count
@@ -5662,6 +5964,11 @@ int main(int argc, char** argv) {
                     == presentation->native_prg_image.materialized_image_sha256
                 && host_presentation->read_only_gemdos.payload_sha256
                     == presentation->read_only_gemdos.payload_sha256);
+            assert(!atari_host.observe_millennium_atari_post_config_entry_jump(
+                {1, 1, 0x11e00}).accepted);
+            assert(!atari_host.observe_millennium_atari_post_config_status_register(
+                {1, 1, 0x1c62c, 0x2700,
+                    eon::MillenniumAtariObservedPrivilege::supervisor}).accepted);
             assert(atari_host.observe_millennium_atari_status_register(
                 {1, 7, 0x2aa88, 0x2700,
                     eon::MillenniumAtariObservedPrivilege::supervisor}).accepted);
@@ -5763,10 +6070,26 @@ int main(int argc, char** argv) {
                 {1,39,0x77056,0x3d,7}).accepted);
             assert(!atari_host.observe_millennium_atari_game_init_post_config_fread(
                 {1,40,0x77074,0x3f,0x20000}).accepted);
-            assert(!atari_host.observe_millennium_atari_game_init_post_config_fclose(
-                {1,41,0x7707c,0x3e,0}).accepted);
+            assert(atari_host.observe_millennium_atari_game_init_post_config_fread(
+                {1,41,0x77074,0x3f,5}).accepted);
+            assert(atari_host.observe_millennium_atari_game_init_post_config_fclose(
+                {1,42,0x7707c,0x3e,0}).accepted);
             assert(!atari_host.observe_millennium_atari_game_init_post_config_rts(
-                {1,42,0x770ba,0x00fd0000,0x123456}).accepted);
+                {1,43,0x770ba,0x00fd0000,0x11e00}).accepted);
+            const auto rejected_post_config_entry =
+                atari_host.millennium_atari_bootstrap_presentation();
+            assert(rejected_post_config_entry
+                && rejected_post_config_entry->config_consumer.state
+                    == eon::MillenniumAtariConfigConsumerState::game_init_post_config_rts_boundary
+                && rejected_post_config_entry->post_config_entry
+                && rejected_post_config_entry->post_config_entry->state
+                    == eon::MillenniumAtariPostConfigEntryState::entry_jump_boundary
+                && !rejected_post_config_entry->post_config_entry->entry_jump_executed);
+            assert(!atari_host.observe_millennium_atari_post_config_entry_jump(
+                {1,44,0x11e00}).accepted);
+            assert(!atari_host.observe_millennium_atari_post_config_status_register(
+                {1,45,0x1c62c,0x2700,
+                    eon::MillenniumAtariObservedPrivilege::supervisor}).accepted);
             atari_host.finish_source_revocation();
         } else if (release.game == eon::Game::deuteros && release.platform == eon::Platform::amiga) {
             assert(session_snapshot.kind == eon::RuntimeSessionKind::deuteros_amiga_opening
@@ -6109,8 +6432,19 @@ int main(int argc, char** argv) {
                 && find_runtime_byte(*source_table_memory,0x204be)==0x02
                 && find_runtime_byte(*source_table_memory,0x204bf)==0xca);
             assert(opening_controller.observe_deuteros_amiga_title_tail_exec_return({37,4,0x00fedcba,0x204f4,-0xa8,0x204f8,0xaabbccdd,0x2030}).accepted);
-            assert(opening_controller.observe_deuteros_amiga_title_load_service_return({38,0x389f4,0x208c0,0x389fa,0x12345678,0x2040}).accepted);
-            assert(opening_controller.observe_deuteros_amiga_title_load_selector({39,0x389fa,0x12fd8,3}).accepted);
+            std::uint64_t title_doio_sequence=38;
+            for(std::uint32_t ordinal=0;ordinal<4;++ordinal){
+                const auto length=0x1600U;
+                const auto offset=0x14000U+ordinal*0x1600U;
+                const auto returned=opening_controller.observe_deuteros_amiga_title_load_doio_return(
+                    {title_doio_sequence++,4,0x206a0,0x00fedcba,0x20934,0x00300000,-0x1c8,0x20938,
+                        0x8002,length,0x26cc0+ordinal*0x1600U,offset,0x12345678,0x2040});
+                assert(returned.accepted);
+                assert(opening_controller.observe_deuteros_amiga_title_load_doio_status(
+                    {title_doio_sequence++,0x2093e,0x0030001f,0}).accepted);
+            }
+            assert(opening_controller.observe_deuteros_amiga_title_load_service_return({46,0x389f4,0x208c0,0x389fa,0x12345678,0x2040}).accepted);
+            assert(opening_controller.observe_deuteros_amiga_title_load_selector({47,0x389fa,0x12fd8,3}).accepted);
             const auto before_copy_memory=opening_controller.native_runtime_memory_diagnostics();
             // The preceding observations after source_table_memory are control
             // boundaries only.  The memory contract is therefore that their
@@ -6121,7 +6455,7 @@ int main(int argc, char** argv) {
                 && before_copy_memory->initialized_byte_count==source_table_memory->initialized_bytes.size()
                 && before_copy_memory->applied_batch_count==source_table_memory->applied_batch_count);
             std::uint32_t runtime_copied=0;
-            std::uint64_t runtime_copy_sequence=40;
+            std::uint64_t runtime_copy_sequence=48;
             while(runtime_copied<0xa20){const auto count=std::min<std::uint32_t>(256,0xa20-runtime_copied);std::vector<std::uint32_t> values;values.reserve(count);for(std::uint32_t i=0;i<count;++i)values.push_back(0x80000000U+runtime_copied+i);assert(opening_controller.observe_deuteros_amiga_title_load_copy_chunk({runtime_copy_sequence++,0x38a28,0x29540+runtime_copied*4U,0x1c482+runtime_copied*4U,runtime_copied,values}).accepted);runtime_copied+=count;}
             const auto completed_copy_memory=opening_controller.native_runtime_memory_checkpoint();
             assert(completed_copy_memory
@@ -6985,12 +7319,41 @@ int main(int argc, char** argv) {
             assert(runtime_byte(*after_209ca_return,0x2092b)==0x02);
             assert(runtime_byte(*after_209ca_return,0x2092c)==0x09);
             assert(runtime_byte(*after_209ca_return,0x2092d)==0x54);
+            constexpr std::string_view trackdisk_name="trackdisk.device";
+            for(std::size_t index=0;index<=trackdisk_name.size();++index){
+                const auto actual=runtime_byte(*after_209ca_return,
+                    0x20982+static_cast<std::uint32_t>(index));
+                const auto expected=index==trackdisk_name.size()?0U:
+                    static_cast<unsigned char>(trackdisk_name[index]);
+                assert(actual&&*actual==expected);
+            }
+            for(std::uint32_t offset=0;offset<0x34;++offset)
+                assert(runtime_byte(*after_209ca_return,0x2091c+offset));
             eon::DeuterosAmigaObservedMainStageExecReturn exec_209f0_return{
-                runtime_copy_sequence+101,0x209f0,-0x1bc,0x209f4,0};
+                runtime_copy_sequence+101,0x209f0,-0x1bc,0x209f4,0,
+                0x20982,0x2091c,0,0};
             auto bad_exec_209f0_return=exec_209f0_return;
             bad_exec_209f0_return.call_address-=2;
             assert(!opening_controller.observe_deuteros_amiga_main_stage_209f0_exec_return(
                 bad_exec_209f0_return).accepted);
+            bad_exec_209f0_return=exec_209f0_return;
+            bad_exec_209f0_return.call_a0++;
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_209f0_exec_return(
+                bad_exec_209f0_return).accepted);
+            bad_exec_209f0_return=exec_209f0_return;
+            bad_exec_209f0_return.call_a1++;
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_209f0_exec_return(
+                bad_exec_209f0_return).accepted);
+            bad_exec_209f0_return=exec_209f0_return;
+            bad_exec_209f0_return.call_d0=1;
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_209f0_exec_return(
+                bad_exec_209f0_return).accepted);
+            bad_exec_209f0_return=exec_209f0_return;
+            bad_exec_209f0_return.call_d1=1;
+            assert(!opening_controller.observe_deuteros_amiga_main_stage_209f0_exec_return(
+                bad_exec_209f0_return).accepted);
+            assert(opening_controller.native_runtime_memory_checkpoint()->checksum
+                ==after_209ca_return->checksum);
             assert(opening_controller.observe_deuteros_amiga_main_stage_209f0_exec_return(
                 exec_209f0_return).accepted);
             assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_cia_a_bit_set);
@@ -8944,6 +9307,13 @@ int main(int argc, char** argv) {
     eon::MillenniumDosTitleToGameSession title_to_game(*mill_bytes,*titles_bytes);
     assert((title_to_game.boundary()==eon::MillenniumDosTitleToGameBoundary{
         eon::MillenniumDosTitleToGameBoundaryKind::call_return,0x1c54,0x1c57,0,0}));
+    {
+        bool rejected_early_game_exec = false;
+        try {
+            title_to_game.observe_game_exec_request({1,0x024c,0x031c,0x069a,0x067a});
+        } catch (const std::runtime_error&) { rejected_early_game_exec = true; }
+        assert(rejected_early_game_exec);
+    }
     title_to_game.observe_call_return(0x1c54,0x1c57);
     title_to_game.observe_call_return(0x1c57,0x1c5a);
     assert(title_to_game.effects().size()==1
@@ -8959,8 +9329,25 @@ int main(int argc, char** argv) {
     title_to_game.observe_parent_exec_return(0x0337,false);
     title_to_game.observe_child_status(0x0348,0,false);
     assert(title_to_game.state()==eon::MillenniumDosTitleToGameState::game_exec_boundary);
+    {
+        bool rejected_entry_before_game_exec = false;
+        try {
+            title_to_game.observe_game_process_entry({2,0x024c,0x0337,0x4b00,0x069a,
+                0x067a,0x0100,0x2000,0x2000,0xfffe,
+                eon::MillenniumDosTitleToGameEntryProvenance::observed_process_entry});
+        } catch (const std::runtime_error&) { rejected_entry_before_game_exec = true; }
+        assert(rejected_entry_before_game_exec);
+    }
+    title_to_game.observe_game_exec_request({1,0x024c,0x031c,0x069a,0x067a});
+    assert(title_to_game.state()
+        ==eon::MillenniumDosTitleToGameState::awaiting_game_process_entry);
+    title_to_game.observe_game_process_entry({2,0x024c,0x0337,0x4b00,0x069a,
+        0x067a,0x0100,0x2000,0x2000,0xfffe,
+        eon::MillenniumDosTitleToGameEntryProvenance::observed_process_entry});
+    assert(title_to_game.state()==eon::MillenniumDosTitleToGameState::game_process_entry_boundary);
+    assert(title_to_game.parent_exec_returned() && title_to_game.child_status_observed());
     assert((title_to_game.boundary()==eon::MillenniumDosTitleToGameBoundary{
-        eon::MillenniumDosTitleToGameBoundaryKind::dos_exec,0x024c,0x031c,0x069a,0}));
+        eon::MillenniumDosTitleToGameBoundaryKind::game_process_entry,0x0100,0x2000,0x069a,0x4b00}));
     {
         bool rejected=false;
         try {
@@ -9142,9 +9529,16 @@ int main(int argc, char** argv) {
         "be5a00e0b71d893a3aeaaa1127b1e5b870fe734dc876e636c6a933b6444f1b72");
     const auto covox = eon::extract_asset_by_sha256(english_dos->path,
         "99e110b91534206a6b83680a3e11cceadd0e5ddf863560aed53dcbd2c49df7c4");
-    assert(sound_blaster && covox);
+    const auto ibm_speaker = eon::extract_asset_by_sha256(english_dos->path,
+        "f3224caa43c1149907f852fa98816ed68c489b70f1ba795592d684d4e51f31b1");
+    assert(sound_blaster && covox && ibm_speaker);
+    const auto ibm_speaker_leaf = eon::admit_millennium_dos_sound_driver_leaf(*ibm_speaker);
     const auto sound_blaster_leaf = eon::admit_millennium_dos_sound_driver_leaf(*sound_blaster);
     const auto covox_leaf = eon::admit_millennium_dos_sound_driver_leaf(*covox);
+    assert(ibm_speaker_leaf.kind == eon::MillenniumDosSoundDriverKind::ibm_speaker);
+    assert(ibm_speaker_leaf.original_filename == "sibm.drv" && ibm_speaker_leaf.byte_size == 2871);
+    assert(ibm_speaker_leaf.sha256
+        == "f3224caa43c1149907f852fa98816ed68c489b70f1ba795592d684d4e51f31b1");
     assert(sound_blaster_leaf.kind == eon::MillenniumDosSoundDriverKind::sound_blaster);
     assert(sound_blaster_leaf.original_filename == "ssbl.drv" && sound_blaster_leaf.byte_size == 9194);
     assert(sound_blaster_leaf.sha256
@@ -9181,6 +9575,24 @@ int main(int argc, char** argv) {
     sound_load.observe_title_exec_request(0x0336,0x4b00,0x068f,0x067a);
     assert(sound_load.state()==eon::MillenniumDosSoundDriverLoadState::title_exec_requested);
     {
+        eon::MillenniumDosSoundDriverLoadSession ibm_load(*mill_bytes,*ibm_speaker,'0',0x2222);
+        assert(ibm_load.driver().kind==eon::MillenniumDosSoundDriverKind::ibm_speaker);
+        assert(ibm_load.boundary().instruction_address==0x02d2
+            && ibm_load.boundary().dx==0x062a);
+        assert(ibm_load.runtime_byte_effects().size()==1
+            && ibm_load.runtime_byte_effects().front().address==0x068a
+            && ibm_load.runtime_byte_effects().front().value=='0');
+        ibm_load.observe_open_result(0x02d2,false,9);
+        ibm_load.observe_seek_end_result(0x02eb,false,9,2871,0);
+        assert(ibm_load.boundary().cx==(2871+15)/16);
+        ibm_load.observe_allocation_result(0x02fa,false,0x4567);
+        ibm_load.observe_seek_start_result(0x0309,false,9,0,0);
+        ibm_load.observe_read_result(0x0313,false,9,2871);
+        assert(ibm_load.memory_effects().size()==2871
+            && ibm_load.memory_effects().front().value==ibm_speaker->front()
+            && ibm_load.memory_effects().back().value==ibm_speaker->back());
+    }
+    {
         eon::MillenniumDosSoundDriverLoadSession covox_load(*mill_bytes,*covox,'2',0x2222);
         assert(covox_load.boundary().dx==0x064e
             && covox_load.runtime_byte_effects().front().value=='4');
@@ -9197,10 +9609,11 @@ int main(int argc, char** argv) {
         assert(rejected);
     }
     eon::MillenniumDosSoundSelectionSession admitted_ibm_sound_session(
-        sound_selection, sound_blaster_leaf, covox_leaf);
+        sound_selection, ibm_speaker_leaf, sound_blaster_leaf, covox_leaf);
     assert(admitted_ibm_sound_session.accept_ascii_character('0'));
-    assert(!admitted_ibm_sound_session.selected_driver_is_admitted());
-    assert(!admitted_ibm_sound_session.selected_driver());
+    assert(admitted_ibm_sound_session.selected_driver_is_admitted());
+    assert(admitted_ibm_sound_session.selected_driver()
+        && admitted_ibm_sound_session.selected_driver()->sha256 == ibm_speaker_leaf.sha256);
     eon::MillenniumDosSoundSelectionSession admitted_sound_blaster_session(
         sound_selection, sound_blaster_leaf, covox_leaf);
     assert(admitted_sound_blaster_session.accept_ascii_character('1'));
@@ -9263,7 +9676,7 @@ int main(int argc, char** argv) {
     assert(ega_profile.function_six_source_nested_pointer_load_address == 0);
     assert(ega_profile.function_six_screen_width == 0x140);
     assert(ega_profile.function_six_horizontal_offset == 8);
-    assert(ega_profile.function_six_height_offset == 0x10);
+    assert(ega_profile.function_six_width_offset == 0x10);
     assert(ega_profile.function_thirteen_address == 0xd37);
     assert(ega_profile.function_thirteen_status_port == 0x3da);
     assert(ega_profile.function_thirteen_retrace_mask == 0x08);
@@ -10132,6 +10545,59 @@ int main(int argc, char** argv) {
         assert(process.runtime_byte(0x0108) == 0xb8);
     }
     {
+        auto process = eon::MillenniumDosNativeProcess::startup(*game_executable);
+        process.observe_private_interrupt_return(0x0129, 0x0201);
+        process.observe_private_interrupt_return(0x0129, 0);
+        const auto first_palette_boundary = process.boundary();
+        assert(first_palette_boundary.kind
+            == eon::MillenniumDosNativeBoundaryKind::bios_interrupt);
+        assert(first_palette_boundary.address == 0x0476
+            && first_palette_boundary.interrupt == std::optional<std::uint8_t>{0x10});
+        bool wrong_pc_rejected = false;
+        try {
+            process.observe_bios_interrupt_return({3, 0x0475, 0x10, 0x2345, 0x0478, 0, 0});
+        } catch (const std::runtime_error&) {
+            wrong_pc_rejected = true;
+        }
+        bool wrong_interrupt_rejected = false;
+        try {
+            process.observe_bios_interrupt_return({3, 0x0476, 0x11, 0x2345, 0x0478, 0, 0});
+        } catch (const std::runtime_error&) {
+            wrong_interrupt_rejected = true;
+        }
+        bool wrong_return_ip_rejected = false;
+        try {
+            process.observe_bios_interrupt_return({3, 0x0476, 0x10, 0x2345, 0x0477, 0, 0});
+        } catch (const std::runtime_error&) {
+            wrong_return_ip_rejected = true;
+        }
+        assert(wrong_pc_rejected && wrong_interrupt_rejected && wrong_return_ip_rejected
+            && process.state()
+                == eon::MillenniumDosNativeProcessState::startup_palette_interrupt_boundary
+            && !process.startup_bios_return());
+        const eon::MillenniumDosNativeBiosInterruptReturnObservation observed_return{
+            3, 0x0476, 0x10, 0x2345, 0x0478, 0, 0};
+        process.observe_bios_interrupt_return(observed_return);
+        assert(process.state() == eon::MillenniumDosNativeProcessState::
+            startup_palette_interrupt_return_observed);
+        assert(process.startup_bios_return()
+            == std::optional<eon::MillenniumDosNativeBiosInterruptReturnObservation>{
+                observed_return});
+        assert(process.boundary().kind
+            == eon::MillenniumDosNativeBoundaryKind::observed_bios_interrupt_return);
+        assert(process.boundary().address == 0x0476
+            && process.boundary().interrupt == std::optional<std::uint8_t>{0x10});
+        assert(process.runtime_byte(0x0107) == 0x00
+            && process.runtime_byte(0x0108) == 0xb8);
+        bool duplicate_return_rejected = false;
+        try {
+            process.observe_bios_interrupt_return({4, 0x0476, 0x10, 0x2345, 0x0478, 0, 0});
+        } catch (const std::runtime_error&) {
+            duplicate_return_rejected = true;
+        }
+        assert(duplicate_return_rejected);
+    }
+    {
         auto process = eon::MillenniumDosNativeProcess::post_gx_loader(
             *game_executable, *gx_overlay);
         assert(process.state() == eon::MillenniumDosNativeProcessState::gx_private_interrupt);
@@ -10618,6 +11084,50 @@ int main(int argc, char** argv) {
         admitted.reset();
         assert(!admitted.admitted() && !admitted.checkpoint());
         assert(terminal_checkpoint.boundary.address == 0x0129);
+
+        auto startup_admission = eon::MillenniumDosNativeProcessAdmission::startup(
+            english_release_sha256, *game_executable);
+        assert(startup_admission.admitted());
+        bool return_before_child_rejected = false;
+        try {
+            startup_admission.observe_bios_interrupt_return(
+                {11, 0x0476, 0x10, 0x2345, 0x0478, 0, 0});
+        } catch (const std::runtime_error&) {
+            return_before_child_rejected = true;
+        }
+        assert(return_before_child_rejected);
+        startup_admission.observe_child_process_entry(10, 0x2345);
+        startup_admission.observe_private_interrupt_return({11, 0x0129, 0x0201});
+        startup_admission.observe_private_interrupt_return({12, 0x0129, 0});
+        const auto before_bios_return = *startup_admission.checkpoint();
+        assert(before_bios_return.state
+                == eon::MillenniumDosNativeProcessState::startup_palette_interrupt_boundary
+            && before_bios_return.last_observation_sequence == 12);
+        bool stale_return_rejected = false;
+        try {
+            startup_admission.observe_bios_interrupt_return(
+                {12, 0x0476, 0x10, 0x2345, 0x0478, 0, 0});
+        } catch (const std::runtime_error&) {
+            stale_return_rejected = true;
+        }
+        bool wrong_pc_rejected = false;
+        try {
+            startup_admission.observe_bios_interrupt_return(
+                {13, 0x0475, 0x10, 0x2345, 0x0478, 0, 0});
+        } catch (const std::runtime_error&) {
+            wrong_pc_rejected = true;
+        }
+        assert(stale_return_rejected && wrong_pc_rejected
+            && startup_admission.checkpoint()->last_observation_sequence == 12
+            && !startup_admission.checkpoint()->startup_bios_return);
+        startup_admission.observe_bios_interrupt_return(
+            {13, 0x0476, 0x10, 0x2345, 0x0478, 0, 0});
+        const auto after_bios_return = *startup_admission.checkpoint();
+        assert(after_bios_return.state == eon::MillenniumDosNativeProcessState::
+            startup_palette_interrupt_return_observed);
+        assert(after_bios_return.last_observation_sequence == 13
+            && after_bios_return.startup_bios_return
+            && after_bios_return.startup_bios_return->interrupt_instruction_address == 0x0476);
 
         auto altered_gx = *gx_overlay;
         altered_gx[0] ^= 1;
@@ -14830,6 +15340,36 @@ int main(int argc, char** argv) {
     assert(title_stage_session.stage().disk_offset == 0x6e000);
     assert(title_stage_session.stage().length == 0x6ca00);
     {
+        const std::array<eon::DeuterosAmigaObservedTitleSelectorHelperReturn,2> returns{{
+            {1165,0x1fe84,0x1fea8,0x1fe88,0x00310000,0x2000},
+            {1173,0x1fe92,0x1fea8,0x1fe96,0x00300000,0x2000}}};
+        const auto passage=title_stage_session.observe_captured_title_selector_passage(
+            1174,0x00330064,returns);
+        assert(passage && passage->selector_address==0x1fe7a
+            && passage->incoming_d0==0x00330064
+            && passage->helper_returns==returns
+            && passage->stop_before_dispatch_address==0x1fbe6);
+        assert(!title_stage_session.observe_captured_title_selector_passage(
+            1175,0x00330064,returns));
+    }
+    {
+        eon::DeuterosAmigaTitleStageSession ordered_session(system_disk,load_plan,1);
+        const std::array<eon::DeuterosAmigaObservedTitleSelectorHelperReturn,2> wrong_order{{
+            {1173,0x1fe92,0x1fea8,0x1fe96,0x00300000,0x2000},
+            {1165,0x1fe84,0x1fea8,0x1fe88,0x00310000,0x2000}}};
+        bool rejected=false;
+        try {
+            static_cast<void>(ordered_session.observe_captured_title_selector_passage(
+                1174,0x00330064,wrong_order));
+        } catch (const std::runtime_error&) { rejected=true; }
+        assert(rejected);
+        const std::array<eon::DeuterosAmigaObservedTitleSelectorHelperReturn,2> valid_order{{
+            {1165,0x1fe84,0x1fea8,0x1fe88,0x00310000,0x2000},
+            {1173,0x1fe92,0x1fea8,0x1fe96,0x00300000,0x2000}}};
+        assert(ordered_session.observe_captured_title_selector_passage(
+            1174,0x00330064,valid_order));
+    }
+    {
         eon::NativeRuntimeMemory memory;
         eon::NativeRuntimeEffectBatch image{"real-profile-five-entry-jmp",true,{}};
         const auto owned_jmp=system_disk.bytes(load_plan.title_stage.disk_offset,6);
@@ -15608,20 +16148,44 @@ int main(int argc, char** argv) {
     assert(tail_exec->next_call_address == 0x404f0);
     assert(tail_exec->next_call_target == 0x389e2);
     assert(tail_exec->stop_before_address == 0x404f0);
+    bool rejected_load_service_before_doio = false;
+    try {
+        static_cast<void>(title_stage_session.observe_load_service_return(
+            {38, 0x389f4, 0x208c0, 0x389fa, 0x12345678, 0x2040}));
+    } catch (const std::runtime_error&) {
+        rejected_load_service_before_doio = true;
+    }
+    assert(rejected_load_service_before_doio);
+    std::uint64_t load_doio_sequence = 38;
+    for (std::uint32_t ordinal = 0; ordinal < 4; ++ordinal) {
+        const auto length = 0x1600U;
+        const auto offset = 0x14000U + ordinal * 0x1600U;
+        const auto doio = title_stage_session.observe_load_doio_return({
+            load_doio_sequence++, 0x0004, 0x206a0, 0x00fedcba, 0x20934, 0x00300000, -0x1c8,
+            0x20938, 0x8002, length, 0x26cc0 + ordinal * 0x1600U,
+            offset, 0xaabbccdd, 0x2030});
+        assert(doio && doio->request_ordinal == ordinal);
+        assert(doio->request_status_read_instruction == 0x2093e);
+        assert(doio->request_status_address == 0x0030001f);
+        const auto status = title_stage_session.observe_load_doio_status(
+            {load_doio_sequence++, 0x2093e, 0x0030001f, 0});
+        assert(status && status->completed_request_count == ordinal + 1U);
+        assert(status->all_requests_succeeded == (ordinal == 3));
+    }
     bool rejected_load_service = false;
     try {
         static_cast<void>(title_stage_session.observe_load_service_return(
-            {38, 0x389f4, 0x208c2, 0x389fa, 0x12345678, 0x2040}));
+            {46, 0x389f4, 0x208c2, 0x389fa, 0x12345678, 0x2040}));
     } catch (const std::runtime_error&) {
         rejected_load_service = true;
     }
     assert(rejected_load_service);
     const auto load_service = title_stage_session.observe_load_service_return(
-        {38, 0x389f4, 0x208c0, 0x389fa, 0x12345678, 0x2040});
+        {46, 0x389f4, 0x208c0, 0x389fa, 0x12345678, 0x2040});
     assert(load_service);
     assert(load_service->observation.result_d0 == 0x12345678);
     assert(load_service->observation.result_sr == 0x2040);
-    assert(load_service->d7_value == 0x13400);
+    assert(load_service->d7_value == 0x14000);
     assert(load_service->d1_value == 0x26cc0);
     assert(load_service->d0_value == 0x5800);
     assert(load_service->selector_read_address == 0x389fa);
@@ -15630,17 +16194,20 @@ int main(int argc, char** argv) {
     bool rejected_load_selector = false;
     try {
         static_cast<void>(title_stage_session.observe_load_selector(
-            {39, 0x389fa, 0x12fda, 3}));
+            {47, 0x389fa, 0x12fda, 3}));
     } catch (const std::runtime_error&) {
         rejected_load_selector = true;
     }
     assert(rejected_load_selector);
     const auto load_selector = title_stage_session.observe_load_selector(
-        {39, 0x389fa, 0x12fd8, 3});
+        {47, 0x389fa, 0x12fd8, 3});
     assert(load_selector);
     assert(load_selector->outcome
         == eon::DeuterosAmigaTitleLoadServiceOutcome::copy_boundary);
     assert(load_selector->copy_source_address == 0x29540);
+    assert(load_selector->copy_source_address >= 0x26cc0);
+    assert(load_selector->copy_source_address + load_selector->copy_longword_count * 4U
+        <= 0x26cc0 + 0x5800);
     assert(load_selector->copy_destination_address == 0x1c482);
     assert(load_selector->copy_longword_count == 0xa20);
     assert(load_selector->next_address == 0x38a28);
@@ -15654,7 +16221,7 @@ int main(int argc, char** argv) {
     }
     assert(rejected_copy_chunk);
     std::uint32_t copied = 0;
-    std::uint64_t copy_sequence = 40;
+    std::uint64_t copy_sequence = 48;
     std::optional<eon::DeuterosAmigaTitleLoadCopyChunkPlan> final_copy_chunk;
     while (copied < 0xa20) {
         const auto count = std::min<std::uint32_t>(256, 0xa20 - copied);
@@ -16491,6 +17058,18 @@ int main(int argc, char** argv) {
         assert(rejected);
     }
     const auto title_stage = eon::parse_deuteros_amiga_title_stage(system_disk, load_plan);
+    for (const auto offset : {0x7abeeU, 0x7ac2aU, 0x7aca4U}) {
+        auto altered_selector_disk = *amiga_disk1;
+        altered_selector_disk[offset] ^= 0x01;
+        bool rejected = false;
+        try {
+            const eon::AmigaAdf altered_disk(std::move(altered_selector_disk));
+            static_cast<void>(eon::parse_deuteros_amiga_title_stage(altered_disk, load_plan));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
     {
         auto altered_profile_five_disk = *amiga_disk1;
         // This byte is in the profile-five body but outside the older
@@ -16796,7 +17375,7 @@ int main(int argc, char** argv) {
             system_disk, load_plan);
     assert(post_exec_load_service.caller_address == 0x404f0);
     assert(post_exec_load_service.entry_address == 0x389e2);
-    assert(post_exec_load_service.d7_value == 0x13400);
+    assert(post_exec_load_service.d7_value == 0x14000);
     assert(post_exec_load_service.d1_value == 0x26cc0);
     assert(post_exec_load_service.d0_value == 0x5800);
     assert(post_exec_load_service.nested_call_address == 0x389f4);
@@ -16806,6 +17385,23 @@ int main(int argc, char** argv) {
     assert(post_exec_load_service.return_address == 0x38a04);
     assert(post_exec_load_service.copy_destination == 0x1c482);
     assert(post_exec_load_service.copy_longword_count == 0xa20);
+    assert(post_exec_load_service.read_vector_call_address == 0x20934);
+    assert(post_exec_load_service.read_vector_return_address == 0x20938);
+    assert(post_exec_load_service.read_vector == -0x1c8);
+    assert(post_exec_load_service.read_request_pointer_cell_address == 0x206a0);
+    assert(post_exec_load_service.read_buffer_address == 0x26cc0);
+    assert(post_exec_load_service.read_status_offset == 0x001f);
+    assert(post_exec_load_service.read_status_instruction_address == 0x2093e);
+    assert(post_exec_load_service.read_command == 0x8002);
+    assert(post_exec_load_service.read_first_disk_offset == 0x14000);
+    assert(post_exec_load_service.read_total_bytes == 0x5800);
+    assert(post_exec_load_service.read_chunk_bytes == 0x1600);
+    assert(post_exec_load_service.read_full_chunk_count == 4);
+    assert(post_exec_load_service.read_tail_bytes == 0);
+    assert(post_exec_load_service.read_loop_sha256
+        == "6bc0de31806f123a36a080c68dae72f50f064f8e52094ddc3f481126f1a0730d");
+    assert(post_exec_load_service.read_vector_helper_sha256
+        == "0e1972c887f8c8f010c37f16ca77926e92a839d36f0b7fc741e43832158262a3");
     assert(post_exec_load_service.caller_sha256
         == "1385698c6c854ab133e3e7cd75417c90025916dd0a1dd303347dce0636114bea");
     assert(post_exec_load_service.routine_sha256

@@ -134,7 +134,7 @@ MillenniumDosVideoDriverProfile parse_driver_profile(
             ega ? 0 : function_six + 0x31),
         .function_six_screen_width = 0x140,
         .function_six_horizontal_offset = 8,
-        .function_six_height_offset = 0x10,
+        .function_six_width_offset = 0x10,
         .function_thirteen_address = function_thirteen,
         .function_thirteen_status_port = 0x03da,
         .function_thirteen_retrace_mask = 0x08,

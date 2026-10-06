@@ -95,6 +95,10 @@ std::string extract_millennium_dos_sound_selection_prompt(
 MillenniumDosSoundDriverLeaf admit_millennium_dos_sound_driver_leaf(
     const std::span<const std::uint8_t> bytes) {
     const auto digest = to_hex(sha256(bytes));
+    if (bytes.size() == 2871
+        && digest == "f3224caa43c1149907f852fa98816ed68c489b70f1ba795592d684d4e51f31b1") {
+        return {MillenniumDosSoundDriverKind::ibm_speaker, "sibm.drv", digest, bytes.size()};
+    }
     if (bytes.size() == 9194
         && digest == "be5a00e0b71d893a3aeaaa1127b1e5b870fe734dc876e636c6a933b6444f1b72") {
         return {MillenniumDosSoundDriverKind::sound_blaster, "ssbl.drv", digest, bytes.size()};

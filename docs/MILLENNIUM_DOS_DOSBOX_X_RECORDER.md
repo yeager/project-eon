@@ -33,6 +33,114 @@ exact hashes and strict runtime non-admission status are in
 Re-review the exact patch, retain a complete configuration and input timeline,
 and capture the required result boundaries before extending any runtime path.
 
+On 2026-10-03, the pinned Millennium DOS recorder locator was run on trv2 over
+`/home/trv2/Downloads` and the scoped Project Eon tool cache. It hashed 1,488
+executable candidates and found no match for a reviewed protocol. The other
+trv2 root held the reviewed Deuteros FS-UAE recorder, but ordinary DOSBox-X
+or an unpinned DOSBox-X build is not a substitute for this missing P0 evidence.
+
+On 2026-10-05, the current pinned-protocol locator was rerun on trv2 after
+copying only its runner scripts into the external tool cache. Across the
+external tool cache and Downloads it found 796 executable candidates, hashed
+793, rejected three for exceeding the candidate-size limit, and found no
+reviewed recorder. Downloads by itself contained no executable candidates.
+The staged DOSBox-X source at
+commit `234797680781567e18c374c9e62da24de5423db0` has an experimental INT 6
+observer but no v21 INT 93 installer arm. Its current 132,945,208-byte binary
+hashes to
+`776a02c687951fdc88a65834719ba7cf0124c879c371b278f8117f203cd4375f`;
+a separate 20,677,632-byte stripped comparison binary hashes to
+`54cb3d8ae45e38fea8a804fe03f851777c17896dd8255ee9a08375601c3061c9`.
+Neither matches the reviewed v21 binary identity below. These rebuild
+artifacts are not capture recorders. The matching v21 source patch/build recipe
+must be restored or reviewed anew before collecting further runtime evidence.
+
+### Normal-core entry observer prototype (2026-10-05)
+
+An independent external-only experiment extends the DOSBox-X source at that
+same base commit. Its source-only patch is retained outside the repository at
+`/home/trv2/.cache/project-eon-tools/dosbox-origin-observer-20261005-01/`
+with SHA-256
+`e054a0dc498e96fb8f203ee20f80acec24e92bbc2d2e9225327017cfd8af6759`.
+The opt-in observer records the first normal-core opcode fetch at CS `$0e70`,
+the immediately previous fetched CS:IP/opcode if one exists, and whether the
+two fetched addresses share a segment. It records opcode bytes only; it does
+not establish the control-transfer cause or original instruction provenance.
+The receipt writer is gated by `PROJECT_EON_DOS_ORIGIN_EXPERIMENT=1`, accepts
+only a fresh name in its fixed external receipts directory, uses no-follow
+directory traversal and exclusive no-follow file creation, and writes at most
+one mode-0600 line after DOSBox-X's guest loop has ended. A trv2 diagnostic run
+used this candidate under the separate experimental harness below; its result
+is recorded in `PRESERVATION.md` and remains non-admissible.
+
+The first full build returned success but compiled `sdlmain.o` before the
+receipt header's final C++14 portability edit. An incremental rebuild against
+the final source then returned success. The relinked binary is 132,978,520 bytes with
+SHA-256
+`d2efd24ddcf0bf458847179987314f1f5b572868a7de610f30bab97302e910d3`.
+The external C++14 harness passed with `-Wall -Wextra -Werror`; it covers
+bounded output, no-target/duplicate-target cases, same/cross-segment classes,
+mode 0600, the opt-in gate, exclusive creation, and symlink rejection. This
+candidate remains an experiment, not a pinned or recovery-admissible recorder.
+It has no recovery-admissible grammar or path. A later trv2 experiment used
+this exact candidate; its observation and limits are recorded in
+`PRESERVATION.md`. Its separate experimental-only harness below does not
+change those boundaries.
+
+### Experimental origin-observer harness
+
+The separate `tools/run_millennium_dos_origin_experiment.py` and
+`tools/millennium_dos_origin_experiment.py` tools define an experimental-only
+execution and receipt contract for the binary above. They do not add it to the
+pinned recorder protocol map or to any game-evidence admission path. The runner
+requires `--experimental-only`, the exact archive and binary identities, a
+visible Linux session on the candidate host, an external cache output, and
+manual closure of the DOSBox-X window. It filters the recorder environment,
+keeps a bounded console prefix, and requires a zero exit, the recorder's exact
+write-success marker, and a single strict raw record. Partial files without
+that marker are rejected. The candidate's UUID-named raw file is copied to
+the per-run external directory, then removed from its fixed receipts cache;
+only that exact generated filename is eligible for removal.
+
+The schema labels fields as the last normal-core fetch context observed before
+the first normal-core fetch at CS `$0e70`. The process-global observer does not
+reset between guest reboots. Its previous/current pair therefore does not
+prove a causal transfer, original instruction provenance, image identity,
+game state, or playability. The verifier binds recorder, patch, original
+archive, configuration, bounded console, success marker, and raw bytes. A
+verified result remains diagnostics-only and cannot be consumed as recovery
+evidence. The v1 external experiment was run visibly on trv2; its outcome is
+recorded in `PRESERVATION.md` and is not promoted by this v2 protocol.
+
+### Experimental origin-observer v2 candidate (2026-10-06)
+
+The v2 experiment candidate retains the same pinned DOSBox-X base commit but
+adds a bounded, opt-in DOS `LOADNGO` identity to the earlier first-fetch
+observer. The full source patch is retained externally at
+`/home/trv2/.cache/project-eon-tools/dosbox-origin-observer-20261005-01/origin-v2-source.patch`,
+SHA-256
+`3984407abea160f97be42e134b400614163c78800c7e217d113c7ec4d861208e`. Its
+binary is 132,982,144 bytes, SHA-256
+`2e03888c5a6d56f0707030ac29a1774223905cd1c43c7cfb114dc1979ac6601f`. The
+v2 receipt carries only the title image identity hash and size, the DOS
+loader's planned entry CS:IP, the count of normal-core opcode fetches since
+that verified load, and the same first CS `$0e70` fetch plus last global
+normal-core fetch. The identity is set only after a complete 7,022-byte
+`TITLES.EXE` read matches its committed hash and DOSBox-X selects its
+`LOADNGO` path at IP `$0100`; absent or late identity remains explicitly
+invalid. No source bytes, memory dumps, or arbitrary instructions are emitted.
+The trv2 C++14 harness passes with `-Wall -Wextra -Werror`, including absent,
+late, and invalid-entry identity boundaries.
+
+This binary is pinned here solely for the separately gated visible experiment
+`eon-dos-origin-experiment-v2`. It is not an admitted recorder: its records
+remain experimental-only, non-causal diagnostics and are never consumed by
+Project Eon runtime. The new run uses a fresh external output directory, the
+read-only archive route, and ordinary manual VNC interaction. The
+experiment-specific DOSBox-X configuration disables its host quit-warning
+dialog so a visible manual close flushes the receipt; the game capture profile
+is unchanged.
+
 On 2026-08-30, a second external-only recorder build added a bounded host-key
 receipt and completed an input-free five-second preflight. It opens no receipt
 file when no keyboard event reaches DOSBox-X's SDL event loop; it emitted no
@@ -288,6 +396,56 @@ Its V21 binary is SHA-256
 `18ec0ead7d08deeca694fbbe8155d5f5e6a99562adaea22fe914a691961fe1f1`
 (86,312,600 bytes). A missing sidecar means neither reviewed site was observed;
 it is not a negative proof of installation elsewhere.
+
+### Experimental MILL.COM loader-return observer (2026-10-06)
+
+A separate, opt-in observer was built from the exact upstream revision above.
+Its patch is retained only in the external cache at
+`~/.cache/project-eon-tools/millennium-dos-return-observer-20261006/driver-load-return.patch`
+(SHA-256 `78f2926989e8db4d52b60603208df43acffdc881aa3ffb128d2b09315be8f44a`).
+The arm64 macOS executable is likewise external
+(`build/src/dosbox-x`, 15,809,768 bytes, SHA-256
+`57020c1138879a6f53394f592b6f88bcd69875bfc06c98f7cd9b9a64372e8404`).
+Neither artifact is a recorder release or recovery-admissible evidence.
+
+When explicitly enabled with `PROJECT_EON_DOS_DRIVER_LOAD_RETURN_RECORD`, it
+maps the full DOS child name `mill.com` to its observed entry CS and admits
+only software INT `$21` calls whose source sites are `$02d2`, `$02eb`, `$02fa`,
+`$0309`, `$0313`, or `$0319`, followed by the matching exact return sites
+`$02d4`, `$02ed`, `$02fc`, `$030b`, `$0315`, or `$031b`. Both sides require
+the guest bytes `CD 21`; the post-INT observation also requires its pending
+source-call marker. It records raw listed registers and FLAGS without assigning
+DOS semantics. At `$0315`, only a carry-clear AX in the bounded range 1–4,366
+causes a bounded snapshot of DS:`$0000`; SHA-256 is computed after the guest
+loop stops, and guest bytes are never serialized. Sidecar creation is
+exclusive, mode `0600`, and no-follow, with a 128-record cap, explicit
+overflow rejection and a completion footer.
+
+The prototype includes none of the reviewed v21 event, result, or physical
+input observers. The Project Eon runner retains only its separate
+experimental sidecar, and the operator must close the visible emulator after
+the observation window so DOSBox-X can complete and hash the receipt. No
+emulator or capture was run for this build. Consequently, there are still no
+observed DOS open/seek/allocation/read/close returns and no evidence yet that
+DOS loaded the supplied `MCGA.BIN` bytes during startup. The observer narrows
+the next experiment; it does not explain the existing `INT 6` boundary.
+
+### Linux trv2 platform build (2026-10-07)
+
+The same pinned source revision and exact patch were built in a clean external
+cache tree on trv2. Build inputs were upstream commit
+`234797680781567e18c374c9e62da24de5423db0` and patch SHA-256
+`78f2926989e8db4d52b60603208df43acffdc881aa3ffb128d2b09315be8f44a`.
+The x86-64 Linux executable is
+`/home/trv2/.cache/project-eon-tools/dosbox-driver-load-return-20261007/build/src/dosbox-x`,
+132,933,552 bytes, SHA-256
+`942f30f2199350a51d0ff1e7c024f4e226d29b5576dc6ea0d61b7556c12468e8`.
+It was configured with SDL2 and without OpenGL; `ldd` found no missing shared
+libraries. This is a platform-specific experimental identity for the same
+diagnostic protocol, not an admitted recorder build. No emulator capture has
+yet been run with it. The repo runner and verifier bind this hash to its exact
+size alongside the macOS arm64 identity, while preserving the explicit
+experimental-only gate.
 
 ## Review and admission
 

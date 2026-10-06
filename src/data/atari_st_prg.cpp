@@ -1,5 +1,6 @@
 #include "data/atari_st_prg.hpp"
 
+#include "data/m68k_executor.hpp"
 #include "data/sha256.hpp"
 
 #include <algorithm>
@@ -132,9 +133,9 @@ MillenniumAtariBssEntry parse_millennium_atari_bss_entry(
     const MillenniumAtariBootstrap& bootstrap) {
     // MOVEA.L #$77000,A1; MOVEA.L #$1d652,A0; MOVE.W #$100,D0;
     // MOVE.W (A0)+,(A1)+; DBF D0,-4; JMP $77000. DBF reaches its body once
-    // for D0 = 0, therefore #$100 means 257 words. The source remains an
-    // unproven runtime-memory dependency: bootstrap only established 0xd8
-    // bytes, not this entire requested range.
+    // for D0 = 0, therefore #$100 means 257 words. The complete source is
+    // the hash-identified bootstrap DATA tail followed by the PRG loader's
+    // proven zeroed BSS interval.
     constexpr std::size_t header_bytes = 28;
     constexpr std::uint32_t source_address = 0x1d652;
     constexpr std::uint32_t destination_address = 0x77000;
@@ -225,6 +226,125 @@ MillenniumAtariMaterializedTarget materialize_millennium_atari_target(
     return result;
 }
 
+MillenniumAtariPostConfigFilenameEvidence parse_millennium_atari_post_config_filename(
+    const std::span<const std::uint8_t> program,
+    const MillenniumAtariBssSource& source,
+    const MillenniumAtariMaterializedTarget& target) {
+    constexpr std::size_t prg_header_bytes = 28;
+    constexpr std::uint32_t source_address = 0x1d652;
+    constexpr std::uint32_t filename_address = 0x1d6d8;
+    constexpr std::uint32_t staged_target_address = 0x77000;
+    constexpr std::uint32_t caller_offset = 0x42;
+    constexpr std::uint32_t caller_bytes = 22;
+    constexpr std::string_view program_sha256 =
+        "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686";
+    constexpr std::string_view nul_terminated_sha256 =
+        "393a936fc20d9f40ecace75f74947833d28e947e3ba9a987761a7d1eb92a575b";
+    constexpr std::string_view caller_span_sha256 =
+        "dc2a50400e22fdbe4870f790d4f70c7446caa379dc68281a0445db4ee027fe4d";
+
+    if (to_hex(sha256(program)) != program_sha256
+        || source.source_address != source_address
+        || target.source_address != source_address
+        || target.target_address != staged_target_address
+        || source.bytes.size() != target.bytes.size()
+        || source.bytes.size() != 514U
+        || source.bytes != target.bytes
+        || filename_address < source_address) {
+        throw std::runtime_error("Unexpected Millennium Atari ST post-config filename provenance");
+    }
+
+    const auto caller = std::span<const std::uint8_t>(target.bytes).subspan(
+        caller_offset, caller_bytes);
+    if (to_hex(sha256(caller)) != caller_span_sha256) {
+        throw std::runtime_error("Unexpected Millennium Atari ST post-config Fopen caller");
+    }
+
+    const auto source_offset = filename_address - source_address;
+    if (source_offset >= source.original_data_bytes
+        || source_offset >= source.bytes.size()) {
+        throw std::runtime_error("Millennium Atari ST post-config filename is outside original DATA");
+    }
+    const auto source_begin = source.bytes.begin() + static_cast<std::ptrdiff_t>(source_offset);
+    const auto source_end = source.bytes.begin()
+        + static_cast<std::ptrdiff_t>(source.original_data_bytes);
+    const auto terminator = std::find(source_begin, source_end, std::uint8_t{0});
+    if (terminator == source_end || terminator == source_begin) {
+        throw std::runtime_error("Unterminated Millennium Atari ST post-config filename");
+    }
+    const auto nul_terminated_byte_count = static_cast<std::size_t>(terminator - source_begin) + 1U;
+    const auto nul_terminated = std::span<const std::uint8_t>(source.bytes).subspan(
+        source_offset, nul_terminated_byte_count);
+    const auto program_file_offset = prg_header_bytes + source.source_data_offset + source_offset;
+    if (program_file_offset > program.size()
+        || nul_terminated_byte_count > program.size() - program_file_offset
+        || !std::equal(nul_terminated.begin(), nul_terminated.end(),
+            program.begin() + static_cast<std::ptrdiff_t>(program_file_offset))) {
+        throw std::runtime_error("Millennium Atari ST filename lost its original PRG DATA provenance");
+    }
+    if (to_hex(sha256(nul_terminated)) != nul_terminated_sha256) {
+        throw std::runtime_error("Unexpected Millennium Atari ST post-config filename bytes");
+    }
+
+    MillenniumAtariPostConfigFilenameEvidence result;
+    result.runtime_address = filename_address;
+    result.source_address = source_address;
+    result.source_offset = source_offset;
+    result.program_file_offset = static_cast<std::uint32_t>(program_file_offset);
+    result.nul_terminated_byte_count = static_cast<std::uint32_t>(nul_terminated_byte_count);
+    result.filename.assign(source_begin, terminator);
+    result.nul_terminated_sha256 = std::string(nul_terminated_sha256);
+    result.caller_span_sha256 = std::string(caller_span_sha256);
+    if (result.filename != "MILL22B.inf") {
+        throw std::runtime_error("Unexpected Millennium Atari ST post-config filename");
+    }
+    return result;
+}
+
+MillenniumAtariPostConfigModuleEntryEvidence parse_millennium_atari_post_config_module_entry(
+    const std::span<const std::uint8_t> module) {
+    constexpr std::uint32_t load_address = 0x11e00;
+    constexpr std::uint32_t expected_jump_address = 0x1c62c;
+    constexpr std::uint32_t expected_entry_file_offset = expected_jump_address - load_address;
+    constexpr std::size_t initial_jump_bytes = 6;
+    constexpr std::size_t entry_prologue_bytes = 24;
+    constexpr std::string_view module_sha256 =
+        "e315b0ec01f2fe429fdce101765577b893d031389c540de1fbe43eca121d53e9";
+    constexpr std::string_view entry_prologue_sha256 =
+        "f97319598c3c193dc292abbf86c0b94c814f4b9ecafcdba612bb0116660c93b6";
+
+    if (module.size() != 84720U || to_hex(sha256(module)) != module_sha256
+        || module.size() < initial_jump_bytes
+        || module[0] != 0x4e || module[1] != 0xf9) {
+        throw std::runtime_error("Unexpected Millennium Atari ST post-config module");
+    }
+
+    const auto jump_address = (static_cast<std::uint32_t>(module[2]) << 24U)
+        | (static_cast<std::uint32_t>(module[3]) << 16U)
+        | (static_cast<std::uint32_t>(module[4]) << 8U)
+        | static_cast<std::uint32_t>(module[5]);
+    if (jump_address != expected_jump_address || (jump_address & 1U) != 0U
+        || jump_address < load_address) {
+        throw std::runtime_error("Unexpected Millennium Atari ST post-config module entry jump");
+    }
+
+    const auto entry_file_offset = static_cast<std::size_t>(jump_address - load_address);
+    if (entry_file_offset != expected_entry_file_offset
+        || entry_file_offset > module.size()
+        || entry_prologue_bytes > module.size() - entry_file_offset) {
+        throw std::runtime_error("Millennium Atari ST post-config module entry is outside its Fread buffer");
+    }
+    const auto prologue = module.subspan(entry_file_offset, entry_prologue_bytes);
+    if (to_hex(sha256(prologue)) != entry_prologue_sha256) {
+        throw std::runtime_error("Unexpected Millennium Atari ST post-config module entry bytes");
+    }
+
+    return {load_address, jump_address,
+        static_cast<std::uint32_t>(entry_file_offset),
+        static_cast<std::uint32_t>(entry_prologue_bytes),
+        std::string(module_sha256), std::string(entry_prologue_sha256)};
+}
+
 MillenniumAtariBootstrapExecution execute_millennium_atari_bootstrap_prefix(
     std::span<const std::uint8_t> bytes, const AtariStPrg& prg,
     const MillenniumAtariBootstrap& bootstrap, const MillenniumAtariBssEntry& entry) {
@@ -255,7 +375,7 @@ MillenniumAtariBootstrapExecution execute_millennium_atari_bootstrap_prefix(
         throw std::runtime_error("Millennium Atari ST first copy did not preserve original bytes");
     }
 
-    const auto bss_source = materialize_millennium_atari_bss_source(bytes, prg, bootstrap, entry);
+    auto bss_source = materialize_millennium_atari_bss_source(bytes, prg, bootstrap, entry);
     const auto source_into_stage = entry.copy_source_address - bootstrap.stage_destination_offset;
     if (entry.entry_offset != bootstrap.stage_destination_offset
         || source_into_stage > result.copied_stage_bytes.size()
@@ -272,12 +392,26 @@ MillenniumAtariBootstrapExecution execute_millennium_atari_bootstrap_prefix(
     result.second_copy_words = entry.copied_words;
     result.target.source_address = entry.copy_source_address;
     result.target.target_address = entry.copy_destination_address;
-    result.target.bytes.resize(bss_source.bytes.size());
-    for (std::size_t word = 0; word < result.second_copy_words; ++word) {
-        const auto offset = word * 2U;
-        result.target.bytes[offset] = bss_source.bytes[offset];
-        result.target.bytes[offset + 1U] = bss_source.bytes[offset + 1U];
+    result.target.bytes.assign(bss_source.bytes.size(), 0);
+    const auto source_sha256_before = to_hex(sha256(bss_source.bytes));
+    std::array<m68k::MemoryRange, 2> memory{{
+        {bss_source.source_address, bss_source.bytes, false},
+        {result.target.target_address, result.target.bytes, true},
+    }};
+    m68k::MachineState initial;
+    initial.pc = result.bss_entry_address;
+    const auto execution = m68k::execute(result.copied_stage_bytes,
+        result.bss_entry_address, initial, memory, 600, result.target.target_address);
+    if (execution.reason != m68k::StopReason::requested_address
+        || execution.instructions_executed != 518U
+        || execution.state.address[0] != bss_source.source_address + bss_source.bytes.size()
+        || execution.state.address[1] != result.target.target_address + result.target.bytes.size()
+        || (execution.state.data[0] & 0xffffU) != 0xffffU
+        || to_hex(sha256(bss_source.bytes)) != source_sha256_before) {
+        throw std::runtime_error("MILLENIUM.TOS bounded 68000 BSS copy did not reach its admitted JMP boundary");
     }
+    result.second_copy_instruction_count = static_cast<std::uint32_t>(execution.instructions_executed);
+    result.second_copy_stop_address = execution.state.pc;
     result.target.first_opcode = read_be16(result.target.bytes, 0);
     result.target.first_immediate_word = read_be16(result.target.bytes, 2);
     result.target.first_immediate_longword = read_be32(result.target.bytes, 6);

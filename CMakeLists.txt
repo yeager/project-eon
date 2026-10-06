@@ -139,6 +139,15 @@ add_executable(project-eon
     src/engine/millennium_dos_sound_driver_load_session.cpp
     src/engine/millennium_dos_video_driver_load_session.cpp
     src/engine/millennium_dos_video_function_zero_session.cpp
+    src/engine/millennium_dos_video_function_six_clip_session.cpp
+    src/engine/millennium_dos_video_function_six_mcga_table_session.cpp
+    src/engine/millennium_dos_video_function_six_mcga_pointer_setup_session.cpp
+    src/engine/millennium_dos_video_function_six_mcga_register_setup_session.cpp
+    src/engine/millennium_dos_video_function_six_mcga_helper_session.cpp
+    src/engine/millennium_dos_video_function_six_mcga_caller_session.cpp
+    src/engine/millennium_dos_video_function_six_mcga_copy_loop_session.cpp
+    src/engine/millennium_dos_video_function_six_mcga_copy_memory_session.cpp
+    src/engine/millennium_dos_video_function_six_mcga_overlay_loop_session.cpp
     src/engine/millennium_dos_video_function_31_session.cpp
     src/engine/millennium_dos_video_function_13_session.cpp
     src/engine/millennium_dos_video_function_13_interrupt_session.cpp
@@ -180,11 +189,13 @@ add_executable(project-eon
     src/engine/atari_st_prg_load_session.cpp
     src/engine/millennium_atari_read_only_gemdos_session.cpp
     src/engine/millennium_atari_config_consumer_session.cpp
+    src/engine/millennium_atari_post_config_entry_session.cpp
     src/engine/millennium_amiga_bootstrap_session.cpp
     src/engine/millennium_amiga_bootstrap_relocator_session.cpp
     src/data/amiga_adf.cpp
     src/data/amiga_ofs.cpp
     src/data/atari_st_prg.cpp
+    src/data/m68k_executor.cpp
     src/data/atari_st_stx.cpp
     src/data/creative_voice.cpp
     src/data/millennium_dos_voice_bank.cpp
@@ -455,9 +466,21 @@ if(BUILD_TESTING)
             ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
             SKIP_RETURN_CODE 77
             TIMEOUT 180)
+        add_test(NAME deuteros-amiga-title-selector-branch-targets-real-media
+            COMMAND eon-native-tests --deuteros-title-stage-selector-branches
+                "${EON_DIRECT_DATA_DIR}")
+        set_tests_properties(deuteros-amiga-title-selector-branch-targets-real-media PROPERTIES
+            ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
+            SKIP_RETURN_CODE 77
+            TIMEOUT 180)
         add_executable(eon-millennium-dos-video-driver-profile-test
             tests/millennium_dos_video_driver_profile_test.cpp
             src/engine/millennium_dos_video_function_zero_session.cpp
+            src/engine/millennium_dos_video_function_six_clip_session.cpp
+            src/engine/millennium_dos_video_function_six_mcga_table_session.cpp
+            src/engine/millennium_dos_video_function_six_mcga_pointer_setup_session.cpp
+            src/engine/millennium_dos_video_function_six_mcga_register_setup_session.cpp
+            src/engine/millennium_dos_video_function_six_mcga_helper_session.cpp
             src/engine/millennium_dos_video_function_31_session.cpp
             src/engine/millennium_dos_video_function_13_session.cpp
             src/engine/millennium_dos_video_function_13_interrupt_session.cpp
@@ -475,6 +498,101 @@ if(BUILD_TESTING)
             COMMAND eon-native-tests --direct-title-runtime "${EON_DIRECT_DATA_DIR}")
         set_tests_properties(millennium-dos-title-runtime-real-media PROPERTIES
             ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
+        add_test(NAME millennium-dos-native-bios-return-real-media
+            COMMAND eon-native-tests --millennium-dos-native-bios-return
+                "${EON_DIRECT_DATA_DIR}/millennium-return-to-earth-2-2")
+        set_tests_properties(millennium-dos-native-bios-return-real-media PROPERTIES
+            SKIP_RETURN_CODE 77
+            TIMEOUT 180)
+        add_executable(eon-millennium-dos-video-function-six-mcga-register-setup-test
+            tests/millennium_dos_video_function_six_mcga_register_setup_test.cpp
+            src/engine/millennium_dos_video_function_six_mcga_register_setup_session.cpp
+            src/data/millennium_dos_video_driver.cpp
+            src/data/sha256.cpp)
+        target_include_directories(eon-millennium-dos-video-function-six-mcga-register-setup-test PRIVATE src)
+        if(MSVC)
+            target_compile_options(eon-millennium-dos-video-function-six-mcga-register-setup-test PRIVATE /UNDEBUG)
+        else()
+            target_compile_options(eon-millennium-dos-video-function-six-mcga-register-setup-test PRIVATE -UNDEBUG)
+        endif()
+        add_test(NAME millennium-dos-video-function-six-mcga-register-setup-real-media
+            COMMAND eon-millennium-dos-video-function-six-mcga-register-setup-test "${EON_DIRECT_DATA_DIR}")
+        add_executable(eon-millennium-dos-video-function-six-mcga-helper-test
+            tests/millennium_dos_video_function_six_mcga_helper_test.cpp
+            src/engine/millennium_dos_video_function_six_mcga_helper_session.cpp
+            src/data/millennium_dos_video_driver.cpp
+            src/data/sha256.cpp)
+        target_include_directories(eon-millennium-dos-video-function-six-mcga-helper-test PRIVATE src)
+        if(MSVC)
+            target_compile_options(eon-millennium-dos-video-function-six-mcga-helper-test PRIVATE /UNDEBUG)
+        else()
+            target_compile_options(eon-millennium-dos-video-function-six-mcga-helper-test PRIVATE -UNDEBUG)
+        endif()
+        add_test(NAME millennium-dos-video-function-six-mcga-helper-real-media
+            COMMAND eon-millennium-dos-video-function-six-mcga-helper-test "${EON_DIRECT_DATA_DIR}")
+        add_executable(eon-millennium-dos-video-function-six-mcga-copy-loop-test
+            tests/millennium_dos_video_function_six_mcga_copy_loop_test.cpp
+            src/engine/millennium_dos_video_function_six_mcga_copy_loop_session.cpp
+            src/engine/millennium_dos_video_function_six_mcga_copy_memory_session.cpp
+            src/engine/bounded_memory_transfer.cpp
+            src/engine/native_runtime_memory.cpp
+            src/data/millennium_dos_video_driver.cpp
+            src/data/sha256.cpp)
+        target_include_directories(eon-millennium-dos-video-function-six-mcga-copy-loop-test PRIVATE src)
+        if(MSVC)
+            target_compile_options(eon-millennium-dos-video-function-six-mcga-copy-loop-test PRIVATE /UNDEBUG)
+        else()
+            target_compile_options(eon-millennium-dos-video-function-six-mcga-copy-loop-test PRIVATE -UNDEBUG)
+        endif()
+        add_test(NAME millennium-dos-video-function-six-mcga-copy-loop-real-media
+            COMMAND eon-millennium-dos-video-function-six-mcga-copy-loop-test "${EON_DIRECT_DATA_DIR}")
+        add_executable(eon-millennium-dos-video-function-six-mcga-caller-test
+            tests/millennium_dos_video_function_six_mcga_caller_test.cpp
+            src/engine/millennium_dos_video_function_six_mcga_caller_session.cpp
+            src/engine/millennium_dos_video_function_six_mcga_register_setup_session.cpp
+            src/engine/millennium_dos_video_function_six_mcga_helper_session.cpp
+            src/engine/millennium_dos_video_function_six_mcga_copy_loop_session.cpp
+            src/engine/millennium_dos_video_function_six_mcga_copy_memory_session.cpp
+            src/engine/millennium_dos_video_function_six_mcga_table_session.cpp
+            src/engine/bounded_memory_transfer.cpp
+            src/engine/native_runtime_memory.cpp
+            src/data/millennium_dos_video_driver.cpp
+            src/data/sha256.cpp)
+        target_include_directories(eon-millennium-dos-video-function-six-mcga-caller-test PRIVATE src)
+        if(MSVC)
+            target_compile_options(eon-millennium-dos-video-function-six-mcga-caller-test PRIVATE /UNDEBUG)
+        else()
+            target_compile_options(eon-millennium-dos-video-function-six-mcga-caller-test PRIVATE -UNDEBUG)
+        endif()
+        add_test(NAME millennium-dos-video-function-six-mcga-caller-real-media
+            COMMAND eon-millennium-dos-video-function-six-mcga-caller-test "${EON_DIRECT_DATA_DIR}")
+        add_executable(eon-millennium-dos-video-function-six-mcga-overlay-loop-test
+            tests/millennium_dos_video_function_six_mcga_overlay_loop_test.cpp
+            src/engine/millennium_dos_video_function_six_mcga_overlay_loop_session.cpp
+            src/data/millennium_dos_video_driver.cpp
+            src/data/sha256.cpp)
+        target_include_directories(eon-millennium-dos-video-function-six-mcga-overlay-loop-test PRIVATE src)
+        if(MSVC)
+            target_compile_options(eon-millennium-dos-video-function-six-mcga-overlay-loop-test PRIVATE /UNDEBUG)
+        else()
+            target_compile_options(eon-millennium-dos-video-function-six-mcga-overlay-loop-test PRIVATE -UNDEBUG)
+        endif()
+        add_test(NAME millennium-dos-video-function-six-mcga-overlay-loop-real-media
+            COMMAND eon-millennium-dos-video-function-six-mcga-overlay-loop-test "${EON_DIRECT_DATA_DIR}")
+        add_executable(eon-millennium-dos-video-function-six-mcga-overlay-call-test
+            tests/millennium_dos_video_function_six_mcga_overlay_call_test.cpp
+            src/engine/millennium_dos_video_function_six_mcga_overlay_call_session.cpp
+            src/engine/millennium_dos_video_function_six_mcga_overlay_loop_session.cpp
+            src/data/millennium_dos_video_driver.cpp
+            src/data/sha256.cpp)
+        target_include_directories(eon-millennium-dos-video-function-six-mcga-overlay-call-test PRIVATE src)
+        if(MSVC)
+            target_compile_options(eon-millennium-dos-video-function-six-mcga-overlay-call-test PRIVATE /UNDEBUG)
+        else()
+            target_compile_options(eon-millennium-dos-video-function-six-mcga-overlay-call-test PRIVATE -UNDEBUG)
+        endif()
+        add_test(NAME millennium-dos-video-function-six-mcga-overlay-call-real-media
+            COMMAND eon-millennium-dos-video-function-six-mcga-overlay-call-test "${EON_DIRECT_DATA_DIR}")
     endif()
     add_executable(eon-game-text-localization-tests
         tests/game_text_localization_tests.cpp
@@ -519,6 +637,17 @@ if(BUILD_TESTING)
         src/engine/native_runtime_memory.cpp)
     target_include_directories(eon-native-runtime-memory-tests PRIVATE src)
     add_test(NAME native-runtime-memory COMMAND eon-native-runtime-memory-tests)
+    add_executable(eon-deuteros-amiga-title-descriptor-model-test
+        tests/deuteros_amiga_title_descriptor_model_test.cpp
+        src/engine/deuteros_amiga_title_descriptor_model.cpp)
+    target_include_directories(eon-deuteros-amiga-title-descriptor-model-test PRIVATE src)
+    if(MSVC)
+        target_compile_options(eon-deuteros-amiga-title-descriptor-model-test PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(eon-deuteros-amiga-title-descriptor-model-test PRIVATE -UNDEBUG)
+    endif()
+    add_test(NAME deuteros-amiga-title-descriptor-model
+        COMMAND eon-deuteros-amiga-title-descriptor-model-test)
     add_executable(eon-deuteros-amiga-interrupt-worker-test
         tests/deuteros_amiga_interrupt_worker_test.cpp
         src/data/deuteros_amiga_interrupt_worker.cpp)
@@ -555,8 +684,10 @@ if(BUILD_TESTING)
         src/engine/millennium_atari_bootstrap_session.cpp
         src/engine/millennium_atari_read_only_gemdos_session.cpp
         src/engine/millennium_atari_config_consumer_session.cpp
+        src/engine/millennium_atari_post_config_entry_session.cpp
         src/engine/native_runtime_memory.cpp
         src/data/atari_st_prg.cpp
+        src/data/m68k_executor.cpp
         src/data/fat12.cpp
         src/data/sha256.cpp)
     target_include_directories(eon-atari-st-prg-load-session-test PRIVATE src)
@@ -566,6 +697,16 @@ if(BUILD_TESTING)
         target_compile_options(eon-atari-st-prg-load-session-test PRIVATE -UNDEBUG)
     endif()
     add_test(NAME atari-st-prg-native-load COMMAND eon-atari-st-prg-load-session-test)
+    add_executable(eon-m68k-executor-test
+        tests/m68k_executor_test.cpp
+        src/data/m68k_executor.cpp)
+    target_include_directories(eon-m68k-executor-test PRIVATE src)
+    if(MSVC)
+        target_compile_options(eon-m68k-executor-test PRIVATE /UNDEBUG)
+    else()
+        target_compile_options(eon-m68k-executor-test PRIVATE -UNDEBUG)
+    endif()
+    add_test(NAME bounded-m68k-executor COMMAND eon-m68k-executor-test)
     add_test(NAME cli-default-data-read-only
         COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_default_data_test.py"
@@ -724,10 +865,10 @@ find_program(EON_MSGCMP_EXECUTABLE NAMES msgcmp)
 if(EON_MSGFMT_EXECUTABLE AND EON_MSGCMP_EXECUTABLE)
     add_custom_target(l10n
         COMMAND "${CMAKE_COMMAND}"
-            -DPO_DIRECTORY="${CMAKE_CURRENT_SOURCE_DIR}/po"
-            -DOUTPUT_DIRECTORY="${CMAKE_CURRENT_BINARY_DIR}/eon-l10n"
-            -DMSGFMT_EXECUTABLE="${EON_MSGFMT_EXECUTABLE}"
-            -DMSGCMP_EXECUTABLE="${EON_MSGCMP_EXECUTABLE}"
+            "-DPO_DIRECTORY=${CMAKE_CURRENT_SOURCE_DIR}/po"
+            "-DOUTPUT_DIRECTORY=${CMAKE_CURRENT_BINARY_DIR}/eon-l10n"
+            "-DMSGFMT_EXECUTABLE=${EON_MSGFMT_EXECUTABLE}"
+            "-DMSGCMP_EXECUTABLE=${EON_MSGCMP_EXECUTABLE}"
             -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/verify_l10n.cmake"
         COMMENT "Validating Project Eon's 20 launcher translation catalogs")
 else()

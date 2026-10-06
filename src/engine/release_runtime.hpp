@@ -15,6 +15,7 @@
 #include "engine/millennium_amiga_bootstrap_relocator_session.hpp"
 #include "engine/millennium_atari_bootstrap_session.hpp"
 #include "engine/millennium_atari_config_consumer_session.hpp"
+#include "engine/millennium_atari_post_config_entry_session.hpp"
 #include "engine/millennium_dos_save_session.hpp"
 #include "engine/millennium_dos_sound_selection_session.hpp"
 #include "engine/millennium_dos_sound_driver_load_session.hpp"
@@ -129,7 +130,14 @@ struct DeuterosAmigaTitleDependencyChainCheckpoint {
         DeuterosAmigaMainStageState::awaiting_profile_two_bootstrap;
     std::uint32_t stop_before_address = 0;
 };
-struct DeuterosAmigaTitleDependencyObservationResult { bool accepted=false; std::string error; };
+struct DeuterosAmigaTitleDependencyObservationResult {
+    bool accepted=false;
+    std::string error;
+    std::optional<DeuterosAmigaTitleSelectorDispatchPlan> selector_dispatch;
+    DeuterosAmigaTitleDependencyObservationResult() = default;
+    DeuterosAmigaTitleDependencyObservationResult(bool accepted_value, std::string error_value)
+        : accepted(accepted_value), error(std::move(error_value)) {}
+};
 struct DeuterosAmigaMainStageDriveResult {
     bool accepted = false;
     std::uint32_t steps = 0;
@@ -152,6 +160,29 @@ struct DeuterosAmigaWorkerScenarioResult {
     std::string scenario_label;
     std::string worker_sha256;
     std::uint32_t memory_base_address = 0;
+    std::vector<DeuterosAmigaInterruptRegisterWrite> register_writes;
+};
+
+// Entry receipt for one externally observed call to the installed $224cc
+// handler's worker. Its nested BSR must have placed $224ee at the observed
+// A7 before execution reaches $22816.
+struct DeuterosAmigaInterruptWorkerEntryObservation {
+    std::uint64_t generation = 0;
+    std::uint64_t trace_sequence = 0;
+    std::uint32_t instruction_address = 0;
+    std::uint32_t stack_pointer = 0;
+    std::array<std::uint8_t, 4> return_address_bytes{};
+};
+
+struct DeuterosAmigaInterruptWorkerObservationResult {
+    bool accepted = false;
+    std::string error;
+    std::uint64_t generation = 0;
+    std::uint64_t trace_sequence = 0;
+    std::string worker_sha256;
+    std::size_t memory_byte_writes = 0;
+    // Raw ordered custom-register values emitted by the bounded translation.
+    // They are not a device effect, playback receipt, or interrupt cadence.
     std::vector<DeuterosAmigaInterruptRegisterWrite> register_writes;
 };
 enum class DeuterosAmigaSessionStopReason {
@@ -328,6 +359,7 @@ struct MillenniumAtariBootstrapPresentationSnapshot {
     MillenniumAtariConfigEntry config_entry;
     MillenniumAtariFreadConfigLoadAddressBoundary fread_config_load_address_boundary;
     MillenniumAtariFreadMappedConfigPrelude fread_mapped_config_prelude;
+    std::optional<MillenniumAtariPostConfigEntryCheckpoint> post_config_entry;
 };
 
 // The recovered DOS title/runtime evidence for one exact archive identity.
@@ -357,9 +389,10 @@ struct MillenniumDosRuntimeAssets {
     std::optional<MillenniumDosTitleFlow> title_flow;
     std::optional<MillenniumDosSoundSelectionEvidence> sound_selection;
     std::optional<std::string> sound_selection_prompt;
-    // These are identity-only admissions for the two supplied selectable
+    // These are identity-only admissions for the three supplied selectable
     // driver leaves. The driver bytes are discarded after validation: no
     // driver is executed, emulated, cached, or written by the runtime.
+    std::optional<MillenniumDosSoundDriverLeaf> ibm_speaker_driver;
     std::optional<MillenniumDosSoundDriverLeaf> sound_blaster_driver;
     std::optional<MillenniumDosSoundDriverLeaf> covox_driver;
     std::optional<MillenniumDosSpanishTitleBoundary> spanish_title_boundary;
@@ -515,6 +548,7 @@ struct MillenniumDosTitleToGameInterruptObservation {
     bool carry = false;
 };
 struct MillenniumDosTitleToGameObservationResult { bool accepted=false; std::string error; };
+struct MillenniumDosNativeProcessObservationResult { bool accepted=false; std::string error; };
 struct MillenniumDosTitleToGameCheckpoint {
     std::uint64_t generation = 0;
     std::uint64_t last_sequence = 0;
@@ -522,8 +556,17 @@ struct MillenniumDosTitleToGameCheckpoint {
         MillenniumDosTitleToGameState::awaiting_title_cleanup_return;
     MillenniumDosTitleToGameBoundary boundary;
     std::vector<MillenniumDosTitleToGameByteEffect> effects;
+    std::vector<MillenniumDosTitleToGameRegisterEffect> register_effects;
+    std::vector<MillenniumDosTitleToGameStackWordEffect> stack_word_effects;
     std::uint16_t restored_stack_pointer = 0;
     std::uint8_t child_status_al = 0;
+    std::uint64_t game_exec_sequence = 0;
+    std::uint64_t child_entry_sequence = 0;
+    std::uint16_t child_code_segment = 0;
+    std::uint16_t initial_stack_segment = 0;
+    std::uint16_t initial_stack_pointer = 0;
+    MillenniumDosTitleToGameEntryProvenance child_entry_provenance =
+        MillenniumDosTitleToGameEntryProvenance::unspecified;
 };
 
 // Hash-gated, static dispatch provenance for 2200AD.EXE.  This deliberately
@@ -917,14 +960,27 @@ public:
     [[nodiscard]] MillenniumDosTitleToGameObservationResult
     observe_millennium_dos_title_to_game_child_status(
         MillenniumDosTitleToGameInterruptObservation observation);
+    [[nodiscard]] MillenniumDosTitleToGameObservationResult
+    observe_millennium_dos_title_to_game_exec_request(
+        MillenniumDosTitleToGameExecRequest observation);
+    [[nodiscard]] MillenniumDosTitleToGameObservationResult
+    observe_millennium_dos_title_to_game_process_entry(
+        MillenniumDosTitleToGameProcessEntry observation);
+    [[nodiscard]] MillenniumDosNativeProcessObservationResult
+    observe_millennium_dos_native_private_interrupt_return(
+        MillenniumDosNativePrivateInterruptReturnObservation observation);
+    [[nodiscard]] MillenniumDosNativeProcessObservationResult
+    observe_millennium_dos_native_bios_interrupt_return(
+        MillenniumDosNativeBiosInterruptReturnObservation observation);
     [[nodiscard]] std::optional<MillenniumDosTitleToGameCheckpoint>
     millennium_dos_title_to_game_checkpoint() const;
     // A value-only diagnostics view. It is available only for the live,
     // exact Millennium DOS title adapter and is revoked with that adapter.
     [[nodiscard]] std::optional<MillenniumDosStaticDispatchDiagnostics>
     millennium_dos_static_dispatch_diagnostics() const;
-    // Prepared static recovery entry for the exact active English DOS media.
-    // This never advances the live session or accepts boundary observations.
+    // Value-only view of the exact English DOS child continuation. It starts
+    // from a static recovery boundary and records whether a live title-to-game
+    // entry and subsequent native observations have connected to it.
     [[nodiscard]] std::optional<MillenniumDosNativeProcessCheckpoint>
     millennium_dos_native_process_checkpoint() const;
     [[nodiscard]] RuntimeInputDisposition observe_input(const RuntimeInputObservation& observation);
@@ -946,6 +1002,9 @@ public:
     evaluate_deuteros_amiga_worker_scenario(std::uint64_t generation,
         std::string scenario_label, std::uint32_t memory_base_address,
         std::span<const std::uint8_t> hypothetical_memory) const;
+    [[nodiscard]] DeuterosAmigaInterruptWorkerObservationResult
+    observe_deuteros_amiga_interrupt_worker(
+        DeuterosAmigaInterruptWorkerEntryObservation observation);
     [[nodiscard]] ActiveNativeSessionDriveResult
     drive_active_native_session(std::uint32_t step_limit = 64);
     // Audio is mixed within the same owner as the recovered VM and is
@@ -1006,6 +1065,8 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_tail_source_table(DeuterosAmigaObservedTailSourceTable);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_tail_exec_return(DeuterosAmigaObservedTailExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_service_return(DeuterosAmigaObservedLocalCallReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_doio_return(DeuterosAmigaObservedTitleLoadDoIoReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_doio_status(DeuterosAmigaObservedTitleLoadDoIoStatus);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_selector(DeuterosAmigaObservedLoadSelector);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_copy_chunk(DeuterosAmigaObservedLoadCopyChunk);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_load_dispatch_table_base(DeuterosAmigaObservedLoadDispatchTableBase);
@@ -1065,6 +1126,14 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_1f9a4_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_1fe88_return(DeuterosAmigaObservedTitlePostAdjusted1fe88Return);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_final_gate(DeuterosAmigaObservedTitlePostAdjustedFinalGate);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    observe_deuteros_amiga_captured_title_selector_passage(std::uint64_t sequence,
+        std::uint32_t incoming_d0,
+        std::array<DeuterosAmigaObservedTitleSelectorHelperReturn,2> returns);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    observe_deuteros_amiga_captured_title_selector_dispatch(
+        DeuterosAmigaObservedTitleSelectorDispatchRead primary,
+        std::optional<DeuterosAmigaObservedTitleSelectorDispatchRead> secondary = std::nullopt);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_input_return(DeuterosAmigaObservedTitlePostAdjustedInputReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_adjusted_repeated_input_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_tail_copy(DeuterosAmigaObservedTitleTailCopy);
@@ -1151,6 +1220,29 @@ public:
     millennium_atari_bootstrap_presentation() const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult
     observe_millennium_atari_status_register(MillenniumAtariStatusRegisterObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_entry_jump(
+        MillenniumAtariPostConfigEntryJumpObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_status_register(
+        MillenniumAtariStatusRegisterObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_xbios_26_return(
+        MillenniumAtariPostConfigXbiosReturnObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_xbios_result(
+        MillenniumAtariPostConfigXbiosResultObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_line_a_return(
+        MillenniumAtariPostConfigLineAObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_local_call(
+        MillenniumAtariPostConfigLocalCallObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_crawcin_branch(
+        MillenniumAtariPostConfigCrawcinBranchObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_gemdos_fopen(
+        MillenniumAtariPostConfigFopenObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_gemdos_fopen_return(
+        MillenniumAtariPostConfigFopenReturnObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_post_config_gemdos_fcreate(
+        MillenniumAtariPostConfigFcreateObservation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult
+    observe_millennium_atari_post_config_gemdos_fcreate_return(
+        MillenniumAtariPostConfigFcreateReturnObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult
     observe_millennium_atari_xbios_selector_two(MillenniumAtariXbiosSelectorTwoObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_xbios_selector_three(MillenniumAtariXbiosSelectorThreeObservation);
@@ -1453,6 +1545,7 @@ private:
     std::optional<std::uint64_t> millennium_amiga_interrupt_control_sequence_;
     std::unique_ptr<MillenniumAtariBootstrapSession> millennium_atari_;
     std::optional<MillenniumAtariConfigConsumerSession> millennium_atari_config_consumer_;
+    std::optional<MillenniumAtariPostConfigEntrySession> millennium_atari_post_config_entry_;
     std::unique_ptr<DeuterosAmigaOpening> deuteros_amiga_;
     std::optional<DeuterosAmigaBootstrapFrameSnapshot> deuteros_amiga_bootstrap_frame_;
     std::uint64_t deuteros_amiga_bootstrap_frame_generation_ = 0;
@@ -1477,6 +1570,7 @@ private:
     std::optional<DeuterosAmigaNativeAudioCheckpoint> deuteros_amiga_native_audio_checkpoint_;
     std::unique_ptr<DeuterosAmigaNativeAudioMixer> deuteros_amiga_native_audio_mixer_;
     std::uint64_t deuteros_amiga_native_audio_generation_=0;
+    std::uint64_t deuteros_amiga_interrupt_worker_last_sequence_ = 0;
     std::optional<DeuterosAmigaTitleDisplayTraceSession>
         deuteros_amiga_title_display_trace_;
     bool deuteros_amiga_opening_input_held_ = false;

@@ -614,8 +614,25 @@ struct DeuterosAmigaTitlePostExecLoadServiceProfile {
     std::uint32_t return_address = 0;
     std::uint32_t copy_destination = 0;
     std::uint32_t copy_longword_count = 0;
+    std::uint32_t read_vector_call_address = 0;
+    std::uint32_t read_vector_return_address = 0;
+    std::int16_t read_vector = 0;
+    std::uint32_t read_exec_base_source_address = 0;
+    std::uint32_t read_request_pointer_cell_address = 0;
+    std::uint32_t read_buffer_address = 0;
+    // Offset of io_Error within the runtime IORequest, not an absolute address.
+    std::uint32_t read_status_offset = 0;
+    std::uint32_t read_status_instruction_address = 0;
+    std::uint16_t read_command = 0;
+    std::uint32_t read_first_disk_offset = 0;
+    std::uint32_t read_total_bytes = 0;
+    std::uint32_t read_chunk_bytes = 0;
+    std::uint32_t read_full_chunk_count = 0;
+    std::uint32_t read_tail_bytes = 0;
     std::string caller_sha256;
     std::string routine_sha256;
+    std::string read_loop_sha256;
+    std::string read_vector_helper_sha256;
 };
 
 [[nodiscard]] DeuterosAmigaTitlePostExecLoadServiceProfile

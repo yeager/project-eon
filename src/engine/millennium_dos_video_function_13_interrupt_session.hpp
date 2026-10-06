@@ -252,6 +252,8 @@ public:
         std::uint16_t instruction_address);
     void execute_mcga_callback_register_saves(
         const MillenniumDosVideoFunction13McgaCallbackRegisterStackInput& input);
+    void observe_mcga_callback_zero_counter_pointer(
+        const MillenniumDosVideoFunction13McgaCallbackFarPointerRead& read);
     void observe_mcga_callback_alternate_cx_read(
         const MillenniumDosVideoFunction13McgaCallbackRead& read);
     void observe_mcga_callback_alternate_pointer(
@@ -364,6 +366,8 @@ private:
     std::optional<std::uint16_t> callback_palette_si_;
     std::optional<std::uint16_t> callback_palette_ds_;
     std::optional<std::uint16_t> callback_palette_outer_cx_;
+    std::optional<std::uint16_t> callback_zero_stack_ss_;
+    std::optional<std::uint16_t> callback_zero_stack_sp_;
     std::uint8_t callback_return_pop_count_ = 0;
     bool callback_iret_pending_ = false;
     std::uint16_t callback_next_instruction_ = 0;

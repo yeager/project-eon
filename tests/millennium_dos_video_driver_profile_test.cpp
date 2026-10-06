@@ -3,6 +3,9 @@
 #include "engine/millennium_dos_video_function_13_session.hpp"
 #include "engine/millennium_dos_video_function_13_interrupt_session.hpp"
 #include "engine/millennium_dos_video_function_zero_session.hpp"
+#include "engine/millennium_dos_video_function_six_clip_session.hpp"
+#include "engine/millennium_dos_video_function_six_mcga_table_session.hpp"
+#include "engine/millennium_dos_video_function_six_mcga_pointer_setup_session.hpp"
 
 #include <cassert>
 #include <cstdlib>
@@ -11,6 +14,7 @@
 #include <map>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -144,6 +148,194 @@ int main(const int argc, char** argv) {
     assert(mcga.function_zero_verify_mode_interrupt_site == 0x200);
     assert(mcga.function_zero_mode_match_branch_target == 0x209);
     assert(mcga.function_zero_mode_mismatch_return == 0x208);
+
+    using FunctionSixClipSession = eon::MillenniumDosVideoFunctionSixClipSession;
+    using FunctionSixClipState = eon::MillenniumDosVideoFunctionSixClipState;
+    const std::uint16_t descriptor_es = 0x3210;
+    const std::uint16_t descriptor_bx = 0xfff8;
+    FunctionSixClipSession ega_clip(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640,
+        descriptor_es, descriptor_bx);
+    const eon::MillenniumDosVideoFunctionSixClipBoundary ega_first_clip_read{
+        1,0x08a6,descriptor_es,0x0008};
+    assert(ega_clip.state() == FunctionSixClipState::awaiting_width
+        && ega_clip.boundary()
+        && *ega_clip.boundary() == ega_first_clip_read);
+    expect_rejected([&] {
+        ega_clip.observe_word_read({1,0x08a6,descriptor_es,0x0007,100});
+    });
+    ega_clip.observe_word_read({1,0x08a6,descriptor_es,0x0008,100});
+    const eon::MillenniumDosVideoFunctionSixClipBoundary ega_second_clip_read{
+        2,0x08b0,descriptor_es,0x0000};
+    assert(ega_clip.boundary()
+        && *ega_clip.boundary() == ega_second_clip_read);
+    ega_clip.observe_word_read({2,0x08b0,descriptor_es,0x0000,250});
+    const eon::MillenniumDosVideoFunctionSixWordWrite ega_expected_clip_write{
+        0x08ba,descriptor_es,0x0008,100,70};
+    assert(ega_clip.state() == FunctionSixClipState::prefix_boundary
+        && ega_clip.outcome()
+        && ega_clip.outcome()->endpoint
+            == eon::MillenniumDosVideoFunctionSixClipEndpoint::caller_driven_prefix
+        && ega_clip.outcome()->instruction_address == 0x08be
+        && ega_clip.outcome()->clipped_value == 70
+        && ega_clip.outcome()->write
+        && *ega_clip.outcome()->write == ega_expected_clip_write);
+
+    FunctionSixClipSession ega_empty(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640,
+        descriptor_es, 0x1340);
+    ega_empty.observe_word_read({1,0x08a6,descriptor_es,0x1350,0x8000});
+    assert(ega_empty.state() == FunctionSixClipState::ret_boundary
+        && ega_empty.outcome()
+        && ega_empty.outcome()->instruction_address == 0x08a5
+        && !ega_empty.outcome()->clipped_value
+        && !ega_empty.outcome()->write);
+
+    FunctionSixClipSession mcga_clip(mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga,
+        descriptor_es, descriptor_bx);
+    const eon::MillenniumDosVideoFunctionSixClipBoundary mcga_first_clip_read{
+        1,0x0708,descriptor_es,0x0000};
+    assert(mcga_clip.state() == FunctionSixClipState::awaiting_clip_limit
+        && mcga_clip.boundary()
+        && *mcga_clip.boundary() == mcga_first_clip_read);
+    mcga_clip.observe_word_read({1,0x0708,descriptor_es,0x0000,280});
+    mcga_clip.observe_word_read({2,0x070c,descriptor_es,0x0008,100});
+    const eon::MillenniumDosVideoFunctionSixClipBoundary mcga_final_clip_read{
+        3,0x0716,descriptor_es,0x0008};
+    assert(mcga_clip.outcome() == std::nullopt
+        && mcga_clip.boundary()
+        && *mcga_clip.boundary() == mcga_final_clip_read);
+    mcga_clip.observe_word_read({3,0x0716,descriptor_es,0x0008,40});
+    const eon::MillenniumDosVideoFunctionSixWordWrite mcga_expected_clip_write{
+        0x0712,descriptor_es,0x0008,100,40};
+    assert(mcga_clip.state() == FunctionSixClipState::prefix_boundary
+        && mcga_clip.outcome()
+        && mcga_clip.outcome()->instruction_address == 0x071d
+        && mcga_clip.outcome()->clipped_value == 40
+        && mcga_clip.outcome()->write
+        && *mcga_clip.outcome()->write == mcga_expected_clip_write);
+
+    using McgaTableSession = eon::MillenniumDosVideoFunctionSixMcgaTableSession;
+    using McgaTableState = eon::MillenniumDosVideoFunctionSixMcgaTableState;
+    static_assert(!std::is_same_v<eon::MillenniumDosVideoDataSegment,
+        eon::MillenniumDosVideoCodeSegment>);
+    const eon::MillenniumDosVideoDataSegment mcga_ds{0x4567};
+    McgaTableSession mcga_table(mcga_bytes, descriptor_es, descriptor_bx, mcga_ds);
+    assert(mcga_table.state() == McgaTableState::awaiting_descriptor_byte);
+    expect_rejected([&] {
+        mcga_table.observe_descriptor_byte_read({1,0x071d,descriptor_es,0x0009,0x12});
+    });
+    assert(mcga_table.state() == McgaTableState::awaiting_descriptor_byte);
+    mcga_table.observe_descriptor_byte_read({1,0x071d,descriptor_es,0x000a,0x42});
+    const eon::MillenniumDosVideoFunctionSixMcgaTableByteBoundary mcga_table_boundary{
+        2,0x0728,mcga_ds,0x00f2};
+    assert(mcga_table.state() == McgaTableState::awaiting_table_byte
+        && mcga_table.descriptor_read()
+            == (eon::MillenniumDosVideoFunctionSixMcgaDescriptorByteRead{
+                1,0x071d,descriptor_es,0x000a,0x42})
+        && mcga_table.table_boundary() == mcga_table_boundary);
+    expect_rejected([&] {
+        mcga_table.observe_table_byte_read({2,0x0728,{0x4568},0x00f2,0xa5});
+    });
+    expect_rejected([&] {
+        mcga_table.observe_table_byte_read({2,0x0729,mcga_ds,0x00f2,0xa5});
+    });
+    assert(mcga_table.state() == McgaTableState::awaiting_table_byte);
+    mcga_table.observe_table_byte_read({2,0x0728,mcga_ds,0x00f2,0xa5});
+    assert(mcga_table.state() == McgaTableState::complete
+        && mcga_table.table_read()
+            == (eon::MillenniumDosVideoFunctionSixMcgaTableByteRead{
+                2,0x0728,mcga_ds,0x00f2,0xa5})
+        && mcga_table.store()
+            == (eon::MillenniumDosVideoFunctionSixMcgaDataByteStore{
+                0x072a,mcga_ds,0x07b9,0xa5}));
+    expect_rejected([&] {
+        mcga_table.observe_table_byte_read({3,0x0728,mcga_ds,0x00f2,0xa5});
+    });
+    expect_rejected([&] {
+        McgaTableSession unsupported(std::span<const std::uint8_t>(mcga_bytes).subspan(1), descriptor_es,
+            descriptor_bx, mcga_ds);
+    });
+
+    McgaTableSession mcga_table_wrapped(mcga_bytes, descriptor_es, 0xfff8, mcga_ds);
+    mcga_table_wrapped.observe_descriptor_byte_read({1,0x071d,descriptor_es,0x000a,0xff});
+    assert(mcga_table_wrapped.table_boundary().di == 0x01af);
+
+    using McgaPointerSession = eon::MillenniumDosVideoFunctionSixMcgaPointerSetupSession;
+    using McgaPointerState = eon::MillenniumDosVideoFunctionSixMcgaPointerSetupState;
+    const eon::MillenniumDosVideoStackSegment mcga_ss{0x2222};
+    McgaPointerSession mcga_pointer_setup(mcga_bytes, descriptor_es, 0x0200, mcga_ds,
+        mcga_ss, 0x1000);
+    assert(mcga_pointer_setup.state() == McgaPointerState::awaiting_descriptor_pointer_offset
+        && mcga_pointer_setup.pushed_ds()
+            == (eon::MillenniumDosVideoFunctionSixMcgaStackWordWrite{
+                0x072d,mcga_ss,0x0ffe,mcga_ds.value}));
+    expect_rejected([&] {
+        mcga_pointer_setup.observe_descriptor_pointer_offset({1,0x072f,descriptor_es,0x0200,0x1000});
+    });
+    assert(mcga_pointer_setup.state() == McgaPointerState::awaiting_descriptor_pointer_offset);
+    mcga_pointer_setup.observe_descriptor_pointer_offset({1,0x072e,descriptor_es,0x0200,0x1000});
+    expect_rejected([&] {
+        mcga_pointer_setup.observe_descriptor_pointer_segment({2,0x072e,descriptor_es,0x0203,0x3000});
+    });
+    mcga_pointer_setup.observe_descriptor_pointer_segment({2,0x072e,descriptor_es,0x0202,0x3000});
+    expect_rejected([&] {
+        mcga_pointer_setup.observe_source_header_word({3,0x0731,mcga_ds,0x1002,0x1234});
+    });
+    mcga_pointer_setup.observe_source_header_word({3,0x0731,{0x3000},0x1002,0x1234});
+    mcga_pointer_setup.observe_nested_pointer_offset({4,0x0736,{0x3000},0x1004,0xff00});
+    mcga_pointer_setup.observe_nested_pointer_segment({5,0x0736,{0x3000},0x1006,0x4000});
+    expect_rejected([&] {
+        mcga_pointer_setup.observe_stack_pop({6,0x0739,{0x2223},0x0ffe,0x4567});
+    });
+    mcga_pointer_setup.observe_stack_pop({6,0x0739,mcga_ss,0x0ffe,mcga_ds.value});
+    assert(mcga_pointer_setup.state() == McgaPointerState::complete
+        && mcga_pointer_setup.outcome()
+        && *mcga_pointer_setup.outcome()
+            == (eon::MillenniumDosVideoFunctionSixMcgaPointerSetupOutcome{
+                mcga_ds,0x1000,
+                {1,0x072e,descriptor_es,0x0200,0x1000},
+                {2,0x072e,descriptor_es,0x0202,0x3000},
+                {3,0x0731,{0x3000},0x1002,0x1234},
+                {4,0x0736,{0x3000},0x1004,0xff00},
+                {5,0x0736,{0x3000},0x1006,0x4000},
+                {6,0x0739,mcga_ss,0x0ffe,0x4567},
+                0x4000,0xff00,0x1234,0x1234,0x4567}));
+
+    McgaPointerSession mcga_pointer_wrapped(mcga_bytes, descriptor_es, 0x0200, mcga_ds,
+        mcga_ss, 0x0000);
+    mcga_pointer_wrapped.observe_descriptor_pointer_offset({1,0x072e,descriptor_es,0x0200,0xfff9});
+    mcga_pointer_wrapped.observe_descriptor_pointer_segment({2,0x072e,descriptor_es,0x0202,0x3000});
+    mcga_pointer_wrapped.observe_source_header_word({3,0x0731,{0x3000},0xfffb,0x1234});
+    expect_rejected([&] {
+        mcga_pointer_wrapped.observe_nested_pointer_offset({4,0x0736,{0x3000},0xfffd,0x4000});
+    });
+    McgaPointerSession mcga_header_wrapped(mcga_bytes, descriptor_es, 0x0200, mcga_ds,
+        mcga_ss, 0x1000);
+    mcga_header_wrapped.observe_descriptor_pointer_offset({1,0x072e,descriptor_es,0x0200,0xfffd});
+    mcga_header_wrapped.observe_descriptor_pointer_segment({2,0x072e,descriptor_es,0x0202,0x3000});
+    expect_rejected([&] {
+        mcga_header_wrapped.observe_source_header_word({3,0x0731,{0x3000},0xffff,0x1234});
+    });
+    expect_rejected([&] {
+        McgaPointerSession wrapped_descriptor(mcga_bytes, descriptor_es, 0xfffd, mcga_ds,
+            mcga_ss, 0x1000);
+    });
+
+    // The original targets intentionally differ in signed versus unsigned
+    // clipping after 16-bit subtraction wraps. Do not normalize this into a
+    // host-side geometric rule.
+    FunctionSixClipSession ega_wrapped(ega_bytes, eon::MillenniumDosVideoDriverKind::ega640,
+        descriptor_es, 0x1000);
+    ega_wrapped.observe_word_read({1,0x08a6,descriptor_es,0x1010,100});
+    ega_wrapped.observe_word_read({2,0x08b0,descriptor_es,0x1008,400});
+    assert(ega_wrapped.outcome() && ega_wrapped.outcome()->clipped_value == 0xffb0
+        && ega_wrapped.outcome()->write && ega_wrapped.outcome()->write->value == 0xffb0);
+    FunctionSixClipSession mcga_wrapped(mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga,
+        descriptor_es, 0x1000);
+    mcga_wrapped.observe_word_read({1,0x0708,descriptor_es,0x1008,400});
+    mcga_wrapped.observe_word_read({2,0x070c,descriptor_es,0x1010,100});
+    mcga_wrapped.observe_word_read({3,0x0716,descriptor_es,0x1010,100});
+    assert(mcga_wrapped.outcome() && mcga_wrapped.outcome()->clipped_value == 0xffb0
+        && !mcga_wrapped.outcome()->write);
 
     using Function31Session = eon::MillenniumDosVideoFunction31Session;
     using Function31State = eon::MillenniumDosVideoFunction31State;
@@ -319,6 +511,57 @@ int main(const int argc, char** argv) {
         && mcga_callback_empty_counter.callback_driver_effects()
             == (std::vector<eon::MillenniumDosVideoFunction13DriverByteEffect>{{0x0c94,0x3456,0x01e4,1}})
         && mcga_callback_empty_counter.callback_driver_word_effects().empty());
+    auto mcga_short_driver = mcga_bytes;
+    mcga_short_driver.resize(0x0ca9);
+    expect_rejected([&] {
+        Function13Interrupt unsupported(mcga_short_driver,
+            eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
+    });
+    auto mcga_altered_driver = mcga_bytes;
+    mcga_altered_driver[0x0ca2] ^= 0x01;
+    expect_rejected([&] {
+        Function13Interrupt unsupported(mcga_altered_driver,
+            eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
+    });
+    expect_rejected([&] { mcga_callback_empty_counter.execute_mcga_callback_register_saves(
+        {7,0x0ca3,0x4000,0x1010,0x1111,0x2222,0x3333,0x4444,0x5555,0x6666,0x7777,0x8888,0x9999}); });
+    assert(mcga_callback_empty_counter.next_sequence() == 7
+        && mcga_callback_empty_counter.callback_stack_effects().empty());
+    mcga_callback_empty_counter.execute_mcga_callback_register_saves(
+        {7,0x0ca2,0x4000,0x1010,0x1111,0x2222,0x3333,0x4444,0x5555,0x6666,0x7777,0x8888,0x9999});
+    assert(mcga_callback_empty_counter.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0caa}
+        && mcga_callback_empty_counter.callback_stack_effects()
+            == (std::vector<eon::MillenniumDosVideoFunction13CallbackStackWordEffect>{
+                {0x0ca2,0x4000,0x100e,0x1111},
+                {0x0ca3,0x4000,0x100c,0x2222},
+                {0x0ca4,0x4000,0x100a,0x3333},
+                {0x0ca5,0x4000,0x1008,0x4444},
+                {0x0ca6,0x4000,0x1006,0x5555},
+                {0x0ca7,0x4000,0x1004,0x6666},
+                {0x0ca8,0x4000,0x1002,0x7777},
+                {0x0ca9,0x4000,0x1000,0x8888}}));
+    expect_rejected([&] { mcga_callback_empty_counter.observe_mcga_callback_zero_counter_pointer(
+        {8,0x0cab,0x3456,0x0c8c,0x6000,0xfffe}); });
+    expect_rejected([&] { mcga_callback_empty_counter.observe_mcga_callback_zero_counter_pointer(
+        {8,0x0caa,0x9999,0x0c8c,0x6000,0xfffe}); });
+    assert(mcga_callback_empty_counter.next_sequence() == 8
+        && mcga_callback_empty_counter.callback_far_pointer_reads().empty()
+        && mcga_callback_empty_counter.callback_stack_effects().size() == 8);
+    mcga_callback_empty_counter.observe_mcga_callback_zero_counter_pointer(
+        {8,0x0caa,0x3456,0x0c8c,0x6000,0xfffe});
+    assert(mcga_callback_empty_counter.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0cb0}
+        && mcga_callback_empty_counter.callback_far_pointer_reads()
+            == (std::vector<eon::MillenniumDosVideoFunction13McgaCallbackFarPointerRead>{
+                {8,0x0caa,0x3456,0x0c8c,0x6000,0xfffe}})
+        && mcga_callback_empty_counter.callback_register_effects()
+            == (std::vector<eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect>{
+                {0x0caa,eon::MillenniumDosVideoFunction13McgaCallbackRegister::es,0x6000},
+                {0x0caa,eon::MillenniumDosVideoFunction13McgaCallbackRegister::di,0xfffe}})
+        && mcga_callback_empty_counter.callback_stack_effects().back()
+            == (eon::MillenniumDosVideoFunction13CallbackStackWordEffect{
+                0x0caf,0x4000,0x0ffe,0xfffe}));
     Function13Interrupt mcga_callback_wrap_counter(mcga_bytes,
         eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
     mcga_callback_wrap_counter.observe_interrupt_request({1,0x0127,0x0013,0x0129,0x5678,0x0302});

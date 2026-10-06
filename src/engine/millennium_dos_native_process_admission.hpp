@@ -49,6 +49,19 @@ struct MillenniumDosNativeProcessCheckpoint {
     std::string game_executable_sha256;
     std::optional<std::string> gx_overlay_sha256;
     bool static_recovery_entry = true;
+    // These fields remain empty until the title-to-game coordinator accepts
+    // a matching DOS child-process transfer observation.
+    bool observed_child_process_entry = false;
+    std::uint64_t child_entry_sequence = 0;
+    std::uint16_t child_code_segment = 0;
+    std::uint64_t last_observation_sequence = 0;
+    std::optional<MillenniumDosNativeBiosInterruptReturnObservation> startup_bios_return;
+};
+
+struct MillenniumDosNativePrivateInterruptReturnObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t interrupt_return_address = 0;
+    std::uint16_t ax = 0;
 };
 
 // Owns the private backing copies required by MillenniumDosNativeProcess's
@@ -108,6 +121,11 @@ public:
         std::uint16_t code_segment) const;
 
     void observe_private_interrupt_return(std::uint16_t address, std::uint16_t ax);
+    void observe_private_interrupt_return(
+        const MillenniumDosNativePrivateInterruptReturnObservation& observation);
+    void observe_bios_interrupt_return(
+        const MillenniumDosNativeBiosInterruptReturnObservation& observation);
+    void observe_child_process_entry(std::uint64_t sequence, std::uint16_t code_segment);
     void observe_runtime_byte(std::uint16_t instruction_address,
         std::uint16_t runtime_address, std::uint8_t value);
     void observe_native_call_return(std::uint16_t call_address,
@@ -135,6 +153,10 @@ private:
     MillenniumDosNativeRecoveryEntry recovery_entry_ =
         MillenniumDosNativeRecoveryEntry::startup;
     std::string error_;
+    bool observed_child_process_entry_ = false;
+    std::uint64_t child_entry_sequence_ = 0;
+    std::uint16_t child_code_segment_ = 0;
+    std::uint64_t last_observation_sequence_ = 0;
 };
 
 } // namespace eon

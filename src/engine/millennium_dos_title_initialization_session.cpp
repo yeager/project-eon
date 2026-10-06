@@ -9,6 +9,10 @@
 
 namespace eon {
 namespace {
+constexpr std::array<std::uint16_t, 15> descriptor_cached_local_addresses{
+    0x0e48, 0x010c, 0x010e, 0x133b, 0x0110, 0x0112, 0x1357, 0x1359,
+    0x14df, 0x14e1, 0x1389, 0x138c, 0x138e, 0x0e4a, 0x0e4c};
+
 std::optional<std::uint16_t> latest_local_word(
     const std::vector<MillenniumDosTitleInitializationMemoryEffect>& effects,
     const std::uint16_t offset) {
@@ -46,6 +50,48 @@ std::uint8_t owned_palette_byte(
     }
     throw std::runtime_error("Missing owned Millennium DOS palette byte");
 }
+}
+
+std::optional<std::uint16_t>
+MillenniumDosTitleInitializationSession::descriptor_cached_local_word(
+    const std::uint16_t address) const {
+    if (!descriptor_loop_local_cache_enabled_) {
+        return latest_local_word(memory_effects_, address);
+    }
+    for (std::size_t index = 0; index < descriptor_cached_local_addresses.size(); ++index) {
+        if (descriptor_cached_local_addresses[index] == address) {
+            return descriptor_loop_local_words_[index];
+        }
+    }
+    return latest_local_word(memory_effects_, address);
+}
+
+std::optional<std::uint16_t>
+MillenniumDosTitleInitializationSession::descriptor_cached_local_effect(
+    const std::uint16_t address, const bool require_zero_segment) const {
+    if (!descriptor_loop_local_cache_enabled_) {
+        for (auto it = memory_effects_.rbegin(); it != memory_effects_.rend(); ++it) {
+            if (!it->explicit_segment && it->offset == address
+                && (!require_zero_segment || it->segment == 0)) {
+                return it->value;
+            }
+        }
+        return std::nullopt;
+    }
+    for (std::size_t index = 0; index < descriptor_cached_local_addresses.size(); ++index) {
+        if (descriptor_cached_local_addresses[index] == address) {
+            return require_zero_segment
+                ? descriptor_loop_local_zero_segment_effects_[index]
+                : descriptor_loop_local_effects_[index];
+        }
+    }
+    for (auto it = memory_effects_.rbegin(); it != memory_effects_.rend(); ++it) {
+        if (!it->explicit_segment && it->offset == address
+            && (!require_zero_segment || it->segment == 0)) {
+            return it->value;
+        }
+    }
+    return std::nullopt;
 }
 
 void MillenniumDosTitleInitializationSession::advance_owned_descriptor_loop_caller(
@@ -197,6 +243,23 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
     auto memory=runtime_memory;
     next.descriptor_loop_owned_=true;
     next.descriptor_loop_driving_=true;
+    next.descriptor_loop_local_cache_enabled_=true;
+    next.descriptor_loop_local_words_.fill(std::nullopt);
+    next.descriptor_loop_local_effects_.fill(std::nullopt);
+    next.descriptor_loop_local_zero_segment_effects_.fill(std::nullopt);
+    for (const auto& effect : next.memory_effects_) {
+        if (effect.explicit_segment) continue;
+        for (std::size_t index = 0; index < descriptor_cached_local_addresses.size(); ++index) {
+            if (effect.offset != descriptor_cached_local_addresses[index]) continue;
+            next.descriptor_loop_local_effects_[index] = effect.value;
+            if (effect.segment == 0) {
+                next.descriptor_loop_local_zero_segment_effects_[index] = effect.value;
+                if (effect.width == MillenniumDosTitleInitializationEffectWidth::word) {
+                    next.descriptor_loop_local_words_[index] = effect.value;
+                }
+            }
+        }
+    }
     const auto word=[&](const std::size_t offset){
         if(offset+1>=library.size()||offset+1>=title_library_first_read_count_)
             throw std::runtime_error("Descriptor library word outside loaded prefix");
@@ -204,9 +267,10 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
     };
     try{
         for(std::size_t count=0;count<request.maximum_observations;++count){
+            const auto prior=next.memory_effects_.size();
             const auto directory=0x4813U+12U*next.descriptor_loop_iteration_;
             const auto first=word(directory),second=word(directory+2);
-            const auto base=latest_local_word(next.memory_effects_,0x0e48);
+            const auto base=next.descriptor_cached_local_word(0x0e48);
             if(!base||*base!=title_library_segment_||second!=0
                 ||static_cast<unsigned>(*base)+(first>>4U)>0xffffU)
                 throw std::runtime_error("Unproven descriptor library base or directory segment");
@@ -215,7 +279,6 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
             const auto record=static_cast<std::size_t>(first);
             if(record+28>library.size()||record+28>title_library_first_read_count_)
                 throw std::runtime_error("Descriptor header exceeds loaded prefix");
-            const auto prior=next.memory_effects_.size();
             const auto sequence=request.first_sequence+count;
             bool mode_four_body_applied=false;
             using S=MillenniumDosTitleInitializationState;
@@ -231,9 +294,9 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
                 next.observe_far_words({sequence,0x13aa,boundary.source_segment,boundary.source_offset,first,second});
                 next.admitted_loop_pair_.reset();
             }else if(next.state_==S::post_descriptor_first_loop_mode_one_header_byte_boundary){
-                const auto output=latest_local_word(next.memory_effects_,0x010c);
-                const auto output_segment=latest_local_word(next.memory_effects_,0x010e);
-                const auto length=latest_local_word(next.memory_effects_,0x133b);
+                const auto output=next.descriptor_cached_local_word(0x010c);
+                const auto output_segment=next.descriptor_cached_local_word(0x010e);
+                const auto length=next.descriptor_cached_local_word(0x133b);
                 const auto table=record+word(record+26)+28U+((library[record]&1U)?0x300U:0U);
                 if(next.selected_mode_!=1||next.continuation_address_!=0x14a9
                     ||next.far_byte_boundary_.source_segment!=segment
@@ -262,7 +325,7 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
                 next.continuation_address_=0x14d0;
                 next.state_=S::descriptor_mode_one_translation_boundary;
             }else if(next.state_==S::descriptor_mode_one_translation_boundary){
-                const auto output_segment=latest_local_word(next.memory_effects_,0x010e);
+                const auto output_segment=next.descriptor_cached_local_word(0x010e);
                 if(next.selected_mode_!=1||!output_segment||next.mode_one_translation_remaining_==0)
                     throw std::runtime_error("Missing mode-one translation context");
                 const auto value=memory.read_byte({NativeRuntimeAddressSpace::dos_segmented,
@@ -285,14 +348,14 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
                     next.advance_descriptor_mode_two_return();
                 }
             }else if(next.state_==S::post_descriptor_first_loop_mode_four_body_boundary){
-                const auto source_offset=latest_local_word(next.memory_effects_,0x010c);
-                const auto source_segment=latest_local_word(next.memory_effects_,0x010e);
-                const auto destination_offset=latest_local_word(next.memory_effects_,0x0110);
-                const auto destination_segment=latest_local_word(next.memory_effects_,0x0112);
-                const auto width=latest_local_word(next.memory_effects_,0x1357);
-                const auto height=latest_local_word(next.memory_effects_,0x1359);
-                const auto table_offset=latest_local_word(next.memory_effects_,0x14df);
-                const auto table_segment=latest_local_word(next.memory_effects_,0x14e1);
+                const auto source_offset=next.descriptor_cached_local_word(0x010c);
+                const auto source_segment=next.descriptor_cached_local_word(0x010e);
+                const auto destination_offset=next.descriptor_cached_local_word(0x0110);
+                const auto destination_segment=next.descriptor_cached_local_word(0x0112);
+                const auto width=next.descriptor_cached_local_word(0x1357);
+                const auto height=next.descriptor_cached_local_word(0x1359);
+                const auto table_offset=next.descriptor_cached_local_word(0x14df);
+                const auto table_segment=next.descriptor_cached_local_word(0x14e1);
                 const auto register_value=[&](const std::string_view name){
                     const auto value=latest_register_value(next.effects_,name);
                     if(!value)throw std::runtime_error("Missing mode-four planar register context");
@@ -518,8 +581,8 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
                 const bool byte=next.continuation_address_==next.far_byte_boundary_.instruction_address;
                 if(source){
                     const auto boundary=next.far_byte_boundary_;
-                    const auto expected_segment=latest_local_word(next.memory_effects_,0x010e);
-                    const auto expected_offset=latest_local_word(next.memory_effects_,0x010c);
+                    const auto expected_segment=next.descriptor_cached_local_word(0x010e);
+                    const auto expected_offset=next.descriptor_cached_local_word(0x010c);
                     if(!expected_segment||!expected_offset||boundary.source_segment!=*expected_segment
                         ||boundary.source_offset<*expected_offset
                         ||static_cast<unsigned>(boundary.source_offset-*expected_offset)>=368U)
@@ -565,6 +628,21 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
                     if(!applied.accepted)throw std::runtime_error(applied.error);
                 }
             }
+            for (std::size_t index = prior; index < next.memory_effects_.size(); ++index) {
+                const auto& effect = next.memory_effects_[index];
+                if (effect.explicit_segment) continue;
+                for (std::size_t cache_index = 0;
+                     cache_index < descriptor_cached_local_addresses.size(); ++cache_index) {
+                    if (effect.offset != descriptor_cached_local_addresses[cache_index]) continue;
+                    next.descriptor_loop_local_effects_[cache_index] = effect.value;
+                    if (effect.segment == 0) {
+                        next.descriptor_loop_local_zero_segment_effects_[cache_index] = effect.value;
+                        if (effect.width == MillenniumDosTitleInitializationEffectWidth::word) {
+                            next.descriptor_loop_local_words_[cache_index] = effect.value;
+                        }
+                    }
+                }
+            }
             result.observation_count=count+1;
             if(next.state_==S::descriptor_loop_complete_boundary){result.returned=true;break;}
             if(!next.descriptor_loop_can_drive())throw std::runtime_error("Descriptor loop reached unadmitted operation");
@@ -572,6 +650,7 @@ MillenniumDosTitleInitializationSession::drive_descriptor_loop_from_title_librar
     }catch(const std::exception& error){result.error=error.what();result.observation_count=0;return result;}
     result.accepted=true;
     next.descriptor_loop_driving_=false;
+    next.descriptor_loop_local_cache_enabled_=false;
     *this=std::move(next);runtime_memory=std::move(memory);
     return result;
 }
@@ -2574,10 +2653,10 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
         ==MillenniumDosTitleInitializationState::post_descriptor_second_loop_second_byte_read_boundary;
     const auto payload_header=second_record_header||boundary_state
         ==MillenniumDosTitleInitializationState::post_descriptor_first_loop_second_byte_read_boundary;
-    const auto second_output=payload_header?latest_local_word(memory_effects_,0x010c):std::nullopt;
-    const auto second_segment=payload_header?latest_local_word(memory_effects_,0x010e):std::nullopt;
-    const auto second_source=payload_header?latest_local_word(memory_effects_,0x138c):std::nullopt;
-    const auto second_source_segment=payload_header?latest_local_word(memory_effects_,0x138e):std::nullopt;
+    const auto second_output=payload_header?descriptor_cached_local_word(0x010c):std::nullopt;
+    const auto second_segment=payload_header?descriptor_cached_local_word(0x010e):std::nullopt;
+    const auto second_source=payload_header?descriptor_cached_local_word(0x138c):std::nullopt;
+    const auto second_source_segment=payload_header?descriptor_cached_local_word(0x138e):std::nullopt;
     if(payload_header&&(!second_output||!second_segment||!second_source||!second_source_segment
         ||*second_source_segment!=observation.source_segment
         ||static_cast<std::uint16_t>(*second_source+4U)!=observation.source_offset))
@@ -2665,8 +2744,10 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
             if(!fes&&it->register_name=="ES"){destination_segment=it->value;fes=true;}
             if(fcl&&fdx&&fdi&&fbx&&fsi&&fch&&fes)break;
         }
-        for(auto it=memory_effects_.rbegin();it!=memory_effects_.rend();++it)
-            if(!it->explicit_segment&&it->offset==0x1359){height=it->value;fh=true;break;}
+        if (const auto latest_height = descriptor_cached_local_effect(0x1359, false)) {
+            height = *latest_height;
+            fh = true;
+        }
         if(!fcl||!fdx||!fdi||!fbx||!fsi||!fch||!fh||!fes){far_byte_observations_.pop_back();throw std::runtime_error("Missing Millennium DOS mode-two loop context");}
         const auto promoted_byte=static_cast<std::uint16_t>(observation.byte);
         auto output=second?static_cast<std::uint8_t>(((promoted_byte>>cl)&0x0fU)|ch)
@@ -2741,10 +2822,13 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
         if(far_byte_observations_.size()<3){far_byte_observations_.pop_back();throw std::runtime_error("Missing Millennium DOS encoded lookup context");}
         const auto dispatch=far_byte_observations_[far_byte_observations_.size()-2];
         std::uint16_t limit=0,current_di=0,current_dx=0,prior=0;
-        const auto output_segment=second_descriptor_payload_?std::optional<std::uint16_t>(descriptor_output_segment_):decoder_output_segment(memory_effects_);
+        const auto output_segment=second_descriptor_payload_
+            ?std::optional<std::uint16_t>(descriptor_output_segment_)
+            :descriptor_cached_local_word(0x010e);
         bool found_di=false,found_dx=false,found_ch=false,found_limit=false;
-        for(auto it=memory_effects_.rbegin();it!=memory_effects_.rend();++it){
-            if(!it->explicit_segment&&it->segment==0&&it->offset==0x1389&&!found_limit){limit=it->value;found_limit=true;}
+        if (const auto latest_limit = descriptor_cached_local_effect(0x1389, true)) {
+            limit = *latest_limit;
+            found_limit = true;
         }
         for(auto it=effects_.rbegin();it!=effects_.rend();++it){
             if(!found_di&&it->register_name=="DI"){current_di=it->value;found_di=true;}
@@ -2752,7 +2836,10 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
             if(!found_ch&&it->register_name=="CH"){prior=it->value;found_ch=true;}
             if(found_di&&found_dx&&found_ch)break;
         }
-        if(!output_segment){far_byte_observations_.pop_back();throw std::runtime_error("Missing Millennium DOS encoded output segment");}
+        if(!output_segment||!found_limit||!found_di||!found_dx||!found_ch){
+            far_byte_observations_.pop_back();
+            throw std::runtime_error("Missing Millennium DOS encoded lookup context");
+        }
         const auto sum=static_cast<std::uint16_t>(observation.byte+prior);
         auto output=static_cast<std::uint8_t>(sum);
         if(sum>0xffU||output>=static_cast<std::uint8_t>(limit))

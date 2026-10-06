@@ -451,7 +451,10 @@ LocalizedGameText localize_unique_admitted_game_text(const Game game,
         if (match) throw std::runtime_error("Ambiguous admitted game-text lookup");
         match = &token;
     }
-    if (!match) throw std::runtime_error("Rendered game text lacks an admitted source token");
+    if (!match) {
+        throw std::runtime_error("Rendered game text lacks an admitted source token: "
+            + std::string(key));
+    }
     return localize_admitted_game_text(
         game, platform, *match, selected_language, translator);
 }

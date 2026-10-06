@@ -59,8 +59,10 @@ continues the nonzero `$01e5` path through the hash-bound local callback
 prefix at `$0d22`. Its typed byte and word reads select only the proven branch
 destinations `$0c94`, `$0d10`, or fallthrough `$0d35`. From `$0c94`, a typed
 nonzero `$0c92` counter is decremented and the local `$01e4/$01e5` flags are
-cleared before stopping at RET `$0d10`; a zero counter stops before the
-register-save block at `$0ca2`. The `$0d35` branch records `$01e4=1`, accepts
+cleared before stopping at RET `$0d10`; a zero counter now records the exact
+eight register pushes from `$0ca2` through `$0ca9`, accepts a typed
+`CS:$0c8c` far pointer at `$0caa`, pushes its offset, and stops before the
+descriptor-word read at `$0cb0`. The `$0d35` branch records `$01e4=1`, accepts
 explicit register values and `SS:SP`, and records the nine ordered stack
 pushes. It accepts a fresh CS:`$0d18` word at `$0d44`, a far pointer from
 CS:`$0d1a` at `$0d49`, then DS:`SI+8` at `$0d4e`, stopping at `$0d54` or
@@ -90,7 +92,7 @@ the RET at `$0dca` to the hash-bound `$0021` CALL return at `$0024`, then reache
 the callback-path IRET boundary. This proves only the static route; runtime
 reachability remains unobserved. Other VGA port I/O remains outside the model.
 The `$0d10` RET also returns to the hash-bound `$0024` CALL continuation;
-`$0ca2` still stops before its register-save block. The zero `$01e5` path still
+the zero-counter branch stops before its `$0cb0` descriptor read. The zero `$01e5` path still
 stops at IRET. These scenario
 inputs do not authenticate the installed vector or prove title execution
 selected this handler.
@@ -129,6 +131,62 @@ decoded-pixel parity remain unverified. Keep mode four separate from MCGA
 mode-one translation and the synthetic mode-two regression; keep mode three
 distinct and leave private function `$0013` unexecuted until its result is
 evidenced.
+
+The title's hash-bound AX=`$0006` caller now has standalone EGA640/MCGA
+entry-side clipping models. They accept only ordered descriptor-word reads,
+preserve each driver's distinct signed/unsigned 16-bit branch behavior, and
+stop before source pointers, helper calls, VGA I/O, or pixel writes. This does
+not select the installed driver or establish a captured `$0006` dispatch; real
+call reachability, descriptor provenance, rendering, and frame comparison
+remain open.
+
+MCGA static follow-on spans now have a standalone observation model for
+`$071d..$072d`: read the descriptor byte at `ES:BX+$12`, derive `DI=$b0+byte`,
+read `DS:[DI]`, and record its store at `DS:$07b9`. DS and CS remain distinct
+types because later code reads `CS:$07b9`. This model is independent of the
+clip-prefix model and proves no runtime reachability. A second standalone
+model now covers `$072d..$073a`, including the recorded DS stack write, ordered
+descriptor/source far-pointer reads, source header word, DS changes and stack
+pop. It stops before `$073a`. Neither model is chained to the clip prefix.
+`$073a..$076f` now has a standalone typed register/stack observation model,
+starting from an explicit 16-bit register snapshot and ordered descriptor
+reads, with no assumed reachability from either earlier span. It stops before
+opaque helper `$0666` and assigns no helper/blit meaning. Its real-media native
+test checks signed multiply, 16-bit register arithmetic, all five `SS:SP`
+writes, and the no-wrap bound BX <= `$ffee`. The MCGA loops
+`[$078b,$079d)` and `[$07a1,$07b5)` now have a hash-bound register/address
+observation session. It records the word/byte REP phases, DF-directed SI/DI
+stepping, per-row BX/DX strides, and BP/JNZ iteration. DF, segments, and
+registers remain explicit inputs. A separate bounded executor now reads only
+initialized bytes from `NativeRuntimeMemory`, takes the real-mode A20 mapping
+explicitly, preserves ordered MOVSW/MOVSB reads for overlapping copies, and
+commits unique final destination bytes in one atomic batch. Its real-media
+test covers both DF directions, overlap, an A20 alias, and rejection without
+partial mutation when source bytes are absent. It accepts the completed
+hash-bound caller result directly, validates the returned loop against the
+driver bytes, and refuses outcomes without the `$88` branch and matching RET.
+This is still not wired into release runtime: the DOS guest does not feed it
+live registers or memory, and neither runtime reachability nor pixels are
+established. A new complete linear candidate scan of the exact English game
+image locates three AX=6 near calls to the private wrapper at `$0124` (`$5d7c`,
+`$6b0c`, and `$ad15`); the third call uses 16-bit IP wrap. See the caller
+facts and report hash in `PRESERVATION.md`. This is static caller evidence, not observed
+reachability or an installed-driver proof. Next, capture the caller registers,
+descriptor bytes, private INT `$91` return and loaded driver identity at one
+of those sites; then connect only that call path to guest-owned state, resolve
+A20 mapping from the running DOS environment, and compare visible output
+against a capture.
+
+An integrated MCGA caller observation now connects the setup and helper
+outcomes across `CALL $076f`, explicit caller stack reads, `CS:$07b9` and the
+two `$88` copy branches. It feeds the selected state into the corresponding
+hash-bound copy-loop address model and records the outer RET word at `$079c`
+or `$07b4`; a helper carry path instead models `$079d` cleanup and `$07a0`
+RET. A non-`$88` CS byte now exports the recovered `$07b5` register snapshot
+to a bounded byte-effect model for `[$07b5,$07c7)`: ordered `DS:SI` reads,
+`ES:DI` reads/OR writes, DF-aware SI, forward DI, row strides and SS:SP
+push/pop observations. The snapshot and branch remain caller-supplied facts;
+no game reachability or pixel interpretation is established.
 
 The following paragraphs retain earlier recovery history. Their intermediate
 stops and historical source assumptions are superseded by the current
@@ -346,12 +404,16 @@ callee beyond that request; no DOS PSP, parent `EXEC` return, display result,
 or game-state transition is inferred.
 
 The normal SDL and CLI startup route no longer depends on a test-only injected
-child code segment after the original sound selection. Choice `1` or `2`
+child code segment after the original sound selection. Choices `0`, `1`, and
+`2` now bind the exact supplied `SIBM.DRV`, `SSBL.DRV`, and `SCVX.DRV` leaves
+by hash and enter their shared bounded file-loader prefix. Choice `0` was
+previously a dead end despite being a literal original option. Each choice
 creates a labelled Eon compatibility process at `$e000`, then lets the
 existing deterministic loader consume only the selected hash-admitted leaf.
 That segment is engine-owned state, never an original allocation claim; the
-first original-dependent parent-stack result and every later ABI boundary
-remain blocked pending evidence.
+first original-dependent parent-stack result and every later driver/device
+ABI boundary remain blocked pending evidence. This does not claim SIBM
+initialization or audio playback.
 
 The clean Deuteros Amiga path now accumulates the zero/zero route and all three
 remaining deterministic non-negative `$1fbe6` planar routes into a sparse
@@ -378,18 +440,33 @@ the exact custom-chip effects at `$42546` and `$4254c` are retained as typed
 records. Execution stops before `$42552 -> $41d4a`, whose device-call result
 and visible display remain unproven.
 
+The English DOS native-process adapter now connects only after a typed
+`2200AD.EXE` child-entry observation at the title-to-game boundary. Its
+first and second `$0129` returns require explicit, strictly ordered AX
+observations and are visible through copy-only checkpoints. The API does not
+provide those values or establish original-process reachability; rank 1 still
+requires a genuine title/EXEC capture.
+
 | Rank | Work package | Exact current evidence | Required acceptance evidence | Status / boundary |
 | --- | --- | --- | --- | --- |
 | 1 | Millennium DOS: capture the launcher/title/`2200AD.EXE` handoff and private DOS ABI | English DOS release `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`; CLI-validated diagnostics-only title-init v2 profile binds the `MILL.COM:0x02cf` driver-load, setup-site `0x0209`/actual-`INT` `0x020c`, `TITLES.EXE:0x0127` request, and two raw returns at `$0129`; v6 additionally binds `svga_s3`/`ega` machine-profile selection to its exact config, while the genuine EGA diagnostic still requested `mcga.bin` and hit the console-capped `INT 6` boundary; v7 records IVT `INT 91h` endpoint `087e:0000`, v8 records a normal-core transfer to it, v9 binds the first raw caller re-entry (`AX=$0101`, `FLAGS=$7202`), v11 terminates the host recorder only after the complete twice-observed `INT 6` diagnostic receipt matches byte-for-byte, and v12 independently repeats an immediate predecessor at `f000:ca60` outside the recognised original-image map. The verified v13 no-input preflight ends at the same eight-record `INT 6` receipt (SHA-256 `8d01223e76a7f5b8497c7a2d8c727452a6d25928002eff06df8265c460e851e7`) with no host-key receipt or title poll; [read-only physical capture runner](MILLENNIUM_DOS_CAPTURE.md#safe-capture-procedure); [external recorder status](MILLENNIUM_DOS_DOSBOX_X_RECORDER.md#prototype-status) | Hash-bound genuine trace of each interrupt, EXEC/far-return and driver result through one navigable state | The title-init prefix and physical capture route have strict contracts. The v12 predecessor is an emulator callback boundary, and the v13 preflight has no physical receipt; neither is guest-code input, rendering, audio, EXEC, or game-state evidence. |
 | 2 | Millennium DOS: admit the GX startup bridge | Same release; `2200GX.EXE` SHA-256 `093f8416de6d23837d2faf82360ef79777c2c2bf146619aafad87626c61ab6fb`; caller and record bounds in `PRESERVATION.md#millennium-dos-gx-startup-record-boundary`; strict ten-record admission builds a call-free overlay state after independently pinned trace validation; an engine-owned successor now requires the exact active English release to have independently reached title handoff and publishes only a terminal value checkpoint | A genuine hash-bound ten-record capture plus the rank-1 driver/title handoff; active admission must end at the second private-INT boundary and reject any missing/reordered/altered record without changing the prior session | Runtime ownership, byte lifetime, state, rejection, reset and revocation contracts are implemented. The current English path still stops before title handoff, so the successor remains unavailable; no genuine GX trace, frame, input or gameplay is implied |
-| 3 | Deuteros Amiga: capture title initialization and display ABI | English Amiga release `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04`; clean disk 1 `6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`; [live debugger status](DEUTEROS_AMIGA_TITLE_CAPTURE_STATUS.md); [read-only physical capture runner and raw-recorder design](DEUTEROS_AMIGA_FS_UAE_RECORDER.md#media-and-execution-safeguards) | Write-protected capture of Exec/graphics return values, callbacks, bitplanes, palette, input and frame/audio checkpoints | Bootstrap-only v9 evidence is bounded. The reviewed v10 observer now waits for the actual `$1eda6` title site and then records only bounded display-register writes; no v10 operator result exists yet. A complete ordered genuine capture is still required. |
-| 4 | Deuteros Amiga: define and admit title-display capture evidence | Title-stage/main-stage recovery-map entries; strict v4 24-record contract and v5 artifact contract; an engine-owned checkpoint now reopens, rehashes and revalidates all evidence at consumption time; separately, the native runtime publishes bounded Original frames from recovered title/main-stage code | A genuine, write-protected v5 capture satisfying every event and artifact checkpoint; then compare captured display and ABI results against the native runtime | Immutable v4/v5 checkpoint ownership, state transition, rejection, reset and revocation are implemented. The reconstructed runtime can publish frames, but complete capture-backed display validation remains unavailable without rank 3 evidence; no parity claim is supported. |
+| 3 | Deuteros Amiga: capture title initialization and display ABI | English Amiga release `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04`; clean disk 1 `6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`; hash-bound `$389e2` caller establishes start disk offset `$14000`, buffer `$26cc0`, and `$5800` total; the `$208c0` loop plus `$20902` vector helper gate four ordered `-$1c8` calls, each followed by `io_Error` at IORequest+$1f; both selector copy spans are checked inside that completed read buffer; [capture status and latest receipt](DEUTEROS_AMIGA_TITLE_CAPTURE_STATUS.md) | Capture bitplane/palette/audio checkpoints and compare them with native Original output; verify a subsequent guest action changes state | Focused direct-media CTest passes against the supplied archive. The gate admits request order/status and copy-address containment only; active disk identity and returned payload remain unobserved. No captured bitplanes, frame hash, audio, selector meaning, or validated actionable state exists. |
+| 4 | Deuteros Amiga: define and admit title-display capture evidence | Title-stage/main-stage recovery-map entries; strict v4 24-record contract and v5 artifact contract; an engine-owned checkpoint now reopens, rehashes and revalidates all evidence at consumption time; separately, the native runtime publishes bounded Original frames from recovered title/main-stage code | A genuine, write-protected v5 capture satisfying every event and artifact checkpoint; then compare captured display and ABI results against the native runtime | The v16 capture validates a bounded register-write receipt only; it does not contain the complete v5 display artifact. Immutable v4/v5 checkpoint ownership, state transition, rejection, reset and revocation are implemented. Full capture-backed display validation and parity remain open. |
 | 5 | Millennium DOS: recover first actionable state and controls | Hash-identified `TITLE.LIB`, `GX.LIB`, video-driver and title-flow profiles; the typed post-overlay continuation covers `$d39d..$d412`, fifteen exact call returns, explicit AL/runtime-byte branches, poll cycle and terminal dispatch-call boundaries; explicit `$d40a → $76f1` observations can create owned typed index `5` → `$7415`, index `6` → `$7521`, and index `9` → `$7384` sessions | Replay of a real input → canonical state → frame/audio checkpoint | F6/F7/F10 runtime ownership, typed forwarding, copy-only checkpoints and revocation are coded and real-media tested at independent recovery boundaries. Positive active dispatch remains unavailable until genuine predecessor evidence exists. No dispatch resolution, call return, input, handler meaning or frame is invented |
-| 6 | Deuteros Amiga: recover first actionable state and controls | Clean ADF loader, bundle, VM, opening-frame and title-stage profiles; bounded native main-stage execution publishes recurring Original frames at the recovered visibility boundary; the installed `$224cc` vector target has a hash-bound 30-byte prologue at ADF `+$7ccc`, and its statically reached `$22816..$229e7` span is hash-bound at ADF `+$8016`; a separate scenario evaluator translates the worker over explicit bounded memory and emits ordered register-write intents | Replay of a real input → canonical state → bitplane/palette/audio checkpoint | Local execution and frame publication are implemented for the recovered slice. The scenario evaluator is not wired to runtime invocation and proves no device/audio effects, real invocation, or cadence. Capture-backed input delivery, state equivalence, interrupt cadence, and audio timing still depend on ranks 3–4. |
+| 6 | Deuteros Amiga: recover first actionable state and controls | Clean ADF loader, bundle, VM, opening-frame and title-stage profiles; bounded native main-stage execution publishes recurring Original frames at the recovered visibility boundary; the installed `$224cc` vector target has a hash-bound 30-byte prologue at ADF `+$7ccc`, and its statically reached `$22816..$229e7` span is hash-bound at ADF `+$8016`; active-runtime worker entry validates generation, PC, owned nested-BSR stack return, vector, and resident code before applying translated writes to owned software memory; v19 visible capture records held-Fire poll outcome at `$21866` (Z=1, BNE falls through), the title-stage `$218cc` path, display setup, and two `$1fbe6` selector reads with `$1f98c/$1f98e=$00`; a host-delivered `KEY_1` is followed by a selector-code sample at A0=`$1eed5` | Replay of a real input → canonical state → bitplane/palette/audio checkpoint | The capture links held Fire to the poll condition and delivers `KEY_1`; static fallthrough predicts the `$21720` latch store but no guest-memory write is recorded. The selector was visible and title display writes were recorded, but the screen became black after the key, and the later selector sample only reaches data at the disk-prompt string address; no visible disk prompt, main-stage handoff, accepted game control, or canonical state change is proven. Custom-register outputs remain intents and do not establish device/audio effects or cadence. Capture-backed state equivalence, interrupt cadence and audio timing remain open. |
 | 7 | Millennium DOS: establish video/audio device contracts for that slice | `EGA640.BIN`, `MCGA.BIN`, `SSBL.DRV`, `SCVX.DRV`, and VOC source-byte profiles | Captured calls plus pixel/sample hash comparison; no guessed hardware behavior | Depends on rank 1 |
 | 8 | Canonical game-core subsystems for the two proven slices | Only rule paths that have a caller-connected code proof or trace | Deterministic long-run replays, including state transitions and edge cases | Cannot begin from strings, assets, or inferred genre mechanics |
 | 9 | Remaining Amiga/Atari ST execution adapters | Millennium Amiga `2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400`, Millennium Atari `ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01`, Deuteros Atari `c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653`; the latter has a hash-gated static bootstrap checkpoint and a non-admitted Hatari `Floprd` shape cross-check | Per-release recorder-backed bootstrap/device traces and explicit shared/divergent replay checks | Deferred until a playable vertical slice establishes the right core boundary; ordinary emulator output remains diagnostics-only |
 | 10 | Final UX, localization, packages, and release audit | Existing card route, i18n catalogues, CI package recipes, and preservation contracts | Real-session menu/CLI equivalence, 20-language checks, clean-package scans and end-to-end replay | Continuous maintenance only; never substitutes runtime recovery or authorizes a release |
+
+The English DOS startup continuation now records a typed BIOS return at the
+hash-checked palette `INT 10h` site `$0476` only when the raw return CS:IP is the
+expected child segment:`$0478`. Its receipt preserves observed AX/FLAGS and
+sequence ordering without applying BIOS/palette effects or continuing the
+loop. Focused direct-media coverage exercises the accepted boundary and rejects
+wrong INT site, interrupt number, return PC/segment, stale order, and duplicates;
+this does not replace rank 1's genuine capture requirement.
 
 ### 2026-09-03 native media-admission update
 
@@ -741,10 +818,12 @@ error spin or the typed `$217e4` CIA observation. The CIA operation and
 must be produced by the earlier graphics setup; controlled unit fixtures are
 not a runtime fallback.
 The typed `$217e4` CIA sample now drives native byte BSET and the owned
-`$21704` selector read. Its retained `$217f6` return is recognized by the
-existing resource-0/1 transfer transaction, which resets loop-local receipts
-and reaches fresh `$21276` preparation. Unproven selectors and unknown return
-addresses remain separate boundaries; no alternate media is substituted.
+`$21704` selector read; the bounded interpreter path also checks the resulting
+MOVE.W condition codes and X/upper-SR preservation before its call boundary.
+Its retained `$217f6` return is recognized by the existing resource-0/1
+transfer transaction, which resets loop-local receipts and reaches fresh
+`$21276` preparation. Unproven selectors and unknown return addresses remain
+separate boundaries; no alternate media is substituted.
 The unconfigured bootstrap `$12a76 -> $13000` route now crosses library
 opening, both memory-query branches and the two initial graphics calls,
 reaching `$1306c`. The first query requires the returned Z flag explicitly;
@@ -813,3 +892,362 @@ tests, and documentation. Keep raw captures, ROMs, original media, generated
 pixels, and user saves outside the repository. When an item remains blocked,
 record the exact missing observation in `PRESERVATION.md` and continue with the
 next unblocked item.
+
+### 2026-10-03 Millennium Atari Fcreate boundary
+
+The typed `MILL22B.INF` Fopen return checks the dynamic RTS destination. Only
+if that observed address is `$11fe6` does it follow the hash-identified local
+prefix through GEMDOS selector `$3c` at `$11ff6`; otherwise it stops after the
+typed Fopen result. The 18-byte continuation hash is
+`352b6ca9a375e016e129667085dbd6fcd89d1e2eece201d75d97972c60b94cd4`; the
+prepared `2200AD.PRG` argument frame is not a disk write, and no Fcreate
+result is synthesized. A typed raw result can now cross the hash-bound
+`$11ff8..$12003` suffix and store its D0.W value before returning to the
+stack-derived caller address. A recorder-backed trace has not established
+that `$11fe6` is the runtime destination. The supplied Equinox roots also
+lack `2200AD.PRG`, so its Fcreate result, program bytes, and later gameplay
+remain unresolved. Next, obtain the real returned PC/service result from an
+admitted trace or locate hash-identified supplied media, then continue on
+that path.
+
+### 2026-10-05 Deuteros v16 no-input boundary
+
+The bounded v16 observer adds only `$218cc` to the v15 raw-PC site set.
+Its visible, realtime, 180-second no-input capture passes schema-24 receipt
+verification, contains 896 raw-PC records, no host-input receipt, no title-
+display receipt, and no `$218cc` sample. The PC observer and receipt grammar
+are ready, but this run does not advance the title or gameplay state. Next,
+obtain a visible physical-input capture linking the relevant guest route to
+`$218cc` and display/state checkpoints before advancing native execution.
+
+### 2026-10-05 Deuteros v17 physical-input attempt
+
+The pinned v17 recorder was launched visibly on trv2 with a 30-second focus
+settle and a 300-second realtime physical-input window. FS-UAE produced raw-PC
+output, but no non-empty host-input receipt. The runner therefore rejected the
+capture with `physical-input capture requires an observed non-empty host-input
+receipt` before writing `run-status.txt`; this attempt is not admitted evidence
+and establishes no game response or selector-cell value. Repeat only with
+visible manual input in the VNC window, then require a complete receipt before
+using any resulting observation.
+
+The follow-up codex09 run used the same pinned v17 binary with a 120-second
+focus settle and a 600-second realtime physical-input window. It reached the
+active window and ran FS-UAE visibly, but again ended without a host-input
+receipt and was rejected before `run-status.txt` was written. The only changed
+condition was the longer visible window; no new game-state evidence was
+produced.
+
+### 2026-10-05 Millennium Atari media recheck
+
+A metadata-only search across local Downloads, local `~/.projecteon`, trv2
+Downloads and trv2 `~/.projecteon`, including archive member listings, found
+no `2200AD.PRG`. The supplied alternate Equinox root contains `TDS.TOS` with
+the exact active Equinox `MILENIUM.TOS` SHA-256
+`4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686`; neither
+root supplies `2200AD.PRG`. Do not substitute or synthesize the missing child
+program; its Fcreate result, bytes and later gameplay remain unresolved.
+
+### 2026-10-05 Millennium Atari bytecode boundary correction
+
+Exact-media execution now follows only the first selector-3 macro command at
+`$1decf`: bytes `16 01 06` store `$00081e01` at `$1ff66`, and execution stops
+at the next token `$10` at `$1ded2` (dispatcher return `$20026`). The native
+runtime now follows the full hash-bound 44-byte macro through its NUL, runs
+the `$10`/`$11` handlers and positive-mode text raster from the actual
+selector-4 word and typed `$5f00` screen source, then stops at selector-7
+trap `$11ebc`. Next, obtain the external Crawcin return/branch observation and
+continue the already hash-identified caller path. The test's patterned buffer
+proves only mechanics. The Equinox disk-member test passes
+when the original image is streamed directly from its user-supplied ZIP; no
+media is extracted. The missing `2200AD.PRG` boundary still prevents claims of
+Atari gameplay.
+
+
+### 2026-10-05 Millennium DOS child image availability
+
+A metadata-only Downloads/archive recheck confirms the English DOS package
+contains `millennium-return-to-earth-2-2/2200AD.EXE`, 54,391 bytes, SHA-256
+`427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57`. The
+member streamed from the user-supplied archive matches the existing
+`~/.projecteon` file byte for byte; no extraction or copy was performed. This
+removes child-image absence as a static DOS blocker. Continue only from the
+existing typed parent EXEC/process-entry path: dynamic private-driver returns
+remain unobserved, so the executable's presence is not evidence of gameplay.
+This DOS `.EXE` is not the missing Atari ST `2200AD.PRG`.
+
+### 2026-10-05 Linux real-media CTest coverage
+
+A Debug/Ninja build on trv2 compiled the current source snapshot. In direct-
+media mode, with `EON_REAL_DATA_DIR` unset and `EON_DIRECT_DATA_DIR` pointing
+to the existing `~/.projecteon`, CTest passed 21/21 tests, including split-container admission,
+Deuteros Amiga worker scenarios, Millennium DOS video-driver profiles, DOS
+title/runtime and MCGA function-six paths, and the DOS title EXEC entry. The
+separate full-corpus mode cannot pass its scanner count because the available
+recognized archive set is incomplete; its real platform-start test also reports the canonical
+Millennium Amiga release (`2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400`)
+and Atari ST release (`ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01`)
+missing or substituted. The direct Millennium DOS directory and its title
+EXEC path pass; no English archive or observed runtime from another platform
+was substituted for the absent releases.
+
+### Deuteros Amiga title selector dispatch
+
+The title-stage session now consumes the captured selector passage followed
+by exact ordered raw reads of `$1f98c` and `$1f98e`, validates the original
+branch PCs, and reports the next local PC for each of the five static routes.
+Native direct-media coverage tests all five mechanics and rejects missing or
+misplaced secondary reads. Fixture values are synthetic test inputs, not
+captured game state. The runtime facade now checks these bytes against any
+already-owned memory and atomically admits them into guest memory, returning the
+computed next PC. A verified physical-input capture now contains 31 input-linked
+reads at `$1fbe6`, but it lacks the ordered `$1fe84 → $1fea8 → $1fe88` and
+`$1fe92 → $1fea8 → $1fe96` helper-return passage required before those reads
+can be admitted. A later visible physical-input run on 2026-10-06 passed the
+language selector and Disk 2 prompt and displayed the main game interface.
+Its verified schema-30 receipt linked three selector samples at `$1fbe6` to
+input ordinals 22, 24 and 28; both selector cells remained zero. The late
+post-input sidecar recorded three executions at `$1fc22` and none at `$1fc9c`.
+This establishes zero-route reachability after physical input, not the
+pattern/mask reads, destination writes, displayed playfield contents or
+gameplay behavior. The first bounded capture was removed after receipt
+verification to reclaim cache space; its full sidecars are no longer
+available. A repeated 2026-10-06 run is now preserved under
+`/home/trv2/.cache/project-eon-tools/deuteros-amiga-capture-20261006-v20-selector-preserved01/`;
+its schema-30 receipt verifies and its sidecars retain the input chronology.
+The repeated run again captured only three `$1fc22` hits, at input ordinals
+18, 20 and 24, with no `$1fc9c` hit. Next, extend the bounded external
+observer to record the zero-route's ordered chip-RAM operands and bitplane
+writes, then capture the required helper returns and selector passage. Do not
+enable native route writes until those exact ordered effects are observed.
+Continue only along admitted paths while retaining the external service stop
+at `$3fbf8`.
+Millennium DOS still lacks an admitted private-INT driver return and live
+function-six caller. Neither game's playability target is complete.
+
+### 2026-10-06 Deuteros v21 zero-route capture
+
+The v21 visible capture now verifies one complete 147-record zero/zero planar
+invocation from `$1fc22` through `$1fc9a`. Its receipt is retained at
+`/home/trv2/.cache/project-eon-tools/deuteros-amiga-capture-20261006-v21-physical04/`;
+the zero-route sidecar SHA-256 is
+`1290bcb23017c86d4f115b281a4cb0a8315efb42c9757803a09635e3379891ff` (54,723
+bytes). The parser binds all rows to delivered host input and validates the
+32 `$1fc74` intended byte writes against the `$1fc76` readbacks. The VNC view
+reached the interface labelled “THE SUN”. Independent source and build review
+against pinned FS-UAE v3.2.35 is complete: a rebuild from the exact observer
+patch matches all 26 loaded ELF sections of the pinned binary byte-for-byte.
+The normal Deuteros receipt verifier accepts this receipt without an
+experimental-observer flag; that flag is not a Deuteros admission gate. The
+recorder identity is now reviewed and pinned, while the capture remains
+diagnostic and does not prove an accepted game action or playable state.
+
+The physical04 run fixes two omissions found during live validation: the
+runner now passes `PROJECT_EON_FS_UAE_ZERO_ROUTE_RECORD` to v21, and the
+schema-31 grammar accepts selector-cell samples at `$1fc28` as well as the
+start/entry sites. Focused parser and receipt tests pass. Review confirms the
+existing owned runtime API already has a bounded, atomic zero/zero planar
+write path via `observe_command_planar_write`; it derives only the 32
+hash-bound route effects and the pointer update, and publishes a surface only
+after memory admission. The separate generic variant API remains gated from
+zero/zero without its own typed evidence. Reinspection of physical04 shows
+input ordinal 26/frame 5031 traversing `$1fe7a`, both ordered `$1fea8` calls,
+their `$00310000`/`$00300000` returns, `$1fbe6`, and `$1fc22`; this satisfies
+the existing captured-selector-passage checkpoint but does not explain the
+opaque input action or establish a screen/state change. The title-display
+recorder had exhausted its 2,048-write budget by input ordinal 20. Next,
+reserve an additional bounded display-register sidecar for later input-linked
+writes, then use a visible capture to bind action and display/state change.
+Keep selector and planar runtime checkpoints tied to their existing owned,
+hash-bound APIs; do not claim general playability from these local passages.
+
+Historical note: the Deuteros v21 external FS-UAE observer was initially
+unexercised. It was subsequently run with visible manual input; see the
+2026-10-06 capture section above for the verified diagnostic result and its
+gameplay evidence boundary.
+
+### 2026-10-06 local validation and remaining playability evidence
+
+The current shared source snapshot configures and builds with CMake/Ninja on
+macOS when the installed Xcode 26.5 SDK is selected explicitly. CTest passes
+22/22 in direct-media mode against the existing `~/.projecteon` collection;
+the full Python preservation suite passes 455 tests (6 skipped), and the
+repository artifact verifier, Gitleaks, and `git diff --check` pass. Both the
+Millennium DOS and Deuteros Amiga CLI launch checks report `READY`; these are
+media/configuration checks, not playability evidence. No runtime fix is
+justified by the current traces: Millennium still needs the first real INT
+`$93` vector change and subsequent call/return context, while Deuteros needs
+captured post-selector display state and ordered helper returns. Continue with
+visible, physical-input captures and do not synthesize missing guest state.
+
+On 2026-10-06 an external experimental DOSBox-X observer was built against
+the pinned upstream commit. A clean x86-64 Linux build of the same patch was
+completed on trv2 on 2026-10-07; its exact binary identity is recorded in
+`MILLENNIUM_DOS_DOSBOX_X_RECORDER.md`, and the local runner/verifier now bind
+the macOS and Linux binaries to separate hash/size identities under the same
+experimental protocol. Its bounded sidecar can record the six exact
+`MILL.COM` post-INT `$21` return sites and a digest of the read buffer at
+`$0315`. The prototype has no reviewed v21 event/result/input hooks, and no
+game run or capture has been performed. Next, use its explicitly experimental
+runner mode for a visible, operator-closed diagnostic to distinguish
+file-service returns from the later `INT 6` path. Compare any observed read
+digest with the hash-identified original driver without retaining guest
+bytes. This does not replace either game's capture-backed playable-state
+requirement.
+
+The later origin-observer candidate was rebuilt on trv2 with the exact
+experimental identity recorded in `MILLENNIUM_DOS_DOSBOX_X_RECORDER.md` and
+run visibly against the unchanged English archive
+`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`. The
+window remained black with DOSBox-X title `TITLES`. Closing it spawned a
+`zenity` confirmation helper that inherited the recorder console pipe; the
+180-second runner timeout killed DOSBox-X but then waited indefinitely for
+that helper to close the pipe. The retained external run
+`/home/trv2/.cache/project-eon-tools/dos-origin-experiment-runs/origin-20261007-rebuilt02/`
+has `failure_reason=timeout`, no success marker, and no raw receipt. The
+runner now starts DOSBox-X in its own process group and kills the complete
+group at timeout or console safety cap, so inherited UI helpers cannot strand
+cleanup again. This corrects the failure mode, not the emulator's black
+screen; no runtime or playability claim follows from the attempt.
+
+Direct, non-materializing inspection of the hash-matched member found its
+first word is `$1f0e`, not either DOS MZ signature. DOSBox-X's pinned loader
+source classifies an unrecognised header as a COM image and chooses PSP:`$0100`
+as its initial CS:IP. This is a source-path prediction, not an observation of
+this run's EXEC parameters or a guest-image mapping. The observer's first
+recorded fetch for CS `$0e70` was `$fffe`, not `$0100`; the origin observer
+also does not retain the time or full instruction history between the DOS
+loader handoff and that fetch. The next recorder increment should capture the
+hash-validated DOS `TITLES.EXE` identity and exact `LOADNGO` CS:IP together
+with the first `CS=$0e70` normal-core fetch, keeping their chronology explicit.
+
+Source inspection identified DOSBox-X's default `[dosbox] quit warning=auto`
+as the cause of the hidden zenity prompt. The experimental-only origin runner
+now sets `quit warning=false` in its hash-bound generated configuration; the
+general Millennium capture profile is unchanged. The manually closed retry
+completed and its metadata/raw-record digest passed the updated verifier. It
+records a last fetch at `0000:0001` (opcode `$ca`) before the first observed
+fetch at `0e70:fffe` (opcode `$00`). Both addresses are outside the declared
+flat candidate interval for the 7,022-byte `TITLES.EXE`, so those bytes are
+not attributed to original code. This remains only last-fetch context: it does
+not identify a DOS EXEC image, prove a causal transfer, or explain the black
+screen. The next DOS boundary is an exact observation of the DOS EXEC load
+image and entry context before that out-of-range fetch; no model may consume
+the `$00` as an original instruction.
+
+The 2026-10-06 guided v18 run again stayed on the animated Deuteros logo.
+Its verified v28 receipt has 18 delivered host-input events but only 1,024
+raw-PC samples, capped at eight sites; no selector-dispatch or title-display
+artifact exists. The new operator prompt did not close the title-to-selector
+evidence gap. Continue from a visibly reached language selector and capture
+the ordered helper returns, dispatch read, and selector-cell values together;
+do not add guessed runtime behavior.
+
+### 2026-10-06 Deuteros v19 late-input recorder
+
+The v19 FS-UAE executable is hash-pinned at 62,020,024 bytes. Its source patch
+and archive-member comparison are documented in
+`DEUTEROS_AMIGA_FS_UAE_RECORDER.md`. Receipt schema 29 and focused parser tests
+cover distinct late-input samples and the joined selector-cell sidecar. The
+visible v19 captures pass receipt verification. Early runs delivered Space,
+Return, and short Fire clicks but remained on the animated logo. A held Fire
+drag then produced Z=1 at `$21866` while action 33 was held; static bytes fall
+through to a store of 1 at `$21720`, after which the language selector became
+visible. The selector sample read cells `$1f98c=$00` and `$1f98e=$00`.
+
+A follow-up run visibly reached the selector and delivered key `1` at input
+ordinals 29/30. The following selector-dispatch sample (ordinal 30) has D0 low
+byte `$20` and A0 `$1eed5`, a statically identified disk-insertion-prompt text
+region. Both selector cells were still `$00`. The display later appeared black;
+the capture does not prove that the prompt was drawn, that English was accepted,
+or that the game reached a playable state. Its raw-PC, late-PC, dispatch and
+display data remain external under
+`/home/trv2/.cache/project-eon-tools/deuteros-amiga-capture-20261006-vnc-v19-language-confirm01/`.
+
+The next Amiga step is to identify the bounded code and display writes between
+that second dispatch and a visible disk prompt, then capture the ordered helper
+returns and selector reads needed by native route admission. Do not synthesize
+the prompt or advance a disk swap without visible, input-linked evidence.
+
+Hash-locked disassembly of Disk 1 ADF offset `$7ac22` / runtime `$1fc22`
+(256 bytes, SHA-256
+`9f1ecf6524f3e88e4124cde39fed5a01fb9008a44871ea7907aa78c029f0ecd3`)
+confirms that the zero/zero route subtracts `$20` from D0's low byte, indexes
+an eight-byte pattern at `$1f99c`, and performs original four-plane merges
+through `$1f974`. The v19 ordinal-30 dispatch sample has D0 low `$20`, A0
+`$1eed5`, and both cells zero. This predicts the route only if the sampled
+cells persist to the later tests; no `$1fc22` execution or plane write is
+captured. Next recorder build should probe `$1fc22/$1fc9c` and retain the
+ordered selector-helper/dispatch passage. Do not treat `$1eed5` as proof that
+the prompt was displayed.
+
+Millennium DOS still lacks an admitted private-INT driver return and live
+function-six caller. Neither game's playability target is complete.
+
+### 2026-10-07 Millennium DOS zero-context disassembly
+
+The `TITLES.EXE` context around the V14 zero-byte history was re-disassembled
+from the exact direct-media member, without extraction. Under the existing
+flat COM-style `IP - 0x100` candidate mapping, the captured `$18e4..$1900`
+range maps to file `+$17e4..+$1800`. Those title bytes are nonzero; `$18e4`
+lands inside the instruction linearly decoded from `$18e3`, and `$1900` lands
+on the final displacement byte of the instruction beginning at `$18fd`. The
+same 30-byte file span in `2200AD.EXE` is zero-filled and matches the observed
+fetch values, but does not prove that executable was loaded at `CS=$0e70`.
+The complete linear report and exact span hashes are recorded in
+`PRESERVATION.md`; raw disassembly remains outside the repository. Next DOS
+work must bind the actual DOS `EXEC` image identity and entry CS to this return
+context using a reviewed read-only observer. Under the `2200AD.EXE` candidate,
+the 15 zero-opcode pairs decode as `ADD byte ptr [BX+SI],AL`, which could write
+guest memory if executed. Any useful observer must therefore retain bounded
+register/effective-address and pre/post-write evidence alongside full EXEC
+image identity; PC samples alone cannot explain the path. The exact source
+zero run is `2200AD.EXE+$124b..+$26c3` (5,241 bytes), with nonzero bytes
+resuming at `+$26c4`; this is file structure, not runtime mapping evidence.
+The reproducible direct-transfer scan tool finds no instruction-aligned
+relative CALL/JMP target among the observed IPs; tests reject byte matches
+that begin inside another instruction. This still leaves indirect transfers
+and computed returns open.
+The tool and focused unit tests are now in `tools/scan_dos_transfer_targets.py`
+and `tests/test_dos_transfer_scan.py`; they revalidate the direct-media set
+and selected file hashes and write mode-0600 metadata only under the external
+cache. The reproduced empty result is hash-recorded in `PRESERVATION.md`. The
+full Python suite passes 463 tests (6 skipped), repository artifact policy
+passes, Gitleaks reports no leaks, and `git diff --check` passes. These static
+checks refine the DOS fault hypothesis but do not advance either game's
+verified playable state.
+Do not infer executable identity or runtime behavior from zero-byte
+compatibility, stack contents, or a candidate offset mapping.
+Deuteros Amiga still needs the ordered selector/helper passage and a captured
+state-changing control leading beyond the observed “THE SUN” interface. Both
+games remain short of verified playability.
+
+The follow-up `tools/analyze_dos_reachability.py` starts at `$0100` and `$d2b0`;
+all six English DOS candidate addresses are reachable only in an
+over-approximation with 24–34 assumed near-call returns and two assumed
+`INT $91` returns. Neither entry has a direct-control-only route to those
+sites. Hashes, route classes, and decoder limits are recorded in
+`PRESERVATION.md`; the caller models remain unconnected to runtime.
+
+The external CMake/Ninja build completed and CTest passed 22/22. The full
+Python preservation suite passed 470 tests (6 skipped), repository artifact
+policy and Gitleaks passed, and `git diff --check` is clean. Neither title has
+yet produced verified gameplay evidence.
+
+### 2026-10-07 Deuteros later-input display observation
+
+Rechecking the v21 schema-31 capture found that input ordinal 26 reaches the
+hash-profiled selector passage and `$1fc22`, with selector cells still zero.
+The established title-display sidecar ended at ordinal 20 after using its
+2,048-write budget, so it could not determine whether that later passage
+changed display registers. FS-UAE v22 is now compiled and hash-pinned in the
+external cache, adding an independently bounded display sidecar for writes
+after ordinal 20. Schema 32 verifies its exact binary identity, register
+allowlist, per-register and total caps, frame/ordinal links, and file hash.
+Focused tests cover these constraints and a full synthetic schema-32 receipt;
+the full Python suite passes 472 tests (6 skipped). The prior v21 physical
+capture still verifies normally. The v22 observer has not yet been run, so
+there is no new evidence of a visible game-state change. Next, run a visible
+physical-input capture with v22 and inspect later-input display writes together
+with the selector route; do not infer gameplay from display-register writes
+alone.

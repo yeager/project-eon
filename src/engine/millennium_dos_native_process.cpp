@@ -56,6 +56,9 @@ MillenniumDosNativeBoundary MillenniumDosNativeProcess::boundary() const {
     case MillenniumDosNativeProcessState::startup_palette_interrupt_boundary:
         return {MillenniumDosNativeBoundaryKind::bios_interrupt,
             startup_prefix_->boundary_address, std::uint8_t{0x10}, std::nullopt, 0};
+    case MillenniumDosNativeProcessState::startup_palette_interrupt_return_observed:
+        return {MillenniumDosNativeBoundaryKind::observed_bios_interrupt_return,
+            startup_prefix_->boundary_address, std::uint8_t{0x10}, std::nullopt, 0};
     case MillenniumDosNativeProcessState::gx_mode_byte:
         return {MillenniumDosNativeBoundaryKind::runtime_byte,
             gx_mode_read_site, std::nullopt, gx_mode_byte_address, 0};
@@ -117,6 +120,23 @@ void MillenniumDosNativeProcess::observe_private_interrupt_return(
         return;
     }
     throw std::runtime_error("Out-of-order Millennium DOS private return observation");
+}
+
+void MillenniumDosNativeProcess::observe_bios_interrupt_return(
+    const MillenniumDosNativeBiosInterruptReturnObservation& observation) {
+    const auto expected = boundary();
+    if (state_ != MillenniumDosNativeProcessState::startup_palette_interrupt_boundary
+        || expected.kind != MillenniumDosNativeBoundaryKind::bios_interrupt
+        || expected.address != observation.interrupt_instruction_address
+        || expected.interrupt != observation.interrupt_number
+        || observation.return_instruction_pointer
+            != static_cast<std::uint16_t>(expected.address + 2U)
+        || !startup_prefix_->first_palette_request) {
+        throw std::runtime_error(
+            "Millennium DOS BIOS return is detached from the startup palette INT $10 boundary");
+    }
+    startup_bios_return_ = observation;
+    state_ = MillenniumDosNativeProcessState::startup_palette_interrupt_return_observed;
 }
 
 void MillenniumDosNativeProcess::observe_runtime_byte(

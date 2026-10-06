@@ -15,7 +15,7 @@ namespace {
 // Keep this table in exact source order with docs/function-map.json.  Every
 // source hash names an existing, separately hash-checked original leaf or
 // stage.  The descriptions deliberately retain unknown ABI/state boundaries.
-constexpr std::array<FunctionMapEntry, 107> entries{{
+constexpr std::array<FunctionMapEntry, 109> entries{{
     {"millennium-atari-en-prg-entry", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
      "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
      "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686",
@@ -119,15 +119,22 @@ constexpr std::array<FunctionMapEntry, 107> entries{{
      "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
      "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686",
      "MILENIUM.TOS staged target +0x58", "$77056", "verified-static",
-     "the signed Fopen result is typed without filesystem semantics; failure span SHA-256 d124b586e52a783689925186d8cc93366870526fd894567b7c55761a617807c7 and success span SHA-256 2ceb9e3c6a8c2882f13708d64367b0a9f8bf18ee7456ea396a3e600734825476; Fread result remains external",
+     "caller $77042..$77057 passes the statically DATA-to-BSS-resolved filename MILL22B.inf from TOS file offset $121c, NUL-terminated SHA-256 393a936fc20d9f40ecace75f74947833d28e947e3ba9a987761a7d1eb92a575b; raw Fopen result remains external, no filesystem return or file execution is inferred; failure span SHA-256 d124b586e52a783689925186d8cc93366870526fd894567b7c55761a617807c7 and success span SHA-256 2ceb9e3c6a8c2882f13708d64367b0a9f8bf18ee7456ea396a3e600734825476; Fread result remains external",
      "native post-config Fopen success and failure dispatch", "PRESERVATION.md#millennium-atari-st-relocation-evidence",
      "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", "runtime"},
     {"millennium-atari-post-config-read-close", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
      "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
      "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686",
      "MILENIUM.TOS staged target +0x76 and +0x7e/+0xa2", "$77076", "verified-static",
-     "Fread and Fclose results are typed without filesystem semantics; exact Fread-return SHA-256 368338a18784d37b5867fa551121703b2fb0ab613db51cbc5b2c08e14f474558 and post-Fclose executed-span SHA-256 aa177208872c4125af13601feb4566003e5fb01c851c44f8b7f4904fb5f52b52; the final even 24-bit RTS destination is typed because the staged target was entered by JMP and encodes no caller",
+     "post-config Fopen pathname resolves to MILL22B.inf from original TOS DATA; its 84,720-byte FAT12 chain is hash-verified. The file starts with JMP $1c62c at Fread base $11e00; the in-range +$a82c prologue hash is f97319598c3c193dc292abbf86c0b94c814f4b9ecafcdba612bb0116660c93b6. This validates code-shaped entry bytes only. Nonnegative typed Fread counts up to 84,720 copy that exact original prefix to $11e00; negative results copy no bytes, larger counts are rejected, and Fclose remains external. No entry execution or display meaning is inferred. exact Fread-return SHA-256 368338a18784d37b5867fa551121703b2fb0ab613db51cbc5b2c08e14f474558 and post-Fclose executed-span SHA-256 aa177208872c4125af13601feb4566003e5fb01c851c44f8b7f4904fb5f52b52; the final even 24-bit RTS destination is typed because the staged target was entered by JMP and encodes no caller",
      "native post-config Fread and Fclose through deterministic writes and typed terminal RTS", "PRESERVATION.md#millennium-atari-st-relocation-evidence",
+     "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", "runtime"},
+    {"millennium-atari-post-config-module-entry", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
+     "millennium-atari-equinox-prg-chain", Game::millennium, Platform::atari_st, "en", "m68000",
+     "4584ddc459e3bf03e642f3156fbedb74aa33a847db4937beb5635eb492e93686",
+     "MILL22B.INF+0x0000 and +0xa82c", "$1f92e", "verified-static",
+     "module entry and status register require typed runtime observations; PSG effects are emitted only for observed supervisor mode; first XBIOS selector-$26 return and later screen/input/game state remain unobserved",
+     "native typed-SR module prologue through first XBIOS boundary", "PRESERVATION.md#millennium-atari-st-relocation-evidence",
      "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7", "runtime"},
     {"millennium-amiga-en-first-stage-entry", "ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd",
      "millennium-amiga-defjam-direct-first-stage-entry", Game::millennium, Platform::amiga, "en", "m68000",
@@ -616,6 +623,13 @@ constexpr std::array<FunctionMapEntry, 107> entries{{
      "Exec base/vector result, callback ABI, input and title state remain unobserved",
      "diagnostics only", "PRESERVATION.md#deuteros-amiga-title-input-and-bootstrap-handoff",
      "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03"},
+    {"millennium-dos-en-mcga-function-six-overlay-loop", "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+     "millennium-dos-mcga-video", Game::millennium, Platform::dos, "en", "i8086",
+     "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228",
+     "MCGA.BIN+0x07b5", "$07b5", "verified-static",
+     "exact 18-byte span SHA-256 1f74b1e9894303e3e6772b8c95a687554f7b989175ea27e756f24293d32fcded; ordered byte and stack effects are modeled, while runtime reachability, physical aliasing beyond explicit observations, and pixel meaning remain unproven",
+     "bounded MCGA overlay byte-effect observation", "PRESERVATION.md#millennium-dos-mcga-function-six-overlay-loop",
+     "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228"},
 }};
 
 bool is_lower_hex(const std::string_view value) {

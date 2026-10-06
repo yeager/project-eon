@@ -88,6 +88,34 @@ struct MillenniumAtariMaterializedTarget {
     std::vector<std::uint8_t> bytes;
 };
 
+// Provenance for the filename passed by the staged post-config Fopen call.
+// Its bytes must lie inside the original DATA portion copied to the BSS
+// source by the already hash-bound bootstrap, and the caller span must be the
+// exact staged-PRG continuation that passes this address to GEMDOS.
+struct MillenniumAtariPostConfigFilenameEvidence {
+    std::uint32_t runtime_address = 0;
+    std::uint32_t source_address = 0;
+    std::uint32_t source_offset = 0;
+    std::uint32_t program_file_offset = 0;
+    std::uint32_t nul_terminated_byte_count = 0;
+    std::string filename;
+    std::string nul_terminated_sha256;
+    std::string caller_span_sha256;
+};
+
+// Static entry evidence for the hash-identified bytes read from MILL22B.INF.
+// The caller names $11e00 as the Fread buffer; the file begins with an
+// absolute JMP into that bounded buffer. This records code-shaped bytes only:
+// it does not claim the Fread succeeds or that the loaded entry is executed.
+struct MillenniumAtariPostConfigModuleEntryEvidence {
+    std::uint32_t load_address = 0;
+    std::uint32_t initial_jump_address = 0;
+    std::uint32_t initial_jump_file_offset = 0;
+    std::uint32_t entry_prologue_bytes = 0;
+    std::string file_sha256;
+    std::string entry_prologue_sha256;
+};
+
 // Result of executing the two wholly local 68000 copy loops at the start of
 // the verified Equinox loader. This is intentionally not a general 68000 or
 // GEMDOS emulator: it performs only fixed, byte-validated transfers and stops
@@ -100,6 +128,11 @@ struct MillenniumAtariBootstrapExecution {
     std::uint32_t second_copy_words = 0;
     std::uint32_t target_address = 0;
     std::uint32_t stop_before_trap_address = 0;
+    // The second, self-initializing BSS copy routine is executed instruction
+    // by instruction from its hash-anchored original bytes. Execution stops
+    // at its JMP target before the target's first GEMDOS trap.
+    std::uint32_t second_copy_instruction_count = 0;
+    std::uint32_t second_copy_stop_address = 0;
     // The three fixed instructions at the materialized target create the
     // Fopen argument frame before the first GEMDOS boundary.  This is a
     // relative, byte-addressed record only: no initial A7 value, host stack,
@@ -642,6 +675,14 @@ struct MillenniumAtariConfigResidualJsrBody {
 // PRG relocation, disk extraction, write, or 68000 execution is involved.
 [[nodiscard]] MillenniumAtariMaterializedTarget materialize_millennium_atari_target(
     const MillenniumAtariBssSource& source, const MillenniumAtariBssEntry& entry);
+
+[[nodiscard]] MillenniumAtariPostConfigFilenameEvidence
+parse_millennium_atari_post_config_filename(std::span<const std::uint8_t> program,
+    const MillenniumAtariBssSource& source,
+    const MillenniumAtariMaterializedTarget& target);
+
+[[nodiscard]] MillenniumAtariPostConfigModuleEntryEvidence
+parse_millennium_atari_post_config_module_entry(std::span<const std::uint8_t> module);
 
 // Validates the original Fopen trap and immediate post-trap setup after the
 // materialized jump. It makes no GEMDOS call or OS emulation; the parser only

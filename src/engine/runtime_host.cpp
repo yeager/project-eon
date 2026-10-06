@@ -85,6 +85,25 @@ MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_ti
 MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_title_termination(MillenniumDosTitleToGameInterruptObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_title_termination(o);}
 MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_parent_exec_return(MillenniumDosTitleToGameInterruptObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_parent_exec_return(o);}
 MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_child_status(MillenniumDosTitleToGameInterruptObservation o){if(revoking())return {false,"Title-to-game observation rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_child_status(o);}
+MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_exec_request(MillenniumDosTitleToGameExecRequest o){if(revoking())return {false,"Game EXEC request rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_exec_request(o);}
+MillenniumDosTitleToGameObservationResult RuntimeHost::observe_millennium_dos_title_to_game_process_entry(MillenniumDosTitleToGameProcessEntry o){if(revoking())return {false,"2200AD.EXE process entry rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_to_game_process_entry(o);}
+MillenniumDosNativeProcessObservationResult
+RuntimeHost::observe_millennium_dos_native_private_interrupt_return(
+    MillenniumDosNativePrivateInterruptReturnObservation observation) {
+    if (revoking()) return {false, "Native INT 91h return rejected during source revocation"};
+    return NativeSessionController::observe_millennium_dos_native_private_interrupt_return(
+        observation);
+}
+
+MillenniumDosNativeProcessObservationResult
+RuntimeHost::observe_millennium_dos_native_bios_interrupt_return(
+    const MillenniumDosNativeBiosInterruptReturnObservation observation) {
+    if (revoking()) {
+        return {false, "Native BIOS return rejected during revocation"};
+    }
+    return NativeSessionController::observe_millennium_dos_native_bios_interrupt_return(
+        observation);
+}
 std::optional<MillenniumDosTitleToGameCheckpoint> RuntimeHost::millennium_dos_title_to_game_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_title_to_game_checkpoint();}
 
 std::optional<MillenniumDosStaticDispatchDiagnostics>
@@ -334,6 +353,16 @@ RuntimeHost::drive_deuteros_amiga_session(const std::uint32_t step_limit) {
         "Runtime source is being revoked"};
     return NativeSessionController::drive_deuteros_amiga_session(step_limit);
 }
+DeuterosAmigaInterruptWorkerObservationResult
+RuntimeHost::observe_deuteros_amiga_interrupt_worker(
+    DeuterosAmigaInterruptWorkerEntryObservation observation) {
+    if (revoking()) {
+        DeuterosAmigaInterruptWorkerObservationResult result;
+        result.error = "Deuteros interrupt worker rejected during revocation";
+        return result;
+    }
+    return NativeSessionController::observe_deuteros_amiga_interrupt_worker(observation);
+}
 ActiveNativeSessionDriveResult
 RuntimeHost::drive_active_native_session(const std::uint32_t step_limit) {
     ActiveNativeSessionDriveResult result;
@@ -420,6 +449,8 @@ EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_tail_repeated_wrapper_graph
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_tail_source_table,(const DeuterosAmigaObservedTailSourceTable o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_tail_exec_return,(const DeuterosAmigaObservedTailExecReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_load_service_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_load_doio_return,(const DeuterosAmigaObservedTitleLoadDoIoReturn o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_load_doio_status,(const DeuterosAmigaObservedTitleLoadDoIoStatus o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_load_selector,(const DeuterosAmigaObservedLoadSelector o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_load_copy_chunk,(const DeuterosAmigaObservedLoadCopyChunk o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_load_dispatch_table_base,(const DeuterosAmigaObservedLoadDispatchTableBase o),(o))
@@ -479,6 +510,8 @@ EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_join_byte,(co
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_1f9a4_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_1fe88_return,(const DeuterosAmigaObservedTitlePostAdjusted1fe88Return o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_final_gate,(const DeuterosAmigaObservedTitlePostAdjustedFinalGate o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_captured_title_selector_passage,(const std::uint64_t sequence,const std::uint32_t incoming_d0,const std::array<DeuterosAmigaObservedTitleSelectorHelperReturn,2> returns),(sequence,incoming_d0,returns))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_captured_title_selector_dispatch,(const DeuterosAmigaObservedTitleSelectorDispatchRead primary,const std::optional<DeuterosAmigaObservedTitleSelectorDispatchRead> secondary),(primary,secondary))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_input_return,(const DeuterosAmigaObservedTitlePostAdjustedInputReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_repeated_input_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_tail_copy,(const DeuterosAmigaObservedTitleTailCopy o),(o))
@@ -682,6 +715,17 @@ MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_i
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_post_config_fread(const MillenniumAtariGemdosSelector63Observation o){if(revoking())return{false,"Post-config Fread rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_post_config_fread(o);}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_post_config_fclose(const MillenniumAtariGemdosSelector62Observation o){if(revoking())return{false,"Post-config Fclose rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_post_config_fclose(o);}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_post_config_rts(const MillenniumAtariGameInitSecondConfigRtsObservation o){if(revoking())return{false,"Post-config RTS rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_post_config_rts(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_post_config_entry_jump(const MillenniumAtariPostConfigEntryJumpObservation o){if(revoking())return{false,"Post-config entry jump rejected during revocation"};return NativeSessionController::observe_millennium_atari_post_config_entry_jump(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_post_config_status_register(const MillenniumAtariStatusRegisterObservation o){if(revoking())return{false,"Post-config SR observation rejected during revocation"};return NativeSessionController::observe_millennium_atari_post_config_status_register(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_post_config_xbios_26_return(const MillenniumAtariPostConfigXbiosReturnObservation o){if(revoking())return{false,"Post-config XBIOS return rejected during revocation"};return NativeSessionController::observe_millennium_atari_post_config_xbios_26_return(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_post_config_xbios_result(const MillenniumAtariPostConfigXbiosResultObservation o){if(revoking())return{false,"Post-config XBIOS result rejected during revocation"};return NativeSessionController::observe_millennium_atari_post_config_xbios_result(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_post_config_line_a_return(const MillenniumAtariPostConfigLineAObservation o){if(revoking())return{false,"Post-config Line-A return rejected during revocation"};return NativeSessionController::observe_millennium_atari_post_config_line_a_return(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_post_config_local_call(const MillenniumAtariPostConfigLocalCallObservation o){if(revoking())return{false,"Post-config local call rejected during revocation"};return NativeSessionController::observe_millennium_atari_post_config_local_call(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_post_config_crawcin_branch(const MillenniumAtariPostConfigCrawcinBranchObservation o){if(revoking())return{false,"Post-config Crawcin branch rejected during revocation"};return NativeSessionController::observe_millennium_atari_post_config_crawcin_branch(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_post_config_gemdos_fopen(const MillenniumAtariPostConfigFopenObservation o){if(revoking())return{false,"Post-config GEMDOS Fopen rejected during revocation"};return NativeSessionController::observe_millennium_atari_post_config_gemdos_fopen(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_post_config_gemdos_fopen_return(const MillenniumAtariPostConfigFopenReturnObservation o){if(revoking())return{false,"Post-config GEMDOS Fopen return rejected during revocation"};return NativeSessionController::observe_millennium_atari_post_config_gemdos_fopen_return(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_post_config_gemdos_fcreate(const MillenniumAtariPostConfigFcreateObservation o){if(revoking())return{false,"Post-config GEMDOS Fcreate rejected during revocation"};return NativeSessionController::observe_millennium_atari_post_config_gemdos_fcreate(o);}
+MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_post_config_gemdos_fcreate_return(const MillenniumAtariPostConfigFcreateReturnObservation o){if(revoking())return{false,"Post-config GEMDOS Fcreate return rejected during revocation"};return NativeSessionController::observe_millennium_atari_post_config_gemdos_fcreate_return(o);}
 
 void RuntimeHost::begin_source_revocation() {
     if (state() == NativeSessionState::returning_to_menu) return;

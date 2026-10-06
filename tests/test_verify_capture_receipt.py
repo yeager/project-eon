@@ -18,6 +18,164 @@ SPEC.loader.exec_module(TOOL)
 
 
 class ReceiptVerifierTests(unittest.TestCase):
+    def test_schema31_zero_route_observation_status_is_exact_and_schema_bound(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        with temporary_directory() as directory:
+            root = Path(directory)
+            fields = {"capture_receipt_version": "31"}
+            fields.update(dict(line.split("=", 1) for line in
+                               runner.zero_route_observation_status(
+                                   root / "zero-route-observation.txt",
+                                   root / "host-input-receipt.txt").splitlines()))
+            TOOL.verify_deuteros_zero_route_observation(fields, root)
+            fields["zero_route_observation_records"] = "145"
+            with self.assertRaisesRegex(ValueError, "hash/count receipt mismatch"):
+                TOOL.verify_deuteros_zero_route_observation(fields, root)
+            fields["capture_receipt_version"] = "30"
+            with self.assertRaisesRegex(ValueError, "requires receipt schema 31"):
+                TOOL.verify_deuteros_zero_route_observation(fields, root)
+
+    def test_schema31_identity_pins_v21_and_rejects_v20(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        identity = {
+            "recorder_sha256": runner.TRV2_RECORDER_V21_SHA256,
+            "recorder_bytes": str(runner.TRV2_RECORDER_V21_SIZE),
+            "recorder_protocol": "deuteros-amiga-fsuae-v21",
+        }
+        self.assertEqual(TOOL.verify_deuteros_recorder_identity(identity, "31", runner), None)
+        self.assertEqual(runner.reviewed_recorder_hashes()["reviewed-fs-uae-trv2-v21"],
+                         "2fc7f47425d0fa005bb59bf41eaeccf32d1cba284dee4f227e7e723b853e1b35")
+        with self.assertRaisesRegex(ValueError, "v21 receipt schema"):
+            TOOL.verify_deuteros_recorder_identity({
+                **identity, "recorder_protocol": "deuteros-amiga-fsuae-v20",
+            }, "31", runner)
+        with self.assertRaisesRegex(ValueError, "identity"):
+            TOOL.verify_deuteros_recorder_identity({
+                **identity, "recorder_sha256": runner.TRV2_RECORDER_V20_SHA256,
+                "recorder_bytes": str(runner.TRV2_RECORDER_V20_SIZE),
+            }, "31", runner)
+
+    def test_schema32_identity_pins_v22_and_late_display_summary(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        identity = {
+            "recorder_sha256": runner.TRV2_RECORDER_V22_SHA256,
+            "recorder_bytes": str(runner.TRV2_RECORDER_V22_SIZE),
+            "recorder_protocol": "deuteros-amiga-fsuae-v22",
+        }
+        self.assertIsNone(TOOL.verify_deuteros_recorder_identity(identity, "32", runner))
+        with self.assertRaisesRegex(ValueError, "v22 receipt schema"):
+            TOOL.verify_deuteros_recorder_identity({
+                **identity, "recorder_protocol": "deuteros-amiga-fsuae-v21",
+            }, "32", runner)
+        with temporary_directory() as directory:
+            root = Path(directory)
+            (root / "host-input-receipt.txt").write_text("".join(
+                f"host-input {ordinal} frame=5031 line=0 action=157 state=1\n"
+                for ordinal in range(1, 22)), encoding="ascii")
+            (root / "late-display.txt").write_text(
+                "late-display-write 1 cycles=100 vpos=54 hpos=104 origin=copper "
+                "register=0x0090 value=0x40c1 input_ordinal=21 input_frame=5031\n",
+                encoding="ascii")
+            fields = {"capture_receipt_version": "32"}
+            fields.update(dict(line.split("=", 1) for line in
+                runner.late_display_receipt_status(
+                    root / "late-display.txt", root / "host-input-receipt.txt").splitlines()))
+            TOOL.verify_deuteros_late_display(fields, root)
+            fields["late_display_records"] = "2"
+            with self.assertRaisesRegex(ValueError, "grammar/count"):
+                TOOL.verify_deuteros_late_display(fields, root)
+    def test_experimental_driver_load_return_receipt_is_bound_to_sidecar(self) -> None:
+        runner = TOOL.load_tool("run_millennium_dos_capture")
+        protocol = "millennium-dos-en-driver-load-return-v1"
+        with temporary_directory() as directory:
+            root = Path(directory)
+            sidecar = root / "driver-load-return.raw"
+            sidecar.write_text(
+                "driver-load-return-v1 ordinal=1 image=mill.com cs=0e70 pc=0315 "
+                "ax=0010 bx=0002 cx=0010 dx=0000 si=0000 di=0000 ds=0e70 es=0e70 "
+                "ss=0e70 sp=ff00 flags=0000 buffer=ds0:16:" + "a" * 64 + "\n"
+                "driver-load-return-end count=1 overflow=0\n", encoding="ascii")
+            fields = {"recorder_protocol": protocol}
+            fields.update(dict(line.split("=", 1) for line in
+                               runner.driver_load_return_status(sidecar, protocol).splitlines()))
+            TOOL.verify_millennium_driver_load_returns(fields, root)
+            fields["driver_load_return_records"] = "2"
+            with self.assertRaisesRegex(ValueError, "hash/count mismatch"):
+                TOOL.verify_millennium_driver_load_returns(fields, root)
+            fields["recorder_protocol"] = "v21-int93-installation"
+            with self.assertRaisesRegex(ValueError, "exact recorder protocol"):
+                TOOL.verify_millennium_driver_load_returns(fields, root)
+
+    def test_driver_loader_experiment_verifies_only_with_explicit_experimental_opt_in(self) -> None:
+        runner = TOOL.load_tool("run_millennium_dos_capture")
+        protocol = "millennium-dos-en-driver-load-return-v1"
+        with temporary_directory() as directory:
+            root = Path(directory)
+            configuration = root / "recorder.conf"
+            configuration.write_text("machine=svga_s3\n", encoding="ascii")
+            console = root / "recorder-console.log"
+            console_payload = b"diagnostic observer stopped\n"
+            console.write_bytes(console_payload)
+            sidecar = root / "driver-load-return.raw"
+            sidecar.write_text(
+                "driver-load-return-v1 ordinal=1 image=mill.com cs=0e70 pc=02d4 "
+                "ax=0001 bx=0002 cx=0010 dx=0000 si=0000 di=0000 ds=0e70 es=0e70 "
+                "ss=0e70 sp=ff00 flags=0000 buffer=none\n"
+                "driver-load-return-end count=1 overflow=0\n", encoding="ascii")
+            sidecar_status = dict(line.split("=", 1) for line in
+                                  runner.driver_load_return_status(sidecar, protocol).splitlines())
+            config_digest, config_size = runner.sha256_file(configuration)
+            recorder_hash = "57020c1138879a6f53394f592b6f88bcd69875bfc06c98f7cd9b9a64372e8404"
+            console_hash = hashlib.sha256(console_payload).hexdigest()
+            fields = {
+                "capture_receipt_version": "22",
+                "recorder_protocol": protocol,
+                "recorder_admission": "experimental-observer-not-for-recovery",
+                "source_release_sha256": runner.EXPECTED_RELEASE_SHA256,
+                "source_release_bytes": str(runner.EXPECTED_RELEASE_SIZE),
+                "recorder_sha256": recorder_hash,
+                "recorder_bytes": "15809768",
+                "events_raw": "not-collected",
+                "results_raw": "not-collected",
+                "host_input_receipt": "absent",
+                "host_input_observed_during_capture": "false",
+                "title_input_checkpoint": "not-collected",
+                "capture_intent": "diagnostic-no-input",
+                "capture_intent_input_requirement": "forbidden",
+                "machine_profile": "svga_s3",
+                "termination_reason": "emulator-exit",
+                "exit_status": "0",
+                "configuration_sha256": config_digest,
+                "configuration_bytes": str(config_size),
+                "recorder_console": "present",
+                "recorder_console_sha256": console_hash,
+                "recorder_console_total_bytes": str(len(console_payload)),
+                "recorder_console_retained_bytes": str(len(console_payload)),
+                "recorder_console_retained_sha256": console_hash,
+                "recorder_console_truncated": "false",
+                "recorder_console_over_limit": "false",
+                **sidecar_status,
+            }
+            status = root / "run-status.txt"
+            status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()),
+                              encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "not recovery-admissible"):
+                TOOL.verify("millennium-dos", root)
+            self.assertEqual(TOOL.verify("millennium-dos", root,
+                                         allow_experimental_observer=True), "22")
+            fields["recorder_sha256"] = (
+                "942f30f2199350a51d0ff1e7c024f4e226d29b5576dc6ea0d61b7556c12468e8")
+            fields["recorder_bytes"] = "132933552"
+            status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()),
+                              encoding="utf-8")
+            self.assertEqual(TOOL.verify("millennium-dos", root,
+                                         allow_experimental_observer=True), "22")
+            fields["recorder_bytes"] = "15809768"
+            status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()),
+                              encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "binary size"):
+                TOOL.verify("millennium-dos", root, allow_experimental_observer=True)
+
     def test_main_rejects_a_runner_capture_error_without_a_traceback(self) -> None:
         output = io.StringIO()
         with (mock.patch.object(sys, "argv", ["verify_capture_receipt.py", "--kind", "deuteros-amiga",
@@ -47,6 +205,8 @@ class ReceiptVerifierTests(unittest.TestCase):
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "21"}), "21")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "22"}), "22")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "23"}), "23")
+        self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "26"}), "26")
+        self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "29"}), "29")
 
     def test_v23_deuteros_source_contract_binds_standalone_pair_without_outer_zip(self) -> None:
         runner = TOOL.load_tool("run_deuteros_amiga_capture")
@@ -119,9 +279,15 @@ class ReceiptVerifierTests(unittest.TestCase):
                 TOOL.verify("deuteros-amiga", root)
             display_gate.assert_called_once_with(fields, root)
 
-            for reviewed_hash in runner.reviewed_recorder_hashes().values():
+            pre_v16_hashes = [digest for digest in runner.reviewed_recorder_hashes().values()
+                              if digest != runner.TRV2_RECORDER_V16_SHA256]
+            for reviewed_hash in pre_v16_hashes:
                 fields["recorder_sha256"] = reviewed_hash
                 status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()), encoding="utf-8")
+                TOOL.verify("deuteros-amiga", root)
+            fields["recorder_sha256"] = runner.TRV2_RECORDER_V16_SHA256
+            status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "requires receipt schema 24"):
                 TOOL.verify("deuteros-amiga", root)
             fields["recorder_sha256"] = "0" * 64
             status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()), encoding="utf-8")
@@ -174,6 +340,18 @@ class ReceiptVerifierTests(unittest.TestCase):
                 TOOL.receipt(path)
             path.write_text("not-a-field\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "invalid"):
+                TOOL.receipt(path)
+
+    def test_receipt_allows_only_empty_no_input_phase_summary(self) -> None:
+        with temporary_directory() as directory:
+            path = Path(directory) / "run-status.txt"
+            path.write_text(
+                "raw_pc_pre_input_site_counts=0x00021822:128\n"
+                "raw_pc_post_input_site_counts=\n", encoding="utf-8")
+            self.assertEqual(
+                TOOL.receipt(path)["raw_pc_post_input_site_counts"], "")
+            path.write_text("recorder_sha256=\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "empty"):
                 TOOL.receipt(path)
 
     def test_optional_artifact_is_hash_bound_and_rejects_symlink(self) -> None:
@@ -283,6 +461,387 @@ class ReceiptVerifierTests(unittest.TestCase):
             fields["raw_pc_input_chronology_records"] = "2"
             with self.assertRaisesRegex(ValueError, "chronology receipt"):
                 TOOL.verify_deuteros_raw_pc_input_chronology(fields, root)
+
+    def test_v24_deuteros_uses_v16_only_site_set_and_exact_recorder_identity(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        with temporary_directory() as directory:
+            root = Path(directory)
+            (root / "raw-pc.txt").write_text(
+                "raw-pc 1 cycles=1 pc=0x000218cc ir_opcode=0x4e75 memory_opcode=0x4e75 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=1 input_frame=2\n", encoding="ascii")
+            (root / "host-input-receipt.txt").write_text(
+                "host-input 1 frame=2 line=3 action=4 state=1\n", encoding="ascii")
+            fields = {"raw_pc": "present", "raw_pc_format": "v9-v16",
+                      "raw_pc_records": "1", "raw_pc_site_counts": "0x000218cc:1",
+                      "raw_pc_input_links": "1", "raw_pc_last_input_ordinal": "1",
+                      "raw_pc_input_chronology": "linked",
+                      "raw_pc_input_chronology_records": "1",
+                      "recorder_sha256": runner.TRV2_RECORDER_V16_SHA256,
+                      "recorder_bytes": str(runner.TRV2_RECORDER_V16_SIZE),
+                      "recorder_protocol": "deuteros-amiga-fsuae-v16"}
+            TOOL.verify_deuteros_raw_pc_summary(fields, root, "24")
+            TOOL.verify_deuteros_raw_pc_input_chronology(fields, root, "v9-v16")
+            (root / "host-input-receipt.txt").write_text(
+                "host-input 1 frame=3 line=3 action=4 state=1\n", encoding="ascii")
+            with self.assertRaisesRegex(ValueError, "input chronology is invalid"):
+                TOOL.verify_deuteros_raw_pc_input_chronology(fields, root, "v9-v16")
+            (root / "host-input-receipt.txt").write_text(
+                "host-input 1 frame=2 line=3 action=4 state=1\n", encoding="ascii")
+            fields["raw_pc_format"] = "v9"
+            with self.assertRaisesRegex(RuntimeError, "unreviewed probe site"):
+                TOOL.verify_deuteros_raw_pc_summary(fields, root, "23")
+            fields["raw_pc_format"] = "v9-v16"
+            fields["recorder_sha256"] = runner.TRV2_RECORDER_V15_SHA256
+            with self.assertRaisesRegex(ValueError, "identity"):
+                TOOL.verify_deuteros_raw_pc_summary(fields, root, "24")
+
+    def test_v26_v16_raw_pc_cap_is_128_per_phase_and_256_per_site(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        with temporary_directory() as directory:
+            root = Path(directory)
+            raw = root / "raw-pc.txt"
+            def row(ordinal: int, cycle: int, input_ordinal: int, frame: int) -> str:
+                return (f"raw-pc {ordinal} cycles={cycle} pc=0x000218cc ir_opcode=0x4e75 "
+                        f"memory_opcode=0x4e75 d0=0x00000000 a0=0x00000000 a6=0x00000000 "
+                        f"sr=0x0000 input_ordinal={input_ordinal} input_frame={frame}\n")
+            payload = "".join(row(i, i, 0, 0) for i in range(1, 129))
+            payload += "".join(row(i, i, 1, 10) for i in range(129, 257))
+            raw.write_text(payload, encoding="ascii")
+            fields = {
+                "raw_pc": "present", "raw_pc_format": "v9-v16-phased",
+                "raw_pc_records": "256", "raw_pc_site_counts": "0x000218cc:256",
+                "raw_pc_pre_input_site_counts": "0x000218cc:128",
+                "raw_pc_post_input_site_counts": "0x000218cc:128",
+                "recorder_sha256": runner.TRV2_RECORDER_V16_SHA256,
+                "recorder_bytes": str(runner.TRV2_RECORDER_V16_SIZE),
+                "recorder_protocol": "deuteros-amiga-fsuae-v16",
+            }
+            TOOL.verify_deuteros_raw_pc_summary(fields, root, "26")
+            counts = runner.parse_raw_pc_observations(raw, "v9-v16-phased")
+            self.assertEqual(counts, {0x000218CC: 256})
+            with self.assertRaisesRegex(runner.CaptureError, "per-site recorder cap"):
+                runner.parse_raw_pc_observations(raw, "v9-v16")
+
+            raw.write_text(payload + row(257, 257, 1, 10), encoding="ascii")
+            with self.assertRaisesRegex(runner.CaptureError, "per-site phase cap"):
+                runner.parse_raw_pc_observations(raw, "v9-v16-phased")
+            raw.write_text("".join(row(i, i, 0, 0) for i in range(1, 130)), encoding="ascii")
+            with self.assertRaisesRegex(runner.CaptureError, "per-site phase cap"):
+                runner.parse_raw_pc_observations(raw, "v9-v16-phased")
+
+    def test_v27_binds_selector_cells_to_raw_sample_and_host_delivery(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        with temporary_directory() as directory:
+            root = Path(directory)
+            (root / "raw-pc.txt").write_text(
+                "raw-pc 1 cycles=10 pc=0x0001fbe6 ir_opcode=0x4a39 memory_opcode=0x4a39 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=1 input_frame=2\n", encoding="ascii")
+            (root / "host-input-receipt.txt").write_text(
+                "host-input 1 frame=2 line=3 action=149 state=1\n", encoding="ascii")
+            (root / "selector-dispatch.txt").write_text(
+                "selector-dispatch 1 raw_ordinal=1 cycles=10 pc=0x0001fbe6 "
+                "cell_1f98c=0x00 cell_1f98e=0x01 input_ordinal=1 input_frame=2\n",
+                encoding="ascii")
+            fields = {"raw_pc": "present", "raw_pc_format": "v9-v16-phased",
+                      "raw_pc_records": "1", "raw_pc_site_counts": "0x0001fbe6:1",
+                      "raw_pc_pre_input_site_counts": "",
+                      "raw_pc_post_input_site_counts": "0x0001fbe6:1",
+                      "capture_receipt_version": "27",
+                      "recorder_sha256": runner.TRV2_RECORDER_V17_SHA256,
+                      "recorder_bytes": str(runner.TRV2_RECORDER_V17_SIZE),
+                      "recorder_protocol": "deuteros-amiga-fsuae-v17"}
+            TOOL.verify_deuteros_raw_pc_summary(fields, root, "27")
+            selector_fields = fields | {
+                "selector_dispatch": "present",
+                **dict(line.split("=", 1) for line in runner.selector_dispatch_status(
+                    root / "selector-dispatch.txt", root / "raw-pc.txt",
+                    root / "host-input-receipt.txt").splitlines())}
+            TOOL.verify_deuteros_selector_dispatch(selector_fields, root)
+            (root / "selector-dispatch.txt").write_text(
+                "selector-dispatch 1 raw_ordinal=1 cycles=11 pc=0x0001fbe6 "
+                "cell_1f98c=0x00 cell_1f98e=0x01 input_ordinal=1 input_frame=2\n",
+                encoding="ascii")
+            with self.assertRaisesRegex(ValueError, "selector-dispatch receipt"):
+                TOOL.verify_deuteros_selector_dispatch(selector_fields, root)
+
+    def test_v27_source_contract_keeps_standalone_archive_provenance(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        fields = {
+            "content_release_sha256": runner.EXPECTED_RELEASE_SHA256,
+            "source_layout": runner.SOURCE_LAYOUT_STANDALONE,
+            "source_container": "two-independent-zip-files",
+            "disk1_archive_sha256": runner.EXPECTED_DISK1_ARCHIVE_SHA256,
+            "disk1_archive_bytes": str(runner.EXPECTED_DISK1_ARCHIVE_SIZE),
+            "disk2_archive_sha256": runner.EXPECTED_DISK2_ARCHIVE_SHA256,
+            "disk2_archive_bytes": str(runner.EXPECTED_DISK2_ARCHIVE_SIZE),
+        }
+        TOOL.verify_deuteros_source_contract(fields, "27", runner)
+
+    def test_v28_binds_btst_branch_opcode_chronology_and_v18_recorder(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        with temporary_directory() as directory:
+            root = Path(directory)
+            (root / "raw-pc.txt").write_text(
+                "raw-pc 1 cycles=9 pc=0x0002185e ir_opcode=0x0839 memory_opcode=0x0839 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0004 "
+                "input_ordinal=1 input_frame=2\n"
+                "raw-pc 2 cycles=10 pc=0x00021866 ir_opcode=0x6608 memory_opcode=0x6608 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0004 "
+                "input_ordinal=1 input_frame=2\n", encoding="ascii")
+            (root / "host-input-receipt.txt").write_text(
+                "host-input 1 frame=2 line=3 action=149 state=1\n", encoding="ascii")
+            fields = {
+                "capture_receipt_version": "28",
+                "raw_pc": "present", "raw_pc_format": "v9-v18-phased",
+                "raw_pc_records": "2", "raw_pc_site_counts": "0x0002185e:1,0x00021866:1",
+                "raw_pc_pre_input_site_counts": "",
+                "raw_pc_post_input_site_counts": "0x0002185e:1,0x00021866:1",
+                "raw_pc_opcode_pairs": "0x0002185e:0839/0839,0x00021866:6608/6608",
+                "raw_pc_input_links": "2", "raw_pc_last_input_ordinal": "1",
+                "raw_pc_input_chronology": "linked",
+                "raw_pc_input_chronology_records": "2",
+                "recorder_sha256": runner.TRV2_RECORDER_V18_SHA256,
+                "recorder_bytes": str(runner.TRV2_RECORDER_V18_SIZE),
+                "recorder_protocol": "deuteros-amiga-fsuae-v18",
+            }
+            TOOL.verify_deuteros_recorder_identity(fields, "28", runner)
+            TOOL.verify_deuteros_raw_pc_summary(fields, root, "28")
+            TOOL.verify_deuteros_raw_pc_opcode_pairs(fields, root, "v9-v18-phased")
+            TOOL.verify_deuteros_raw_pc_input_chronology(fields, root, "v9-v18-phased")
+            selector_fields = fields | {"selector_dispatch": "absent"}
+            TOOL.verify_deuteros_selector_dispatch(selector_fields, root)
+            fields["recorder_protocol"] = "deuteros-amiga-fsuae-v17"
+            with self.assertRaisesRegex(ValueError, "v18 receipt schema"):
+                TOOL.verify_deuteros_recorder_identity(fields, "28", runner)
+
+    def test_v28_source_contract_keeps_standalone_archive_provenance(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        fields = {
+            "content_release_sha256": runner.EXPECTED_RELEASE_SHA256,
+            "source_layout": runner.SOURCE_LAYOUT_STANDALONE,
+            "source_container": "two-independent-zip-files",
+            "disk1_archive_sha256": runner.EXPECTED_DISK1_ARCHIVE_SHA256,
+            "disk1_archive_bytes": str(runner.EXPECTED_DISK1_ARCHIVE_SIZE),
+            "disk2_archive_sha256": runner.EXPECTED_DISK2_ARCHIVE_SHA256,
+            "disk2_archive_bytes": str(runner.EXPECTED_DISK2_ARCHIVE_SIZE),
+        }
+        TOOL.verify_deuteros_source_contract(fields, "28", runner)
+
+    def test_v29_binds_late_input_window_and_selector_to_host_receipts(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        with temporary_directory() as directory:
+            root = Path(directory)
+            (root / "host-input-receipt.txt").write_text("".join(
+                f"host-input {i} frame={i * 10} line=3 action=149 state=1\n"
+                for i in range(1, 10)), encoding="ascii")
+            (root / "late-input-pc.txt").write_text(
+                "late-pc 1 cycles=90 pc=0x0001fbe6 ir_opcode=0x4a39 memory_opcode=0x4a39 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=9 input_frame=90\n", encoding="ascii")
+            (root / "late-selector-dispatch.txt").write_text(
+                "late-selector-dispatch 1 late_raw_ordinal=1 cycles=90 pc=0x0001fbe6 "
+                "cell_1f98c=0x00 cell_1f98e=0x01 input_ordinal=9 input_frame=90\n",
+                encoding="ascii")
+            fields = {"capture_receipt_version": "29"}
+            statuses = (runner.late_raw_pc_status(
+                root / "late-input-pc.txt", root / "host-input-receipt.txt")
+                + runner.late_selector_dispatch_status(
+                    root / "late-selector-dispatch.txt", root / "late-input-pc.txt",
+                    root / "host-input-receipt.txt"))
+            fields.update(dict(line.split("=", 1) for line in statuses.splitlines()))
+            TOOL.verify_deuteros_late_sidecars(fields, root)
+            TOOL.verify_deuteros_recorder_identity({
+                "recorder_sha256": runner.TRV2_RECORDER_V19_SHA256,
+                "recorder_bytes": str(runner.TRV2_RECORDER_V19_SIZE),
+                "recorder_protocol": "deuteros-amiga-fsuae-v19",
+            }, "29", runner)
+            wrong = dict(fields, late_input_pc_last_input_ordinal="8")
+            with self.assertRaisesRegex(ValueError, "grammar/count receipt"):
+                TOOL.verify_deuteros_late_sidecars(wrong, root)
+            bad_identity = {
+                "recorder_sha256": runner.TRV2_RECORDER_V19_SHA256,
+                "recorder_bytes": str(runner.TRV2_RECORDER_V19_SIZE),
+                "recorder_protocol": "deuteros-amiga-fsuae-v18",
+            }
+            with self.assertRaisesRegex(ValueError, "v19 receipt schema"):
+                TOOL.verify_deuteros_recorder_identity(bad_identity, "29", runner)
+
+    def test_v30_binds_v20_identity_and_two_late_only_sites(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "30"}), "30")
+        with temporary_directory() as directory:
+            root = Path(directory)
+            host = root / "host-input-receipt.txt"
+            host.write_text("".join(
+                f"host-input {i} frame={i * 10} line=3 action=149 state=1\n"
+                for i in range(1, 10)), encoding="ascii")
+            late = root / "late-input-pc.txt"
+            late.write_text(
+                "late-pc 1 cycles=90 pc=0x0001fc22 ir_opcode=0x4e75 memory_opcode=0x4e75 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=9 input_frame=90\n", encoding="ascii")
+            fields = {"capture_receipt_version": "30"}
+            statuses = (runner.late_raw_pc_status(late, host, "v20")
+                        + runner.late_selector_dispatch_status(
+                            root / "late-selector-dispatch.txt", late, host, "v20"))
+            fields.update(dict(line.split("=", 1) for line in statuses.splitlines()))
+            TOOL.verify_deuteros_late_sidecars(fields, root)
+            v20_identity = {
+                "recorder_sha256": runner.TRV2_RECORDER_V20_SHA256,
+                "recorder_bytes": str(runner.TRV2_RECORDER_V20_SIZE),
+                "recorder_protocol": "deuteros-amiga-fsuae-v20",
+            }
+            TOOL.verify_deuteros_recorder_identity(v20_identity, "30", runner)
+            with self.assertRaisesRegex(ValueError, "unreviewed probe site"):
+                TOOL.verify_deuteros_late_sidecars(
+                    {**fields, "capture_receipt_version": "29"}, root)
+            with self.assertRaisesRegex(ValueError, "v20 receipt schema"):
+                TOOL.verify_deuteros_recorder_identity(
+                    {**v20_identity, "recorder_protocol": "deuteros-amiga-fsuae-v19"},
+                    "30", runner)
+            with self.assertRaisesRegex(ValueError, "identity"):
+                TOOL.verify_deuteros_recorder_identity(
+                    {**v20_identity, "recorder_sha256": runner.TRV2_RECORDER_V19_SHA256},
+                    "30", runner)
+
+    def test_v29_full_capture_receipt_recomputes_all_observation_hashes(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        with temporary_directory() as directory:
+            root = Path(directory)
+            config = root / "deuteros-amiga-capture.fs-uae"
+            config.write_text("warp_mode = 0\n", encoding="ascii")
+            raw_payload = (
+                "raw-pc 1 cycles=10 pc=0x000210d4 ir_opcode=0x4e75 memory_opcode=0x4e75 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=0 input_frame=0\n"
+                "raw-pc 2 cycles=20 pc=0x0001fbe6 ir_opcode=0x4a39 memory_opcode=0x4a39 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=9 input_frame=90\n").encode("ascii")
+            host_payload = "".join(
+                f"host-input {i} frame={i * 10} line=3 action=149 state=1\n"
+                for i in range(1, 10)).encode("ascii")
+            late_payload = (
+                "late-pc 1 cycles=20 pc=0x0001fbe6 ir_opcode=0x4a39 memory_opcode=0x4a39 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=9 input_frame=90\n").encode("ascii")
+            late_selector_payload = (
+                "late-selector-dispatch 1 late_raw_ordinal=1 cycles=20 pc=0x0001fbe6 "
+                "cell_1f98c=0x00 cell_1f98e=0x01 input_ordinal=9 input_frame=90\n").encode("ascii")
+            console = b"visible fs-uae session\n"
+            (root / "raw-pc.txt").write_bytes(raw_payload)
+            (root / "host-input-receipt.txt").write_bytes(host_payload)
+            (root / "late-input-pc.txt").write_bytes(late_payload)
+            (root / "late-selector-dispatch.txt").write_bytes(late_selector_payload)
+            (root / "recorder-console.log").write_bytes(console)
+            for filename in ("release-outer-ro", "disk1-ro", "disk2-ro", "kickstart-ro"):
+                (root / filename).mkdir()
+
+            def file_status(key: str, payload: bytes) -> dict[str, str]:
+                return {key: "present", key + "_sha256": hashlib.sha256(payload).hexdigest(),
+                        key + "_bytes": str(len(payload))}
+
+            fields = {
+                "capture_receipt_version": "29",
+                "recorder_protocol": "deuteros-amiga-fsuae-v19",
+                "source_layout": runner.SOURCE_LAYOUT_STANDALONE,
+                "source_container": "two-independent-zip-files",
+                "content_release_sha256": runner.EXPECTED_RELEASE_SHA256,
+                "timing_profile": "realtime",
+                "capture_intent": "physical-input",
+                "capture_intent_input_requirement": "required",
+                "host_input_observed_during_capture": "true",
+                "exit_status": "124", "start_unix": "1", "end_unix": "2",
+                "recorder_sha256": runner.TRV2_RECORDER_V19_SHA256,
+                "recorder_bytes": str(runner.TRV2_RECORDER_V19_SIZE),
+                "kickstart_archive_sha256": runner.EXPECTED_KICKSTART_SHA256,
+                "kickstart_archive_bytes": str(runner.EXPECTED_KICKSTART_SIZE),
+                "disk1_archive_sha256": runner.EXPECTED_DISK1_ARCHIVE_SHA256,
+                "disk1_archive_bytes": str(runner.EXPECTED_DISK1_ARCHIVE_SIZE),
+                "disk2_archive_sha256": runner.EXPECTED_DISK2_ARCHIVE_SHA256,
+                "disk2_archive_bytes": str(runner.EXPECTED_DISK2_ARCHIVE_SIZE),
+                "raw_pc_format": "v9-v19-phased", "raw_pc_records": "2",
+                "raw_pc_site_counts": "0x000210d4:1,0x0001fbe6:1",
+                "raw_pc_pre_input_site_counts": "0x000210d4:1",
+                "raw_pc_post_input_site_counts": "0x0001fbe6:1",
+                "raw_pc_opcode_pairs": "0x000210d4:4e75/4e75,0x0001fbe6:4a39/4a39",
+                "raw_pc_input_links": "1", "raw_pc_last_input_ordinal": "9",
+                "raw_pc_input_chronology": "linked", "raw_pc_input_chronology_records": "1",
+                "host_input_receipt_records": "9",
+                "recorder_console": "present",
+                "recorder_console_sha256": hashlib.sha256(console).hexdigest(),
+                "recorder_console_total_bytes": str(len(console)),
+                "recorder_console_retained_bytes": str(len(console)),
+                "recorder_console_retained_sha256": hashlib.sha256(console).hexdigest(),
+                "recorder_console_truncated": "false", "recorder_console_over_limit": "false",
+                **file_status("raw_pc", raw_payload),
+                **file_status("host_input_receipt", host_payload),
+                "title_display": "absent",
+            }
+            fields.update(dict(line.split("=", 1) for line in
+                               runner.late_raw_pc_status(root / "late-input-pc.txt",
+                                                         root / "host-input-receipt.txt").splitlines()))
+            fields.update(dict(line.split("=", 1) for line in
+                               runner.late_selector_dispatch_status(
+                                   root / "late-selector-dispatch.txt", root / "late-input-pc.txt",
+                                   root / "host-input-receipt.txt").splitlines()))
+            fields.update(file_status("late_input_pc", late_payload))
+            fields.update(file_status("late_selector_dispatch", late_selector_payload))
+            fields.update(file_status("configuration", config.read_bytes()))
+            status = root / "run-status.txt"
+            status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()),
+                              encoding="utf-8")
+            self.assertEqual(TOOL.verify("deuteros-amiga", root), "29")
+
+            v20_late_payload = late_payload + (
+                "late-pc 2 cycles=21 pc=0x0001fc22 ir_opcode=0x4e75 memory_opcode=0x4e75 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=9 input_frame=90\n").encode("ascii")
+            (root / "late-input-pc.txt").write_bytes(v20_late_payload)
+            fields["capture_receipt_version"] = "30"
+            fields["recorder_protocol"] = "deuteros-amiga-fsuae-v20"
+            fields["recorder_sha256"] = runner.TRV2_RECORDER_V20_SHA256
+            fields["recorder_bytes"] = str(runner.TRV2_RECORDER_V20_SIZE)
+            v20_late_status = (runner.late_raw_pc_status(
+                root / "late-input-pc.txt", root / "host-input-receipt.txt", "v20")
+                + runner.late_selector_dispatch_status(
+                    root / "late-selector-dispatch.txt", root / "late-input-pc.txt",
+                    root / "host-input-receipt.txt", "v20"))
+            for key in tuple(fields):
+                if key == "late_input_pc" or key.startswith("late_input_pc_") \
+                        or key == "late_selector_dispatch" or key.startswith("late_selector_dispatch_"):
+                    del fields[key]
+            fields.update(dict(line.split("=", 1) for line in v20_late_status.splitlines()))
+            fields.update(file_status("late_input_pc", v20_late_payload))
+            status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()),
+                              encoding="utf-8")
+            self.assertEqual(TOOL.verify("deuteros-amiga", root), "30")
+
+            fields["capture_receipt_version"] = "32"
+            fields["recorder_protocol"] = "deuteros-amiga-fsuae-v22"
+            fields["recorder_sha256"] = runner.TRV2_RECORDER_V22_SHA256
+            fields["recorder_bytes"] = str(runner.TRV2_RECORDER_V22_SIZE)
+            v22_status = (runner.zero_route_observation_status(
+                root / "zero-route-observation.txt", root / "host-input-receipt.txt")
+                + runner.late_display_receipt_status(
+                    root / "late-display.txt", root / "host-input-receipt.txt"))
+            fields.update(dict(line.split("=", 1) for line in v22_status.splitlines()))
+            status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()),
+                              encoding="utf-8")
+            self.assertEqual(TOOL.verify("deuteros-amiga", root), "32")
+
+    def test_schema23_identity_rejects_v16_even_without_raw_observations(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        fields = {"recorder_sha256": runner.TRV2_RECORDER_V16_SHA256,
+                  "recorder_bytes": str(runner.TRV2_RECORDER_V16_SIZE)}
+        with self.assertRaisesRegex(ValueError, "requires receipt schema 24"):
+            TOOL.verify_deuteros_recorder_identity(fields, "23", runner)
+        historical_v15 = {"recorder_sha256": runner.TRV2_RECORDER_V15_SHA256,
+                          "recorder_bytes": "62014944"}
+        TOOL.verify_deuteros_recorder_identity(historical_v15, "23", runner)
+        labelled_v15 = {**historical_v15, "recorder_protocol": "deuteros-amiga-fsuae-v15"}
+        TOOL.verify_deuteros_recorder_identity(labelled_v15, "23", runner)
 
     def test_v10_deuteros_title_display_summary_is_recomputed(self) -> None:
         with temporary_directory() as directory:

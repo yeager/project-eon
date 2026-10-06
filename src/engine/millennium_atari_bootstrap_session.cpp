@@ -3,6 +3,8 @@
 #include "data/sha256.hpp"
 
 #include <stdexcept>
+#include <string_view>
+#include <utility>
 
 namespace eon {
 
@@ -23,6 +25,8 @@ MillenniumAtariBootstrapSession::MillenniumAtariBootstrapSession(
     bss_source_ = materialize_millennium_atari_bss_source(program, prg, bootstrap_, bss_entry_);
     execution_ = execute_millennium_atari_bootstrap_prefix(program, prg, bootstrap_, bss_entry_);
     target_ = execution_.target;
+    post_config_filename_ = parse_millennium_atari_post_config_filename(
+        program, bss_source_, target_);
     trap_ = parse_millennium_atari_trap_entry(bss_source_, target_);
     fopen_result_gate_ = execute_millennium_atari_fopen_result_gate(target_, trap_);
     fopen_fallthrough_ = parse_millennium_atari_fopen_fallthrough(target_, trap_);
@@ -54,6 +58,42 @@ MillenniumAtariBootstrapSession::MillenniumAtariBootstrapSession(
     // RuntimeHost revokes the entire coordinator before any source switch.
     read_only_gemdos_.emplace(1, disk, trap_, fread_frame_prefix_,
         fread_config_transfer_);
+
+    constexpr std::string_view post_config_sha256 =
+        "e315b0ec01f2fe429fdce101765577b893d031389c540de1fbe43eca121d53e9";
+    const auto* post_config_entry = disk.find(post_config_filename_.filename);
+    if (!post_config_entry || post_config_entry->directory()
+        || post_config_entry->size != 84720U) {
+        throw std::runtime_error("Unsupported Millennium Atari ST post-config source");
+    }
+    post_config_payload_ = disk.read(*post_config_entry);
+    if (post_config_payload_.size() != 84720U
+        || to_hex(sha256(post_config_payload_)) != post_config_sha256) {
+        throw std::runtime_error("Millennium Atari ST post-config source changed");
+    }
+    post_config_module_entry_ = parse_millennium_atari_post_config_module_entry(
+        post_config_payload_);
+}
+
+NativeRuntimeEffectBatch MillenniumAtariBootstrapSession::make_post_config_fread_effect_batch(
+    const std::int32_t returned_bytes, std::string id) const {
+    if (id.empty() || post_config_payload_.size() != 84720U
+        || returned_bytes > static_cast<std::int32_t>(post_config_payload_.size())
+        || to_hex(sha256(post_config_payload_))
+            != "e315b0ec01f2fe429fdce101765577b893d031389c540de1fbe43eca121d53e9") {
+        throw std::runtime_error("Unsupported Millennium Atari ST post-config Fread result");
+    }
+    const auto byte_count = returned_bytes > 0
+        ? static_cast<std::size_t>(returned_bytes) : 0U;
+    NativeRuntimeEffectBatch batch{std::move(id), true, {}};
+    batch.effects.reserve(byte_count);
+    for (std::size_t index = 0; index < byte_count; ++index) {
+        batch.effects.push_back({index + 1,
+            {NativeRuntimeAddressSpace::linear, std::nullopt, 0x11e00ULL + index},
+            MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian,
+            post_config_payload_[index]});
+    }
+    return batch;
 }
 
 } // namespace eon

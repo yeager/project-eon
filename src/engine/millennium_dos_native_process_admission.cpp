@@ -71,6 +71,11 @@ MillenniumDosNativeProcessAdmission::checkpoint() const {
         .gx_overlay_sha256 = recovery_entry_ == MillenniumDosNativeRecoveryEntry::post_gx_loader
             ? std::optional<std::string>{std::string(gx_sha256)} : std::nullopt,
         .static_recovery_entry = true,
+        .observed_child_process_entry = observed_child_process_entry_,
+        .child_entry_sequence = child_entry_sequence_,
+        .child_code_segment = child_code_segment_,
+        .last_observation_sequence = last_observation_sequence_,
+        .startup_bios_return = process_->startup_bios_return(),
     };
 }
 
@@ -149,6 +154,56 @@ void MillenniumDosNativeProcessAdmission::observe_private_interrupt_return(
     process_->observe_private_interrupt_return(address, ax);
 }
 
+void MillenniumDosNativeProcessAdmission::observe_bios_interrupt_return(
+    const MillenniumDosNativeBiosInterruptReturnObservation& observation) {
+    require_admitted();
+    const auto boundary = process_->boundary();
+    if (recovery_entry_ != MillenniumDosNativeRecoveryEntry::startup
+        || !observed_child_process_entry_
+        || observation.sequence <= last_observation_sequence_
+        || observation.sequence <= child_entry_sequence_
+        || boundary.kind != MillenniumDosNativeBoundaryKind::bios_interrupt
+        || observation.interrupt_instruction_address != boundary.address
+        || boundary.interrupt != observation.interrupt_number
+        || observation.return_code_segment != child_code_segment_
+        || observation.return_instruction_pointer
+            != static_cast<std::uint16_t>(boundary.address + 2U)) {
+        throw std::runtime_error(
+            "Millennium DOS BIOS return is detached from the observed startup continuation");
+    }
+    process_->observe_bios_interrupt_return(observation);
+    last_observation_sequence_ = observation.sequence;
+}
+
+void MillenniumDosNativeProcessAdmission::observe_private_interrupt_return(
+    const MillenniumDosNativePrivateInterruptReturnObservation& observation) {
+    require_admitted();
+    const auto boundary = process_->boundary();
+    if (!observed_child_process_entry_ || observation.sequence <= last_observation_sequence_
+        || observation.sequence <= child_entry_sequence_
+        || boundary.kind != MillenniumDosNativeBoundaryKind::private_interrupt
+        || observation.interrupt_return_address != boundary.address) {
+        throw std::runtime_error("Millennium DOS private return is detached from the observed child continuation");
+    }
+    process_->observe_private_interrupt_return(observation.interrupt_return_address,
+        observation.ax);
+    last_observation_sequence_ = observation.sequence;
+}
+
+void MillenniumDosNativeProcessAdmission::observe_child_process_entry(
+    const std::uint64_t sequence, const std::uint16_t code_segment) {
+    require_admitted();
+    if (recovery_entry_ != MillenniumDosNativeRecoveryEntry::startup
+        || observed_child_process_entry_ || sequence == 0 || code_segment == 0
+        || process_->state() != MillenniumDosNativeProcessState::startup_first_private_interrupt) {
+        throw std::runtime_error("Millennium DOS native startup entry is detached from the first private interrupt");
+    }
+    observed_child_process_entry_ = true;
+    child_entry_sequence_ = sequence;
+    child_code_segment_ = code_segment;
+    last_observation_sequence_ = sequence;
+}
+
 void MillenniumDosNativeProcessAdmission::observe_runtime_byte(
     const std::uint16_t instruction_address, const std::uint16_t runtime_address,
     const std::uint8_t value) {
@@ -166,6 +221,10 @@ void MillenniumDosNativeProcessAdmission::reset() {
     process_.reset();
     gx_overlay_executable_.clear();
     game_executable_.clear();
+    observed_child_process_entry_ = false;
+    child_entry_sequence_ = 0;
+    child_code_segment_ = 0;
+    last_observation_sequence_ = 0;
 }
 
 } // namespace eon

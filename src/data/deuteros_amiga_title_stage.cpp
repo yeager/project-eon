@@ -3,6 +3,7 @@
 #include "data/sha256.hpp"
 
 #include <algorithm>
+#include <limits>
 #include <span>
 #include <stdexcept>
 #include <string_view>
@@ -41,6 +42,15 @@ void require_long(std::span<const std::uint8_t> bytes, std::size_t offset, std::
     if (big32(bytes, offset) != expected) {
         throw std::runtime_error("Unexpected Deuteros title-stage operand at offset " + std::to_string(offset));
     }
+}
+
+std::uint32_t branch_word_target(const std::uint32_t opcode_address,
+    const std::int16_t displacement) {
+    const auto target = static_cast<std::int64_t>(opcode_address) + 2 + displacement;
+    if (target < 0 || target > std::numeric_limits<std::uint32_t>::max()) {
+        throw std::runtime_error("Deuteros title branch target overflows address space");
+    }
+    return static_cast<std::uint32_t>(target);
 }
 
 } // namespace
@@ -368,6 +378,12 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
         || selector_address + 26U + static_cast<std::int16_t>(0x0014) != local_helper_address) {
         throw std::runtime_error("Unexpected Deuteros title selector local-helper targets");
     }
+    const auto local_helper = stage_code(local_helper_address, 0x36);
+    if (to_hex(sha256(local_helper))
+        != "403b91aa579587ca205d941e39181972a27121d5c42389f58ca82f962178c3a0") {
+        throw std::runtime_error("Unsupported Deuteros title selector helper");
+    }
+    require_word(local_helper, 0x34, 0x4e75); // RTS $1fedc
     require_word(selector, 28, 0x0640); // addi.w #$30,d0
     require_word(selector, 30, 0x0030);
     require_word(selector, 32, 0x13fc); // move.b #0,$1fe54
@@ -380,14 +396,17 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_long(dispatch, 2, 0x0001f98c);
     // The selector destination is not a generic return trampoline. The
     // original tests a signed state byte: zero goes to $1fc22, positive goes
-    // to $1fc9e, and the negative fall-through preserves D0/D5, calls the
+    // to $1fc9c, and the negative fall-through preserves D0/D5, calls the
     // $1fc24 helper, then conditionally invokes $3fbf8 with literal D0/D1.
     // Record that concrete call boundary without assigning a UI/gameplay
     // meaning to its service or state bytes.
     const auto dispatch_flow = stage_code(0x1fbe6, 60);
     require_word(dispatch_flow, 6, 0x6734); // beq.b $1fc22
-    require_word(dispatch_flow, 8, 0x6a00); // bpl.w $1fc9e
+    require_word(dispatch_flow, 8, 0x6a00); // bpl.w $1fc9c
     require_word(dispatch_flow, 10, 0x00ac);
+    if (branch_word_target(0x1fbee, 0x00ac) != 0x1fc9c) {
+        throw std::runtime_error("Unexpected Deuteros selector positive-branch target");
+    }
     require_word(dispatch_flow, 12, 0x2f00); // move.l d0,-(a7)
     require_word(dispatch_flow, 14, 0x6100); // bsr.w $1fc24
     require_word(dispatch_flow, 16, 0x002c);
@@ -413,8 +432,12 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     const auto zero_branch = stage_code(0x1fc22, 6);
     require_word(zero_branch, 0, 0x4a39); // tst.b $1f98e
     require_long(zero_branch, 2, 0x0001f98e);
-    require_word(stage_code(0x1fc28, 4), 0, 0x6600); // bne.w $1fd0a
-    require_word(stage_code(0x1fc28, 4), 2, 0x00e0);
+    const auto zero_route = stage_code(0x1fc28, 4);
+    require_word(zero_route, 0, 0x6600); // bne.w $1fd0a
+    require_word(zero_route, 2, 0x00e0);
+    if (branch_word_target(0x1fc28, 0x00e0) != 0x1fd0a) {
+        throw std::runtime_error("Unexpected Deuteros selector zero-branch target");
+    }
     // 68000 Bcc.W displacement is relative to the extension word: BPL.W
     // lands at $1fc9c, the sibling route's tst.b (not its preceding RTS).
     const auto positive = stage_code(0x1fc9c, 108);
@@ -422,6 +445,9 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     require_long(positive, 2, 0x0001f98e);
     require_word(positive, 6, 0x6600); // bne.w $1fd7a
     require_word(positive, 8, 0x00d6);
+    if (branch_word_target(0x1fca2, 0x00d6) != 0x1fd7a) {
+        throw std::runtime_error("Unexpected Deuteros selector positive sibling target");
+    }
     const auto positive_clear = stage_code(0x1fca6, 100);
     require_word(positive_clear, 6, 0x7c28); // moveq #$28,d6
     require_word(positive_clear, 8, 0x3e3c); // move.w #$1f40,d7
@@ -2114,6 +2140,10 @@ parse_deuteros_amiga_title_post_exec_load_service_profile(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
     constexpr std::uint32_t caller_address = 0x404f0;
     constexpr std::uint32_t entry_address = 0x389e2;
+    constexpr std::uint32_t read_loop_address = 0x208c0;
+    constexpr std::size_t read_loop_length = 0x42;
+    constexpr std::uint32_t read_vector_helper_address = 0x20902;
+    constexpr std::size_t read_vector_helper_length = 0x64;
     constexpr ExecutableByteAnchor<6> caller{"1385698c6c854ab133e3e7cd75417c90025916dd0a1dd303347dce0636114bea"};
     constexpr std::size_t routine_length = 0x4e;
     constexpr std::string_view stage_hash =
@@ -2122,26 +2152,57 @@ parse_deuteros_amiga_title_post_exec_load_service_profile(
         "1385698c6c854ab133e3e7cd75417c90025916dd0a1dd303347dce0636114bea";
     constexpr std::string_view routine_hash =
         "4400342704c0c26b934dec5db314e8853b0963d6757432f3aad275cab965811d";
+    constexpr std::string_view read_loop_hash =
+        "6bc0de31806f123a36a080c68dae72f50f064f8e52094ddc3f481126f1a0730d";
+    constexpr std::string_view read_vector_helper_hash =
+        "0e1972c887f8c8f010c37f16ca77926e92a839d36f0b7fc741e43832158262a3";
     const auto& stage = plan.title_stage;
     const auto in_stage = [&](std::uint32_t address, std::size_t length) {
         return address >= stage.destination && address - stage.destination <= stage.length
             && length <= stage.length - (address - stage.destination);
     };
-    if (!in_stage(caller_address, caller.size()) || !in_stage(entry_address, routine_length)) {
+    if (!in_stage(caller_address, caller.size()) || !in_stage(entry_address, routine_length)
+        || !in_stage(read_loop_address, read_loop_length)
+        || !in_stage(read_vector_helper_address, read_vector_helper_length)) {
         throw std::runtime_error("Deuteros post-Exec load service lies outside original stage");
     }
     const auto bytes = disk.bytes(stage.disk_offset, stage.length);
     const auto caller_bytes = bytes.subspan(caller_address - stage.destination, caller.size());
     const auto routine = bytes.subspan(entry_address - stage.destination, routine_length);
+    const auto read_loop = bytes.subspan(read_loop_address - stage.destination, read_loop_length);
+    const auto read_vector_helper = bytes.subspan(
+        read_vector_helper_address - stage.destination, read_vector_helper_length);
     if (to_hex(sha256(bytes)) != stage_hash
         || !caller.matches(std::span<const std::uint8_t>(caller_bytes.begin(), caller.size()))
         || to_hex(sha256(caller_bytes)) != caller_hash
-        || to_hex(sha256(routine)) != routine_hash) {
+        || to_hex(sha256(routine)) != routine_hash
+        || to_hex(sha256(read_loop)) != read_loop_hash
+        || to_hex(sha256(read_vector_helper)) != read_vector_helper_hash) {
         throw std::runtime_error("Unsupported Deuteros post-Exec load-service profile");
     }
-    return {caller_address, entry_address, 0x13400, 0x26cc0, 0x5800,
+    DeuterosAmigaTitlePostExecLoadServiceProfile profile{
+        caller_address, entry_address, 0x14000, 0x26cc0, 0x5800,
         0x389f4, 0x208c0, 0x389fa, 0x12fd8, 0x38a04,
-        0x1c482, 0xa20, std::string(caller_hash), std::string(routine_hash)};
+        0x1c482, 0xa20};
+    profile.read_vector_call_address = 0x20934;
+    profile.read_vector_return_address = 0x20938;
+    profile.read_vector = static_cast<std::int16_t>(-0x1c8);
+    profile.read_exec_base_source_address = 0x0004;
+    profile.read_request_pointer_cell_address = 0x206a0;
+    profile.read_buffer_address = 0x26cc0;
+    profile.read_status_offset = 0x001f;
+    profile.read_status_instruction_address = 0x2093e;
+    profile.read_command = 0x8002;
+    profile.read_first_disk_offset = 0x14000;
+    profile.read_total_bytes = 0x5800;
+    profile.read_chunk_bytes = 0x1600;
+    profile.read_full_chunk_count = 4;
+    profile.read_tail_bytes = 0;
+    profile.caller_sha256 = caller_hash;
+    profile.routine_sha256 = routine_hash;
+    profile.read_loop_sha256 = read_loop_hash;
+    profile.read_vector_helper_sha256 = read_vector_helper_hash;
+    return profile;
 }
 
 DeuterosAmigaTitlePostExecTailReturnContinuationProfile

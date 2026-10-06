@@ -7,6 +7,8 @@
 
 #include <optional>
 #include <span>
+#include <string>
+#include <vector>
 
 namespace eon {
 
@@ -28,6 +30,15 @@ public:
     [[nodiscard]] const MillenniumAtariBssSource& bss_source() const { return bss_source_; }
     [[nodiscard]] const MillenniumAtariMaterializedTarget& target() const { return target_; }
     [[nodiscard]] const MillenniumAtariBootstrapExecution& execution() const { return execution_; }
+    [[nodiscard]] const MillenniumAtariPostConfigFilenameEvidence& post_config_filename() const {
+        return post_config_filename_;
+    }
+    [[nodiscard]] const MillenniumAtariPostConfigModuleEntryEvidence& post_config_module_entry() const {
+        return post_config_module_entry_;
+    }
+    [[nodiscard]] std::span<const std::uint8_t> post_config_payload() const {
+        return post_config_payload_;
+    }
     [[nodiscard]] const MillenniumAtariTrapEntry& fopen_boundary() const { return trap_; }
     [[nodiscard]] const MillenniumAtariFopenResultGateExecution& fopen_result_gate() const {
         return fopen_result_gate_;
@@ -59,6 +70,8 @@ public:
     [[nodiscard]] const MillenniumAtariReadOnlyGemdosSession& read_only_gemdos() const {
         return *read_only_gemdos_;
     }
+    [[nodiscard]] NativeRuntimeEffectBatch make_post_config_fread_effect_batch(
+        std::int32_t returned_bytes, std::string id) const;
 
 private:
     MillenniumAtariPrgLoadSession prg_load_;
@@ -66,6 +79,8 @@ private:
     MillenniumAtariBssEntry bss_entry_;
     MillenniumAtariBssSource bss_source_;
     MillenniumAtariMaterializedTarget target_;
+    MillenniumAtariPostConfigFilenameEvidence post_config_filename_;
+    MillenniumAtariPostConfigModuleEntryEvidence post_config_module_entry_;
     MillenniumAtariBootstrapExecution execution_;
     MillenniumAtariTrapEntry trap_;
     MillenniumAtariFopenResultGateExecution fopen_result_gate_;
@@ -78,6 +93,7 @@ private:
     MillenniumAtariFreadConfigLoadAddressBoundary fread_config_load_address_boundary_;
     MillenniumAtariFreadMappedConfigPrelude fread_mapped_config_prelude_;
     std::optional<MillenniumAtariReadOnlyGemdosSession> read_only_gemdos_;
+    std::vector<std::uint8_t> post_config_payload_;
 };
 
 } // namespace eon

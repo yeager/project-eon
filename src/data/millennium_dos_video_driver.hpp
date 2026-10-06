@@ -51,7 +51,7 @@ struct MillenniumDosVideoDriverProfile {
     std::uint16_t function_six_source_nested_pointer_load_address = 0;
     std::uint16_t function_six_screen_width = 0;
     std::uint16_t function_six_horizontal_offset = 0;
-    std::uint16_t function_six_height_offset = 0;
+    std::uint16_t function_six_width_offset = 0;
     std::uint16_t function_thirteen_address = 0;
     std::uint16_t function_thirteen_status_port = 0;
     std::uint8_t function_thirteen_retrace_mask = 0;

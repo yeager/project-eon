@@ -760,15 +760,18 @@ void draw_admitted_game_multiline_text(SDL_Renderer* renderer, const float x, fl
     const float line_stride = 22.0F) {
     std::size_t line_start = 0;
     while (line_start <= text.size()) {
-        const auto line_end = text.find('\n', line_start);
+        const auto line_end = text.find_first_of("\r\n", line_start);
         const auto count = (line_end == std::string_view::npos ? text.size() : line_end) - line_start;
-        auto line = text.substr(line_start, count);
-        if (!line.empty() && line.back() == '\r') line.remove_suffix(1);
+        const auto line = text.substr(line_start, count);
         if (!line.empty()) draw_admitted_game_text(
             renderer, x, y, game, platform, admitted, language, line);
         y += line_stride;
         if (line_end == std::string_view::npos) return;
+
+        // DOS assets use CR and CRLF as well as LF line separators.
         line_start = line_end + 1;
+        if (text[line_end] == '\r' && line_start < text.size() && text[line_start] == '\n')
+            ++line_start;
     }
 }
 
@@ -3405,8 +3408,10 @@ void report_millennium_atari_st(const eon::ReleaseArchive& release) {
     const auto fread_config_transfer = eon::parse_millennium_atari_fread_config_transfer_boundary(
         target, fopen_fallthrough);
     std::cout << "          bounded launcher bootstrap: executed " << std::dec
-        << live_bootstrap.execution().first_copy_longwords << " original longword copies and "
-        << live_bootstrap.execution().second_copy_words << " original word copies to target 0x"
+        << live_bootstrap.execution().first_copy_longwords << " original longword materializations, then "
+        << live_bootstrap.execution().second_copy_instruction_count
+        << " bounded 68000 instructions ("
+        << live_bootstrap.execution().second_copy_words << " word copies) to target 0x"
         << std::hex << live_bootstrap.target().target_address << ", stops before TRAP #1 at 0x"
         << live_bootstrap.execution().stop_before_trap_address << " after " << std::dec
         << live_bootstrap.execution().target_prefix_bytes_executed
@@ -6044,6 +6049,16 @@ int main(int argc, char** argv) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) running = false;
+            if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST
+                && event.window.windowID == SDL_GetWindowID(window)
+                && screen == Screen::launching && selected == eon::Game::deuteros) {
+                // SDL does not guarantee a matching key-up when a window
+                // loses focus. Clear the single recovered held signal so a
+                // stale Space/Enter or gamepad press cannot continue the
+                // original opening after focus returns.
+                static_cast<void>(runtime.observe_input(
+                    eon::RuntimeInputObservation::opening_input_held(false)));
+            }
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F10 && !event.key.repeat) {
                 // F10 is consumed by Project Eon's renderer chrome, never by
                 // original DOS/Amiga input. Original exposes only its two
@@ -6391,28 +6406,37 @@ int main(int argc, char** argv) {
         SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
 
         if (screen == Screen::menu) {
-            // A compact cockpit-style masthead makes the menu feel like a
-            // handoff into the two games. All ornaments are renderer-side UI;
-            // the original artwork remains exactly as shipped in the repo.
-            const SDL_FRect masthead_bounds{32.0F, 12.0F, 1216.0F, 142.0F};
+            // Keep the masthead clear so the full game cards below remain the
+            // single source of game artwork and are not repeated behind the
+            // language and data-folder controls.
+            const SDL_FRect masthead_bounds{32.0F, 12.0F, 1216.0F, 154.0F};
             SDL_SetRenderDrawColor(renderer, 5, 16, 28, 255);
             SDL_RenderFillRect(renderer, &masthead_bounds);
-            SDL_SetRenderDrawColor(renderer, 66, 108, 132, 255);
-            SDL_RenderRect(renderer, &masthead_bounds);
-            SDL_SetRenderDrawColor(renderer, 236, 172, 64, 255);
-            SDL_RenderLine(renderer, 52.0F, 141.0F, 1054.0F, 141.0F);
-            SDL_SetRenderDrawColor(renderer, 57, 130, 159, 255);
-            for (int tick = 0; tick < 24; ++tick) {
-                const float x = 72.0F + static_cast<float>(tick) * 24.0F;
-                SDL_RenderLine(renderer, x, 25.0F, x, tick % 3 == 0 ? 37.0F : 31.0F);
+            SDL_SetRenderDrawColor(renderer, 34, 65, 82, 255);
+            SDL_RenderLine(renderer, 48.0F, 22.0F, 1048.0F, 22.0F);
+            SDL_SetRenderDrawColor(renderer, 75, 135, 157, 255);
+            for (int tick = 0; tick < 31; ++tick) {
+                const float x = 54.0F + static_cast<float>(tick) * 32.0F;
+                SDL_RenderLine(renderer, x, 20.0F, x, tick % 4 == 0 ? 29.0F : 24.0F);
             }
-            SDL_SetRenderDrawColor(renderer, 236, 172, 64, 255);
-            draw_text(renderer, 76.0F, 50.0F, tr("PROJECT EON"));
-            SDL_SetRenderDrawColor(renderer, 197, 217, 222, 255);
-            draw_text(renderer, 76.0F, 82.0F, tr("SELECT A GAME"));
+
+            if (launcher_page != LauncherPage::games) {
+                SDL_SetRenderDrawColor(renderer, 66, 108, 132, 255);
+                SDL_RenderRect(renderer, &masthead_bounds);
+            }
+            if (launcher_page != LauncherPage::games) {
+                SDL_SetRenderDrawColor(renderer, 236, 172, 64, 255);
+                draw_text(renderer, 76.0F, 50.0F, tr("PROJECT EON"));
+            }
             if (project_eon_logo_texture) {
-                const SDL_FRect logo_bounds{1082.0F, 15.0F, 136.0F, 136.0F};
+                const SDL_FRect logo_bounds{1180.0F, 15.0F, 52.0F, 52.0F};
                 SDL_RenderTexture(renderer, project_eon_logo_texture, nullptr, &logo_bounds);
+            }
+            if (launcher_page == LauncherPage::games) {
+                SDL_SetRenderDrawColor(renderer, 236, 172, 64, 255);
+                draw_text(renderer, 52.0F, 18.0F, tr("PROJECT EON"));
+                SDL_SetRenderDrawColor(renderer, 197, 217, 222, 255);
+                draw_text(renderer, 52.0F, 48.0F, tr("SELECT A GAME"));
             }
             SDL_SetRenderDrawColor(renderer, 24, 55, 88, 255);
             SDL_RenderFillRect(renderer, &launcher_language_bounds);

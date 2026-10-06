@@ -21,12 +21,95 @@ SPEC.loader.exec_module(TOOL)
 
 
 class MillenniumDosCaptureRunnerTests(unittest.TestCase):
+    @staticmethod
+    def _driver_load_return(ordinal: int, pc: int, buffer: str = "none") -> str:
+        return (f"driver-load-return-v1 ordinal={ordinal} image=mill.com cs=0e70 pc={pc:04x} "
+                "ax=0001 bx=0002 cx=0010 dx=0000 si=0000 di=0000 ds=0e70 es=0e70 "
+                f"ss=0e70 sp=ff00 flags=0000 buffer={buffer}\n")
+
+    def test_driver_load_return_sidecar_is_bounded_and_preserves_opaque_results(self) -> None:
+        with temporary_directory() as directory:
+            sidecar = Path(directory) / "driver-load-return.raw"
+            self.assertEqual(TOOL.driver_load_return_status(sidecar, "millennium-dos-en-driver-load-return-v1"),
+                             "driver_load_return=absent\n")
+            self.assertEqual(TOOL.driver_load_return_status(sidecar, "v21-int93-installation"), "")
+            payload = (self._driver_load_return(1, 0x02D4)
+                       + self._driver_load_return(2, 0x0315, "ds0:4366:" + "a" * 64)
+                       + "driver-load-return-end count=2 overflow=0\n")
+            sidecar.write_text(payload, encoding="ascii")
+            status = TOOL.driver_load_return_status(sidecar, "millennium-dos-en-driver-load-return-v1")
+            self.assertIn("driver_load_return=present\n", status)
+            self.assertIn("driver_load_return_records=2\n", status)
+            self.assertIn("driver_load_return_site_counts=0x02d4:1,0x0315:1\n", status)
+            self.assertIn("driver_load_return_buffer_digests=1\n", status)
+            self.assertIn(hashlib.sha256(payload.encode("ascii")).hexdigest(), status)
+
+            sidecar.write_text(self._driver_load_return(2, 0x02D4)
+                               + "driver-load-return-end count=1 overflow=0\n", encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "ordinals"):
+                TOOL.driver_load_return_status(sidecar, "millennium-dos-en-driver-load-return-v1")
+            sidecar.write_text(self._driver_load_return(1, 0x02D5)
+                               + "driver-load-return-end count=1 overflow=0\n", encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "unreviewed instruction site"):
+                TOOL.driver_load_return_status(sidecar, "millennium-dos-en-driver-load-return-v1")
+            sidecar.write_text(self._driver_load_return(1, 0x02D4, "ds0:32:" + "a" * 64)
+                               + "driver-load-return-end count=1 overflow=0\n",
+                               encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "detached from the read return"):
+                TOOL.driver_load_return_status(sidecar, "millennium-dos-en-driver-load-return-v1")
+            sidecar.write_text(self._driver_load_return(1, 0x0315, "ds0:4367:" + "a" * 64)
+                               + "driver-load-return-end count=1 overflow=0\n",
+                               encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "size bound"):
+                TOOL.driver_load_return_status(sidecar, "millennium-dos-en-driver-load-return-v1")
+            sidecar.write_text("driver-load-return-overflow cap=128\n"
+                               "driver-load-return-end count=128 overflow=1\n", encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "overflowed"):
+                TOOL.driver_load_return_status(sidecar, "millennium-dos-en-driver-load-return-v1")
+
+            sidecar.write_text(self._driver_load_return(1, 0x02D4), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "incomplete or overflowed"):
+                TOOL.driver_load_return_status(sidecar, "millennium-dos-en-driver-load-return-v1")
+
+            sidecar.write_bytes(b"x" * (TOOL.MAX_DRIVER_LOAD_RETURN_BYTES + 1))
+            with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
+                TOOL.driver_load_return_status(sidecar, "millennium-dos-en-driver-load-return-v1")
+            sidecar.unlink()
+            sidecar.symlink_to("missing")
+            with self.assertRaisesRegex(TOOL.CaptureError, "regular non-symlink"):
+                TOOL.driver_load_return_status(sidecar, "millennium-dos-en-driver-load-return-v1")
+
     def test_rejects_headless_or_missing_visible_display(self) -> None:
         with self.assertRaisesRegex(TOOL.CaptureError, "headless SDL"):
             TOOL.require_visible_operator_input({"SDL_VIDEODRIVER": "dummy", "DISPLAY": ":1"})
         with self.assertRaisesRegex(TOOL.CaptureError, "visible X11 or Wayland"):
             TOOL.require_visible_operator_input({})
         TOOL.require_visible_operator_input({"WAYLAND_DISPLAY": "wayland-0"})
+
+    def test_experimental_driver_loader_protocol_is_separate_from_recovery_pins(self) -> None:
+        protocol = "millennium-dos-en-driver-load-return-v1"
+        self.assertNotIn(protocol, TOOL.RECORDER_PROTOCOLS)
+        accepted_hashes = TOOL.EXPERIMENTAL_OBSERVER_PROTOCOLS[protocol]
+        self.assertEqual(len(accepted_hashes), 2)
+        self.assertTrue(all(len(digest) == 64 for digest in accepted_hashes))
+        self.assertEqual(set(TOOL.EXPERIMENTAL_OBSERVER_SIZES[protocol]), accepted_hashes)
+        self.assertEqual(TOOL.EXPERIMENTAL_OBSERVER_RECEIPT_VERSIONS[protocol], "22")
+        linux_hash = "942f30f2199350a51d0ff1e7c024f4e226d29b5576dc6ea0d61b7556c12468e8"
+        with mock.patch.object(TOOL, "sha256_file", return_value=(linux_hash, 132_933_552)):
+            self.assertEqual(TOOL.validate_recorder(Path("/external/dosbox-x"), accepted_hashes),
+                             (linux_hash, 132_933_552))
+        with mock.patch.object(TOOL, "sha256_file", return_value=("0" * 64, 132_933_552)):
+            with self.assertRaisesRegex(TOOL.CaptureError, "does not match"):
+                TOOL.validate_recorder(Path("/external/dosbox-x"), accepted_hashes)
+        args = TOOL.parse_arguments((
+            "--source-release", "/release.zip", "--recorder", "/recorder", "--output", "/capture",
+            "--capture-intent", "diagnostic-no-input", "--recorder-protocol", protocol,
+            "--experimental-observer",
+        ))
+        self.assertEqual(args.recorder_protocol, protocol)
+        self.assertTrue(args.experimental_observer)
+        self.assertIn("operating-system window controls",
+                      TOOL.experimental_driver_return_operator_instructions()[1])
 
     def test_generated_configuration_handles_real_mode_wrap_and_never_injects_input(self) -> None:
         configuration = TOOL.recorder_config(Path("/safe/read-only/game-root"))

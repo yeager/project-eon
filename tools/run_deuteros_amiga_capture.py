@@ -30,7 +30,22 @@ EXPECTED_KICKSTART_SHA256 = "c9521c114900633c09317ca6ff979db7b9df34d3cb537de062f
 EXPECTED_KICKSTART_SIZE = 143_269
 EXPECTED_RECORDER_SHA256 = "0e0bfb1fe73a6f37dc38992b39e34e355564adc516106c399c8be86fb38232ec"
 # Independently reviewed x86_64 restoration; see CAPTURE_RECORDER_RESTORATION.md.
-TRV2_RECORDER_SHA256 = "c6422037df6cadeb50ffaee3bb1c1b56d21722a7c687287d6058d4802943f54b"
+TRV2_RECORDER_V10_SHA256 = "c6422037df6cadeb50ffaee3bb1c1b56d21722a7c687287d6058d4802943f54b"
+TRV2_RECORDER_V11_SHA256 = "18378aacf2a4bbe4fe3a84c295a1f53a3edd08c1cd4f5dca90f2c4af87c2181d"
+TRV2_RECORDER_SHA256 = "7b3779771dd705aeb313f71c355e06fe6d4f77b836ea95f7b9748baba4eb4f64"
+TRV2_RECORDER_V13_SHA256 = "e32f337dafdfb30e655f0aa8eb06e37a5dc445a225ec8473da92cad23cf5eb24"
+TRV2_RECORDER_V14_SHA256 = "701d11b705dd36934712ab37df4e105a2d68bde4dea2642214f45012d6768acf"
+TRV2_RECORDER_V15_SHA256 = "7160dfafbfe67b17db931065ab6f9853874591ea4af6c33ad51059b2b0f703df"
+TRV2_RECORDER_V16_SHA256 = "aa4c797fc2e580c887ab6be88a57abe93f6b442ac822870e4840c514898518b4"
+TRV2_RECORDER_V16_SIZE = 62_015_016
+TRV2_RECORDER_V17_SHA256 = "8d7255b20a6f9867a9329541cdf5e0a590d2d507f639da313dd8964c7f02fd5e"
+TRV2_RECORDER_V17_SIZE = 62_016_168
+TRV2_RECORDER_V18_SHA256 = "44477a0f41025a6e3f68098eb093fb7a32aebf3b2d1577fb294337a617154a54"
+TRV2_RECORDER_V18_SIZE = 62_016_152
+TRV2_RECORDER_V19_SHA256 = "7b46501fc3cf774938fc8ca4e02788586ba22ef440462ea7ecd00396311b73a2"
+TRV2_RECORDER_V19_SIZE = 62_020_024
+TRV2_RECORDER_V20_SHA256 = "071f1c949409be9ff3faa128d0acc98fcde9136c0aa09ab6a6edb058e7fbc397"
+TRV2_RECORDER_V20_SIZE = 62_020_224
 EXPECTED_DISK1_SHA256 = "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38"
 EXPECTED_DISK2_SHA256 = "99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a"
 EXPECTED_DISK1_ARCHIVE_SHA256 = "7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533"
@@ -59,6 +74,25 @@ MAX_INPUT_RECEIPT_RECORDS = 256
 # unbounded host storage.  A broken emulator must not be able to exhaust the
 # operator's terminal, disk, or cache while a capture is being reviewed.
 MAX_RAW_OBSERVATION_BYTES = 8 * 1024 * 1024
+# v17 emits one small, separate receipt for the two byte cells read by the
+# selector dispatch. Keep it independent from historical raw-PC grammars.
+MAX_SELECTOR_DISPATCH_BYTES = 64 * 1024
+MAX_SELECTOR_DISPATCH_RECORDS = 256
+MAX_LATE_RAW_RECORDS_PER_SITE = 96
+MAX_LATE_RAW_RECORDS_V19 = 26 * MAX_LATE_RAW_RECORDS_PER_SITE
+MAX_LATE_RAW_RECORDS_V20 = 28 * MAX_LATE_RAW_RECORDS_PER_SITE
+# Retain the historical v19 name for callers and tests that exercise schema 29.
+MAX_LATE_RAW_RECORDS = MAX_LATE_RAW_RECORDS_V19
+MAX_LATE_RAW_BYTES = 1024 * 1024
+MAX_LATE_SELECTOR_BYTES = 32 * 1024
+MAX_ZERO_ROUTE_OBSERVATION_BYTES = 1024 * 1024
+MAX_ZERO_ROUTE_OBSERVATION_RECORDS = 4096
+MAX_ZERO_ROUTE_OBSERVATION_INVOCATIONS = 16
+MAX_LATE_DISPLAY_RECEIPT_BYTES = 512 * 1024
+MAX_LATE_DISPLAY_WRITES = 2048
+MAX_LATE_DISPLAY_WRITES_PER_REGISTER = 64
+MAX_LATE_SELECTOR_RECORDS = MAX_LATE_RAW_RECORDS_PER_SITE
+LATE_INPUT_START_ORDINAL = 9
 # 2,048 fixed-format writes can exceed 128 KiB; this remains a strict cap
 # above the reviewed finite grammar without rejecting a complete observation.
 MAX_TITLE_DISPLAY_RECEIPT_BYTES = 512 * 1024
@@ -72,10 +106,16 @@ MAX_RECORDER_CONSOLE_TOTAL_BYTES = 64 * 1024 * 1024
 # exposes these investigation sites.  This list is a grammar boundary, not an
 # interpretation of the observed instructions or their ABI effects.
 RAW_PC_SITES = (
-    0x000210D4, 0x00040450, 0x0004046C, 0x0004069A, 0x0001ED80,
-    0x0001EDA6, 0x0001EF74, 0x0001F056, 0x0001F182, 0x0001FE7A,
+    0x000210D4, 0x00021822, 0x00040450, 0x0004046C, 0x0004069A, 0x0001ED80,
+    0x0001EDA6, 0x0001EDAC, 0x0001EF74, 0x0001F056, 0x0001F182, 0x0001FE7A,
     0x0001FE84, 0x0001FE88, 0x0001FE92, 0x0001FE96, 0x0001FBE6,
+    0x0002182A, 0x0002182C, 0x00021834, 0x00021850, 0x0002185E, 0x00021892,
 )
+RAW_PC_V16_SITES = (*RAW_PC_SITES, 0x000218CC)
+RAW_PC_V18_SITES = (*RAW_PC_V16_SITES, 0x00021866)
+RAW_PC_V19_SITES = (*RAW_PC_V18_SITES, 0x0001FEA8)
+LATE_RAW_PC_V19_SITES = RAW_PC_V19_SITES
+LATE_RAW_PC_V20_SITES = (*LATE_RAW_PC_V19_SITES, 0x0001FC22, 0x0001FC9C)
 MAX_RAW_RECORDS = 4096
 MAX_RAW_RECORDS_PER_SITE = 128
 MAX_TITLE_DISPLAY_WRITES = 2048
@@ -108,6 +148,10 @@ TITLE_DISPLAY_WRITE_LINE = re.compile(
     r"display-write ([1-9][0-9]*) cycles=([0-9]+) vpos=([0-9]+) hpos=([0-9]+) "
     r"origin=(cpu|copper) register=0x([0-9a-f]{4}) value=0x([0-9a-f]{4}) "
     r"input_ordinal=([0-9]+) input_frame=(-?[0-9]+)\n")
+LATE_DISPLAY_WRITE_LINE = re.compile(
+    r"late-display-write ([1-9][0-9]*) cycles=([0-9]+) vpos=([0-9]+) hpos=([0-9]+) "
+    r"origin=(cpu|copper) register=0x([0-9a-f]{4}) value=0x([0-9a-f]{4}) "
+    r"input_ordinal=([0-9]+) input_frame=(-?[0-9]+)\n")
 TITLE_DISPLAY_REGISTERS = frozenset((
     0x0080, 0x0082, 0x008E, 0x0090, 0x0092, 0x0094,
     *range(0x00E0, 0x00F0, 2), 0x0100, 0x0108, 0x010A,
@@ -119,9 +163,45 @@ TITLE_DISPLAY_REGISTERS = frozenset((
 HOST_INPUT_LINE = re.compile(
     r"host-input ([1-9][0-9]*) frame=(-?[0-9]+) line=(-?[0-9]+) "
     r"action=(-?[0-9]+) state=(-?[0-9]+)\n")
+SELECTOR_DISPATCH_LINE = re.compile(
+    r"selector-dispatch ([1-9][0-9]*) raw_ordinal=([1-9][0-9]*) "
+    r"cycles=([0-9]+) pc=0x0001fbe6 cell_1f98c=0x([0-9a-f]{2}) "
+    r"cell_1f98e=0x([0-9a-f]{2}) input_ordinal=([0-9]+) input_frame=(-?[0-9]+)\n")
+LATE_RAW_PC_LINE = re.compile(
+    r"late-pc ([1-9][0-9]*) cycles=([0-9]+) pc=0x([0-9a-f]{8}) "
+    r"ir_opcode=0x([0-9a-f]{4}) memory_opcode=0x([0-9a-f]{4}) "
+    r"d0=0x([0-9a-f]{8}) a0=0x([0-9a-f]{8}) a6=0x([0-9a-f]{8}) sr=0x([0-9a-f]{4}) "
+    r"input_ordinal=([0-9]+) input_frame=(-?[0-9]+)\n")
+LATE_SELECTOR_DISPATCH_LINE = re.compile(
+    r"late-selector-dispatch ([1-9][0-9]*) late_raw_ordinal=([1-9][0-9]*) "
+    r"cycles=([0-9]+) pc=0x0001fbe6 cell_1f98c=0x([0-9a-f]{2}) "
+    r"cell_1f98e=0x([0-9a-f]{2}) input_ordinal=([0-9]+) input_frame=(-?[0-9]+)\n")
+ZERO_ROUTE_OBSERVATION_LINE = re.compile(
+    r"zero-route-observation ([1-9][0-9]*) cycles=([0-9]+) pc=0x([0-9a-f]{8}) "
+    r"input_ordinal=([1-9][0-9]*) input_frame=(-?[0-9]+) "
+    + " ".join(f"d{index}=0x([0-9a-f]{{8}})" for index in range(8)) + r" "
+    + r"a0=0x([0-9a-f]{8}) a1=0x([0-9a-f]{8}) a2=0x([0-9a-f]{8}) a4=0x([0-9a-f]{8}) "
+    + r"cell_1f98c=0x([0-9a-f]{2}) cell_1f98e=0x([0-9a-f]{2}) cells_valid=(0|1) "
+    + r"mem_addr=0x([0-9a-f]{8}) mem_width=(0|1|2|4) mem_value=0x([0-9a-f]{8}) mem_valid=(0|1)\n")
+ZERO_ROUTE_OBSERVATION_SITES = frozenset((
+    0x0001FC22, 0x0001FC28, 0x0001FC2C, 0x0001FC42, 0x0001FC4A, 0x0001FC50,
+    0x0001FC56, 0x0001FC5E, 0x0001FC6A, 0x0001FC6C, 0x0001FC74,
+    0x0001FC76, 0x0001FC88, 0x0001FC8E, 0x0001FC94, 0x0001FC9A,
+))
 # Receipt v6 additionally binds the finite recorder timing profile. Older
 # evidence remains verifiable without pretending it has the newer field.
 CAPTURE_RECEIPT_VERSION = "23"
+CAPTURE_RECEIPT_V16_PHASED_VERSION = "26"
+CAPTURE_RECEIPT_V17_VERSION = "27"
+CAPTURE_RECEIPT_V18_VERSION = "28"
+CAPTURE_RECEIPT_V19_VERSION = "29"
+CAPTURE_RECEIPT_V20_VERSION = "30"
+CAPTURE_RECEIPT_V21_VERSION = "31"
+CAPTURE_RECEIPT_V22_VERSION = "32"
+TRV2_RECORDER_V21_SHA256 = "2fc7f47425d0fa005bb59bf41eaeccf32d1cba284dee4f227e7e723b853e1b35"
+TRV2_RECORDER_V21_SIZE = 62_030_288
+TRV2_RECORDER_V22_SHA256 = "eb0995c70f7f355f674d448b08c0f3e647430562ffde7d179e5aeb12e5abca71"
+TRV2_RECORDER_V22_SIZE = 62_031_592
 SOURCE_LAYOUT_RELEASE = "nested-release-zip"
 SOURCE_LAYOUT_STANDALONE = "standalone-zip-pair"
 SOURCE_LAYOUTS = {SOURCE_LAYOUT_RELEASE, SOURCE_LAYOUT_STANDALONE}
@@ -181,8 +261,30 @@ def validate_identity(path: Path, label: str, expected_hash: str, expected_size:
 
 def reviewed_recorder_hashes() -> dict[str, str]:
     """Keep historical evidence valid when another host build is reviewed."""
-    return {"reviewed-fs-uae": EXPECTED_RECORDER_SHA256,
-            "reviewed-fs-uae-trv2": TRV2_RECORDER_SHA256}
+    hashes = {"reviewed-fs-uae": EXPECTED_RECORDER_SHA256,
+            "reviewed-fs-uae-trv2-v10": TRV2_RECORDER_V10_SHA256,
+            "reviewed-fs-uae-trv2-v11": TRV2_RECORDER_V11_SHA256,
+            "reviewed-fs-uae-trv2-v12": TRV2_RECORDER_SHA256,
+            "reviewed-fs-uae-trv2-v13": TRV2_RECORDER_V13_SHA256,
+            "reviewed-fs-uae-trv2-v14": TRV2_RECORDER_V14_SHA256,
+            "reviewed-fs-uae-trv2-v15": TRV2_RECORDER_V15_SHA256,
+            "reviewed-fs-uae-trv2-v16": TRV2_RECORDER_V16_SHA256,
+            "reviewed-fs-uae-trv2-v17": TRV2_RECORDER_V17_SHA256,
+            "reviewed-fs-uae-trv2-v18": TRV2_RECORDER_V18_SHA256,
+            "reviewed-fs-uae-trv2-v19": TRV2_RECORDER_V19_SHA256,
+            "reviewed-fs-uae-trv2-v20": TRV2_RECORDER_V20_SHA256}
+    hashes["reviewed-fs-uae-trv2-v21"] = TRV2_RECORDER_V21_SHA256
+    hashes["reviewed-fs-uae-trv2-v22"] = TRV2_RECORDER_V22_SHA256
+    return hashes
+
+
+def raw_pc_sites_for_format(raw_format: str) -> tuple[int, ...]:
+    """Keep the historical v15 grammar separate from the v16 observer site."""
+    if raw_format == "v9-v18-phased":
+        return RAW_PC_V18_SITES
+    if raw_format == "v9-v19-phased":
+        return RAW_PC_V19_SITES
+    return RAW_PC_V16_SITES if raw_format in {"v9-v16", "v9-v16-phased"} else RAW_PC_SITES
 
 
 def validate_recorder(path: Path) -> tuple[str, int]:
@@ -193,6 +295,20 @@ def validate_recorder(path: Path) -> tuple[str, int]:
             "recorder hash does not match a reviewed FS-UAE binary "
             f"(expected SHA-256 {expected}, got {digest}); select "
             "the reviewed external recorder rather than a normal FS-UAE installation")
+    if digest == TRV2_RECORDER_V16_SHA256 and size != TRV2_RECORDER_V16_SIZE:
+        raise CaptureError("v16 recorder size does not match the reviewed binary")
+    if digest == TRV2_RECORDER_V17_SHA256 and size != TRV2_RECORDER_V17_SIZE:
+        raise CaptureError("v17 recorder size does not match the reviewed binary")
+    if digest == TRV2_RECORDER_V18_SHA256 and size != TRV2_RECORDER_V18_SIZE:
+        raise CaptureError("v18 recorder size does not match the reviewed binary")
+    if digest == TRV2_RECORDER_V19_SHA256 and size != TRV2_RECORDER_V19_SIZE:
+        raise CaptureError("v19 recorder size does not match the reviewed binary")
+    if digest == TRV2_RECORDER_V20_SHA256 and size != TRV2_RECORDER_V20_SIZE:
+        raise CaptureError("v20 recorder size does not match the reviewed binary")
+    if digest == TRV2_RECORDER_V21_SHA256 and size != TRV2_RECORDER_V21_SIZE:
+        raise CaptureError("v21 recorder size does not match the reviewed binary")
+    if digest == TRV2_RECORDER_V22_SHA256 and size != TRV2_RECORDER_V22_SIZE:
+        raise CaptureError("v22 recorder size does not match the reviewed binary")
     return digest, size
 
 
@@ -333,12 +449,13 @@ def capture_intent_status(intent: str, receipt_status: str, observed_during_capt
             f"capture_intent_input_requirement={requirement}\n")
 
 
-def capture_operator_instructions(intent: str) -> tuple[str, str, str]:
+def capture_operator_instructions(intent: str, *, late_sampling: bool = False) -> tuple[str, str, str]:
     """Return visible instructions that cannot contradict the capture intent."""
     if intent == "physical-input":
         return (
             "CAPTURE PREPARED  read-only original media; physical operator input required",
-            "Focus the visible FS-UAE window by clicking it yourself; do not use terminal or automation input. Then press and release ordinary mapped keys only in that window (for example Return, Space, or arrows).",
+            "Focus the visible FS-UAE window by clicking it yourself; do not use terminal or automation input. Advance the visible intro with ordinary mapped keys (press and release Return or Space only while the game is visibly waiting). Choose 1: ENGLISH only when the language selector is on screen. At the Disk 2 prompt, press F10 once to insert the second read-only image into DF0, then continue only in response to visible prompts." +
+            (" Continue beyond the language selector through the later visible route; the separate late probe begins after host-input ordinal 8 and records at most 96 distinct deliveries per site." if late_sampling else ""),
             "No debugger, playback, injected host event, or guest-memory edit is permitted.",
         )
     if intent == "diagnostic-no-input":
@@ -388,23 +505,28 @@ def raw_observation_status(path: Path, name: str, raw_format: str = "legacy") ->
         raise CaptureError(f"{name} exceeds the bounded recorder contract")
     if info.st_size == 0:
         return f"{name}=empty\n"
-    site_counts, site_opcode_pairs = parse_raw_pc_summary(path, raw_format)
+    site_counts, site_opcode_pairs, input_links, phase_counts = _parse_raw_pc(path, raw_format)
     digest, size = sha256_file(path)
+    sites = raw_pc_sites_for_format(raw_format)
     ordered_counts = ",".join(
-        f"0x{site:08x}:{site_counts[site]}" for site in RAW_PC_SITES if site in site_counts)
+        f"0x{site:08x}:{site_counts[site]}" for site in sites if site in site_counts)
     status = (f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
               f"{name}_format={raw_format}\n{name}_records={sum(site_counts.values())}\n"
               f"{name}_site_counts={ordered_counts}\n")
-    if raw_format in {"v7", "v9"}:
+    if raw_format in {"v7", "v9", "v9-v16", "v9-v16-phased", "v9-v18-phased", "v9-v19-phased"}:
         ordered_pairs = ",".join(
             f"0x{site:08x}:" + "+".join(
                 f"{ir:04x}/{memory:04x}" for ir, memory in sorted(site_opcode_pairs[site]))
-            for site in RAW_PC_SITES if site in site_opcode_pairs)
+            for site in sites if site in site_opcode_pairs)
         status += f"{name}_opcode_pairs={ordered_pairs}\n"
-    if raw_format == "v9":
-        links = parse_raw_pc_input_links(path)
-        status += (f"{name}_input_links={sum(ordinal != 0 for ordinal, _ in links)}\n"
-                   f"{name}_last_input_ordinal={links[-1][0] if links else 0}\n")
+    if raw_format in {"v9", "v9-v16", "v9-v16-phased", "v9-v18-phased", "v9-v19-phased"}:
+        status += (f"{name}_input_links={sum(ordinal != 0 for ordinal, _ in input_links)}\n"
+                   f"{name}_last_input_ordinal={input_links[-1][0] if input_links else 0}\n")
+        for phase, label in ((0, "pre_input"), (1, "post_input")):
+            ordered_phase_counts = ",".join(
+                f"0x{site:08x}:{phase_counts[phase][site]}"
+                for site in sites if phase_counts[phase].get(site, 0))
+            status += f"{name}_{label}_site_counts={ordered_phase_counts}\n"
     return status
 
 
@@ -418,13 +540,20 @@ def parse_raw_pc_observations(path: Path, raw_format: str = "legacy") -> dict[in
     return parse_raw_pc_summary(path, raw_format)[0]
 
 
-def _parse_raw_pc(path: Path, raw_format: str) -> tuple[dict[int, int], dict[int, set[tuple[int, int]]], list[tuple[int, int]]]:
+def _parse_raw_pc(
+    path: Path, raw_format: str
+) -> tuple[
+    dict[int, int],
+    dict[int, set[tuple[int, int]]],
+    list[tuple[int, int]],
+    tuple[dict[int, int], dict[int, int]],
+]:
     """Validate raw records and retain opaque v7/v9 fields per probe site."""
     if raw_format == "legacy":
         matcher = RAW_PC_LEGACY_LINE
     elif raw_format == "v7":
         matcher = RAW_PC_V7_LINE
-    elif raw_format == "v9":
+    elif raw_format in {"v9", "v9-v16", "v9-v16-phased", "v9-v18-phased", "v9-v19-phased"}:
         matcher = RAW_PC_V9_LINE
     else:
         raise CaptureError("raw_pc format is not a reviewed recorder grammar")
@@ -435,9 +564,11 @@ def _parse_raw_pc(path: Path, raw_format: str) -> tuple[dict[int, int], dict[int
     if not text.endswith("\n"):
         raise CaptureError("raw_pc has a truncated final record")
     counts: dict[int, int] = {}
+    phase_counts: tuple[dict[int, int], dict[int, int]] = ({}, {})
     opcode_pairs: dict[int, set[tuple[int, int]]] = {}
     input_links: list[tuple[int, int]] = []
     previous_cycle = -1
+    previous_v18_sample: tuple[int, int, int] | None = None
     for expected_ordinal, line in enumerate(text.splitlines(keepends=True), start=1):
         match = matcher.fullmatch(line)
         if not match:
@@ -448,12 +579,14 @@ def _parse_raw_pc(path: Path, raw_format: str) -> tuple[dict[int, int], dict[int
         if cycle < previous_cycle:
             raise CaptureError("raw_pc cycles are not monotonic")
         previous_cycle = cycle
-        if site not in RAW_PC_SITES:
+        if site not in raw_pc_sites_for_format(raw_format):
             raise CaptureError("raw_pc uses an unreviewed probe site")
         counts[site] = counts.get(site, 0) + 1
-        if raw_format in {"v7", "v9"}:
+        if raw_format in {"v7", "v9", "v9-v16", "v9-v16-phased", "v9-v18-phased", "v9-v19-phased"}:
+            if raw_format in {"v9-v18-phased", "v9-v19-phased"} and site == 0x00021866 and int(match.group(5), 16) != 0x6608:
+                raise CaptureError("v18 input-branch site has an unexpected memory opcode")
             opcode_pairs.setdefault(site, set()).add((int(match.group(4), 16), int(match.group(5), 16)))
-        if raw_format == "v9":
+        if raw_format in {"v9", "v9-v16", "v9-v16-phased", "v9-v18-phased", "v9-v19-phased"}:
             input_ordinal, input_frame = int(match.group(10)), int(match.group(11))
             if input_ordinal > MAX_INPUT_RECEIPT_RECORDS:
                 raise CaptureError("raw_pc exceeds the input-recorder ordinal cap")
@@ -461,28 +594,493 @@ def _parse_raw_pc(path: Path, raw_format: str) -> tuple[dict[int, int], dict[int
                 raise CaptureError("raw_pc input ordinals are not monotonic")
             if input_ordinal == 0 and input_frame != 0:
                 raise CaptureError("raw_pc no-input snapshot must use frame zero")
+            if raw_format in {"v9-v18-phased", "v9-v19-phased"} and site == 0x00021866:
+                if previous_v18_sample != (0x0002185E, input_ordinal, input_frame):
+                    raise CaptureError("v18 branch sample is not paired with the same input-linked bit-test")
+            if raw_format in {"v9-v18-phased", "v9-v19-phased"}:
+                previous_v18_sample = (site, input_ordinal, input_frame)
             input_links.append((input_ordinal, input_frame))
-        if counts[site] > MAX_RAW_RECORDS_PER_SITE:
+            phase = 1 if input_ordinal else 0
+            phase_counts[phase][site] = phase_counts[phase].get(site, 0) + 1
+            if phase_counts[phase][site] > MAX_RAW_RECORDS_PER_SITE:
+                raise CaptureError("raw_pc exceeds the per-site phase cap")
+            if raw_format == "v9-v16" and counts[site] > MAX_RAW_RECORDS_PER_SITE:
+                raise CaptureError("raw_pc exceeds the per-site recorder cap")
+            if raw_format in {"v9-v16-phased", "v9-v18-phased", "v9-v19-phased"} and counts[site] > MAX_RAW_RECORDS_PER_SITE * 2:
+                raise CaptureError("raw_pc exceeds the per-site recorder cap")
+        elif counts[site] > MAX_RAW_RECORDS_PER_SITE:
             raise CaptureError("raw_pc exceeds the per-site recorder cap")
         if expected_ordinal > MAX_RAW_RECORDS:
             raise CaptureError("raw_pc exceeds the recorder record cap")
-    return counts, opcode_pairs, input_links
+    return counts, opcode_pairs, input_links, phase_counts
 
 
 def parse_raw_pc_summary(path: Path, raw_format: str = "legacy") -> tuple[dict[int, int], dict[int, set[tuple[int, int]]]]:
     """Validate raw records and retain opaque IR/memory pairs per probe site."""
-    counts, opcode_pairs, _ = _parse_raw_pc(path, raw_format)
+    counts, opcode_pairs, _, _ = _parse_raw_pc(path, raw_format)
     return counts, opcode_pairs
 
 
-def parse_raw_pc_input_links(path: Path) -> list[tuple[int, int]]:
+def parse_raw_pc_input_links(path: Path, raw_format: str = "v9") -> list[tuple[int, int]]:
     """Return v9 delivery chronology without promoting it to guest input proof."""
-    return _parse_raw_pc(path, "v9")[2]
+    return _parse_raw_pc(path, raw_format)[2]
 
 
-def raw_pc_input_chronology_status(raw_path: Path, input_path: Path) -> str:
+def parse_raw_pc_phase_counts(path: Path, raw_format: str = "v9") -> tuple[dict[int, int], dict[int, int]]:
+    """Return bounded pre/post-delivery reachability counts for v9 records."""
+    return _parse_raw_pc(path, raw_format)[3]
+
+
+def _late_raw_pc_contract(late_version: str) -> tuple[tuple[int, ...], int]:
+    if late_version == "v19":
+        return LATE_RAW_PC_V19_SITES, MAX_LATE_RAW_RECORDS_V19
+    if late_version == "v20":
+        return LATE_RAW_PC_V20_SITES, MAX_LATE_RAW_RECORDS_V20
+    raise CaptureError("late raw-PC version is not a reviewed recorder contract")
+
+
+def parse_late_raw_pc_receipt(
+    path: Path, late_version: str = "v19"
+) -> list[tuple[int, int, int, int, int]]:
+    """Validate the finite post-ordinal-eight raw-PC window, preserving opaque values."""
+    allowed_sites, max_records = _late_raw_pc_contract(late_version)
+    try:
+        info = path.lstat()
+    except OSError as error:
+        raise CaptureError(f"late raw-PC receipt is unavailable: {error}") from error
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError("late raw-PC receipt is not a regular non-symlink file")
+    if info.st_size > MAX_LATE_RAW_BYTES:
+        raise CaptureError("late raw-PC receipt exceeds the bounded recorder contract")
+    try:
+        text = path.read_text(encoding="ascii")
+    except UnicodeDecodeError as error:
+        raise CaptureError("late raw-PC receipt is not ASCII recorder output") from error
+    if not text.endswith("\n"):
+        raise CaptureError("late raw-PC receipt has a truncated final record")
+    records: list[tuple[int, int, int, int, int]] = []
+    site_counts: dict[int, int] = {}
+    last_site_input: dict[int, int] = {}
+    previous_cycle = -1
+    previous_input = 0
+    previous_input_site: tuple[int, int, int] | None = None
+    for expected, line in enumerate(text.splitlines(keepends=True), start=1):
+        match = LATE_RAW_PC_LINE.fullmatch(line)
+        if not match:
+            raise CaptureError("late raw-PC receipt contains an invalid recorder record")
+        record, cycles, site = int(match.group(1)), int(match.group(2)), int(match.group(3), 16)
+        input_ordinal, input_frame = int(match.group(10)), int(match.group(11))
+        if record != expected:
+            raise CaptureError("late raw-PC record ordinals are not contiguous")
+        if cycles < previous_cycle:
+            raise CaptureError("late raw-PC cycles are not monotonic")
+        if site not in allowed_sites:
+            raise CaptureError("late raw-PC uses an unreviewed probe site")
+        if not LATE_INPUT_START_ORDINAL <= input_ordinal <= MAX_INPUT_RECEIPT_RECORDS:
+            raise CaptureError("late raw-PC input ordinal is outside the reviewed late window")
+        if input_ordinal < previous_input:
+            raise CaptureError("late raw-PC input ordinals are not monotonic")
+        if input_ordinal <= last_site_input.get(site, 0):
+            raise CaptureError("late raw-PC repeats an input ordinal at one probe site")
+        if site == 0x00021866 and int(match.group(5), 16) != 0x6608:
+            raise CaptureError("late v19 input-branch site has an unexpected memory opcode")
+        if site == 0x00021866 and previous_input_site != (0x0002185E, input_ordinal, input_frame):
+            raise CaptureError("late v19 branch sample is not paired with its input-linked bit-test")
+        if site == 0x0002185E:
+            previous_input_site = (site, input_ordinal, input_frame)
+        elif site == 0x00021866:
+            previous_input_site = (site, input_ordinal, input_frame)
+        else:
+            previous_input_site = None
+        site_counts[site] = site_counts.get(site, 0) + 1
+        if site_counts[site] > MAX_LATE_RAW_RECORDS_PER_SITE:
+            raise CaptureError("late raw-PC receipt exceeds the per-site sample cap")
+        if expected > max_records:
+            raise CaptureError("late raw-PC receipt exceeds the total sample cap")
+        records.append((record, cycles, site, input_ordinal, input_frame))
+        previous_cycle = cycles
+        previous_input = input_ordinal
+        last_site_input[site] = input_ordinal
+    return records
+
+
+def _optional_bounded_file(path: Path, label: str, limit: int) -> tuple[str, tuple[str, int] | None]:
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return "absent", None
+    except OSError as error:
+        raise CaptureError(f"{label} is unavailable: {error}") from error
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError(f"{label} is not a regular non-symlink file")
+    if info.st_size > limit:
+        raise CaptureError(f"{label} exceeds the bounded recorder contract")
+    if info.st_size == 0:
+        return "empty", None
+    return "present", sha256_file(path)
+
+
+def late_raw_pc_status(path: Path, input_path: Path, late_version: str = "v19") -> str:
+    """Hash and link the late sidecar to host deliveries without interpreting actions."""
+    allowed_sites, _ = _late_raw_pc_contract(late_version)
+    state, identity = _optional_bounded_file(path, "late raw-PC receipt", MAX_LATE_RAW_BYTES)
+    if state == "absent":
+        return ("late_input_pc=absent\nlate_input_pc_format=v1\nlate_input_pc_records=0\n"
+                "late_input_pc_site_counts=\nlate_input_pc_input_links=0\n"
+                "late_input_pc_last_input_ordinal=0\nlate_input_pc_input_chronology=none\n"
+                "late_input_pc_input_chronology_records=0\n")
+    if state == "empty":
+        return ("late_input_pc=empty\nlate_input_pc_format=v1\nlate_input_pc_records=0\n"
+                "late_input_pc_site_counts=\nlate_input_pc_input_links=0\n"
+                "late_input_pc_last_input_ordinal=0\nlate_input_pc_input_chronology=none\n"
+                "late_input_pc_input_chronology_records=0\n")
+    records = parse_late_raw_pc_receipt(path, late_version)
+    events = dict(parse_host_input_records(input_path))
+    for _, _, _, input_ordinal, input_frame in records:
+        if events.get(input_ordinal) != input_frame:
+            raise CaptureError("late raw-PC chronology does not match the host-input receipt")
+    counts: dict[int, int] = {}
+    for _, _, site, _, _ in records:
+        counts[site] = counts.get(site, 0) + 1
+    assert identity is not None
+    digest, size = identity
+    links = len(records)
+    return ("late_input_pc=present\nlate_input_pc_format=v1\n"
+            f"late_input_pc_sha256={digest}\nlate_input_pc_bytes={size}\n"
+            f"late_input_pc_records={len(records)}\n"
+            "late_input_pc_site_counts=" + ",".join(
+                f"0x{site:08x}:{counts[site]}" for site in allowed_sites if site in counts) + "\n"
+            f"late_input_pc_input_links={links}\n"
+            f"late_input_pc_last_input_ordinal={records[-1][3]}\n"
+            f"late_input_pc_input_chronology={'linked' if links else 'none'}\n"
+            f"late_input_pc_input_chronology_records={links}\n")
+
+
+def parse_late_selector_dispatch(path: Path) -> list[tuple[int, int, int, int, int, int, int]]:
+    """Parse later selector-cell reads joined to late raw-PC records."""
+    state, _ = _optional_bounded_file(path, "late selector-dispatch receipt", MAX_LATE_SELECTOR_BYTES)
+    if state != "present":
+        return []
+    try:
+        text = path.read_text(encoding="ascii")
+    except UnicodeDecodeError as error:
+        raise CaptureError("late selector-dispatch receipt is not ASCII recorder output") from error
+    if not text.endswith("\n"):
+        raise CaptureError("late selector-dispatch receipt has a truncated final record")
+    records: list[tuple[int, int, int, int, int, int, int]] = []
+    previous_cycle = -1
+    previous_raw = 0
+    previous_input = LATE_INPUT_START_ORDINAL - 1
+    for expected, line in enumerate(text.splitlines(keepends=True), start=1):
+        match = LATE_SELECTOR_DISPATCH_LINE.fullmatch(line)
+        if not match:
+            raise CaptureError("late selector-dispatch receipt contains an invalid recorder record")
+        ordinal, raw_ordinal, cycles = int(match.group(1)), int(match.group(2)), int(match.group(3))
+        cell_a, cell_b = int(match.group(4), 16), int(match.group(5), 16)
+        input_ordinal, input_frame = int(match.group(6)), int(match.group(7))
+        if ordinal != expected or ordinal > MAX_LATE_SELECTOR_RECORDS:
+            raise CaptureError("late selector-dispatch ordinals exceed the reviewed sample cap")
+        if raw_ordinal <= previous_raw or cycles < previous_cycle:
+            raise CaptureError("late selector-dispatch order is not monotonic")
+        if not LATE_INPUT_START_ORDINAL <= input_ordinal <= MAX_INPUT_RECEIPT_RECORDS:
+            raise CaptureError("late selector-dispatch input ordinal is outside the late window")
+        if input_ordinal <= previous_input:
+            raise CaptureError("late selector-dispatch repeats an input ordinal")
+        records.append((ordinal, raw_ordinal, cycles, cell_a, cell_b, input_ordinal, input_frame))
+        previous_raw, previous_cycle, previous_input = raw_ordinal, cycles, input_ordinal
+    return records
+
+
+def late_selector_dispatch_status(
+    dispatch_path: Path, raw_path: Path, input_path: Path, late_version: str = "v19"
+) -> str:
+    """Require a one-to-one join from late selector PCs to late cell reads."""
+    state, identity = _optional_bounded_file(
+        dispatch_path, "late selector-dispatch receipt", MAX_LATE_SELECTOR_BYTES)
+    raw_state, _ = _optional_bounded_file(raw_path, "late raw-PC receipt", MAX_LATE_RAW_BYTES)
+    raw_records = parse_late_raw_pc_receipt(raw_path, late_version) if raw_state == "present" else []
+    raw_links = [(record, cycles, input_ordinal, input_frame)
+                 for record, cycles, site, input_ordinal, input_frame in raw_records
+                 if site == 0x0001FBE6]
+    if state != "present":
+        if raw_links:
+            raise CaptureError("late selector-dispatch receipt omits a reached raw-PC site")
+        return f"late_selector_dispatch={state}\nlate_selector_dispatch_format=v1\nlate_selector_dispatch_records=0\n"
+    records = parse_late_selector_dispatch(dispatch_path)
+    dispatch_links = [(record[1], record[2], record[5], record[6]) for record in records]
+    if dispatch_links != raw_links:
+        raise CaptureError("late selector-dispatch rows do not match late raw-PC chronology")
+    events = dict(parse_host_input_records(input_path))
+    for _, _, _, _, _, input_ordinal, input_frame in records:
+        if events.get(input_ordinal) != input_frame:
+            raise CaptureError("late selector-dispatch chronology does not match host input")
+    if not records:
+        return "late_selector_dispatch=empty\nlate_selector_dispatch_format=v1\nlate_selector_dispatch_records=0\n"
+    assert identity is not None
+    digest, size = identity
+    return ("late_selector_dispatch=present\nlate_selector_dispatch_format=v1\n"
+            f"late_selector_dispatch_sha256={digest}\nlate_selector_dispatch_bytes={size}\n"
+            f"late_selector_dispatch_records={len(records)}\n"
+            f"late_selector_dispatch_raw_pc_links={len(dispatch_links)}\n"
+            f"late_selector_dispatch_input_links={len(records)}\n"
+            f"late_selector_dispatch_last_input_ordinal={records[-1][5]}\n"
+            "late_selector_dispatch_input_chronology=linked\n"
+            f"late_selector_dispatch_input_chronology_records={len(records)}\n")
+
+
+def _read_zero_route_observation(path: Path) -> tuple[str, bytes]:
+    """Read the small schema-31 sidecar without following links or trusting stat alone."""
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return "absent", b""
+    except OSError as error:
+        raise CaptureError(f"zero-route observation is unavailable: {error}") from error
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError("zero-route observation is not a regular non-symlink file")
+    if info.st_size > MAX_ZERO_ROUTE_OBSERVATION_BYTES:
+        raise CaptureError("zero-route observation exceeds the bounded recorder contract")
+    try:
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
+        with os.fdopen(fd, "rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise CaptureError("zero-route observation must remain a regular file")
+            payload = stream.read(MAX_ZERO_ROUTE_OBSERVATION_BYTES + 1)
+    except OSError as error:
+        raise CaptureError(f"zero-route observation is unavailable: {error}") from error
+    if len(payload) > MAX_ZERO_ROUTE_OBSERVATION_BYTES:
+        raise CaptureError("zero-route observation exceeds the bounded recorder contract")
+    return ("empty" if not payload else "present"), payload
+
+
+def _zero_route_observation_records(payload: bytes) -> list[dict[str, int]]:
+    """Parse exact v21 rows, retaining opaque machine state without gameplay claims."""
+    try:
+        text = payload.decode("ascii")
+    except UnicodeDecodeError as error:
+        raise CaptureError("zero-route observation is not ASCII recorder output") from error
+    if not text.endswith("\n"):
+        raise CaptureError("zero-route observation has a truncated final record")
+    records: list[dict[str, int]] = []
+    previous_cycles = -1
+    previous_input_ordinal = 0
+    previous_input_frame = -1
+    for expected, line in enumerate(text.splitlines(keepends=True), start=1):
+        match = ZERO_ROUTE_OBSERVATION_LINE.fullmatch(line)
+        if not match:
+            raise CaptureError("zero-route observation contains an invalid recorder record")
+        # Record, cycles, PC, input ordinal, input frame, D0..D7, A0/A1/A2/A4,
+        # selector cells, memory address, width, value and valid flag.
+        names = ("record", "cycles", "pc", "input_ordinal", "input_frame",
+                 *(f"d{i}" for i in range(8)), "a0", "a1", "a2", "a4",
+                 "cell_1f98c", "cell_1f98e", "cells_valid", "mem_addr", "mem_width", "mem_value", "mem_valid")
+        # Width and validity are decimal fields, unlike the surrounding hex fields.
+        values = []
+        try:
+            for index, value in enumerate(match.groups()):
+                if index in {0, 1, 3, 4, 19, 21, 23}:
+                    values.append(int(value))
+                else:
+                    values.append(int(value, 16))
+        except ValueError as error:
+            raise CaptureError("zero-route observation contains an out-of-range integer") from error
+        if len(names) != len(values):
+            raise CaptureError("zero-route observation field count is invalid")
+        record = dict(zip(names, values))
+        if record["record"] != expected:
+            raise CaptureError("zero-route observation ordinals are not contiguous")
+        if record["cycles"] > 0xFFFFFFFFFFFFFFFF:
+            raise CaptureError("zero-route observation cycle count exceeds the reviewed range")
+        if record["input_ordinal"] > MAX_INPUT_RECEIPT_RECORDS:
+            raise CaptureError("zero-route observation input ordinal exceeds the recorder cap")
+        if not -(1 << 63) <= record["input_frame"] < (1 << 63):
+            raise CaptureError("zero-route observation input frame exceeds the signed-64 range")
+        if record["cycles"] < previous_cycles:
+            raise CaptureError("zero-route observation cycles are not monotonic")
+        if record["input_ordinal"] < previous_input_ordinal:
+            raise CaptureError("zero-route observation input ordinals are not monotonic")
+        if record["input_frame"] < previous_input_frame:
+            raise CaptureError("zero-route observation input frames are not monotonic")
+        if record["pc"] not in ZERO_ROUTE_OBSERVATION_SITES:
+            raise CaptureError("zero-route observation uses an unreviewed probe site")
+        if record["cells_valid"] != int(record["pc"] in {
+                0x0001FC22, 0x0001FC28, 0x0001FC2C}):
+            raise CaptureError("zero-route selector-cell validity does not match the probe site")
+        if record["mem_valid"] not in {0, 1}:
+            raise CaptureError("zero-route observation memory-valid flag is invalid")
+        if record["mem_width"] and record["mem_value"] >= 1 << (record["mem_width"] * 8):
+            raise CaptureError("zero-route observation value exceeds its memory width")
+        if (record["mem_width"] == 0) != (record["mem_valid"] == 0):
+            # $1fc74 is an intended CPU write: width is one but the bus-side
+            # memory readback is intentionally marked invalid there.
+            if record["pc"] != 0x0001FC74:
+                raise CaptureError("zero-route observation memory validity/width mismatch")
+        if record["mem_width"] == 0 and (record["mem_addr"] or record["mem_value"]):
+            raise CaptureError("zero-route no-access record carries memory data")
+        if len(records) >= MAX_ZERO_ROUTE_OBSERVATION_RECORDS:
+            raise CaptureError("zero-route observation exceeds the recorder record cap")
+        records.append(record)
+        previous_cycles = record["cycles"]
+        previous_input_ordinal = record["input_ordinal"]
+        previous_input_frame = record["input_frame"]
+    return records
+
+
+def _validate_zero_route_memory(record: dict[str, int], last_write: tuple[int, int] | None) -> None:
+    """Enforce the exact observed memory shape at each reviewed instruction PC."""
+    pc = record["pc"]
+    address, width, value, valid = (record["mem_addr"], record["mem_width"],
+                                    record["mem_value"], record["mem_valid"])
+    fixed_reads = {
+        0x0001FC22: (0x0001F98E, 1),
+        0x0001FC42: (0x0001F99C, 4),
+        0x0001FC4A: (0x0001F974, 4),
+        0x0001FC50: (0x0001F96C, 4),
+        0x0001FC56: (0x0001F970, 4),
+        0x0001FC88: (0x0001F9A0, 4),
+        0x0001FC8E: (0x0001F974, 4),
+        0x0001FC94: (0x0001F974, 4),
+    }
+    if pc in {0x0001FC28, 0x0001FC2C, 0x0001FC9A}:
+        if (address, width, value, valid) != (0, 0, 0, 0):
+            raise CaptureError("zero-route branch/return site must have no memory access")
+    elif pc in fixed_reads:
+        expected_address, expected_width = fixed_reads[pc]
+        if (address, width, valid) != (expected_address, expected_width, 1):
+            raise CaptureError("zero-route fixed-cell read has the wrong address or width")
+        if width == 1 and pc == 0x0001FC22 and value != record["cell_1f98e"]:
+            raise CaptureError("zero-route selector-cell read does not match its sample")
+    elif pc == 0x0001FC5E:
+        if (address, width, valid) != (record["a0"], 1, 1):
+            raise CaptureError("zero-route glyph read does not match A0")
+    elif pc == 0x0001FC6A:
+        if (address, width, valid) != (record["a1"], 2, 1):
+            raise CaptureError("zero-route first mask read does not match A1")
+    elif pc == 0x0001FC6C:
+        if (address, width, valid) != (record["a2"], 2, 1):
+            raise CaptureError("zero-route second mask read does not match A2")
+    elif pc == 0x0001FC74:
+        if (address, width, value, valid) != (record["a4"], 1, record["d2"] & 0xFF, 0):
+            raise CaptureError("zero-route intended byte write does not match A4 and D2")
+    elif pc == 0x0001FC76:
+        if (address, width, valid) != (record["a4"], 1, 1):
+            raise CaptureError("zero-route destination readback does not match A4")
+        if last_write != (address, value):
+            raise CaptureError("zero-route destination readback differs from the preceding intended write")
+
+
+def _read_zero_route_host_input(path: Path) -> dict[int, int]:
+    """Read only the bounded regular receipt needed to verify sample chronology."""
+    try:
+        info = path.lstat()
+        if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+            raise CaptureError("host-input receipt is not a regular non-symlink file")
+        if info.st_size > MAX_INPUT_RECEIPT_BYTES:
+            raise CaptureError("host-input receipt exceeds the bounded recorder contract")
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
+        with os.fdopen(fd, "rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise CaptureError("host-input receipt must remain a regular file")
+            payload = stream.read(MAX_INPUT_RECEIPT_BYTES + 1)
+    except OSError as error:
+        raise CaptureError(f"host-input receipt is unavailable: {error}") from error
+    if len(payload) > MAX_INPUT_RECEIPT_BYTES:
+        raise CaptureError("host-input receipt exceeds the bounded recorder contract")
+    try:
+        text = payload.decode("ascii")
+    except UnicodeDecodeError as error:
+        raise CaptureError("host-input receipt is not ASCII recorder output") from error
+    if not text.endswith("\n"):
+        raise CaptureError("host-input receipt has a truncated final record")
+    events: dict[int, int] = {}
+    for expected, line in enumerate(text.splitlines(keepends=True), start=1):
+        match = HOST_INPUT_LINE.fullmatch(line)
+        if not match:
+            raise CaptureError("host-input receipt contains an invalid recorder record")
+        try:
+            ordinal, frame = int(match.group(1)), int(match.group(2))
+        except ValueError as error:
+            raise CaptureError("host-input receipt contains an out-of-range integer") from error
+        if ordinal != expected:
+            raise CaptureError("host-input receipt contains an invalid recorder record")
+        events[expected] = frame
+        if len(events) > MAX_INPUT_RECEIPT_RECORDS:
+            raise CaptureError("host-input receipt exceeds the recorder record cap")
+    return events
+
+
+def parse_zero_route_observation(path: Path, input_path: Path) -> list[list[dict[str, int]]]:
+    """Validate complete zero-route invocations and their recorder-confirmed input chronology."""
+    state, payload = _read_zero_route_observation(path)
+    if state != "present":
+        return []
+    records = _zero_route_observation_records(payload)
+    input_events = _read_zero_route_host_input(input_path)
+    return _validate_zero_route_invocations(records, input_events)
+
+
+def _validate_zero_route_invocations(
+    records: list[dict[str, int]], input_events: dict[int, int]
+) -> list[list[dict[str, int]]]:
+    """Join one bounded sidecar parse to host input and verify complete route shape."""
+    for record in records:
+        if input_events.get(record["input_ordinal"]) != record["input_frame"]:
+            raise CaptureError("zero-route observation chronology does not match the host-input receipt")
+    row_group = [0x0001FC5E]
+    for _ in range(4):
+        row_group.extend((0x0001FC6A, 0x0001FC6C, 0x0001FC74, 0x0001FC76))
+    invocation_pcs = [0x0001FC22, 0x0001FC28, 0x0001FC2C, 0x0001FC42, 0x0001FC4A,
+                      0x0001FC50, 0x0001FC56]
+    for _ in range(8):
+        invocation_pcs.extend(row_group)
+    invocation_pcs.extend((0x0001FC88, 0x0001FC8E, 0x0001FC94, 0x0001FC9A))
+    invocation_size = len(invocation_pcs)
+    if len(records) % invocation_size:
+        raise CaptureError("zero-route observation does not contain a complete start-through-return invocation")
+    invocation_count = len(records) // invocation_size
+    if invocation_count > MAX_ZERO_ROUTE_OBSERVATION_INVOCATIONS:
+        raise CaptureError("zero-route observation exceeds the invocation cap")
+    invocations: list[list[dict[str, int]]] = []
+    for offset in range(0, len(records), invocation_size):
+        invocation = records[offset:offset + invocation_size]
+        if [record["pc"] for record in invocation] != invocation_pcs:
+            raise CaptureError("zero-route observation PC sequence is not a complete reviewed invocation")
+        last_write: tuple[int, int] | None = None
+        for record in invocation:
+            if record["pc"] in {0x0001FC22, 0x0001FC28, 0x0001FC2C}:
+                if record["cell_1f98c"] != 0 or record["cell_1f98e"] != 0:
+                    raise CaptureError("zero-route entry does not sample both selector cells as zero")
+            _validate_zero_route_memory(record, last_write)
+            if record["pc"] == 0x0001FC74:
+                last_write = (record["mem_addr"], record["mem_value"])
+            elif record["pc"] == 0x0001FC76:
+                last_write = None
+        invocations.append(invocation)
+    return invocations
+
+
+def zero_route_observation_status(path: Path, input_path: Path) -> str:
+    """Bind the diagnostic-only sidecar's exact bytes, rows and complete invocations."""
+    state, payload = _read_zero_route_observation(path)
+    if state == "absent":
+        return ("zero_route_observation=absent\nzero_route_observation_format=v1\n"
+                "zero_route_observation_records=0\nzero_route_observation_invocations=0\n")
+    if state == "empty":
+        return ("zero_route_observation=empty\nzero_route_observation_format=v1\n"
+                "zero_route_observation_records=0\nzero_route_observation_invocations=0\n")
+    records = _zero_route_observation_records(payload)
+    invocations = _validate_zero_route_invocations(records, _read_zero_route_host_input(input_path))
+    digest = hashlib.sha256(payload).hexdigest()
+    records = sum(len(invocation) for invocation in invocations)
+    return ("zero_route_observation=present\nzero_route_observation_format=v1\n"
+            f"zero_route_observation_sha256={digest}\nzero_route_observation_bytes={len(payload)}\n"
+            f"zero_route_observation_records={records}\n"
+            f"zero_route_observation_invocations={len(invocations)}\n")
+
+
+def raw_pc_input_chronology_status(raw_path: Path, input_path: Path, raw_format: str = "v9") -> str:
     """Cross-bind v9 CPU samples to prior recorder-confirmed host delivery."""
-    links = parse_raw_pc_input_links(raw_path)
+    links = parse_raw_pc_input_links(raw_path, raw_format)
     if not any(ordinal for ordinal, _ in links):
         return "raw_pc_input_chronology=none\n"
     by_ordinal = dict(parse_host_input_records(input_path))
@@ -491,6 +1089,119 @@ def raw_pc_input_chronology_status(raw_path: Path, input_path: Path) -> str:
             raise CaptureError("raw_pc input chronology does not match the host-input receipt")
     return ("raw_pc_input_chronology=linked\n"
             f"raw_pc_input_chronology_records={sum(ordinal != 0 for ordinal, _ in links)}\n")
+
+
+def parse_selector_dispatch_receipt(
+    path: Path,
+) -> list[tuple[int, int, int, int, int, int, int]]:
+    """Validate v17's bounded byte-cell samples without assigning meaning."""
+    try:
+        info = path.lstat()
+    except OSError as error:
+        raise CaptureError(f"selector-dispatch receipt is unavailable: {error}") from error
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError("selector-dispatch receipt is not a regular non-symlink file")
+    if info.st_size > MAX_SELECTOR_DISPATCH_BYTES:
+        raise CaptureError("selector-dispatch receipt exceeds the bounded recorder contract")
+    try:
+        text = path.read_text(encoding="ascii")
+    except UnicodeDecodeError as error:
+        raise CaptureError("selector-dispatch receipt is not ASCII recorder output") from error
+    if not text.endswith("\n"):
+        raise CaptureError("selector-dispatch receipt has a truncated final record")
+    records: list[tuple[int, int, int, int, int, int, int]] = []
+    previous_cycle = -1
+    previous_raw_ordinal = 0
+    previous_input_ordinal = 0
+    phase_counts = [0, 0]
+    for expected, line in enumerate(text.splitlines(keepends=True), start=1):
+        match = SELECTOR_DISPATCH_LINE.fullmatch(line)
+        if not match:
+            raise CaptureError("selector-dispatch receipt contains an invalid recorder record")
+        (ordinal, raw_ordinal, cycles, cell_1f98c, cell_1f98e,
+         input_ordinal, input_frame) = (int(match.group(1)), int(match.group(2)),
+                                       int(match.group(3)), int(match.group(4), 16),
+                                       int(match.group(5), 16), int(match.group(6)),
+                                       int(match.group(7)))
+        if ordinal != expected:
+            raise CaptureError("selector-dispatch receipt ordinals are not contiguous")
+        if cycles < previous_cycle or raw_ordinal <= previous_raw_ordinal:
+            raise CaptureError("selector-dispatch order is not monotonic")
+        if input_ordinal < previous_input_ordinal or input_ordinal > MAX_INPUT_RECEIPT_RECORDS:
+            raise CaptureError("selector-dispatch input ordinal is invalid")
+        if input_ordinal == 0 and input_frame != 0:
+            raise CaptureError("selector-dispatch no-input sample must use frame zero")
+        phase = 1 if input_ordinal else 0
+        phase_counts[phase] += 1
+        if phase_counts[phase] > 128:
+            raise CaptureError("selector-dispatch exceeds the per-phase sample cap")
+        records.append((ordinal, raw_ordinal, cycles, cell_1f98c, cell_1f98e,
+                        input_ordinal, input_frame))
+        previous_cycle = cycles
+        previous_raw_ordinal = raw_ordinal
+        previous_input_ordinal = input_ordinal
+        if len(records) > MAX_SELECTOR_DISPATCH_RECORDS:
+            raise CaptureError("selector-dispatch exceeds the recorder record cap")
+    return records
+
+
+def selector_dispatch_status(
+    dispatch_path: Path,
+    raw_path: Path,
+    input_path: Path,
+    raw_format: str = "v9-v16-phased",
+) -> str:
+    """Hash and cross-bind v17 selector cells to raw-PC and host chronology."""
+    try:
+        info = dispatch_path.lstat()
+    except FileNotFoundError:
+        info = None
+    if info is not None and (stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode)):
+        raise CaptureError("selector-dispatch receipt is not a regular non-symlink file")
+    if info is not None and info.st_size > MAX_SELECTOR_DISPATCH_BYTES:
+        raise CaptureError("selector-dispatch receipt exceeds the bounded recorder contract")
+
+    raw_site_links: list[tuple[int, int, int, int]] = []
+    if raw_path.exists():
+        try:
+            raw_text = raw_path.read_text(encoding="ascii")
+        except UnicodeDecodeError as error:
+            raise CaptureError("raw_pc is not ASCII recorder output") from error
+        for line in raw_text.splitlines(keepends=True):
+            match = RAW_PC_V9_LINE.fullmatch(line)
+            if not match:
+                raise CaptureError("raw_pc contains an invalid recorder record")
+            if int(match.group(3), 16) == 0x1FBE6:
+                raw_site_links.append((int(match.group(1)), int(match.group(2)),
+                                       int(match.group(10)), int(match.group(11))))
+
+    if info is None:
+        if raw_site_links:
+            raise CaptureError("selector-dispatch receipt is missing samples present in raw_pc")
+        return "selector_dispatch=absent\n"
+    if info.st_size == 0:
+        if raw_site_links:
+            raise CaptureError("selector-dispatch receipt omits reached raw_pc samples")
+        return "selector_dispatch=empty\n"
+
+    records = parse_selector_dispatch_receipt(dispatch_path)
+    dispatch_links = [(record[1], record[2], record[5], record[6]) for record in records]
+    if dispatch_links != raw_site_links:
+        raise CaptureError("selector-dispatch records do not match raw_pc chronology")
+    host_events = dict(parse_host_input_records(input_path))
+    for _, _, _, _, _, input_ordinal, input_frame in records:
+        if input_ordinal and host_events.get(input_ordinal) != input_frame:
+            raise CaptureError("selector-dispatch chronology does not match host input")
+    digest, size = sha256_file(dispatch_path)
+    linked = sum(record[5] != 0 for record in records)
+    return ("selector_dispatch=present\n"
+            f"selector_dispatch_sha256={digest}\n"
+            f"selector_dispatch_bytes={size}\n"
+            f"selector_dispatch_records={len(records)}\n"
+            f"selector_dispatch_raw_pc_links={len(dispatch_links)}\n"
+            f"selector_dispatch_input_links={linked}\n"
+            f"selector_dispatch_last_input_ordinal={records[-1][5]}\n"
+            f"selector_dispatch_input_chronology={'linked' if linked else 'none'}\n")
 
 
 def _validate_title_display_input_links(links: list[tuple[int, int]], input_path: Path) -> str:
@@ -589,6 +1300,98 @@ def title_display_receipt_status(path: Path, input_path: Path) -> str:
             f"title_display_input_chronology_records={sum(ordinal != 0 for ordinal, _ in links)}\n")
 
 
+def parse_late_display_receipt(path: Path) -> list[tuple[int, int, int, int, int, int, int]]:
+    """Validate a separately bounded post-intro display-write sidecar."""
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return []
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError("late-display receipt is not a regular non-symlink file")
+    if info.st_size > MAX_LATE_DISPLAY_RECEIPT_BYTES:
+        raise CaptureError("late-display receipt exceeds the bounded recorder contract")
+    try:
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                     | getattr(os, "O_NONBLOCK", 0))
+        with os.fdopen(fd, "rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise CaptureError("late-display receipt must remain a regular file")
+            payload = stream.read(MAX_LATE_DISPLAY_RECEIPT_BYTES + 1)
+    except OSError as error:
+        raise CaptureError(f"late-display receipt is unavailable: {error}") from error
+    if len(payload) > MAX_LATE_DISPLAY_RECEIPT_BYTES:
+        raise CaptureError("late-display receipt exceeds the bounded recorder contract")
+    try:
+        text = payload.decode("ascii")
+    except UnicodeDecodeError as error:
+        raise CaptureError("late-display receipt is not ASCII recorder output") from error
+    if not text:
+        return []
+    if not text.endswith("\n"):
+        raise CaptureError("late-display receipt has a truncated final record")
+    records: list[tuple[int, int, int, int, int, int, int]] = []
+    counts: dict[int, int] = {}
+    previous_cycles = -1
+    previous_input = 20
+    for expected, line in enumerate(text.splitlines(keepends=True), start=1):
+        match = LATE_DISPLAY_WRITE_LINE.fullmatch(line)
+        if not match:
+            raise CaptureError("late-display receipt contains an invalid recorder record")
+        ordinal, cycles, vpos, hpos = (int(match.group(i)) for i in range(1, 5))
+        register = int(match.group(6), 16)
+        input_ordinal, input_frame = int(match.group(8)), int(match.group(9))
+        if ordinal != expected:
+            raise CaptureError("late-display receipt ordinals are not contiguous")
+        if cycles < previous_cycles:
+            raise CaptureError("late-display receipt cycles are not monotonic")
+        if vpos > 0xffff or hpos > 0xffff:
+            raise CaptureError("late-display position exceeds the reviewed range")
+        if register not in TITLE_DISPLAY_REGISTERS:
+            raise CaptureError("late-display receipt writes an unreviewed display register")
+        if not 20 < input_ordinal <= MAX_INPUT_RECEIPT_RECORDS:
+            raise CaptureError("late-display receipt is outside the later-input window")
+        if input_ordinal < previous_input:
+            raise CaptureError("late-display input ordinals are not monotonic")
+        counts[register] = counts.get(register, 0) + 1
+        if counts[register] > MAX_LATE_DISPLAY_WRITES_PER_REGISTER:
+            raise CaptureError("late-display receipt exceeds the per-register recorder cap")
+        records.append((ordinal, cycles, vpos, hpos, register, input_ordinal, input_frame))
+        if len(records) > MAX_LATE_DISPLAY_WRITES:
+            raise CaptureError("late-display receipt exceeds the recorder record cap")
+        previous_cycles, previous_input = cycles, input_ordinal
+    return records
+
+
+def late_display_receipt_status(path: Path, input_path: Path) -> str:
+    """Bind post-ordinal-20 display writes to exact host-delivery chronology."""
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return "late_display=absent\nlate_display_format=v1\nlate_display_records=0\n"
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError("late-display receipt is not a regular non-symlink file")
+    if info.st_size > MAX_LATE_DISPLAY_RECEIPT_BYTES:
+        raise CaptureError("late-display receipt exceeds the bounded recorder contract")
+    if info.st_size == 0:
+        return "late_display=empty\nlate_display_format=v1\nlate_display_records=0\n"
+    records = parse_late_display_receipt(path)
+    links = [(record[5], record[6]) for record in records]
+    _validate_title_display_input_links(links, input_path)
+    counts: dict[int, int] = {}
+    for record in records:
+        counts[record[4]] = counts.get(record[4], 0) + 1
+    digest, size = sha256_file(path)
+    register_counts = ",".join(f"0x{reg:04x}:{counts[reg]}" for reg in sorted(counts))
+    return ("late_display=present\nlate_display_format=v1\n"
+            f"late_display_sha256={digest}\nlate_display_bytes={size}\n"
+            f"late_display_records={len(records)}\n"
+            f"late_display_register_counts={register_counts}\n"
+            f"late_display_first_input_ordinal={records[0][5]}\n"
+            f"late_display_last_input_ordinal={records[-1][5]}\n"
+            "late_display_input_chronology=linked\n"
+            f"late_display_input_chronology_records={len(records)}\n")
+
+
 def capture_bounded_console(stream, path: Path, over_limit: threading.Event) -> RecorderConsoleStatus:
     """Drain a console into fixed storage and signal if its total safety cap trips.
 
@@ -647,7 +1450,10 @@ def recorder_config(disk1: Path, disk2: Path, kickstart: Path, output: Path,
         "amiga_model = A500",
         f"kickstart_file = {kickstart}",
         f"floppy_drive_0 = {disk1}",
-        f"floppy_drive_1 = {disk2}",
+        # Keep DF1 empty so disk 2 remains available for the game's explicit
+        # disk-in-DF0 prompt through FS-UAE's ordinary removable-media menu.
+        f"floppy_image_0 = {disk1}",
+        f"floppy_image_1 = {disk2}",
         "floppy_write_protect = 1",
         f"base_dir = {output / 'runtime'}",
         f"logs_dir = {output / 'logs'}",
@@ -657,6 +1463,9 @@ def recorder_config(disk1: Path, disk2: Path, kickstart: Path, output: Path,
         "window_height = 512",
         "console_debugger = 0",
         "use_debugger = 0",
+        # A VNC-visible physical F10 press inserts the already-mounted,
+        # read-only second disk into DF0 without relying on the F12 menu.
+        "keyboard_key_f10 = action_drive_0_insert_floppy_1",
         "uae_sound_output = interrupts",
         f"warp_mode = {warp_mode}",
         "",
@@ -717,6 +1526,26 @@ def run_capture(args: argparse.Namespace) -> Path:
         if disk2_source is not None else None)
     kickstart_before = validate_identity(kickstart, "Kickstart archive", EXPECTED_KICKSTART_SHA256, EXPECTED_KICKSTART_SIZE)
     recorder_identity = validate_recorder(recorder)
+    is_v17 = recorder_identity[0] == TRV2_RECORDER_V17_SHA256
+    is_v18 = recorder_identity[0] == TRV2_RECORDER_V18_SHA256
+    is_v19 = recorder_identity[0] == TRV2_RECORDER_V19_SHA256
+    is_v20 = recorder_identity[0] == TRV2_RECORDER_V20_SHA256
+    is_v21 = recorder_identity[0] == TRV2_RECORDER_V21_SHA256
+    is_v22 = recorder_identity[0] == TRV2_RECORDER_V22_SHA256
+    has_late_input_sidecars = is_v19 or is_v20 or is_v21 or is_v22
+    is_v16 = recorder_identity[0] == TRV2_RECORDER_V16_SHA256
+    phased_raw = is_v16 or is_v17 or is_v18 or is_v19 or is_v20 or is_v21 or is_v22
+    raw_format = ("v9-v19-phased" if is_v19 or is_v20 or is_v21 or is_v22 else
+                  "v9-v18-phased" if is_v18 else
+                  "v9-v16-phased" if phased_raw else "v9")
+    receipt_version = (CAPTURE_RECEIPT_V22_VERSION if is_v22 else
+                       CAPTURE_RECEIPT_V21_VERSION if is_v21 else
+                       CAPTURE_RECEIPT_V20_VERSION if is_v20 else
+                       CAPTURE_RECEIPT_V19_VERSION if is_v19 else
+                       CAPTURE_RECEIPT_V18_VERSION if is_v18 else
+                       CAPTURE_RECEIPT_V17_VERSION if is_v17 else
+                       CAPTURE_RECEIPT_V16_PHASED_VERSION if is_v16 else
+                       CAPTURE_RECEIPT_VERSION)
     output.mkdir(mode=0o700)
     mounts = [output / name for name in ("release-outer-ro", "disk1-ro", "disk2-ro", "kickstart-ro")]
     for index, mountpoint in enumerate(mounts):
@@ -763,7 +1592,27 @@ def run_capture(args: argparse.Namespace) -> Path:
             "PROJECT_EON_FS_UAE_INPUT_RECORD": str(output / "host-input-receipt.txt"),
             "PROJECT_EON_FS_UAE_DISPLAY_RECORD": str(output / "title-display.txt"),
         })
-        for instruction in capture_operator_instructions(args.capture_intent):
+        environment.pop("PROJECT_EON_FS_UAE_SELECTOR_DISPATCH_RECORD", None)
+        environment.pop("PROJECT_EON_FS_UAE_LATE_RAW_RECORD", None)
+        environment.pop("PROJECT_EON_FS_UAE_LATE_SELECTOR_RECORD", None)
+        if is_v17 or is_v18:
+            environment["PROJECT_EON_FS_UAE_SELECTOR_DISPATCH_RECORD"] = str(
+                output / "selector-dispatch.txt")
+        if has_late_input_sidecars:
+            environment["PROJECT_EON_FS_UAE_LATE_RAW_RECORD"] = str(
+                output / "late-input-pc.txt")
+            environment["PROJECT_EON_FS_UAE_LATE_SELECTOR_RECORD"] = str(
+                output / "late-selector-dispatch.txt")
+        if is_v22:
+            environment["PROJECT_EON_FS_UAE_LATE_DISPLAY_RECORD"] = str(
+                output / "late-display.txt")
+        else:
+            environment.pop("PROJECT_EON_FS_UAE_LATE_DISPLAY_RECORD", None)
+        if is_v21 or is_v22:
+            environment["PROJECT_EON_FS_UAE_ZERO_ROUTE_RECORD"] = str(
+                output / "zero-route-observation.txt")
+        for instruction in capture_operator_instructions(
+                args.capture_intent, late_sampling=has_late_input_sidecars):
             print(instruction)
         print(f"The {args.focus_settle_seconds}-second focus-settle window begins now; the {args.duration_seconds}-second capture window follows.")
         started = time.time()
@@ -839,13 +1688,36 @@ def run_capture(args: argparse.Namespace) -> Path:
                                               live_input_observed)
         raw_path = output / "raw-pc.txt"
         input_path = output / "host-input-receipt.txt"
-        observation_status = raw_observation_status(raw_path, "raw_pc", "v9")
-        chronology_status = (raw_pc_input_chronology_status(raw_path, input_path)
+        observation_status = raw_observation_status(raw_path, "raw_pc", raw_format)
+        chronology_status = (raw_pc_input_chronology_status(raw_path, input_path, raw_format)
                              if "raw_pc=present\n" in observation_status else "")
         display_status = title_display_receipt_status(output / "title-display.txt", input_path)
+        selector_status = (selector_dispatch_status(
+            output / "selector-dispatch.txt", raw_path, input_path, raw_format)
+            if is_v17 or is_v18 else "")
+        late_version = "v20" if is_v20 or is_v21 else "v19"
+        late_status = (late_raw_pc_status(
+                           output / "late-input-pc.txt", input_path, late_version)
+                       + late_selector_dispatch_status(
+                           output / "late-selector-dispatch.txt",
+                           output / "late-input-pc.txt", input_path, late_version)
+                       if has_late_input_sidecars else "")
+        zero_route_status = (zero_route_observation_status(
+            output / "zero-route-observation.txt", input_path) if is_v21 or is_v22 else "")
+        late_display_status = (late_display_receipt_status(
+            output / "late-display.txt", input_path) if is_v22 else "")
         write_exclusive(output / "run-status.txt",
-                        f"capture_receipt_version={CAPTURE_RECEIPT_VERSION}\n"
-                        f"source_layout={source_layout}\n"
+                        f"capture_receipt_version={receipt_version}\n"
+                        + ("recorder_protocol=deuteros-amiga-fsuae-v22\n" if is_v22 else
+                           "recorder_protocol=deuteros-amiga-fsuae-v21\n" if is_v21 else
+                           "recorder_protocol=deuteros-amiga-fsuae-v20\n" if is_v20 else
+                           "recorder_protocol=deuteros-amiga-fsuae-v19\n" if is_v19 else
+                           "recorder_protocol=deuteros-amiga-fsuae-v18\n" if is_v18 else
+                           "recorder_protocol=deuteros-amiga-fsuae-v17\n" if is_v17 else
+                           "recorder_protocol=deuteros-amiga-fsuae-v16\n" if is_v16 else
+                           "recorder_protocol=deuteros-amiga-fsuae-v15\n"
+                           if recorder_identity[0] == TRV2_RECORDER_V15_SHA256 else "")
+                        + f"source_layout={source_layout}\n"
                         f"source_container={'single-outer-zip' if release is not None else 'two-independent-zip-files'}\n"
                         f"content_release_sha256={EXPECTED_RELEASE_SHA256}\n"
                         f"timing_profile={args.timing_profile}\n"
@@ -859,6 +1731,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                         + identity_status("recorder", recorder_identity)
                         + identity_status("configuration", configuration_identity)
                         + intent_status + receipt_status + observation_status + chronology_status + display_status
+                        + selector_status + late_status + zero_route_status + late_display_status
                         + recorder_console_status(console_result[0]))
         if console_result[0].over_limit:
             raise CaptureError(

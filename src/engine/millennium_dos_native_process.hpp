@@ -19,6 +19,7 @@ enum class MillenniumDosNativeProcessState {
     startup_selected_private_interrupt,
     startup_local_return_boundary,
     startup_palette_interrupt_boundary,
+    startup_palette_interrupt_return_observed,
     gx_private_interrupt,
     gx_mode_byte,
     gx_adapter_return,
@@ -30,9 +31,21 @@ enum class MillenniumDosNativeProcessState {
 enum class MillenniumDosNativeBoundaryKind {
     private_interrupt,
     bios_interrupt,
+    observed_bios_interrupt_return,
     runtime_byte,
     native_call_return,
     local_return,
+};
+
+struct MillenniumDosNativeBiosInterruptReturnObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t interrupt_instruction_address = 0;
+    std::uint8_t interrupt_number = 0;
+    std::uint16_t return_code_segment = 0;
+    std::uint16_t return_instruction_pointer = 0;
+    std::uint16_t ax = 0;
+    std::uint16_t flags = 0;
+    constexpr bool operator==(const MillenniumDosNativeBiosInterruptReturnObservation&) const = default;
 };
 
 struct MillenniumDosNativeBoundary {
@@ -63,6 +76,8 @@ public:
     // boundary. Address arguments prevent a result from being replayed at a
     // different INT, call, or native byte read.
     void observe_private_interrupt_return(std::uint16_t address, std::uint16_t ax);
+    void observe_bios_interrupt_return(
+        const MillenniumDosNativeBiosInterruptReturnObservation& observation);
     void observe_runtime_byte(std::uint16_t instruction_address,
         std::uint16_t runtime_address, std::uint8_t value);
     void observe_native_call_return(std::uint16_t call_address,
@@ -70,6 +85,8 @@ public:
 
     [[nodiscard]] std::optional<std::uint8_t> runtime_byte(std::uint16_t address) const;
     [[nodiscard]] std::optional<std::uint8_t> gx_overlay_byte(std::uint16_t offset) const;
+    [[nodiscard]] const std::optional<MillenniumDosNativeBiosInterruptReturnObservation>&
+    startup_bios_return() const { return startup_bios_return_; }
 
 private:
     explicit MillenniumDosNativeProcess(std::span<const std::uint8_t> game_executable);
@@ -82,6 +99,7 @@ private:
         MillenniumDosNativeProcessState::startup_first_private_interrupt;
     std::optional<std::uint16_t> startup_first_ax_;
     std::optional<MillenniumDosEnglishStartupPrefix> startup_prefix_;
+    std::optional<MillenniumDosNativeBiosInterruptReturnObservation> startup_bios_return_;
     std::unique_ptr<MillenniumDosGxStartupSession> gx_session_;
     std::map<std::uint16_t, std::uint8_t> runtime_bytes_;
 };

@@ -171,6 +171,25 @@ MillenniumDosTitleToGameObservationResult NativeSessionController::observe_mille
 MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_title_termination(MillenniumDosTitleToGameInterruptObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_title_termination(o);}
 MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_parent_exec_return(MillenniumDosTitleToGameInterruptObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_parent_exec_return(o);}
 MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_child_status(MillenniumDosTitleToGameInterruptObservation o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Title-to-game observation requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_child_status(o);}
+MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_exec_request(MillenniumDosTitleToGameExecRequest o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"Game EXEC request requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_exec_request(o);}
+MillenniumDosTitleToGameObservationResult NativeSessionController::observe_millennium_dos_title_to_game_process_entry(MillenniumDosTitleToGameProcessEntry o){if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return {false,"2200AD.EXE process entry requires the title-handoff boundary"};return runtime_.observe_millennium_dos_title_to_game_process_entry(o);}
+MillenniumDosNativeProcessObservationResult
+NativeSessionController::observe_millennium_dos_native_private_interrupt_return(
+    MillenniumDosNativePrivateInterruptReturnObservation observation) {
+    if (state_ != NativeSessionState::millennium_dos_title_handoff_boundary) {
+        return {false, "Native INT 91h return requires the active title-handoff boundary"};
+    }
+    return runtime_.observe_millennium_dos_native_private_interrupt_return(observation);
+}
+
+MillenniumDosNativeProcessObservationResult
+NativeSessionController::observe_millennium_dos_native_bios_interrupt_return(
+    const MillenniumDosNativeBiosInterruptReturnObservation observation) {
+    if (state_ != NativeSessionState::millennium_dos_title_handoff_boundary) {
+        return {false, "Native BIOS return requires the active title-handoff boundary"};
+    }
+    return runtime_.observe_millennium_dos_native_bios_interrupt_return(observation);
+}
 std::optional<MillenniumDosTitleToGameCheckpoint> NativeSessionController::millennium_dos_title_to_game_checkpoint()const{if(state_!=NativeSessionState::millennium_dos_title_handoff_boundary)return std::nullopt;return runtime_.millennium_dos_title_to_game_checkpoint();}
 
 std::optional<MillenniumDosStaticDispatchDiagnostics>
@@ -492,6 +511,17 @@ NativeSessionController::drive_deuteros_amiga_session(const std::uint32_t step_l
     synchronize_after_runtime_change();
     return result;
 }
+DeuterosAmigaInterruptWorkerObservationResult
+NativeSessionController::observe_deuteros_amiga_interrupt_worker(
+    DeuterosAmigaInterruptWorkerEntryObservation observation) {
+    if (state_ != NativeSessionState::deuteros_amiga_title_stage_boundary
+        && state_ != NativeSessionState::deuteros_amiga_title_program_entry) {
+        DeuterosAmigaInterruptWorkerObservationResult result;
+        result.error = "Deuteros interrupt worker requires the title-stage session";
+        return result;
+    }
+    return runtime_.observe_deuteros_amiga_interrupt_worker(observation);
+}
 
 ActiveNativeSessionDriveResult
 NativeSessionController::drive_active_native_session(const std::uint32_t step_limit) {
@@ -622,6 +652,8 @@ EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_tail_repeated_wrapper_gra
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_tail_source_table,(const DeuterosAmigaObservedTailSourceTable o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_tail_exec_return,(const DeuterosAmigaObservedTailExecReturn o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_load_service_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
+EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_load_doio_return,(const DeuterosAmigaObservedTitleLoadDoIoReturn o),(o))
+EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_load_doio_status,(const DeuterosAmigaObservedTitleLoadDoIoStatus o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_load_selector,(const DeuterosAmigaObservedLoadSelector o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_load_copy_chunk,(const DeuterosAmigaObservedLoadCopyChunk o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_load_dispatch_table_base,(const DeuterosAmigaObservedLoadDispatchTableBase o),(o))
@@ -681,6 +713,8 @@ EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_join_byte,(
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_1f9a4_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_1fe88_return,(const DeuterosAmigaObservedTitlePostAdjusted1fe88Return o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_final_gate,(const DeuterosAmigaObservedTitlePostAdjustedFinalGate o),(o))
+EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_captured_title_selector_passage,(const std::uint64_t sequence,const std::uint32_t incoming_d0,const std::array<DeuterosAmigaObservedTitleSelectorHelperReturn,2> returns),(sequence,incoming_d0,returns))
+EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_captured_title_selector_dispatch,(const DeuterosAmigaObservedTitleSelectorDispatchRead primary,const std::optional<DeuterosAmigaObservedTitleSelectorDispatchRead> secondary),(primary,secondary))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_input_return,(const DeuterosAmigaObservedTitlePostAdjustedInputReturn o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_adjusted_repeated_input_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_title_tail_copy,(const DeuterosAmigaObservedTitleTailCopy o),(o))
@@ -921,6 +955,17 @@ MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_
 MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_game_init_post_config_fread(const MillenniumAtariGemdosSelector63Observation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Post-config Fread requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_game_init_post_config_fread(o);}
 MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_game_init_post_config_fclose(const MillenniumAtariGemdosSelector62Observation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Post-config Fclose requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_game_init_post_config_fclose(o);}
 MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_game_init_post_config_rts(const MillenniumAtariGameInitSecondConfigRtsObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Post-config RTS requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_game_init_post_config_rts(o);}
+MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_post_config_entry_jump(const MillenniumAtariPostConfigEntryJumpObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Post-config entry jump requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_post_config_entry_jump(o);}
+MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_post_config_status_register(const MillenniumAtariStatusRegisterObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Post-config SR observation requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_post_config_status_register(o);}
+MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_post_config_xbios_26_return(const MillenniumAtariPostConfigXbiosReturnObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Post-config XBIOS return requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_post_config_xbios_26_return(o);}
+MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_post_config_xbios_result(const MillenniumAtariPostConfigXbiosResultObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Post-config XBIOS result requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_post_config_xbios_result(o);}
+MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_post_config_line_a_return(const MillenniumAtariPostConfigLineAObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Post-config Line-A return requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_post_config_line_a_return(o);}
+MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_post_config_local_call(const MillenniumAtariPostConfigLocalCallObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Post-config local call requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_post_config_local_call(o);}
+MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_post_config_crawcin_branch(const MillenniumAtariPostConfigCrawcinBranchObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Post-config Crawcin branch requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_post_config_crawcin_branch(o);}
+MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_post_config_gemdos_fopen(const MillenniumAtariPostConfigFopenObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Post-config GEMDOS Fopen requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_post_config_gemdos_fopen(o);}
+MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_post_config_gemdos_fopen_return(const MillenniumAtariPostConfigFopenReturnObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Post-config GEMDOS Fopen return requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_post_config_gemdos_fopen_return(o);}
+MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_post_config_gemdos_fcreate(const MillenniumAtariPostConfigFcreateObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Post-config GEMDOS Fcreate requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_post_config_gemdos_fcreate(o);}
+MillenniumAtariConfigConsumerResult NativeSessionController::observe_millennium_atari_post_config_gemdos_fcreate_return(const MillenniumAtariPostConfigFcreateReturnObservation o){if(state_!=NativeSessionState::millennium_atari_bootstrap)return{false,"Post-config GEMDOS Fcreate return requires Millennium Atari bootstrap"};return runtime_.observe_millennium_atari_post_config_gemdos_fcreate_return(o);}
 
 void NativeSessionController::begin_return_to_menu() {
     deuteros_amiga_opening_runner_.reset();

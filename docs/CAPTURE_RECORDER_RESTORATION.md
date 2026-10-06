@@ -19,12 +19,54 @@ cache before asking Project Eon to run an evidence capture:
 | Millennium DOS | `v13-title-poll` | `07d80df74d303b519884d37dd474da071b414e98396e8ae030ad89256432521b` | Host-key to original title-poll chronology only |
 | Deuteros Amiga | reviewed FS-UAE v10 | `0e0bfb1fe73a6f37dc38992b39e34e355564adc516106c399c8be86fb38232ec` | Raw PC, host-delivery and title-armed display-write observer |
 | Deuteros Amiga | reviewed FS-UAE v10, trv2 x86_64 | `c6422037df6cadeb50ffaee3bb1c1b56d21722a7c687287d6058d4802943f54b` | Independently reviewed restoration of the same bounded grammar |
+| Deuteros Amiga | reviewed FS-UAE v13, trv2 x86_64 | `e32f337dafdfb30e655f0aa8eb06e37a5dc445a225ec8473da92cad23cf5eb24` | Bounded 22-site raw-PC observer for poll and branch-route reachability; no input meaning inferred |
+| Deuteros Amiga | reviewed FS-UAE v15, trv2 x86_64 | `7160dfafbfe67b17db931065ab6f9853874591ea4af6c33ad51059b2b0f703df` | Bounded 23-site raw-PC observer adds `$1edac` post-load sample; no-input and physical-input captures verified 2026-10-05, but do not reach the new site |
+| Deuteros Amiga | reviewed FS-UAE v16, trv2 x86_64 | `aa4c797fc2e580c887ab6be88a57abe93f6b442ac822870e4840c514898518b4` | 62,015,016-byte successor to v15; adds only raw-PC site `$218cc`; schema-24 no-input diagnostic verified 2026-10-05, but does not reach the new site |
+| Deuteros Amiga | reviewed FS-UAE v18, trv2 x86_64 | `44477a0f41025a6e3f68098eb093fb7a32aebf3b2d1577fb294337a617154a54` | 62,016,152-byte successor to v17; adds raw-PC site `$21866` after the CIA bit-test; schema 28 checks memory opcode `0x6608`; no capture has been run |
+| Deuteros Amiga | reviewed FS-UAE v19, trv2 x86_64 | `7b46501fc3cf774938fc8ca4e02788586ba22ef440462ea7ecd00396311b73a2` | 62,020,024-byte successor; adds separate capped late-input raw-PC and selector sidecars; schema 29 checks chronology and joins; no capture has been run |
+| Deuteros Amiga | reviewed FS-UAE v20, trv2 x86_64 | `071f1c949409be9ff3faa128d0acc98fcde9136c0aa09ab6a6edb058e7fbc397` | 62,020,224-byte successor; schema 30 adds only `$1fc22/$1fc9c` to the bounded late-input sidecar; no capture has been run |
+| Deuteros Amiga | reviewed FS-UAE v21, trv2 x86_64 | `2fc7f47425d0fa005bb59bf41eaeccf32d1cba284dee4f227e7e723b853e1b35` | Schema 31 records a bounded complete zero-route invocation; physical04 verifies but does not establish a game action |
+| Deuteros Amiga | reviewed FS-UAE v22, trv2 x86_64 | `eb0995c70f7f355f674d448b08c0f3e647430562ffde7d179e5aeb12e5abca71` | Schema 32 adds a separate display-register sidecar after host-input ordinal 20; no capture has been run |
+
+The v16 source patch SHA-256 is
+`1fa61e7984fe5535b42c07614be4f10a219323bf8536a3dc271a80c0b6f5f361`.
+It was built from the exact v15 baseline with FS-UAE reporting version
+`3.2.35`. Only `newcpu.o` changed in `libuae.a`; every other archive member
+matched the v15 baseline, and the v15 executable remains preserved. The new
+receipt schema 24 binds the v16 digest and size and uses its own bounded raw-PC
+site set. Schema 23 retains its v9 site set, which rejects `$218cc`, and
+continues to verify historical v10–v15 receipts. A visible 180-second
+no-input diagnostic is admitted under schema 24 but records no `$218cc` sample;
+see the capture status log for its hash and record counts.
 
 The default restoration location is a new directory under
 `$HOME/.cache/project-eon-tools/`, for example
 `$HOME/.cache/project-eon-tools/recorders/`. Do not place a recorder in
 the checkout, `~/.projecteon`, an original-media directory, `/tmp`, or a
 package staging tree.
+
+The v19 source patch is retained on trv2 at
+`/home/trv2/.cache/project-eon-tools/v19-late-window-20261006/v19-source.patch`
+(SHA-256 `f36706a6a4ce8e1c2ffa011392407c9418359052ccac3106a81ea02343eb8b9c`).
+The executable at the same external-cache directory was checked at 62,020,024
+bytes and matched the pin above; it reports FS-UAE 3.2.35. Its `libuae.a`
+member list matches v17 and the retained comparison reports only `newcpu.o`
+changed. Keep the executable bound to schema 29 and use the visible
+manual-input path. The sidecars do not establish guest input acceptance or
+gameplay.
+
+The v20 patch is retained externally at
+`/home/trv2/.cache/project-eon-tools/v20-selector-targets-20261006/v20-source.patch`
+(SHA-256 `cc55f243c54421719ed5b954df47a855d8e5c146a59f315806c1c3cdecfd91de`,
+3,357 bytes). Its x86_64 binary is at
+`/home/trv2/.cache/project-eon-tools/v20-selector-targets-20261006/source-tree/fs-uae`,
+62,020,224 bytes with the pinned SHA-256 above; it reports FS-UAE 3.2.35.
+Compared with the retained v19 `libuae.a`, its 180-member archive changes
+only `newcpu.o`. The observer keeps the 26 established sites in the ordinary
+raw-PC receipt, and adds `$1fc22` and `$1fc9c` only to the post-input sidecar.
+The sidecar remains capped at 96 observations per site and 2,688 total; schema
+30 admits these two additional PCs while schema 29 continues to reject them.
+No emulator capture was run while building or reviewing v20.
 
 ## Locate before running
 
@@ -108,6 +150,18 @@ not ask again for generic emulator installation: normal installed emulators
 are known and insufficient. The recorder boundary can move only when an
 already pinned executable is restored to the scoped cache, or when the exact
 documented digest is produced by the specified reviewed restoration path.
+
+## Local cache recheck (2026-10-02)
+
+The pinned-receipt locators were rerun against the local scoped cache before
+continuing native playability work. The Millennium DOS `v13-title-poll` search
+reported `roots=1`, `hashes-checked=418`, and `reviewed-matches=0`; its
+`v21-int93-installation` search reported `roots=1`, `hashes-checked=549`, and
+`reviewed-matches=0`. The reviewed Deuteros Amiga locator reported
+`roots=1`, `hashes-checked=418`, and `reviewed-matches=0`. No capture was run.
+This local result does not supersede the separately documented pinned Deuteros
+recorder restoration on trv2, and it admits no input, return, frame, or
+gameplay evidence.
 
 ## trv2 FS-UAE restoration (2026-09-29)
 
@@ -910,3 +964,115 @@ normal-core observer remains config-gated and other CPU decoder variants keep
 their original operand path. No executable invocation, emulator session,
 capture, or original-media access occurred; the build pin does not advance the
 recorder-restoration state machine or admit recovery evidence.
+
+### 2026-10-02 trv2 Deuteros recorder-tool sync
+
+The trv2 project checkout's Deuteros locator and runner were older than the
+local reviewed workflow: its runner exposed capture receipt version 11 and
+its finite recorder registry omitted the reviewed trv2 x86_64 digest. The
+three scripts `tools/locate_capture_recorder.py`,
+`tools/run_deuteros_amiga_capture.py`, and
+`tools/verify_capture_receipt.py` were copied from the local checkout after
+confirming that none had remote working-tree edits. Their pre-sync bytes were
+saved under
+`~/.cache/project-eon-tools/capture-tools-sync-20261002-01/`; the unrelated
+trv2 working-tree changes were left intact. The synced script digests are
+`07f366006c01580018a5022d60e800fa8f05899b4e0c24d756b05e0ea9439566`,
+`4e24a9dfaeefbf383b9ec36d2426c19e8e8c471b1137bc6dfc4e528bbedcc866`, and
+`26be10ffc8b3ad42b090f0ae689f6ca763ad776601084f1c0a98bb0c326056f9`,
+respectively. Python compilation and scoped `git diff --check` passed on
+trv2. The locator then checked 1,392 executable candidates and found exactly
+one recorder: `/home/trv2/.cache/project-eon-tools/recorder-recovery-20260929/fs-uae/fs-uae`,
+SHA-256 `c6422037df6cadeb50ffaee3bb1c1b56d21722a7c687287d6058d4802943f54b`.
+No emulator was started and no original media was accessed. The remote
+desktop has no active user session, so visible manual-input capture remains
+pending; this locator result is operational recovery only, not game evidence.
+
+### 2026-10-02 trv2 remote-desktop handover diagnosis
+
+The system GNOME Remote Desktop service is active, listens on port 3389, and
+still reports the previously reviewed TLS fingerprint
+`d4:b6:09:01:e9:fb:9f:17:94:9b:92:a5:3d:c3:b5:eb:1f:e7:cc:6e:77:c7:dd:b2:5f:51:b6:f8:51:e4:20:59`.
+Recent server logs show RDP clients reaching system-daemon handover; GDM
+creates greeter sessions, but the handover daemons emit Mesa EGL/Zink device
+initialization failures and the client disconnects. `loginctl` still shows no
+active user graphical session. No credential, certificate, or authentication
+setting was changed during this diagnosis. XQuartz is installed and its X11
+app is running locally, but a forwarded emulator window was not established
+or verified. The GNOME handover failure is therefore still an operational
+block to visible manual-input capture, not evidence about either game.
+
+### 2026-10-02 trv2 VNC diagnostic
+
+The existing Screen Sharing connection to trv2's VNC display is usable as a
+visible X session (`DISPLAY=:2`). The reviewed x86_64 FS-UAE recorder was
+started there for a fresh 15-second realtime diagnostic with no input, using
+the two exact standalone Deuteros disk ZIPs and the hash-verified Kickstart
+archive in place. The external receipt at
+`~/.cache/project-eon-tools/deuteros-amiga-capture-20261002-vncdiag-01/`
+passed `verify_capture_receipt.py` as receipt version 23. Its source layout is
+`standalone-zip-pair`; the disk, Kickstart, and recorder hashes match the
+identities above. The 41,876-byte raw-PC observer file has SHA-256
+`092c131201446b3b9f9540d25208d63cbc4f24733b177b86df3cf31b34d63063` and 256
+records: 128 each at `$1fe84` (`7202/7202`) and `$1fe96` (`7208/7208`). The
+receipt has no host-input delivery, zero input links, and no title-display
+receipt. This confirms a visible VNC capture route is now available; it adds
+no input, title-display, or gameplay evidence. Manual input remains required
+for the next physical-input capture.
+
+### 2026-10-05 trv2 Deuteros FS-UAE v17 recorder
+
+Built and reviewed an isolated successor on the pinned FS-UAE v3.2.35 source
+commit `4ae7ddaec50b567ed80d71ffbff067cb58e945a3`, retaining the v16 baseline
+and adding only the selector-cell observation. The incremental patch
+`fs-uae-v17-selector-dispatch.patch` has SHA-256
+`37967e26f9cc4ae4ead2814c8656e940a4cdc0351c4c48e0ca3456708f5c7f95`; it is
+external to the repository at
+`/home/trv2/.cache/project-eon-tools/v17-selector-dispatch-20261005/`. The
+resulting x86_64 binary is 62,016,168 bytes with SHA-256
+`8d7255b20a6f9867a9329541cdf5e0a590d2d507f639da313dd8964c7f02fd5e`.
+
+At pre-instruction PC `$1fbe6`, the observer directly reads `$1f98c` and
+`$1f98e` only when both addresses map to allocated chip RAM. It emits a
+separate bounded receipt, capped at 128 records per pre/post-input phase, and
+links each row to the corresponding raw-PC sample and recorder-confirmed host
+input ordinal/frame. Receipt schema 27 verifies those joins. The binary
+contains the compiled observer symbols, `git diff --check` passed in the
+external source tree, and the source hook is present in both normal and
+cycle-exact CPU loops. This is a recorder pin and tooling capability only: no
+emulator was launched, no capture was run, and no original media was accessed.
+
+### 2026-10-05 trv2 v17 recorder availability recheck
+
+An exact-size search under `/home/trv2/.cache/project-eon-tools` found no
+62,016,168-byte file to verify against the pinned v17 SHA-256. The previously
+reviewed source tree and patch remain, but the executable is not available at
+the documented recorder path or elsewhere in that cache. The trv2 VNC proxy
+and display server are listening, but FS-UAE is not running; opening noVNC
+reaches its authentication prompt. No emulator was started, no input was
+delivered, and no authentication or server setting was changed. Resume only
+after the exact pinned executable is restored and a visible operator can
+deliver manual input.
+
+### 2026-10-05 v17 restoration and v18 input-branch probe
+
+The v17 executable was rebuilt in its existing external trv2 source tree and
+matched the documented 62,016,168-byte pin exactly. An isolated successor was
+then built from that baseline. Its source patch SHA-256 is
+`7c1f253bc05e5aac81769d44905af01459769d771ccfdf37dd17bb092499439c`; the
+resulting x86_64 executable is 62,016,152 bytes with SHA-256
+`44477a0f41025a6e3f68098eb093fb7a32aebf3b2d1577fb294337a617154a54` and
+reports FS-UAE `3.2.35`. Comparison of all 175 `libuae.a` members confirmed
+that only `newcpu.o` changed from v17. An independent subagent reviewed the
+bounded site/counter change and found no guest-state writes, input injection,
+or unbounded output change.
+
+The added PC `$21866` follows the statically decoded `BTST.B #6,$bfe001` at
+`$2185e`. Schema 28 binds this exact binary, verifies `memory_opcode=0x6608`,
+and keeps the v17 selector-dispatch receipt joined to raw-PC and host-input
+chronology. It also requires adjacent `$2185e` and `$21866` samples linked to
+the same input ordinal and frame. This can expose the post-BTST Z flag at the following branch; it
+does not by itself establish the source of the CIA bit, a game-state change,
+or a displayed frame. No emulator was launched and no capture was run. The
+v18 binary and source patch remain in the scoped external trv2 cache; original
+media was not accessed or changed for this build.

@@ -350,7 +350,20 @@ proves reachability, code/data classification, an ABI result, or gameplay.
 | Millennium Atari ST English Equinox direct container | byte-identical `MILENIUM.TOS` PRG TEXT+DATA, file `+0x1c`, 49,010 bytes, **image-relative only** | `0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69` | `8c4acf574f52890a407f881e44bf41f4bb51ae5ccc7afd6ad240018bb30cc548` | 17,519 |
 | Millennium Atari ST English Equinox | `MILL22A.INF`, file `+0x0`, 7,506 bytes, **image-relative only** | `ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01` | `f8c6e335c1ebb7eb985bccd6baf1c3a106eeb0eca51ec3e6497e1f2efe89b420` | 2,495 |
 | Deuteros Amiga English clean Disk 1 | boot/bootstrap/main/title loaded spans; M68000 origins from the validated load plan | `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | `db4379bb4f50cb18f9ef72fdc1066796d5a8621a798e519d730f5282610c1791` | 162,970 |
+| Deuteros Amiga English clean Disk 1 transition neighborhood | ADF `+0x70a8`, `0x80` bytes → `$218a8` | `7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533` | `4d0a334f6785560d9df62922843c8b2b711414e5d8cb26a0923dc10da384dcf3` | 43 |
 | Deuteros Atari ST English Replicants Disk 1 | raw disk `+0x4ec00`, length `0x1200` → `$1200` | `c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653` | `4c4bd8add9873e1ab2a52ba0d23a9c225005a7a6d2ecb7435f24191f32b88c35` | 1,979 |
+
+On 2026-10-05 the Deuteros Amiga clean Disk 1 transition neighborhood was
+extended to ADF `+0x70a8..+0x7127` (`0x80` bytes), runtime `$218a8..$21927`.
+Its external report identity above is retained at
+`~/.cache/project-eon-tools/amiga-disasm-218cc-20261005/reports/` and remains
+a linear M68000 candidate. The ADF range SHA-256 is
+`79cec52755f366cc2fddead4a67c3d248849065bbcd455554202f0a6009bbdec`.
+Static decoding shows `$218cc` reading `$2126a`:
+zero branches to `$218dc`, nonzero calls `$2229c` then `$224a2`, and both
+routes join at `$22a5a`. A separate counter wait starts at `$218e2`.
+This neighborhood does not establish runtime reachability, external call
+effects, or game-state meaning.
 
 These reports cover source spans with an independently established CPU. Most
 also have a runtime load address. The Millennium Atari ST PRG is the explicit

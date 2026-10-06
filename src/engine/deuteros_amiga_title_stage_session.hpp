@@ -81,6 +81,9 @@ public:
     main_stage_loop_prepare_body_plan() const { return service_batch_boundary_session_.main_stage_loop_prepare_body_plan(); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
     main_stage_loop_graphics_plan() const { return service_batch_boundary_session_.main_stage_loop_graphics_plan(); }
+    [[nodiscard]] std::span<const std::uint8_t> main_stage_cia_prefix_code() const noexcept {
+        return service_batch_boundary_session_.main_stage_cia_prefix_code();
+    }
     [[nodiscard]] DeuterosAmigaMainStageState main_stage_state() const noexcept {
         return service_batch_boundary_session_.main_stage_state();
     }
@@ -238,6 +241,14 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadServiceLocalPlan>
     observe_load_service_return(const DeuterosAmigaObservedLocalCallReturn& observation) {
         return service_batch_boundary_session_.observe_load_service_return(observation);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDoIoReturnPlan>
+    observe_load_doio_return(const DeuterosAmigaObservedTitleLoadDoIoReturn& observation) {
+        return service_batch_boundary_session_.observe_load_doio_return(observation);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDoIoStatusPlan>
+    observe_load_doio_status(const DeuterosAmigaObservedTitleLoadDoIoStatus& observation) {
+        return service_batch_boundary_session_.observe_load_doio_status(observation);
     }
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadServiceSelectorPlan>
     observe_load_selector(const DeuterosAmigaObservedLoadSelector& observation) {
@@ -422,6 +433,20 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedJoinBytePlan> observe_post_adjusted_join_byte(const DeuterosAmigaObservedTitlePostAdjustedJoinByte& o) { return service_batch_boundary_session_.observe_post_adjusted_join_byte(o); }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjusted1f9a4ReturnPlan> observe_post_adjusted_1f9a4_return(const DeuterosAmigaObservedLocalCallReturn& o) { return service_batch_boundary_session_.observe_post_adjusted_1f9a4_return(o); }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjusted1fe88ReturnPlan> observe_post_adjusted_1fe88_return(const DeuterosAmigaObservedTitlePostAdjusted1fe88Return& o) { return service_batch_boundary_session_.observe_post_adjusted_1fe88_return(o); }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleSelectorPassagePlan>
+    observe_captured_title_selector_passage(std::uint64_t sequence, std::uint32_t incoming_d0,
+        const std::array<DeuterosAmigaObservedTitleSelectorHelperReturn,2>& returns) {
+        return service_batch_boundary_session_.observe_captured_title_selector_passage(
+            sequence,incoming_d0,returns);
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleSelectorDispatchPlan>
+    observe_captured_title_selector_dispatch(
+        const DeuterosAmigaObservedTitleSelectorDispatchRead& primary,
+        const std::optional<DeuterosAmigaObservedTitleSelectorDispatchRead>& secondary =
+            std::nullopt) {
+        return service_batch_boundary_session_.observe_captured_title_selector_dispatch(
+            primary, secondary);
+    }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedFinalGatePlan> observe_post_adjusted_final_gate(const DeuterosAmigaObservedTitlePostAdjustedFinalGate& o) { return service_batch_boundary_session_.observe_post_adjusted_final_gate(o); }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedInputReturnPlan> observe_post_adjusted_input_return(const DeuterosAmigaObservedTitlePostAdjustedInputReturn& o) { return service_batch_boundary_session_.observe_post_adjusted_input_return(o); }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostAdjustedRepeatedInputReturnPlan> observe_post_adjusted_repeated_input_return(const DeuterosAmigaObservedLocalCallReturn& o) { return service_batch_boundary_session_.observe_post_adjusted_repeated_input_return(o); }

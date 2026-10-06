@@ -23,6 +23,102 @@ SPEC.loader.exec_module(TOOL)
 
 
 class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
+    @staticmethod
+    def _zero_route_observation_payload() -> str:
+        rows: list[str] = []
+        cycle = 0
+
+        def append(pc: int, address: int = 0, width: int = 0, value: int = 0,
+                   valid: int = 0, cells_valid: int | None = None,
+                   *, a0: int = 0x20000, a1: int = 0x30000,
+                   a2: int = 0x31000, a4: int = 0x40000,
+                   d2: int = 0x5A) -> None:
+            nonlocal cycle
+            cycle += 10
+            if cells_valid is None:
+                cells_valid = int(pc in {0x1FC22, 0x1FC28, 0x1FC2C})
+            regs = " ".join(f"d{i}=0x{(d2 if i == 2 else i):08x}" for i in range(8))
+            rows.append(
+                f"zero-route-observation {len(rows) + 1} cycles={cycle} pc=0x{pc:08x} "
+                f"input_ordinal=1 input_frame=10 {regs} a0=0x{a0:08x} a1=0x{a1:08x} "
+                f"a2=0x{a2:08x} a4=0x{a4:08x} cell_1f98c=0x00 cell_1f98e=0x00 "
+                f"cells_valid={cells_valid} mem_addr=0x{address:08x} mem_width={width} "
+                f"mem_value=0x{value:08x} mem_valid={valid}\n")
+
+        append(0x1FC22, 0x1F98E, 1, 0, 1)
+        append(0x1FC28)
+        append(0x1FC2C)
+        for pc, address in ((0x1FC42, 0x1F99C), (0x1FC4A, 0x1F974),
+                            (0x1FC50, 0x1F96C), (0x1FC56, 0x1F970)):
+            append(pc, address, 4, 0x20000, 1)
+        for row in range(8):
+            glyph_address = 0x20000 + row
+            append(0x1FC5E, glyph_address, 1, 0x41 + row, 1, a0=glyph_address)
+            for plane in range(4):
+                source_a = 0x30000 + row * 8 + plane * 2
+                source_b = 0x31000 + row * 8 + plane * 2
+                dest = 0x40000 + row * 0x28 + plane * 0x1F40
+                write_value = (0x5A + row + plane) & 0xFF
+                append(0x1FC6A, source_a, 2, 0x1234, 1, a1=source_a)
+                append(0x1FC6C, source_b, 2, 0x5678, 1, a2=source_b)
+                append(0x1FC74, dest, 1, write_value, 0, a4=dest, d2=write_value)
+                append(0x1FC76, dest, 1, write_value, 1, a4=dest, d2=write_value)
+        append(0x1FC88, 0x1F9A0, 4, 0x28, 1)
+        append(0x1FC8E, 0x1F974, 4, 0x40000, 1)
+        append(0x1FC94, 0x1F974, 4, 0x40028, 1)
+        append(0x1FC9A)
+        return "".join(rows)
+
+    def test_zero_route_observation_binds_complete_invocation_and_input(self) -> None:
+        payload = self._zero_route_observation_payload()
+        with temporary_directory() as directory:
+            root = Path(directory)
+            sidecar = root / "zero-route-observation.txt"
+            host = root / "host-input-receipt.txt"
+            sidecar.write_text(payload, encoding="ascii")
+            host.write_text("host-input 1 frame=10 line=3 action=149 state=1\n", encoding="ascii")
+            invocations = TOOL.parse_zero_route_observation(sidecar, host)
+            self.assertEqual(len(invocations), 1)
+            self.assertEqual(len(invocations[0]), 147)
+            branch_sample = next(row for row in invocations[0] if row["pc"] == 0x1FC28)
+            self.assertEqual(branch_sample["cells_valid"], 1)
+            self.assertEqual((branch_sample["cell_1f98c"], branch_sample["cell_1f98e"]), (0, 0))
+            status = dict(line.split("=", 1) for line in
+                          TOOL.zero_route_observation_status(sidecar, host).splitlines())
+            self.assertEqual(status["zero_route_observation_records"], "147")
+            self.assertEqual(status["zero_route_observation_invocations"], "1")
+            self.assertEqual(status["zero_route_observation_sha256"],
+                             hashlib.sha256(payload.encode("ascii")).hexdigest())
+
+    def test_zero_route_observation_rejects_partial_memory_chronology_and_route(self) -> None:
+        payload = self._zero_route_observation_payload()
+        with temporary_directory() as directory:
+            root = Path(directory)
+            sidecar = root / "zero-route-observation.txt"
+            host = root / "host-input-receipt.txt"
+            host.write_text("host-input 1 frame=10 line=3 action=149 state=1\n", encoding="ascii")
+            sidecar.write_text(payload.replace("pc=0x0001fc42", "pc=0x0001fc42", 1)
+                               .replace("mem_addr=0x0001f99c", "mem_addr=0x0001f99d", 1),
+                               encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "fixed-cell read"):
+                TOOL.parse_zero_route_observation(sidecar, host)
+
+            sidecar.write_text(payload.rsplit("zero-route-observation ", 1)[0], encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "complete start-through-return"):
+                TOOL.parse_zero_route_observation(sidecar, host)
+
+            sidecar.write_text(payload, encoding="ascii")
+            host.write_text("host-input 1 frame=11 line=3 action=149 state=1\n", encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "chronology"):
+                TOOL.parse_zero_route_observation(sidecar, host)
+
+    def test_zero_route_observation_rejects_unbounded_sidecar(self) -> None:
+        with temporary_directory() as directory:
+            sidecar = Path(directory) / "zero-route-observation.txt"
+            sidecar.write_bytes(b"x" * (TOOL.MAX_ZERO_ROUTE_OBSERVATION_BYTES + 1))
+            with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
+                TOOL.parse_zero_route_observation(sidecar, Path(directory) / "unused-host-input.txt")
+
     def test_pinned_kickstart_archive_size_is_not_its_rom_payload_size(self) -> None:
         self.assertEqual(TOOL.EXPECTED_KICKSTART_SIZE, 143_269)
         self.assertNotEqual(TOOL.EXPECTED_KICKSTART_SIZE, 262_144)
@@ -47,6 +143,10 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
             Path("/safe/disk1.adf"), Path("/safe/disk2.adf"), Path("/safe/kickstart.rom"),
             Path("/safe/capture"))
         self.assertIn("amiga_model = A500", configuration)
+        self.assertIn("floppy_drive_0 = /safe/disk1.adf", configuration)
+        self.assertNotIn("floppy_drive_1 =", configuration)
+        self.assertIn("floppy_image_0 = /safe/disk1.adf", configuration)
+        self.assertIn("floppy_image_1 = /safe/disk2.adf", configuration)
         self.assertIn("floppy_write_protect = 1", configuration)
         self.assertIn("console_debugger = 0", configuration)
         self.assertIn("use_debugger = 0", configuration)
@@ -134,6 +234,247 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
                 with self.assertRaises(TOOL.CaptureError):
                     TOOL.validate_recorder(recorder)
             self.assertEqual(TOOL.EXPECTED_RECORDER_SHA256, historical)
+
+    def test_trv2_v13_build_is_pinned_without_replacing_v12(self) -> None:
+        hashes = TOOL.reviewed_recorder_hashes()
+        self.assertEqual(hashes["reviewed-fs-uae-trv2-v12"], TOOL.TRV2_RECORDER_SHA256)
+        self.assertEqual(hashes["reviewed-fs-uae-trv2-v13"], TOOL.TRV2_RECORDER_V13_SHA256)
+
+    def test_trv2_v14_build_pin_coexists_with_v12_and_v13(self) -> None:
+        hashes = TOOL.reviewed_recorder_hashes()
+        self.assertEqual(hashes["reviewed-fs-uae-trv2-v12"], TOOL.TRV2_RECORDER_SHA256)
+        self.assertEqual(hashes["reviewed-fs-uae-trv2-v13"], TOOL.TRV2_RECORDER_V13_SHA256)
+        self.assertEqual(hashes["reviewed-fs-uae-trv2-v14"], TOOL.TRV2_RECORDER_V14_SHA256)
+        self.assertEqual(
+            TOOL.TRV2_RECORDER_V14_SHA256,
+            "701d11b705dd36934712ab37df4e105a2d68bde4dea2642214f45012d6768acf",
+        )
+
+    def test_trv2_v15_build_pin_coexists_and_raw_site_is_admitted(self) -> None:
+        hashes = TOOL.reviewed_recorder_hashes()
+        self.assertEqual(hashes["reviewed-fs-uae-trv2-v14"], TOOL.TRV2_RECORDER_V14_SHA256)
+        self.assertEqual(hashes["reviewed-fs-uae-trv2-v15"], TOOL.TRV2_RECORDER_V15_SHA256)
+        self.assertEqual(
+            TOOL.TRV2_RECORDER_V15_SHA256,
+            "7160dfafbfe67b17db931065ab6f9853874591ea4af6c33ad51059b2b0f703df",
+        )
+
+    def test_trv2_v16_pin_adds_only_the_new_site_and_preserves_v15_grammar(self) -> None:
+        hashes = TOOL.reviewed_recorder_hashes()
+        self.assertEqual(hashes["reviewed-fs-uae-trv2-v15"], TOOL.TRV2_RECORDER_V15_SHA256)
+        self.assertEqual(hashes["reviewed-fs-uae-trv2-v16"], TOOL.TRV2_RECORDER_V16_SHA256)
+        self.assertEqual(TOOL.TRV2_RECORDER_V16_SIZE, 62_015_016)
+        self.assertEqual(TOOL.raw_pc_sites_for_format("v9"), TOOL.RAW_PC_SITES)
+        self.assertEqual(TOOL.raw_pc_sites_for_format("v9-v16"), (*TOOL.RAW_PC_SITES, 0x218CC))
+        sample = ("raw-pc 1 cycles=1 pc=0x000218cc ir_opcode=0x4e75 memory_opcode=0x4e75 "
+                  "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                  "input_ordinal=0 input_frame=0\n")
+        with temporary_directory() as directory:
+            raw = Path(directory) / "raw-pc.txt"
+            raw.write_text(sample, encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "unreviewed probe site"):
+                TOOL.parse_raw_pc_observations(raw, "v9")
+            self.assertEqual(TOOL.parse_raw_pc_observations(raw, "v9-v16"), {0x218CC: 1})
+            raw.write_text("".join(sample.replace("raw-pc 1 ", f"raw-pc {ordinal} ")
+                                       for ordinal in range(1, 130)), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "phase cap"):
+                TOOL.parse_raw_pc_observations(raw, "v9-v16")
+            raw.write_text("".join(
+                f"raw-pc {ordinal} cycles={ordinal} pc=0x000218cc ir_opcode=0x4e75 "
+                f"memory_opcode=0x4e75 d0=0x00000000 a0=0x00000000 a6=0x00000000 "
+                f"sr=0x0000 input_ordinal={0 if ordinal <= 65 else 1} "
+                f"input_frame={0 if ordinal <= 65 else 2}\n"
+                for ordinal in range(1, 130)), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "per-site recorder cap"):
+                TOOL.parse_raw_pc_observations(raw, "v9-v16")
+
+    def test_trv2_v17_pin_coexists_with_v15_v16_and_uses_phased_grammar(self) -> None:
+        hashes = TOOL.reviewed_recorder_hashes()
+        self.assertEqual(hashes["reviewed-fs-uae-trv2-v15"], TOOL.TRV2_RECORDER_V15_SHA256)
+        self.assertEqual(hashes["reviewed-fs-uae-trv2-v16"], TOOL.TRV2_RECORDER_V16_SHA256)
+        self.assertEqual(hashes["reviewed-fs-uae-trv2-v17"], TOOL.TRV2_RECORDER_V17_SHA256)
+        self.assertEqual(TOOL.TRV2_RECORDER_V17_SIZE, 62_016_168)
+        self.assertEqual(TOOL.raw_pc_sites_for_format("v9-v16-phased"),
+                         (*TOOL.RAW_PC_SITES, 0x218CC))
+
+    def test_trv2_v18_adds_hash_pinned_btst_branch_site_without_changing_v17(self) -> None:
+        hashes = TOOL.reviewed_recorder_hashes()
+        self.assertEqual(hashes["reviewed-fs-uae-trv2-v17"], TOOL.TRV2_RECORDER_V17_SHA256)
+        self.assertEqual(hashes["reviewed-fs-uae-trv2-v18"], TOOL.TRV2_RECORDER_V18_SHA256)
+        self.assertEqual(TOOL.TRV2_RECORDER_V18_SIZE, 62_016_152)
+        self.assertEqual(TOOL.raw_pc_sites_for_format("v9-v16-phased"),
+                         (*TOOL.RAW_PC_SITES, 0x218CC))
+        self.assertEqual(TOOL.raw_pc_sites_for_format("v9-v18-phased"),
+                         (*TOOL.RAW_PC_SITES, 0x218CC, 0x21866))
+        sample = ("raw-pc 1 cycles=1 pc=0x0002185e ir_opcode=0x0839 memory_opcode=0x0839 "
+                  "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0004 "
+                  "input_ordinal=1 input_frame=2\n"
+                  "raw-pc 2 cycles=2 pc=0x00021866 ir_opcode=0x6608 memory_opcode=0x6608 "
+                  "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0004 "
+                  "input_ordinal=1 input_frame=2\n")
+        with temporary_directory() as directory:
+            raw = Path(directory) / "raw-pc.txt"
+            raw.write_text(sample, encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "unreviewed probe site"):
+                TOOL.parse_raw_pc_observations(raw, "v9-v16-phased")
+            self.assertEqual(TOOL.parse_raw_pc_observations(raw, "v9-v18-phased"),
+                             {0x2185E: 1, 0x21866: 1})
+            raw.write_text(sample.replace("pc=0x00021866 ir_opcode=0x6608 memory_opcode=0x6608",
+                                          "pc=0x00021866 ir_opcode=0x6608 memory_opcode=0x4e75"),
+                           encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "unexpected memory opcode"):
+                TOOL.parse_raw_pc_observations(raw, "v9-v18-phased")
+            raw.write_text(sample.replace(
+                "raw-pc 2 cycles=2 pc=0x00021866 ir_opcode=0x6608 memory_opcode=0x6608 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0004 "
+                "input_ordinal=1 input_frame=2",
+                "raw-pc 2 cycles=2 pc=0x00021866 ir_opcode=0x6608 memory_opcode=0x6608 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0004 "
+                "input_ordinal=2 input_frame=3"), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "same input-linked bit-test"):
+                TOOL.parse_raw_pc_observations(raw, "v9-v18-phased")
+
+    def test_v19_late_pc_window_is_distinct_bounded_and_input_linked(self) -> None:
+        self.assertEqual(TOOL.reviewed_recorder_hashes()["reviewed-fs-uae-trv2-v19"],
+                         TOOL.TRV2_RECORDER_V19_SHA256)
+        self.assertEqual(TOOL.TRV2_RECORDER_V19_SIZE, 62_020_024)
+        self.assertEqual(TOOL.raw_pc_sites_for_format("v9-v19-phased"),
+                         (*TOOL.RAW_PC_V18_SITES, 0x1FEA8))
+        rows = []
+        for ordinal in range(1, 11):
+            rows.append(f"host-input {ordinal} frame={ordinal * 10} line=3 action=149 state=1\n")
+        with temporary_directory() as directory:
+            root = Path(directory)
+            host = root / "host-input-receipt.txt"
+            host.write_text("".join(rows), encoding="ascii")
+            late = root / "late-input-pc.txt"
+            late.write_text(
+                "late-pc 1 cycles=90 pc=0x0001fe84 ir_opcode=0x7202 memory_opcode=0x7202 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=9 input_frame=90\n"
+                "late-pc 2 cycles=91 pc=0x0001fea8 ir_opcode=0x4e75 memory_opcode=0x4e75 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=10 input_frame=100\n", encoding="ascii")
+            parsed = TOOL.parse_late_raw_pc_receipt(late)
+            self.assertEqual([(row[2], row[3]) for row in parsed], [(0x1FE84, 9), (0x1FEA8, 10)])
+            status = TOOL.late_raw_pc_status(late, host)
+            self.assertIn("late_input_pc_records=2\n", status)
+            self.assertIn("late_input_pc_last_input_ordinal=10\n", status)
+
+            late.write_text(late.read_text(encoding="ascii").replace(
+                "input_ordinal=10 input_frame=100", "input_ordinal=10 input_frame=99"), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "host-input receipt"):
+                TOOL.late_raw_pc_status(late, host)
+
+            late.write_text("".join(
+                f"late-pc {i} cycles={i} pc=0x0001fea8 ir_opcode=0x4e75 memory_opcode=0x4e75 "
+                f"d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                f"input_ordinal={i + 8} input_frame={i}\n" for i in range(1, 98)), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "per-site sample cap"):
+                TOOL.parse_late_raw_pc_receipt(late)
+
+    def test_v19_late_selector_is_bijective_with_late_dispatch_pc(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            late = root / "late-input-pc.txt"
+            host = root / "host-input-receipt.txt"
+            selector = root / "late-selector-dispatch.txt"
+            host.write_text("".join(
+                f"host-input {i} frame={i * 10} line=3 action=149 state=1\n"
+                for i in range(1, 10)), encoding="ascii")
+            late.write_text(
+                "late-pc 1 cycles=90 pc=0x0001fbe6 ir_opcode=0x4a39 memory_opcode=0x4a39 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=9 input_frame=90\n", encoding="ascii")
+            selector.write_text(
+                "late-selector-dispatch 1 late_raw_ordinal=1 cycles=90 pc=0x0001fbe6 "
+                "cell_1f98c=0x00 cell_1f98e=0x01 input_ordinal=9 input_frame=90\n",
+                encoding="ascii")
+            status = TOOL.late_selector_dispatch_status(selector, late, host)
+            self.assertIn("late_selector_dispatch_records=1\n", status)
+            selector.unlink()
+            with self.assertRaisesRegex(TOOL.CaptureError, "omits a reached"):
+                TOOL.late_selector_dispatch_status(selector, late, host)
+
+    def test_v20_late_selector_targets_are_version_scoped_and_bounded(self) -> None:
+        self.assertEqual(TOOL.reviewed_recorder_hashes()["reviewed-fs-uae-trv2-v20"],
+                         TOOL.TRV2_RECORDER_V20_SHA256)
+        self.assertEqual(TOOL.TRV2_RECORDER_V20_SIZE, 62_020_224)
+        self.assertEqual(TOOL.LATE_RAW_PC_V20_SITES,
+                         (*TOOL.LATE_RAW_PC_V19_SITES, 0x1FC22, 0x1FC9C))
+        self.assertEqual(TOOL._late_raw_pc_contract("v19"),
+                         (TOOL.LATE_RAW_PC_V19_SITES, 26 * TOOL.MAX_LATE_RAW_RECORDS_PER_SITE))
+        self.assertEqual(TOOL._late_raw_pc_contract("v20"),
+                         (TOOL.LATE_RAW_PC_V20_SITES, 28 * TOOL.MAX_LATE_RAW_RECORDS_PER_SITE))
+        with temporary_directory() as directory:
+            root = Path(directory)
+            host = root / "host-input-receipt.txt"
+            host.write_text("".join(
+                f"host-input {i} frame={i * 10} line=3 action=149 state=1\n"
+                for i in range(1, 10)), encoding="ascii")
+            late = root / "late-input-pc.txt"
+            for index, site in enumerate((0x1FC22, 0x1FC9C), start=1):
+                late.write_text(
+                    f"late-pc 1 cycles={index} pc=0x{site:08x} ir_opcode=0x4e75 memory_opcode=0x4e75 "
+                    "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                    "input_ordinal=9 input_frame=90\n", encoding="ascii")
+                with self.assertRaisesRegex(TOOL.CaptureError, "unreviewed probe site"):
+                    TOOL.parse_late_raw_pc_receipt(late, "v19")
+                parsed = TOOL.parse_late_raw_pc_receipt(late, "v20")
+                self.assertEqual(parsed[0][2], site)
+                status = TOOL.late_raw_pc_status(late, host, "v20")
+                self.assertIn(f"0x{site:08x}:1", status)
+
+            late.write_text(
+                "late-pc 1 cycles=1 pc=0x0001fca6 ir_opcode=0x4e75 memory_opcode=0x4e75 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=9 input_frame=90\n", encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "unreviewed probe site"):
+                TOOL.parse_late_raw_pc_receipt(late, "v20")
+            with self.assertRaisesRegex(TOOL.CaptureError, "not a reviewed recorder contract"):
+                TOOL.parse_late_raw_pc_receipt(late, "v21")
+
+    def test_v17_selector_dispatch_is_joined_to_raw_pc_and_host_input(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            raw = root / "raw-pc.txt"
+            host = root / "host-input-receipt.txt"
+            dispatch = root / "selector-dispatch.txt"
+            raw.write_text(
+                "raw-pc 1 cycles=10 pc=0x0001fbe6 ir_opcode=0x4a39 memory_opcode=0x4a39 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=1 input_frame=2\n", encoding="ascii")
+            host.write_text("host-input 1 frame=2 line=3 action=149 state=1\n", encoding="ascii")
+            dispatch.write_text(
+                "selector-dispatch 1 raw_ordinal=1 cycles=10 pc=0x0001fbe6 "
+                "cell_1f98c=0x00 cell_1f98e=0x01 input_ordinal=1 input_frame=2\n",
+                encoding="ascii")
+            status = TOOL.selector_dispatch_status(dispatch, raw, host)
+            self.assertIn("selector_dispatch=present\n", status)
+            self.assertIn("selector_dispatch_records=1\n", status)
+            self.assertIn("selector_dispatch_raw_pc_links=1\n", status)
+            self.assertIn("selector_dispatch_input_links=1\n", status)
+
+            dispatch.write_text(
+                "selector-dispatch 1 raw_ordinal=1 cycles=11 pc=0x0001fbe6 "
+                "cell_1f98c=0x00 cell_1f98e=0x01 input_ordinal=1 input_frame=2\n",
+                encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "do not match raw_pc chronology"):
+                TOOL.selector_dispatch_status(dispatch, raw, host)
+
+            dispatch.unlink()
+            with self.assertRaisesRegex(TOOL.CaptureError, "missing samples present in raw_pc"):
+                TOOL.selector_dispatch_status(dispatch, raw, host)
+
+    def test_v17_selector_dispatch_has_a_separate_128_per_phase_cap(self) -> None:
+        with temporary_directory() as directory:
+            path = Path(directory) / "selector-dispatch.txt"
+            path.write_text("".join(
+                f"selector-dispatch {i} raw_ordinal={i} cycles={i} pc=0x0001fbe6 "
+                f"cell_1f98c=0x00 cell_1f98e=0x00 input_ordinal=0 input_frame=0\n"
+                for i in range(1, 130)), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "per-phase sample cap"):
+                TOOL.parse_selector_dispatch_receipt(path)
 
     def test_input_receipt_status_keeps_no_input_distinct_from_a_receipt(self) -> None:
         with temporary_directory() as directory:
@@ -278,10 +619,10 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
             process = SimpleNamespace(stdout=io.BytesIO(b"bounded test console\n"), poll=lambda: 0)
             with mock.patch.object(TOOL, "require_visible_operator_input"), \
                     mock.patch.object(TOOL, "validate_identity", side_effect=identity), \
-                    mock.patch.object(TOOL, "validate_recorder", return_value=(TOOL.EXPECTED_RECORDER_SHA256, 17)), \
+                    mock.patch.object(TOOL, "validate_recorder", return_value=(TOOL.TRV2_RECORDER_V21_SHA256, TOOL.TRV2_RECORDER_V21_SIZE)), \
                     mock.patch.object(TOOL, "mount_read_only") as mount, \
                     mock.patch.object(TOOL, "unmount") as unmount, \
-                    mock.patch.object(TOOL.subprocess, "Popen", return_value=process), \
+                    mock.patch.object(TOOL.subprocess, "Popen", return_value=process) as popen, \
                     contextlib.redirect_stdout(io.StringIO()):
                 TOOL.run_capture(args)
 
@@ -298,8 +639,13 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
             self.assertEqual(hash_calls, {"Deuteros disk 1 archive": 2,
                                           "Deuteros disk 2 archive": 2,
                                           "Kickstart archive": 2})
+            recorder_environment = popen.call_args.kwargs["env"]
+            self.assertEqual(recorder_environment["PROJECT_EON_FS_UAE_ZERO_ROUTE_RECORD"],
+                             str(output / "zero-route-observation.txt"))
             receipt = (output / "run-status.txt").read_text(encoding="utf-8")
-            self.assertIn("capture_receipt_version=23\n", receipt)
+            self.assertIn("capture_receipt_version=31\n", receipt)
+            self.assertIn("recorder_protocol=deuteros-amiga-fsuae-v21\n", receipt)
+            self.assertIn("zero_route_observation=absent\n", receipt)
             self.assertIn("source_layout=standalone-zip-pair\n", receipt)
             self.assertIn("source_container=two-independent-zip-files\n", receipt)
             self.assertIn(f"content_release_sha256={TOOL.EXPECTED_RELEASE_SHA256}\n", receipt)
@@ -375,6 +721,10 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
         self.assertIn("Do not click it or press any key", diagnostic)
         self.assertNotIn("press and release", diagnostic)
         self.assertIn("press and release", physical)
+        self.assertIn("Choose 1: ENGLISH only when the language selector is on screen", physical)
+        self.assertIn("At the Disk 2 prompt, press F10 once", physical)
+        late_physical = "\n".join(TOOL.capture_operator_instructions("physical-input", late_sampling=True))
+        self.assertIn("late probe begins after host-input ordinal 8", late_physical)
 
     def test_raw_recorder_observation_is_hash_bound_and_bounded(self) -> None:
         with temporary_directory() as directory:
@@ -403,6 +753,24 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
                            b"input_ordinal=0 input_frame=0\n")
             raw.write_bytes(v9_observed)
             v9_status = TOOL.raw_observation_status(raw, "raw_pc", "v9")
+            input_poll_observed = v9_observed.replace(b"0x000210d4", b"0x00021822")
+            raw.write_bytes(input_poll_observed)
+            input_poll_status = TOOL.raw_observation_status(raw, "raw_pc", "v9")
+            self.assertIn("raw_pc_site_counts=0x00021822:1\n", input_poll_status)
+            self.assertIn("raw_pc_opcode_pairs=0x00021822:4e75/4e75\n", input_poll_status)
+            branch_observed = (v9_observed.replace(b"0x000210d4", b"0x0002182a")
+                               .replace(b"ir_opcode=0x4e75 memory_opcode=0x4e75",
+                                        b"ir_opcode=0x6608 memory_opcode=0x6608")
+                               .replace(b"sr=0x0000", b"sr=0x0004"))
+            raw.write_bytes(branch_observed)
+            branch_status = TOOL.raw_observation_status(raw, "raw_pc", "v9")
+            self.assertIn("raw_pc_site_counts=0x0002182a:1\n", branch_status)
+            self.assertIn("raw_pc_opcode_pairs=0x0002182a:6608/6608\n", branch_status)
+            display_base_observed = v9_observed.replace(b"0x000210d4", b"0x0001edac")
+            raw.write_bytes(display_base_observed)
+            display_base_status = TOOL.raw_observation_status(raw, "raw_pc", "v9")
+            self.assertIn("raw_pc_site_counts=0x0001edac:1\n", display_base_status)
+            raw.write_bytes(v9_observed)
             self.assertIn("raw_pc_format=v9\n", v9_status)
             self.assertIn("raw_pc_input_links=0\n", v9_status)
             self.assertEqual(TOOL.raw_pc_input_chronology_status(raw, receipt),
@@ -471,6 +839,39 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
                 encoding="ascii")
             with self.assertRaisesRegex(TOOL.CaptureError, "does not match"):
                 TOOL.title_display_receipt_status(display, input_receipt)
+
+    def test_late_display_receipt_is_separate_bounded_and_linked_after_intro(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            display = root / "late-display.txt"
+            inputs = root / "host-input-receipt.txt"
+            inputs.write_text("".join(
+                f"host-input {ordinal} frame=5031 line=0 action=157 state=1\n"
+                for ordinal in range(1, 23)), encoding="ascii")
+            display.write_text(
+                "late-display-write 1 cycles=100 vpos=54 hpos=104 origin=copper "
+                "register=0x0090 value=0x40c1 input_ordinal=21 input_frame=5031\n"
+                "late-display-write 2 cycles=110 vpos=55 hpos=108 origin=cpu "
+                "register=0x0180 value=0x0000 input_ordinal=22 input_frame=5031\n",
+                encoding="ascii")
+            status = TOOL.late_display_receipt_status(display, inputs)
+            self.assertIn("late_display=present\n", status)
+            self.assertIn("late_display_records=2\n", status)
+            self.assertIn("late_display_first_input_ordinal=21\n", status)
+            self.assertIn("late_display_last_input_ordinal=22\n", status)
+            self.assertIn("late_display_input_chronology=linked\n", status)
+            display.write_text(
+                "late-display-write 1 cycles=100 vpos=54 hpos=104 origin=copper "
+                "register=0x0090 value=0x40c1 input_ordinal=20 input_frame=5031\n",
+                encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "later-input window"):
+                TOOL.late_display_receipt_status(display, inputs)
+            display.write_text(
+                "late-display-write 1 cycles=100 vpos=54 hpos=104 origin=copper "
+                "register=0x0090 value=0x40c1 input_ordinal=21 input_frame=1\n",
+                encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "does not match"):
+                TOOL.late_display_receipt_status(display, inputs)
 
     def test_console_transcript_is_hashed_but_disk_bounded(self) -> None:
         with temporary_directory() as directory:

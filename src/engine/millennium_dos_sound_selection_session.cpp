@@ -7,14 +7,23 @@ namespace eon {
 
 MillenniumDosSoundSelectionSession::MillenniumDosSoundSelectionSession(
     MillenniumDosSoundSelectionEvidence evidence)
-    : MillenniumDosSoundSelectionSession(std::move(evidence), std::nullopt, std::nullopt) {}
+    : MillenniumDosSoundSelectionSession(std::move(evidence), std::nullopt,
+          std::nullopt, std::nullopt) {}
 
 MillenniumDosSoundSelectionSession::MillenniumDosSoundSelectionSession(
     MillenniumDosSoundSelectionEvidence evidence,
     std::optional<MillenniumDosSoundDriverLeaf> sound_blaster_driver,
     std::optional<MillenniumDosSoundDriverLeaf> covox_driver)
-    : evidence_(std::move(evidence)), sound_blaster_driver_(std::move(sound_blaster_driver)),
-      covox_driver_(std::move(covox_driver)) {
+    : MillenniumDosSoundSelectionSession(std::move(evidence), std::nullopt,
+          std::move(sound_blaster_driver), std::move(covox_driver)) {}
+
+MillenniumDosSoundSelectionSession::MillenniumDosSoundSelectionSession(
+    MillenniumDosSoundSelectionEvidence evidence,
+    std::optional<MillenniumDosSoundDriverLeaf> ibm_speaker_driver,
+    std::optional<MillenniumDosSoundDriverLeaf> sound_blaster_driver,
+    std::optional<MillenniumDosSoundDriverLeaf> covox_driver)
+    : evidence_(std::move(evidence)), ibm_speaker_driver_(std::move(ibm_speaker_driver)),
+      sound_blaster_driver_(std::move(sound_blaster_driver)), covox_driver_(std::move(covox_driver)) {
     // Do not allow this input mapping to drift independently of the parser's
     // content-locked source evidence.  In particular, the table's missing
     // SROL leaf is not a selectable fallback.
@@ -33,6 +42,7 @@ MillenniumDosSoundSelectionSession::MillenniumDosSoundSelectionSession(
             throw std::runtime_error("Mismatched Millennium DOS sound-driver admission");
         }
     };
+    require_driver(ibm_speaker_driver_, MillenniumDosSoundDriverKind::ibm_speaker, "sibm.drv");
     require_driver(sound_blaster_driver_, MillenniumDosSoundDriverKind::sound_blaster, "ssbl.drv");
     require_driver(covox_driver_, MillenniumDosSoundDriverKind::covox_sound_master, "scvx.drv");
 }
@@ -70,7 +80,7 @@ std::uint8_t MillenniumDosSoundSelectionSession::selected_table_slot() const {
 std::optional<MillenniumDosSoundDriverLeaf> MillenniumDosSoundSelectionSession::selected_driver() const {
     if (!choice_) return std::nullopt;
     switch (*choice_) {
-    case MillenniumDosSoundEffectChoice::ibm_speaker: return std::nullopt;
+    case MillenniumDosSoundEffectChoice::ibm_speaker: return ibm_speaker_driver_;
     case MillenniumDosSoundEffectChoice::sound_blaster: return sound_blaster_driver_;
     case MillenniumDosSoundEffectChoice::covox_sound_master: return covox_driver_;
     }

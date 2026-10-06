@@ -197,7 +197,8 @@ selects a card on the current page, Left/Right Shoulder changes the launcher UI
 language, and South/A or Start activates it. During
 the recovered Deuteros Amiga opening, hold South/A for
 the same verified physical input signal as Space/Enter; it is not mapped to any
-invented title or gameplay action.
+invented title or gameplay action. Losing focus while the opening is active
+clears that held signal, so a missing key/button release cannot remain stuck.
 
 The profile card fixes Original or Modern before a game starts; F1 deliberately
 does not switch an active session. F10 always opens Project Eon's input-modal

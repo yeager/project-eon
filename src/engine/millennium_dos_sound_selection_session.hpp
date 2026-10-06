@@ -18,6 +18,10 @@ public:
     MillenniumDosSoundSelectionSession(MillenniumDosSoundSelectionEvidence evidence,
         std::optional<MillenniumDosSoundDriverLeaf> sound_blaster_driver,
         std::optional<MillenniumDosSoundDriverLeaf> covox_driver);
+    MillenniumDosSoundSelectionSession(MillenniumDosSoundSelectionEvidence evidence,
+        std::optional<MillenniumDosSoundDriverLeaf> ibm_speaker_driver,
+        std::optional<MillenniumDosSoundDriverLeaf> sound_blaster_driver,
+        std::optional<MillenniumDosSoundDriverLeaf> covox_driver);
 
     // Return true only when `ascii_character` is one of the exact characters
     // accepted by the original routine and this session has not selected an
@@ -30,14 +34,14 @@ public:
     [[nodiscard]] std::string_view selected_original_filename() const;
     [[nodiscard]] std::uint8_t selected_table_slot() const;
     // A supplied leaf may be admitted by its complete immutable hash while
-    // its original initialization ABI remains unrecovered. IBM speaker is a
-    // literal selectable table entry but has no admitted leaf in this corpus.
+    // its original initialization ABI remains unrecovered.
     [[nodiscard]] bool selected_driver_is_admitted() const;
     [[nodiscard]] std::optional<MillenniumDosSoundDriverLeaf> selected_driver() const;
     [[nodiscard]] const MillenniumDosSoundSelectionEvidence& evidence() const { return evidence_; }
 
 private:
     MillenniumDosSoundSelectionEvidence evidence_;
+    std::optional<MillenniumDosSoundDriverLeaf> ibm_speaker_driver_;
     std::optional<MillenniumDosSoundDriverLeaf> sound_blaster_driver_;
     std::optional<MillenniumDosSoundDriverLeaf> covox_driver_;
     std::optional<MillenniumDosSoundEffectChoice> choice_;
