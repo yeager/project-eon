@@ -1,6 +1,6 @@
 project-eon (0.1.4-1) unstable; urgency=medium
 
-  * Align package and application version metadata for the cross-platform release.
+  * Synchronize application and package version metadata.
 
  -- Daniel Nylander <1206564+yeager@users.noreply.github.com>  Tue, 06 Oct 2026 00:00:00 +0000
 
