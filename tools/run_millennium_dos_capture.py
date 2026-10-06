@@ -507,7 +507,7 @@ def input_delivery_file_observed(path: Path) -> bool:
 def parse_host_input_receipt(path: Path) -> int:
     """Validate the finite SDL host-key receipt without decoding DOS input."""
     try:
-        text = path.read_text(encoding="ascii")
+        text = path.read_bytes().decode("ascii")
     except UnicodeDecodeError as error:
         raise CaptureError("host-input receipt is not ASCII recorder output") from error
     if not text.endswith("\n"):
@@ -820,7 +820,7 @@ def driver_load_return_status(path: Path, recorder_protocol: str) -> str:
 def raw_result_labels(path: Path, recorder_protocol: str = "v11") -> list[str]:
     """Parse finite recorder diagnostics into non-semantic shape labels."""
     try:
-        text = path.read_text(encoding="ascii")
+        text = path.read_bytes().decode("ascii")
     except UnicodeDecodeError as error:
         raise CaptureError("results_raw is not ASCII recorder output") from error
     if not text.endswith("\n"):
@@ -876,7 +876,7 @@ def title_input_poll_ordinals(path: Path, recorder_protocol: str = "v11") -> lis
     if recorder_protocol not in {"v13-title-poll", "v14-normal-core-history", "v15-anomaly-entry", "v16-anomaly-entry", "v17-anomaly-entry", "v18-ivt-entry", "v19-int93-vector", "v20-title-entry-transfer", "v21-int93-installation"}:
         return []
     try:
-        text = path.read_text(encoding="ascii")
+        text = path.read_bytes().decode("ascii")
     except UnicodeDecodeError as error:
         raise CaptureError("results_raw is not ASCII recorder output") from error
     if not text.endswith("\n"):
@@ -1005,7 +1005,7 @@ def known_unhandled_interrupt_observed(path: Path, recorder_protocol: str = "v11
     if info.st_size == 0 or info.st_size > MAX_RAW_OBSERVATION_BYTES:
         return False
     try:
-        text = path.read_text(encoding="ascii")
+        text = path.read_bytes().decode("ascii")
     except UnicodeDecodeError:
         return False
     # A recorder append can be in progress while this helper polls.  Never

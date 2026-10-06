@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import os
 from pathlib import Path
 import signal
 import unittest
@@ -48,12 +49,14 @@ def raw_record(*, title_valid="1", title_entry_cs="0e70", title_entry_ip="0100",
 
 
 class OriginExperimentTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "posix", "recorder process-group isolation is POSIX-specific")
     def test_timeout_kill_targets_the_isolated_recorder_process_group(self):
         process = mock.Mock(pid=4321)
         with mock.patch.object(RUNNER.os, "killpg") as killpg:
             RUNNER.kill_recorder_group(process)
         killpg.assert_called_once_with(4321, signal.SIGKILL)
 
+    @unittest.skipUnless(os.name == "posix", "recorder process-group isolation is POSIX-specific")
     def test_timeout_kill_accepts_a_group_that_already_exited(self):
         process = mock.Mock(pid=4321)
         with mock.patch.object(RUNNER.os, "killpg", side_effect=ProcessLookupError):

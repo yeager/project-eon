@@ -470,7 +470,7 @@ def capture_operator_instructions(intent: str, *, late_sampling: bool = False) -
 def parse_host_input_records(path: Path) -> list[tuple[int, int]]:
     """Validate finite host-to-core delivery records and retain ordinal/frame."""
     try:
-        text = path.read_text(encoding="ascii")
+        text = path.read_bytes().decode("ascii")
     except UnicodeDecodeError as error:
         raise CaptureError("host-input receipt is not ASCII recorder output") from error
     if not text.endswith("\n"):
@@ -558,7 +558,7 @@ def _parse_raw_pc(
     else:
         raise CaptureError("raw_pc format is not a reviewed recorder grammar")
     try:
-        text = path.read_text(encoding="ascii")
+        text = path.read_bytes().decode("ascii")
     except UnicodeDecodeError as error:
         raise CaptureError("raw_pc is not ASCII recorder output") from error
     if not text.endswith("\n"):
@@ -653,7 +653,7 @@ def parse_late_raw_pc_receipt(
     if info.st_size > MAX_LATE_RAW_BYTES:
         raise CaptureError("late raw-PC receipt exceeds the bounded recorder contract")
     try:
-        text = path.read_text(encoding="ascii")
+        text = path.read_bytes().decode("ascii")
     except UnicodeDecodeError as error:
         raise CaptureError("late raw-PC receipt is not ASCII recorder output") from error
     if not text.endswith("\n"):
@@ -762,7 +762,7 @@ def parse_late_selector_dispatch(path: Path) -> list[tuple[int, int, int, int, i
     if state != "present":
         return []
     try:
-        text = path.read_text(encoding="ascii")
+        text = path.read_bytes().decode("ascii")
     except UnicodeDecodeError as error:
         raise CaptureError("late selector-dispatch receipt is not ASCII recorder output") from error
     if not text.endswith("\n"):
@@ -1104,7 +1104,7 @@ def parse_selector_dispatch_receipt(
     if info.st_size > MAX_SELECTOR_DISPATCH_BYTES:
         raise CaptureError("selector-dispatch receipt exceeds the bounded recorder contract")
     try:
-        text = path.read_text(encoding="ascii")
+        text = path.read_bytes().decode("ascii")
     except UnicodeDecodeError as error:
         raise CaptureError("selector-dispatch receipt is not ASCII recorder output") from error
     if not text.endswith("\n"):
@@ -1164,7 +1164,7 @@ def selector_dispatch_status(
     raw_site_links: list[tuple[int, int, int, int]] = []
     if raw_path.exists():
         try:
-            raw_text = raw_path.read_text(encoding="ascii")
+            raw_text = raw_path.read_bytes().decode("ascii")
         except UnicodeDecodeError as error:
             raise CaptureError("raw_pc is not ASCII recorder output") from error
         for line in raw_text.splitlines(keepends=True):
@@ -1218,7 +1218,7 @@ def _validate_title_display_input_links(links: list[tuple[int, int]], input_path
 def parse_title_display_receipt(path: Path) -> tuple[int, dict[int, int], list[tuple[int, int]], int]:
     """Validate v10's title-armed custom-chip write receipt without display inference."""
     try:
-        text = path.read_text(encoding="ascii")
+        text = path.read_bytes().decode("ascii")
     except UnicodeDecodeError as error:
         raise CaptureError("title-display receipt is not ASCII recorder output") from error
     if not text.endswith("\n"):
@@ -1445,19 +1445,20 @@ def recorder_config(disk1: Path, disk2: Path, kickstart: Path, output: Path,
         warp_mode = TIMING_PROFILES[timing_profile]
     except KeyError as error:
         raise CaptureError("timing profile is not in the reviewed finite profile set") from error
+    posix = lambda path: path.as_posix()
     return "\n".join((
         "# Ephemeral physical-input capture configuration; no debugger or playback.",
         "amiga_model = A500",
-        f"kickstart_file = {kickstart}",
-        f"floppy_drive_0 = {disk1}",
+        f"kickstart_file = {posix(kickstart)}",
+        f"floppy_drive_0 = {posix(disk1)}",
         # Keep DF1 empty so disk 2 remains available for the game's explicit
         # disk-in-DF0 prompt through FS-UAE's ordinary removable-media menu.
-        f"floppy_image_0 = {disk1}",
-        f"floppy_image_1 = {disk2}",
+        f"floppy_image_0 = {posix(disk1)}",
+        f"floppy_image_1 = {posix(disk2)}",
         "floppy_write_protect = 1",
-        f"base_dir = {output / 'runtime'}",
-        f"logs_dir = {output / 'logs'}",
-        f"save_states_dir = {output / 'states'}",
+        f"base_dir = {posix(output / 'runtime')}",
+        f"logs_dir = {posix(output / 'logs')}",
+        f"save_states_dir = {posix(output / 'states')}",
         "fullscreen = 0",
         "window_width = 640",
         "window_height = 512",

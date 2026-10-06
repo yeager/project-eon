@@ -7,6 +7,7 @@ import importlib.util
 import io
 import contextlib
 from pathlib import Path
+from pathlib import PurePosixPath
 from types import SimpleNamespace
 import unittest
 from unittest import mock
@@ -140,8 +141,8 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
 
     def test_generated_configuration_locks_media_and_disables_debug_routes(self) -> None:
         configuration = TOOL.recorder_config(
-            Path("/safe/disk1.adf"), Path("/safe/disk2.adf"), Path("/safe/kickstart.rom"),
-            Path("/safe/capture"))
+            PurePosixPath("/safe/disk1.adf"), PurePosixPath("/safe/disk2.adf"),
+            PurePosixPath("/safe/kickstart.rom"), PurePosixPath("/safe/capture"))
         self.assertIn("amiga_model = A500", configuration)
         self.assertIn("floppy_drive_0 = /safe/disk1.adf", configuration)
         self.assertNotIn("floppy_drive_1 =", configuration)
@@ -155,13 +156,13 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
 
     def test_timing_profile_is_finite_and_bound_into_configuration(self) -> None:
         configuration = TOOL.recorder_config(
-            Path("/safe/disk1.adf"), Path("/safe/disk2.adf"), Path("/safe/kickstart.rom"),
-            Path("/safe/capture"), "warp")
+            PurePosixPath("/safe/disk1.adf"), PurePosixPath("/safe/disk2.adf"),
+            PurePosixPath("/safe/kickstart.rom"), PurePosixPath("/safe/capture"), "warp")
         self.assertIn("warp_mode = 1", configuration)
         with self.assertRaisesRegex(TOOL.CaptureError, "finite profile set"):
             TOOL.recorder_config(
-                Path("/safe/disk1.adf"), Path("/safe/disk2.adf"), Path("/safe/kickstart.rom"),
-                Path("/safe/capture"), "unbounded")
+                PurePosixPath("/safe/disk1.adf"), PurePosixPath("/safe/disk2.adf"),
+                PurePosixPath("/safe/kickstart.rom"), PurePosixPath("/safe/capture"), "unbounded")
 
     def test_unmount_requires_the_exact_fuse_view_to_disappear(self) -> None:
         with temporary_directory() as directory:
