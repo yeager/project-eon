@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import unittest
 from unittest import mock
 
-from eon_test_paths import temporary_directory
+from eon_test_paths import CanonicalReceiptPath, LfTextFixtureWrites, temporary_directory
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,7 +23,7 @@ TOOL = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(TOOL)
 
 
-class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
+class DeuterosAmigaCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
     @staticmethod
     def _zero_route_observation_payload() -> str:
         rows: list[str] = []
@@ -74,8 +74,8 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
         payload = self._zero_route_observation_payload()
         with temporary_directory() as directory:
             root = Path(directory)
-            sidecar = root / "zero-route-observation.txt"
-            host = root / "host-input-receipt.txt"
+            sidecar = CanonicalReceiptPath(root / "zero-route-observation.txt")
+            host = CanonicalReceiptPath(root / "host-input-receipt.txt")
             sidecar.write_text(payload, encoding="ascii")
             host.write_text("host-input 1 frame=10 line=3 action=149 state=1\n", encoding="ascii")
             invocations = TOOL.parse_zero_route_observation(sidecar, host)
@@ -95,8 +95,8 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
         payload = self._zero_route_observation_payload()
         with temporary_directory() as directory:
             root = Path(directory)
-            sidecar = root / "zero-route-observation.txt"
-            host = root / "host-input-receipt.txt"
+            sidecar = CanonicalReceiptPath(root / "zero-route-observation.txt")
+            host = CanonicalReceiptPath(root / "host-input-receipt.txt")
             host.write_text("host-input 1 frame=10 line=3 action=149 state=1\n", encoding="ascii")
             sidecar.write_text(payload.replace("pc=0x0001fc42", "pc=0x0001fc42", 1)
                                .replace("mem_addr=0x0001f99c", "mem_addr=0x0001f99d", 1),
@@ -271,7 +271,7 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
                   "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
                   "input_ordinal=0 input_frame=0\n")
         with temporary_directory() as directory:
-            raw = Path(directory) / "raw-pc.txt"
+            raw = CanonicalReceiptPath(Path(directory) / "raw-pc.txt")
             raw.write_text(sample, encoding="ascii")
             with self.assertRaisesRegex(TOOL.CaptureError, "unreviewed probe site"):
                 TOOL.parse_raw_pc_observations(raw, "v9")
@@ -314,7 +314,7 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
                   "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0004 "
                   "input_ordinal=1 input_frame=2\n")
         with temporary_directory() as directory:
-            raw = Path(directory) / "raw-pc.txt"
+            raw = CanonicalReceiptPath(Path(directory) / "raw-pc.txt")
             raw.write_text(sample, encoding="ascii")
             with self.assertRaisesRegex(TOOL.CaptureError, "unreviewed probe site"):
                 TOOL.parse_raw_pc_observations(raw, "v9-v16-phased")
@@ -346,9 +346,9 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
             rows.append(f"host-input {ordinal} frame={ordinal * 10} line=3 action=149 state=1\n")
         with temporary_directory() as directory:
             root = Path(directory)
-            host = root / "host-input-receipt.txt"
+            host = CanonicalReceiptPath(root / "host-input-receipt.txt")
             host.write_text("".join(rows), encoding="ascii")
-            late = root / "late-input-pc.txt"
+            late = CanonicalReceiptPath(root / "late-input-pc.txt")
             late.write_text(
                 "late-pc 1 cycles=90 pc=0x0001fe84 ir_opcode=0x7202 memory_opcode=0x7202 "
                 "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
@@ -377,9 +377,9 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
     def test_v19_late_selector_is_bijective_with_late_dispatch_pc(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)
-            late = root / "late-input-pc.txt"
-            host = root / "host-input-receipt.txt"
-            selector = root / "late-selector-dispatch.txt"
+            late = CanonicalReceiptPath(root / "late-input-pc.txt")
+            host = CanonicalReceiptPath(root / "host-input-receipt.txt")
+            selector = CanonicalReceiptPath(root / "late-selector-dispatch.txt")
             host.write_text("".join(
                 f"host-input {i} frame={i * 10} line=3 action=149 state=1\n"
                 for i in range(1, 10)), encoding="ascii")
@@ -409,11 +409,11 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
                          (TOOL.LATE_RAW_PC_V20_SITES, 28 * TOOL.MAX_LATE_RAW_RECORDS_PER_SITE))
         with temporary_directory() as directory:
             root = Path(directory)
-            host = root / "host-input-receipt.txt"
+            host = CanonicalReceiptPath(root / "host-input-receipt.txt")
             host.write_text("".join(
                 f"host-input {i} frame={i * 10} line=3 action=149 state=1\n"
                 for i in range(1, 10)), encoding="ascii")
-            late = root / "late-input-pc.txt"
+            late = CanonicalReceiptPath(root / "late-input-pc.txt")
             for index, site in enumerate((0x1FC22, 0x1FC9C), start=1):
                 late.write_text(
                     f"late-pc 1 cycles={index} pc=0x{site:08x} ir_opcode=0x4e75 memory_opcode=0x4e75 "
@@ -438,9 +438,9 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
     def test_v17_selector_dispatch_is_joined_to_raw_pc_and_host_input(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)
-            raw = root / "raw-pc.txt"
-            host = root / "host-input-receipt.txt"
-            dispatch = root / "selector-dispatch.txt"
+            raw = CanonicalReceiptPath(root / "raw-pc.txt")
+            host = CanonicalReceiptPath(root / "host-input-receipt.txt")
+            dispatch = CanonicalReceiptPath(root / "selector-dispatch.txt")
             raw.write_text(
                 "raw-pc 1 cycles=10 pc=0x0001fbe6 ir_opcode=0x4a39 memory_opcode=0x4a39 "
                 "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
@@ -807,8 +807,8 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
     def test_title_display_receipt_is_title_armed_bounded_and_hash_bound(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)
-            display = root / "title-display.txt"
-            input_receipt = root / "host-input-receipt.txt"
+            display = CanonicalReceiptPath(root / "title-display.txt")
+            input_receipt = CanonicalReceiptPath(root / "host-input-receipt.txt")
             input_receipt.write_text(
                 "host-input 1 frame=2 line=3 action=4 state=1\n", encoding="ascii")
             display.write_text(
@@ -844,8 +844,8 @@ class DeuterosAmigaCaptureRunnerTests(unittest.TestCase):
     def test_late_display_receipt_is_separate_bounded_and_linked_after_intro(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)
-            display = root / "late-display.txt"
-            inputs = root / "host-input-receipt.txt"
+            display = CanonicalReceiptPath(root / "late-display.txt")
+            inputs = CanonicalReceiptPath(root / "host-input-receipt.txt")
             inputs.write_text("".join(
                 f"host-input {ordinal} frame=5031 line=0 action=157 state=1\n"
                 for ordinal in range(1, 23)), encoding="ascii")

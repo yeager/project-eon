@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 import unittest
 from unittest import mock
-from eon_test_paths import temporary_directory
+from eon_test_paths import CanonicalReceiptPath, LfTextFixtureWrites, temporary_directory
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("verify_capture_receipt", ROOT / "tools" / "verify_capture_receipt.py")
@@ -17,7 +17,7 @@ TOOL = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(TOOL)
 
 
-class ReceiptVerifierTests(unittest.TestCase):
+class ReceiptVerifierTests(LfTextFixtureWrites, unittest.TestCase):
     def test_schema31_zero_route_observation_status_is_exact_and_schema_bound(self) -> None:
         runner = TOOL.load_tool("run_deuteros_amiga_capture")
         with temporary_directory() as directory:
@@ -69,10 +69,10 @@ class ReceiptVerifierTests(unittest.TestCase):
             }, "32", runner)
         with temporary_directory() as directory:
             root = Path(directory)
-            (root / "host-input-receipt.txt").write_text("".join(
+            CanonicalReceiptPath(root / "host-input-receipt.txt").write_text("".join(
                 f"host-input {ordinal} frame=5031 line=0 action=157 state=1\n"
                 for ordinal in range(1, 22)), encoding="ascii")
-            (root / "late-display.txt").write_text(
+            CanonicalReceiptPath(root / "late-display.txt").write_text(
                 "late-display-write 1 cycles=100 vpos=54 hpos=104 origin=copper "
                 "register=0x0090 value=0x40c1 input_ordinal=21 input_frame=5031\n",
                 encoding="ascii")
@@ -89,7 +89,7 @@ class ReceiptVerifierTests(unittest.TestCase):
         protocol = "millennium-dos-en-driver-load-return-v1"
         with temporary_directory() as directory:
             root = Path(directory)
-            sidecar = root / "driver-load-return.raw"
+            sidecar = CanonicalReceiptPath(root / "driver-load-return.raw")
             sidecar.write_text(
                 "driver-load-return-v1 ordinal=1 image=mill.com cs=0e70 pc=0315 "
                 "ax=0010 bx=0002 cx=0010 dx=0000 si=0000 di=0000 ds=0e70 es=0e70 "
@@ -116,7 +116,7 @@ class ReceiptVerifierTests(unittest.TestCase):
             console = root / "recorder-console.log"
             console_payload = b"diagnostic observer stopped\n"
             console.write_bytes(console_payload)
-            sidecar = root / "driver-load-return.raw"
+            sidecar = CanonicalReceiptPath(root / "driver-load-return.raw")
             sidecar.write_text(
                 "driver-load-return-v1 ordinal=1 image=mill.com cs=0e70 pc=02d4 "
                 "ax=0001 bx=0002 cx=0010 dx=0000 si=0000 di=0000 ds=0e70 es=0e70 "

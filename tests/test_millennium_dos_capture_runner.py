@@ -9,7 +9,7 @@ from pathlib import Path
 import unittest
 from unittest import mock
 
-from eon_test_paths import temporary_directory
+from eon_test_paths import CanonicalReceiptPath, LfTextFixtureWrites, temporary_directory
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,7 +20,7 @@ TOOL = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(TOOL)
 
 
-class MillenniumDosCaptureRunnerTests(unittest.TestCase):
+class MillenniumDosCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
     @staticmethod
     def _driver_load_return(ordinal: int, pc: int, buffer: str = "none") -> str:
         return (f"driver-load-return-v1 ordinal={ordinal} image=mill.com cs=0e70 pc={pc:04x} "
@@ -29,7 +29,7 @@ class MillenniumDosCaptureRunnerTests(unittest.TestCase):
 
     def test_driver_load_return_sidecar_is_bounded_and_preserves_opaque_results(self) -> None:
         with temporary_directory() as directory:
-            sidecar = Path(directory) / "driver-load-return.raw"
+            sidecar = CanonicalReceiptPath(Path(directory) / "driver-load-return.raw")
             self.assertEqual(TOOL.driver_load_return_status(sidecar, "millennium-dos-en-driver-load-return-v1"),
                              "driver_load_return=absent\n")
             self.assertEqual(TOOL.driver_load_return_status(sidecar, "v21-int93-installation"), "")

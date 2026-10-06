@@ -9,7 +9,7 @@ import signal
 import unittest
 from unittest import mock
 
-from eon_test_paths import temporary_directory
+from eon_test_paths import LfTextFixtureWrites, temporary_directory
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,7 +48,7 @@ def raw_record(*, title_valid="1", title_entry_cs="0e70", title_entry_ip="0100",
             f"\ttransfer_class={transfer_class}\n").encode("ascii")
 
 
-class OriginExperimentTests(unittest.TestCase):
+class OriginExperimentTests(LfTextFixtureWrites, unittest.TestCase):
     @unittest.skipUnless(os.name == "posix", "recorder process-group isolation is POSIX-specific")
     def test_timeout_kill_targets_the_isolated_recorder_process_group(self):
         process = mock.Mock(pid=4321)
