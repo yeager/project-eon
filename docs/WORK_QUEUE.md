@@ -1443,3 +1443,40 @@ separate normal-session VNC snapshot shows the intro logo. The black image was
 observed in separate v23 capture attempts and remains unexplained. Keep tracing
 the guest startup before its repeating input poll, and continue to require a
 visible input-linked state change before claiming Deuteros playability.
+
+### 2026-10-08 Millennium DOS loader and INT 93h cross-reference
+
+The exact English `TITLES.EXE` now has an external full linear candidate
+listing and bounded instruction-start transfer scans. A file-selection/read
+fragment at `$104a..$1082` reads a far pointer from `CS:$011c`; the candidate
+installer at `$1247..$1265` uses DOS `GetVect`/`SetVect` for INT `$93` around
+that pointer. The source bytes at `+$001c..+$001f` are zero. The listing records
+`$1061 -> $1066` and `$1082 -> $1247`, but no edge proves entry into `$104a`
+from the modeled `$1b80` startup. No handler identity or runtime pointer write
+is established. See the matching hash-addressed evidence in
+`PRESERVATION.md#2026-10-08-millennium-dos-int-93h-installer-disassembly-cross-check`.
+
+The call-context scenario that assumes the recorded INT `$91` returns plus
+named BIOS/DOS returns reaches the DOS memory request at `$1b2d` with
+`AH=$48`, `BX=$fa00`; its carry, returned registers and memory effects are
+unknown. Next DOS work must capture the exact EXEC child and the actual
+allocation result, then trace who writes `CS:$011c` and which indirect/far
+transfer reaches the candidate loader. Do not synthesize the DOS return,
+handler vector, or child state.
+
+The exact `MILL.COM` linear candidate also identifies DOS EXEC function
+`$4b00` at `$0336`, called from `$0240` and `$024c` with distinct runtime
+filename pointers. The next recorder should bind each site to the actual
+`DS:DX`, parameter block and hash-identified child image. This links the
+existing `LOADNGO` identity work to a specific runtime boundary only when
+those values are observed; see the parent EXEC record in `PRESERVATION.md`.
+
+The v23 Deuteros capture helper also had a schema-33 bookkeeping defect: it
+activated the zero-route observer but omitted its status fields from the final
+receipt. A pinned-recorder hash allowlist now drives both activation and
+serialization. The runner/verifier suites pass 86 tests, and a visible
+software-OpenGL no-input diagnostic passes receipt verification on VNC `:6`.
+Its raw-PC trace is byte-identical to prior runs and contains only pre-input
+poll sites; it does not demonstrate display/game-state progress. Keep requiring
+visible manual input and a later verified state/frame change before claiming
+Deuteros playability.

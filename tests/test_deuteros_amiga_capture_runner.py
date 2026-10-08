@@ -24,6 +24,15 @@ SPEC.loader.exec_module(TOOL)
 
 
 class DeuterosAmigaCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
+    def test_zero_route_observer_sidecar_is_enabled_for_v21_through_v23(self) -> None:
+        self.assertEqual(TOOL.RECORDER_ZERO_ROUTE_OBSERVATION_HASHES, frozenset((
+            TOOL.TRV2_RECORDER_V21_SHA256,
+            TOOL.TRV2_RECORDER_V22_SHA256,
+            TOOL.TRV2_RECORDER_V23_SHA256,
+        )))
+        self.assertNotIn(TOOL.TRV2_RECORDER_V20_SHA256,
+                         TOOL.RECORDER_ZERO_ROUTE_OBSERVATION_HASHES)
+
     def test_latch_write_receipt_is_bounded_exact_and_input_linked(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)

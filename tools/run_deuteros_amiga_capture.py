@@ -212,6 +212,9 @@ TRV2_RECORDER_V22_SHA256 = "eb0995c70f7f355f674d448b08c0f3e647430562ffde7d179e5a
 TRV2_RECORDER_V22_SIZE = 62_031_592
 TRV2_RECORDER_V23_SHA256 = "e4e46e84cd75eceffb28d26882fef0062582c251b0ef26baa0fccf6aff2e8dd1"
 TRV2_RECORDER_V23_SIZE = 62_039_312
+RECORDER_ZERO_ROUTE_OBSERVATION_HASHES = frozenset((
+    TRV2_RECORDER_V21_SHA256, TRV2_RECORDER_V22_SHA256, TRV2_RECORDER_V23_SHA256,
+))
 SOURCE_LAYOUT_RELEASE = "nested-release-zip"
 SOURCE_LAYOUT_STANDALONE = "standalone-zip-pair"
 SOURCE_LAYOUTS = {SOURCE_LAYOUT_RELEASE, SOURCE_LAYOUT_STANDALONE}
@@ -1621,6 +1624,7 @@ def run_capture(args: argparse.Namespace) -> Path:
     is_v21 = recorder_identity[0] == TRV2_RECORDER_V21_SHA256
     is_v22 = recorder_identity[0] == TRV2_RECORDER_V22_SHA256
     is_v23 = recorder_identity[0] == TRV2_RECORDER_V23_SHA256
+    has_zero_route_observer = recorder_identity[0] in RECORDER_ZERO_ROUTE_OBSERVATION_HASHES
     has_late_input_sidecars = is_v19 or is_v20 or is_v21 or is_v22 or is_v23
     is_v16 = recorder_identity[0] == TRV2_RECORDER_V16_SHA256
     phased_raw = is_v16 or is_v17 or is_v18 or is_v19 or is_v20 or is_v21 or is_v22 or is_v23
@@ -1699,7 +1703,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                 output / "late-display.txt")
         else:
             environment.pop("PROJECT_EON_FS_UAE_LATE_DISPLAY_RECORD", None)
-        if is_v21 or is_v22 or is_v23:
+        if has_zero_route_observer:
             environment["PROJECT_EON_FS_UAE_ZERO_ROUTE_RECORD"] = str(
                 output / "zero-route-observation.txt")
         if is_v23:
@@ -1799,7 +1803,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                            output / "late-input-pc.txt", input_path, late_version)
                        if has_late_input_sidecars else "")
         zero_route_status = (zero_route_observation_status(
-            output / "zero-route-observation.txt", input_path) if is_v21 or is_v22 else "")
+            output / "zero-route-observation.txt", input_path) if has_zero_route_observer else "")
         late_display_status = (late_display_receipt_status(
             output / "late-display.txt", input_path) if is_v22 or is_v23 else "")
         latch_write_status = (latch_write_receipt_status(

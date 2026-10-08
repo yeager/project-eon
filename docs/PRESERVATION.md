@@ -11013,6 +11013,68 @@ and listings remain outside Git and supplied media. Twenty-four focused tests
 cover DS/CS absolute aliasing, exact wrapper-stack restoration, the BIOS and
 DOS return scenarios, invalidated register facts, and rejected overlaps.
 
+### 2026-10-08 Millennium DOS INT 93h installer disassembly cross-check
+
+A fresh full linear listing was regenerated from the hash-verified English
+`TITLES.EXE` (7,022 bytes; SHA-256
+`3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6`) in the
+verified direct-media set
+`d938cd6a611a83897a745b257a371613b73a7dddffb2d336ec2167a192803783`.
+The listing is a decode candidate only; it does not classify code and data.
+Its complete body is external at
+`~/.cache/project-eon-tools/millennium-dos-entry-handler-readonly-20261008.md`
+(1,683,090 bytes, SHA-256
+`62f9c61f21d8598efbf9e26afcc66975d2e9c8ffa805f4310e261b65dc77f864`, mode
+`0600`).
+
+The linear candidate at runtime `$104a..$1082` (file offsets `+$0f4a..+$0f82`)
+contains a file-selection/read fragment that reads a far pointer from
+`CS:$011c`. The candidate at `$1247..$1265` (file `+$1147..+$1165`) invokes
+DOS `GetVect` for vector `$93`, saves the returned `BX:ES` at `$1243/$1245`,
+loads `DX:DS` from `CS:$011c`, and invokes DOS `SetVect` for vector `$93`.
+The source bytes at file `+$001c..+$001f` are zero. A bounded instruction-start
+transfer scan records the internal conditional edge `$1061 -> $1066` and jump
+`$1082 -> $1247`; it finds no direct transfer to `$104a`, `$124b`, or `$125c`.
+An independent scan of `$0134`, `$115c`, `$124b`, and `$125c` finds no direct
+instruction-start transfer. The exact 639-byte loader-target report has SHA-256
+`fa0493e9c2a4d14a298ed79f638ff275fb45540dbc100bb3b8bd06c220f608e1`; the
+423-byte INT 93h-target report has SHA-256
+`f712a3d41cb6b2b847b958ff16c5d1694dca9d66ece414f3843e28605172188e`. Both
+are external mode-`0600` metadata files.
+
+These instruction edges establish only a candidate internal route. They do
+not connect its entry to the modeled `$1b80` start, identify which file is
+read, prove a write to the zero-filled pointer, establish the handler bytes,
+or show execution of either INT 93h wrapper. The context-sensitive report
+continues to stop at DOS `INT 21h/AH=48h` at `$1b2d` after the explicitly
+assumed `$1b26` resize return. Capturing the allocator's carry/result and
+memory state is required before extending that route; no DOS return or
+allocation result is inferred here.
+
+### 2026-10-08 Millennium DOS parent EXEC candidate
+
+The same exact-media linear analysis includes `MILL.COM` (1,445 bytes,
+SHA-256 `4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e`)
+and `2200AD.EXE` (54,391 bytes, SHA-256
+`427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57`).
+The combined full linear candidate report is external on trv2 at
+`/home/trv2/.cache/project-eon-tools/millennium-startup-analysis-20261008-parent-images-linear.md`
+(769,893 bytes, SHA-256
+`663a334d9b5f969072b4d8ee43a30e591020a2bc7007a52a038b04dda71c8825`, mode
+`0600`).
+
+In the `MILL.COM` candidate, the helper at runtime `$031c..$034b` (file
+`+$021c..+$024b`) sets DS/ES to CS, uses parameter block BX=`$067a`, issues
+DOS EXEC function `$4b00` at `$0336` (file `+$0236`), restores SS:SP, and
+queries the child return code with function `$4d` on the carry-clear branch.
+Two linear callers set DS=CS and DX=`$068f` at `$023d` or DX=`$069a` at
+`$0249` before calling the helper. These are candidate filename pointers in
+runtime memory; this listing does not prove their contents, which child each
+call executes, or that either call ran. The existing experimental LOADNGO
+records identify planned COM image reads but do not yet bind them to these
+specific caller PCs or establish the resulting runtime path. This EXEC site
+is therefore a concrete next observer location, not a recovered transfer.
+
 ### 2026-10-08 Deuteros VNC display authorization check
 
 The trv2 Deuteros capture display is Xvnc `:6`, protected by the external
@@ -11080,3 +11142,27 @@ still showed a black guest image; this ROM probe does not explain that
 capture-only display result or establish Deuteros input, title state, or
 playability. No emulator input was sent, and this normal-emulator observation
 is not capture evidence.
+
+### 2026-10-08 Deuteros v23 software-rendering diagnostic
+
+The schema-33 receipt verifier requires the zero-route observation status for
+v23, but the capture runner wrote that status only for v21/v22. The runner now
+uses one pinned-hash allowlist for both recorder activation and receipt
+serialization, including the v23 recorder. The focused capture-runner and
+receipt-verifier suites pass 86 tests.
+
+A 30-second visible v23 no-input diagnostic was then run on the connected
+Xvnc `:6` display with `LIBGL_ALWAYS_SOFTWARE=1`. Mesa created an OpenGL
+`llvmpipe` renderer; the recorder produced a schema-33 receipt that passes the
+current verifier. External artifacts are under
+`/home/trv2/.cache/project-eon-tools/deuteros-capture-display6-20261008-softwarediag02/`.
+The mode-`0600` `run-status.txt` is 2,768 bytes (SHA-256
+`cff285f623719d4bf18eb2f6bd4b46751f2eec9d753a39f83ceb10abf9827829`); it
+records diagnostic-no-input intent, no host-input receipt, and an absent
+zero-route sidecar. The 167,853-byte raw-PC file is mode `0600`, SHA-256
+`91a05a69ce723695da661f1c9c0c8eb5fd4b71e7e5bffa4ad5e23256ae3904b9`,
+byte-identical to the earlier bounded v23 polling trace. Its 1,024 observations
+remain at eight pre-input sites; no title-display, selector, or later-input
+transition is established. Software OpenGL setup and a valid receipt improve
+the diagnostic path, but this run supplies no game input, frame change, or
+playability evidence.
