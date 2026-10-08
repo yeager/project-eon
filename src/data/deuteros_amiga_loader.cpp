@@ -266,6 +266,18 @@ DeuterosAmigaLoadPlan parse_deuteros_amiga_load_plan(const AmigaAdf& disk) {
     if (big16(loop_bytes, 0x6a) != 6 || big32(loop_bytes, 0x6c) != 0xbfe001) {
         throw std::runtime_error("Unexpected Deuteros CIA input probe");
     }
+    // The secondary input port test continues through a local latch and two
+    // exact branch gates before selecting the scheduler or $21982. Keep this
+    // executable slice tied to its clean-media identity; it does not name the
+    // control or infer what either destination displays.
+    constexpr std::uint32_t secondary_input_address = 0x2185e;
+    constexpr std::size_t secondary_input_length = 0x34;
+    const auto secondary_input = stage_bytes.subspan(
+        main_offset(secondary_input_address), secondary_input_length);
+    if (to_hex(sha256(secondary_input))
+            != "82eaf3c25827471bcc4005c155722c63bd6913af294677ab592162b13904fd86") {
+        throw std::runtime_error("Unsupported Deuteros secondary-input continuation");
+    }
     // Values above two at $21982 branch to $2181c, the scheduler call rather
     // than one of the bootstrap exits. Decode the scheduler's fixed layout
     // and its wait dispatch from the raw stage. This provides a bounded

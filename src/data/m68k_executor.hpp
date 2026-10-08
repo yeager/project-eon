@@ -20,6 +20,13 @@ struct MemoryRange {
     bool writable = false;
 };
 
+struct BranchCheckpoint {
+    std::uint32_t instruction_address = 0;
+    std::uint16_t status_register = 0;
+    std::uint32_t target_address = 0;
+    bool taken = false;
+};
+
 enum class StopReason {
     requested_address,
     unsupported_instruction,
@@ -33,6 +40,7 @@ struct ExecutionResult {
     StopReason reason = StopReason::instruction_limit;
     std::uint64_t instructions_executed = 0;
     std::uint16_t stop_opcode = 0;
+    std::vector<BranchCheckpoint> branches;
 };
 
 // Executes only instructions used by hash-verified Atari loader and bounded
@@ -44,5 +52,10 @@ struct ExecutionResult {
     std::uint32_t code_base, MachineState initial,
     std::span<MemoryRange> memory, std::uint64_t max_steps,
     std::uint32_t stop_address);
+
+[[nodiscard]] ExecutionResult execute(std::span<const std::uint8_t> code,
+    std::uint32_t code_base, MachineState initial,
+    std::span<MemoryRange> memory, std::uint64_t max_steps,
+    std::span<const std::uint32_t> stop_addresses);
 
 } // namespace eon::m68k

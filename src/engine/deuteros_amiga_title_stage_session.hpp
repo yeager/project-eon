@@ -84,6 +84,9 @@ public:
     [[nodiscard]] std::span<const std::uint8_t> main_stage_cia_prefix_code() const noexcept {
         return service_batch_boundary_session_.main_stage_cia_prefix_code();
     }
+    [[nodiscard]] std::span<const std::uint8_t> main_stage_outer_input_code() const noexcept {
+        return service_batch_boundary_session_.main_stage_outer_input_code();
+    }
     [[nodiscard]] DeuterosAmigaMainStageState main_stage_state() const noexcept {
         return service_batch_boundary_session_.main_stage_state();
     }

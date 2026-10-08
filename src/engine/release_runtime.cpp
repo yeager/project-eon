@@ -6764,7 +6764,7 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_outer_input(const DeuterosAmig
             route={0x21926,execution.data_register_zero,0x217f6};
         }else{
             route=execute_deuteros_amiga_owned_outer_input(o.instruction_address,o.value,
-                current->d0_value,read,write);
+                current->d0_value,read,write,deuteros_amiga_->main_stage_outer_input_code());
         }
         if(!pending.observe_main_stage_outer_input(o,route)){
             result.error="Deuteros outer input route rejected";return result;

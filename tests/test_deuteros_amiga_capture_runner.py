@@ -24,6 +24,39 @@ SPEC.loader.exec_module(TOOL)
 
 
 class DeuterosAmigaCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
+    def test_latch_write_receipt_is_bounded_exact_and_input_linked(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            sidecar = CanonicalReceiptPath(root / "latch-write.txt")
+            host = CanonicalReceiptPath(root / "host-input-receipt.txt")
+            host.write_text("host-input 1 frame=80 line=2 action=149 state=1\n", encoding="ascii")
+            record = ("latch-write 1 cycles=100 site=0x00021868 next_pc=0x00021870 "
+                      "opcode=0x13fc target=0x00021720 before=0x00 after=0x01 "
+                      "input_ordinal=1 input_frame=80\n")
+            sidecar.write_text(record, encoding="ascii")
+            status = dict(line.split("=", 1) for line in
+                          TOOL.latch_write_receipt_status(sidecar, host).splitlines())
+            self.assertEqual(status["latch_write"], "present")
+            self.assertEqual(status["latch_write_records"], "1")
+            self.assertEqual(status["latch_write_input_chronology"], "linked")
+            sidecar.write_text(record.replace("before=0x00", "before=0x01"), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "invalid recorder record"):
+                TOOL.latch_write_receipt_status(sidecar, host)
+            sidecar.write_text(record, encoding="ascii")
+            host.write_text("host-input 1 frame=81 line=2 action=149 state=1\n", encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "exact host-input chronology"):
+                TOOL.latch_write_receipt_status(sidecar, host)
+
+    def test_latch_write_receipt_accepts_absent_and_rejects_size_over_cap(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            sidecar = root / "latch-write.txt"
+            host = root / "host-input-receipt.txt"
+            self.assertIn("latch_write=absent\n", TOOL.latch_write_receipt_status(sidecar, host))
+            sidecar.write_bytes(b"x" * (TOOL.MAX_LATCH_WRITE_BYTES + 1))
+            with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
+                TOOL.latch_write_receipt_status(sidecar, host)
+
     @staticmethod
     def _zero_route_observation_payload() -> str:
         rows: list[str] = []
@@ -138,6 +171,24 @@ class DeuterosAmigaCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
         with self.assertRaisesRegex(TOOL.CaptureError, "visible X11 or Wayland"):
             TOOL.require_visible_operator_input({})
         TOOL.require_visible_operator_input({"WAYLAND_DISPLAY": "wayland-0"})
+
+    def test_rejects_inaccessible_x11_display_before_capture(self) -> None:
+        environment = {"DISPLAY": ":6", "XAUTHORITY": "/cache/Xauthority6"}
+        with mock.patch.object(TOOL.shutil, "which", return_value="/usr/bin/xdpyinfo"), \
+                mock.patch.object(TOOL.subprocess, "run",
+                    return_value=SimpleNamespace(returncode=1)) as probe:
+            with self.assertRaisesRegex(TOOL.CaptureError, "check DISPLAY and XAUTHORITY"):
+                TOOL.require_visible_operator_input(environment)
+        probe.assert_called_once_with(["/usr/bin/xdpyinfo", "-display", ":6"],
+            env=environment, capture_output=True, text=True, timeout=5, check=False)
+
+    def test_accepts_accessible_x11_display(self) -> None:
+        environment = {"DISPLAY": ":6", "XAUTHORITY": "/cache/Xauthority6"}
+        with mock.patch.object(TOOL.shutil, "which", return_value="/usr/bin/xdpyinfo"), \
+                mock.patch.object(TOOL.subprocess, "run",
+                    return_value=SimpleNamespace(returncode=0)) as probe:
+            TOOL.require_visible_operator_input(environment)
+        probe.assert_called_once()
 
     def test_generated_configuration_locks_media_and_disables_debug_routes(self) -> None:
         configuration = TOOL.recorder_config(

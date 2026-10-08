@@ -1,5 +1,7 @@
 #include "data/m68k_executor.hpp"
 
+#include <algorithm>
+#include <array>
 #include <limits>
 
 namespace eon::m68k {
@@ -27,13 +29,27 @@ void set_move_long_flags(MachineState& state, const std::uint32_t value) {
     if (value == 0) state.sr |= 0x0004U;
 }
 
+void set_move_byte_flags(MachineState& state, const std::uint8_t value) {
+    state.sr = static_cast<std::uint16_t>(state.sr & 0xfff0U);
+    if ((value & 0x80U) != 0U) state.sr |= 0x0008U;
+    if (value == 0U) state.sr |= 0x0004U;
+}
+
 } // namespace
 
 ExecutionResult execute(const std::span<const std::uint8_t> code,
     const std::uint32_t code_base, MachineState initial,
     const std::span<MemoryRange> memory, const std::uint64_t max_steps,
     const std::uint32_t stop_address) {
-    ExecutionResult result{initial, StopReason::instruction_limit, 0, 0};
+    const std::array<std::uint32_t, 1> stops{stop_address};
+    return execute(code, code_base, initial, memory, max_steps, stops);
+}
+
+ExecutionResult execute(const std::span<const std::uint8_t> code,
+    const std::uint32_t code_base, MachineState initial,
+    const std::span<MemoryRange> memory, const std::uint64_t max_steps,
+    const std::span<const std::uint32_t> stop_addresses) {
+    ExecutionResult result{initial, StopReason::instruction_limit, 0, 0, {}};
 
     const auto read_bytes = [&](const std::uint32_t address, std::uint8_t* output,
         const std::size_t width) {
@@ -82,7 +98,8 @@ ExecutionResult execute(const std::span<const std::uint8_t> code,
     };
 
     while (result.instructions_executed < max_steps) {
-        if (result.state.pc == stop_address) {
+        if (std::find(stop_addresses.begin(), stop_addresses.end(), result.state.pc)
+            != stop_addresses.end()) {
             result.reason = StopReason::requested_address;
             return result;
         }
@@ -158,6 +175,31 @@ ExecutionResult execute(const std::span<const std::uint8_t> code,
             result.state.address[7] = destination_address;
             set_move_word_flags(result.state, immediate);
             next_pc += 2U;
+        } else if (opcode == 0x0839U) { // BTST #imm,(absolute long), byte
+            std::uint16_t bit_number = 0;
+            std::uint32_t address = 0;
+            std::uint8_t value = 0;
+            if (!fetch_word(next_pc, bit_number) || !fetch_long(next_pc + 2U, address)
+                || !read_bytes(address, &value, 1U)) {
+                result.reason = StopReason::memory_fault;
+                return result;
+            }
+            const auto bit = static_cast<std::uint8_t>(bit_number & 7U);
+            result.state.sr = static_cast<std::uint16_t>(result.state.sr & 0xfffbU);
+            if ((value & static_cast<std::uint8_t>(1U << bit)) == 0U)
+                result.state.sr |= 0x0004U;
+            next_pc += 6U;
+        } else if (opcode == 0x0800U) { // BTST #imm,D0
+            std::uint16_t bit_number = 0;
+            if (!fetch_word(next_pc, bit_number)) {
+                result.reason = StopReason::memory_fault;
+                return result;
+            }
+            const auto bit = static_cast<std::uint8_t>(bit_number & 31U);
+            result.state.sr = static_cast<std::uint16_t>(result.state.sr & 0xfffbU);
+            if ((result.state.data[0] & (std::uint32_t{1} << bit)) == 0U)
+                result.state.sr |= 0x0004U;
+            next_pc += 2U;
         } else if (opcode == 0x08f9U) { // BSET #imm,(absolute long), byte
             std::uint16_t bit_number = 0;
             std::uint32_t address = 0;
@@ -181,6 +223,39 @@ ExecutionResult execute(const std::span<const std::uint8_t> code,
             destination->bytes[offset] = static_cast<std::uint8_t>(
                 prior | static_cast<std::uint8_t>(1U << bit));
             next_pc += 6U;
+        } else if (opcode == 0x13fcU) { // MOVE.B #imm,(absolute long)
+            std::uint16_t immediate = 0;
+            std::uint32_t address = 0;
+            if (!fetch_word(next_pc, immediate) || !fetch_long(next_pc + 2U, address)) {
+                result.reason = StopReason::memory_fault;
+                return result;
+            }
+            auto* destination = writable_range(address, 1U);
+            if (!destination) {
+                result.reason = StopReason::memory_fault;
+                return result;
+            }
+            const auto offset = static_cast<std::size_t>(address - destination->base);
+            const auto value = static_cast<std::uint8_t>(immediate);
+            destination->bytes[offset] = value;
+            set_move_byte_flags(result.state, value);
+            next_pc += 6U;
+        } else if (opcode == 0x4a39U) { // TST.B (absolute long)
+            std::uint32_t address = 0;
+            std::uint8_t value = 0;
+            if (!fetch_long(next_pc, address) || !read_bytes(address, &value, 1U)) {
+                result.reason = StopReason::memory_fault;
+                return result;
+            }
+            result.state.sr = static_cast<std::uint16_t>(result.state.sr & 0xfff0U);
+            if ((value & 0x80U) != 0U) result.state.sr |= 0x0008U;
+            if (value == 0U) result.state.sr |= 0x0004U;
+            next_pc += 4U;
+        } else if (opcode == 0x4a00U) { // TST.B D0
+            const auto value = static_cast<std::uint8_t>(result.state.data[0]);
+            result.state.sr = static_cast<std::uint16_t>(result.state.sr & 0xfff0U);
+            if ((value & 0x80U) != 0U) result.state.sr |= 0x0008U;
+            if (value == 0U) result.state.sr |= 0x0004U;
         } else if (opcode == 0x3039U) { // MOVE.W (absolute long),D0
             std::uint32_t address = 0;
             std::uint16_t value = 0;
@@ -303,6 +378,33 @@ ExecutionResult execute(const std::span<const std::uint8_t> code,
             }
             result.state.address[7] += 4U;
             next_pc = address;
+        } else if ((opcode & 0xff00U) == 0x6000U
+            || (opcode & 0xff00U) == 0x6600U
+            || (opcode & 0xff00U) == 0x6700U) { // BRA/BNE/BEQ
+            const auto condition = static_cast<std::uint8_t>((opcode >> 8U) & 0x0fU);
+            const bool is_bra = condition == 0U;
+            const bool is_bne = condition == 6U;
+            const bool is_beq = condition == 7U;
+            if (!is_bra && !is_bne && !is_beq) {
+                result.reason = StopReason::unsupported_instruction;
+                return result;
+            }
+            std::int32_t displacement = static_cast<std::int8_t>(opcode & 0xffU);
+            if ((opcode & 0xffU) == 0U) {
+                std::uint16_t extension = 0;
+                if (!fetch_word(next_pc, extension)) {
+                    result.reason = StopReason::memory_fault;
+                    return result;
+                }
+                displacement = static_cast<std::int16_t>(extension);
+                next_pc += 2U;
+            }
+            const auto target = static_cast<std::uint32_t>(
+                static_cast<std::int64_t>(instruction_pc) + 2 + displacement);
+            const bool taken = is_bra || (is_bne && (result.state.sr & 0x0004U) == 0U)
+                || (is_beq && (result.state.sr & 0x0004U) != 0U);
+            result.branches.push_back({instruction_pc, result.state.sr, target, taken});
+            if (taken) next_pc = target;
         } else {
             result.reason = StopReason::unsupported_instruction;
             return result;
@@ -312,7 +414,8 @@ ExecutionResult execute(const std::span<const std::uint8_t> code,
         ++result.instructions_executed;
     }
 
-    result.reason = result.state.pc == stop_address
+    result.reason = std::find(stop_addresses.begin(), stop_addresses.end(), result.state.pc)
+            != stop_addresses.end()
         ? StopReason::requested_address
         : StopReason::instruction_limit;
     return result;

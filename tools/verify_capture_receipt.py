@@ -11,7 +11,7 @@ import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32"}
+CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33"}
 
 
 def load_tool(name: str):
@@ -112,7 +112,7 @@ def verify_console(fields: dict[str, str], directory: Path) -> None:
 
 def verify_console_admission(fields: dict[str, str], version: str) -> None:
     """Reject a v4+ recorder runaway without rewriting retained evidence."""
-    if version in {"4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "26", "27", "28", "29", "30", "31", "32"} and fields.get("recorder_console_over_limit") != "false":
+    if version in {"4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"} and fields.get("recorder_console_over_limit") != "false":
         raise ValueError("recorder console exceeded its safety cap; capture is not admitted")
 
 
@@ -132,15 +132,19 @@ def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path, vers
     if fields.get("raw_pc") != "present":
         return
     tool = load_tool("run_deuteros_amiga_capture")
-    raw_format = ("v9-v19-phased" if version in {"29", "30", "31", "32"} else
+    raw_format = ("v9-v19-phased" if version in {"29", "30", "31", "32", "33"} else
                   "v9-v18-phased" if version == "28" else
                   "v9-v16-phased" if version in {"26", "27"} else
                   "v9-v16" if version == "24" else
                   "v9" if version in {"9", "10", "11", "23"} else
                   "v7" if version in {"7", "8"} else "legacy")
-    if version in {"24", "26", "27", "28", "29", "30", "31", "32"}:
+    if version in {"24", "26", "27", "28", "29", "30", "31", "32", "33"}:
         tool_hash = load_tool("run_deuteros_amiga_capture")
-        if version == "32":
+        if version == "33":
+            expected_identity = (tool_hash.TRV2_RECORDER_V23_SHA256,
+                                 tool_hash.TRV2_RECORDER_V23_SIZE)
+            expected_protocol = "deuteros-amiga-fsuae-v23"
+        elif version == "32":
             expected_identity = (tool_hash.TRV2_RECORDER_V22_SHA256,
                                  tool_hash.TRV2_RECORDER_V22_SIZE)
             expected_protocol = "deuteros-amiga-fsuae-v22"
@@ -171,7 +175,7 @@ def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path, vers
         require_identity(fields, "recorder", expected_identity)
         if fields.get("recorder_protocol") != expected_protocol:
             raise ValueError("recorder protocol does not match the receipt schema")
-    if version in {"7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32"} and fields.get("raw_pc_format") != raw_format:
+    if version in {"7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"} and fields.get("raw_pc_format") != raw_format:
         raise ValueError("raw_pc format does not match the reviewed recorder contract")
     counts = tool.parse_raw_pc_observations(directory / "raw-pc.txt", raw_format)
     expected_records = str(sum(counts.values()))
@@ -280,14 +284,14 @@ def verify_deuteros_selector_dispatch(fields: dict[str, str], directory: Path) -
 def verify_deuteros_late_sidecars(fields: dict[str, str], directory: Path) -> None:
     """Recompute late PC/cell joins with version-specific sites and exact fields."""
     version = fields.get("capture_receipt_version")
-    if version not in {"29", "30", "31", "32"}:
+    if version not in {"29", "30", "31", "32", "33"}:
         if any(key == "late_input_pc" or key.startswith("late_input_pc_")
                or key == "late_selector_dispatch" or key.startswith("late_selector_dispatch_")
                for key in fields):
             raise ValueError("late input sidecars require receipt schema 29 through 32")
         return
     tool = load_tool("run_deuteros_amiga_capture")
-    late_version = "v20" if version in {"30", "31", "32"} else "v19"
+    late_version = "v20" if version in {"30", "31", "32", "33"} else "v19"
     try:
         statuses = (tool.late_raw_pc_status(
             directory / "late-input-pc.txt", directory / "host-input-receipt.txt", late_version)
@@ -311,7 +315,7 @@ def verify_deuteros_zero_route_observation(fields: dict[str, str], directory: Pa
     version = fields.get("capture_receipt_version")
     observation_keys = {key for key in fields if key == "zero_route_observation"
                         or key.startswith("zero_route_observation_")}
-    if version not in {"31", "32"}:
+    if version not in {"31", "32", "33"}:
         if observation_keys:
             raise ValueError("zero-route observation requires receipt schema 31")
         return
@@ -330,7 +334,7 @@ def verify_deuteros_zero_route_observation(fields: dict[str, str], directory: Pa
 
 def verify_deuteros_late_display(fields: dict[str, str], directory: Path) -> None:
     """Recompute schema-32 later-input display writes and host chronology."""
-    if fields.get("capture_receipt_version") != "32":
+    if fields.get("capture_receipt_version") not in {"32", "33"}:
         if any(key == "late_display" or key.startswith("late_display_") for key in fields):
             raise ValueError("late display sidecar requires receipt schema 32")
         return
@@ -346,6 +350,26 @@ def verify_deuteros_late_display(fields: dict[str, str], directory: Path) -> Non
         raise ValueError("late display sidecar fields are incomplete or unexpected")
     if any(fields.get(key) != value for key, value in expected.items()):
         raise ValueError("late display sidecar grammar/count receipt mismatch")
+
+
+def verify_deuteros_latch_write(fields: dict[str, str], directory: Path) -> None:
+    """Recompute schema-33's exact latch-write and host chronology receipt."""
+    if fields.get("capture_receipt_version") != "33":
+        if any(key == "latch_write" or key.startswith("latch_write_") for key in fields):
+            raise ValueError("latch-write sidecar requires receipt schema 33")
+        return
+    tool = load_tool("run_deuteros_amiga_capture")
+    try:
+        status = tool.latch_write_receipt_status(
+            directory / "latch-write.txt", directory / "host-input-receipt.txt")
+    except tool.CaptureError as error:
+        raise ValueError(f"latch-write sidecar is invalid: {error}") from error
+    expected = dict(line.split("=", 1) for line in status.splitlines())
+    actual_keys = {key for key in fields if key == "latch_write" or key.startswith("latch_write_")}
+    if actual_keys != set(expected):
+        raise ValueError("latch-write receipt fields are incomplete or unexpected")
+    if any(fields.get(key) != value for key, value in expected.items()):
+        raise ValueError("latch-write sidecar grammar/count receipt mismatch")
 
 
 def verify_deuteros_host_input_summary(fields: dict[str, str], directory: Path) -> None:
@@ -522,7 +546,7 @@ def verify_millennium_driver_load_returns(fields: dict[str, str], directory: Pat
 
 def verify_deuteros_source_contract(fields: dict[str, str], version: str, tool) -> None:
     """Bind v23+ provenance to the physical source layout without inventing a ZIP."""
-    if version not in {"23", "24", "26", "27", "28", "29", "30", "31", "32"}:
+    if version not in {"23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
         require_identity(fields, "source_release", (tool.EXPECTED_RELEASE_SHA256, tool.EXPECTED_RELEASE_SIZE))
         return
     if fields.get("content_release_sha256") != tool.EXPECTED_RELEASE_SHA256:
@@ -549,6 +573,12 @@ def verify_deuteros_source_contract(fields: dict[str, str], version: str, tool) 
 def verify_deuteros_recorder_identity(fields: dict[str, str], version: str, tool) -> None:
     """Bind the recorder generation to its receipt grammar, preserving old receipts."""
     digest = fields.get("recorder_sha256")
+    if version == "33":
+        require_identity(fields, "recorder", (tool.TRV2_RECORDER_V23_SHA256,
+                                                 tool.TRV2_RECORDER_V23_SIZE))
+        if fields.get("recorder_protocol") != "deuteros-amiga-fsuae-v23":
+            raise ValueError("recorder protocol does not match the v23 receipt schema")
+        return
     if version == "32":
         require_identity(fields, "recorder", (tool.TRV2_RECORDER_V22_SHA256,
                                                  tool.TRV2_RECORDER_V22_SIZE))
@@ -614,7 +644,7 @@ def verify(kind: str, directory: Path, *, allow_experimental_observer: bool = Fa
         raise ValueError("capture directory must be an absolute non-symlink directory")
     fields = receipt(directory / "run-status.txt")
     version = require_receipt_schema(fields)
-    if version in {"31", "32"} and kind != "deuteros-amiga":
+    if version in {"31", "32", "33"} and kind != "deuteros-amiga":
         raise ValueError(f"capture receipt schema {version} is only supported for Deuteros Amiga")
     if version == "25":
         if kind != "millennium-dos":
@@ -727,7 +757,7 @@ def verify(kind: str, directory: Path, *, allow_experimental_observer: bool = Fa
         verify_deuteros_source_contract(fields, version, tool)
         verify_deuteros_recorder_identity(fields, version, tool)
         require_identity(fields, "kickstart_archive", (tool.EXPECTED_KICKSTART_SHA256, tool.EXPECTED_KICKSTART_SIZE))
-        if version not in {"23", "24", "26", "27", "28", "29", "30", "31", "32"}:
+        if version not in {"23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
             require_identity(fields, "disk1_archive", (tool.EXPECTED_DISK1_ARCHIVE_SHA256,
                                                          tool.EXPECTED_DISK1_ARCHIVE_SIZE))
             require_identity(fields, "disk2_archive", (tool.EXPECTED_DISK2_ARCHIVE_SHA256,
@@ -737,38 +767,41 @@ def verify(kind: str, directory: Path, *, allow_experimental_observer: bool = Fa
         require_identity(fields, "recorder", (fields["recorder_sha256"], int(fields["recorder_bytes"])))
         verify_file(fields, directory, "raw_pc", "raw-pc.txt")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.txt")
-        if version in {"10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32"}:
+        if version in {"10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
             verify_file(fields, directory, "title_display", "title-display.txt")
         if version in {"27", "28"}:
             verify_file(fields, directory, "selector_dispatch", "selector-dispatch.txt")
-        if version in {"29", "30", "31", "32"}:
+        if version in {"29", "30", "31", "32", "33"}:
             verify_file(fields, directory, "late_input_pc", "late-input-pc.txt")
             verify_file(fields, directory, "late_selector_dispatch", "late-selector-dispatch.txt")
-        if version in {"3", "4", "5", "6", "7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32"}:
+        if version in {"3", "4", "5", "6", "7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
             verify_deuteros_raw_pc_summary(fields, directory, version)
-        if version in {"5", "6", "7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32"}:
+        if version in {"5", "6", "7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
             verify_deuteros_host_input_summary(fields, directory)
-        if version in {"6", "7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32"}:
+        if version in {"6", "7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
             verify_deuteros_timing_profile(fields, directory)
         if version == "8" and fields.get("raw_pc") == "present":
             verify_deuteros_raw_pc_opcode_pairs(fields, directory)
-        if version in {"9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32"} and fields.get("raw_pc") == "present":
-            raw_format = ("v9-v19-phased" if version in {"29", "30", "31", "32"} else
+        if version in {"9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"} and fields.get("raw_pc") == "present":
+            raw_format = ("v9-v19-phased" if version in {"29", "30", "31", "32", "33"} else
                           "v9-v18-phased" if version == "28" else
                           "v9-v16-phased" if version in {"26", "27"} else
                           "v9-v16" if version == "24" else "v9")
             verify_deuteros_raw_pc_opcode_pairs(fields, directory, raw_format)
             verify_deuteros_raw_pc_input_chronology(fields, directory, raw_format)
-        if version in {"10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32"}:
+        if version in {"10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
             verify_deuteros_title_display(fields, directory)
         if version in {"27", "28"}:
             verify_deuteros_selector_dispatch(fields, directory)
         verify_deuteros_late_sidecars(fields, directory)
         verify_deuteros_zero_route_observation(fields, directory)
-        if version == "32":
+        if version in {"32", "33"}:
             verify_file(fields, directory, "late_display", "late-display.txt")
             verify_deuteros_late_display(fields, directory)
-        if version in {"11", "23", "24", "26", "27", "28", "29", "30", "31", "32"}:
+        if version == "33":
+            verify_file(fields, directory, "latch_write", "latch-write.txt")
+            verify_deuteros_latch_write(fields, directory)
+        if version in {"11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
             verify_capture_intent(fields, tool)
     verify_console(fields, directory)
     verify_console_admission(fields, version)

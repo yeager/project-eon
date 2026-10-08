@@ -27,7 +27,8 @@ configuration and supplied media remain outside this repository.
 | Rebuilt trv2 v19 candidate | x86_64 Linux, 62,020,024 bytes, SHA-256 `7b46501fc3cf774938fc8ca4e02788586ba22ef440462ea7ecd00396311b73a2`; adds separate bounded late-input raw-PC and selector-cell sidecars; no capture has been run |
 | Rebuilt trv2 v20 candidate | x86_64 Linux, 62,020,224 bytes, SHA-256 `071f1c949409be9ff3faa128d0acc98fcde9136c0aa09ab6a6edb058e7fbc397`; adds late-input-only PCs `$1fc22/$1fc9c`; receipt schema 30; no capture has been run |
 | Rebuilt trv2 v21 recorder | x86_64 Linux, 62,030,288 bytes, SHA-256 `2fc7f47425d0fa005bb59bf41eaeccf32d1cba284dee4f227e7e723b853e1b35`; adds complete zero-route memory observations; schema 31; physical04 receipt verified, but no accepted game action established |
-| Rebuilt trv2 v22 candidate | x86_64 Linux, 62,031,592 bytes, SHA-256 `eb0995c70f7f355f674d448b08c0f3e647430562ffde7d179e5aeb12e5abca71`; adds a separate later-input display-write sidecar after host-input ordinal 20; schema 32; no capture has been run |
+| Rebuilt trv2 v22 recorder | x86_64 Linux, 62,031,592 bytes, SHA-256 `eb0995c70f7f355f674d448b08c0f3e647430562ffde7d179e5aeb12e5abca71`; adds a separate later-input display-write sidecar after host-input ordinal 20; schema 32; visible no-input diagnostic verified 2026-10-07, no game action established |
+| Rebuilt trv2 v23 recorder | x86_64 Linux, 62,039,312 bytes, SHA-256 `e4e46e84cd75eceffb28d26882fef0062582c251b0ef26baa0fccf6aff2e8dd1`; adds bounded observation of the exact `$21868` write to `$21720`; schema 33; visible attempt rejected 2026-10-07 for no host input |
 
 The v16 source patch SHA-256 is
 `1fa61e7984fe5535b42c07614be4f10a219323bf8536a3dc271a80c0b6f5f361`.
@@ -531,7 +532,40 @@ allocated ELF section changes are recorded in
 `/home/trv2/.cache/project-eon-tools/v22-late-display/loaded-section-diff.txt`
 (SHA-256
 `b3a5ff35303c0153c7dfc97fb7a4809546b989277deeced73af401e4823bbda0`). The
-v22 executable has compiled, but it has not yet been run against original
-media. No original media was copied or modified for this build. A visible
-physical-input capture and independent receipt verification are still needed
-to learn whether later inputs produce display writes.
+v22 executable has compiled and was attempted in a visible no-input diagnostic
+at `/home/trv2/.cache/project-eon-tools/deuteros-amiga-capture-20261007-v22-physical02/`.
+The run produced 1,024 raw-PC samples, all with input ordinal zero, then the
+runner rejected it because the required physical-input receipt and completed
+sidecars were absent. It is incomplete and does not establish a game action or
+later display write. The original media remained read-only and was neither
+copied nor modified. A completed visible physical-input capture and
+independent receipt verification are still needed to learn whether later
+inputs produce display writes.
+
+## v23 main-stage latch-write observer review
+
+The v23 patch is retained outside Git at
+`/home/trv2/.cache/project-eon-tools/v23-latch-write-observer-20261007/v23.patch`
+(SHA-256 `47c5dddc5d22761824b8a14d53947686d615be874746a2fefd6410617793e50d`).
+It was applied to the v22 source tree at FS-UAE v3.2.35 commit
+`4ae7ddaec50b567ed80d71ffbff067cb58e945a3`. Only `src/eon_observer.hpp` and
+`src/newcpu.cpp` change. The x86_64 executable is
+`/home/trv2/.cache/project-eon-tools/v23-latch-write-observer-20261007/source-tree-v22/fs-uae`,
+62,039,312 bytes, SHA-256
+`e4e46e84cd75eceffb28d26882fef0062582c251b0ef26baa0fccf6aff2e8dd1`.
+
+At the hash-addressed main-stage code span `$21822..$21897`, the observer
+checks the instruction at `$21868` (`13fc 0001 00021720`) and the following
+PC `$21870`. It samples mapped chip RAM immediately before and after that
+instruction and emits only a `0x00` to `0x01` change to `$21720`, paired with
+the same host-input ordinal/frame. The sidecar is lazy-opened, limited to 64
+records and 16 KiB, and performs no guest write, device access, or input
+injection. Schema 33 pins the binary and strictly recomputes this record
+grammar and chronology. A matching row would establish the original
+instruction changed the latch during a host-input event; by itself it would
+not identify an action or prove a rendered frame/gameplay result. The visible
+visible operator-driven attempt on display `:6` ended without host input and
+was rejected by the runner. Its incomplete external output is
+`/home/trv2/.cache/project-eon-tools/deuteros-latch-evidence-20261007/capture-operator03/`;
+it has no run receipt and proves no input acceptance. A later human-driven
+capture is still required.

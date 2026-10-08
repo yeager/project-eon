@@ -127,6 +127,10 @@ public:
         return title_stage_session_ ? title_stage_session_->main_stage_cia_prefix_code()
                                     : std::span<const std::uint8_t>{};
     }
+    [[nodiscard]] std::span<const std::uint8_t> main_stage_outer_input_code() const noexcept {
+        return title_stage_session_ ? title_stage_session_->main_stage_outer_input_code()
+                                    : std::span<const std::uint8_t>{};
+    }
     // Prepare or rebuild title-stage execution receipts after an admitted
     // loader has returned to the loaded $13000 entry (profiles one or five).
     // The replacement is prepared completely before publication, so a

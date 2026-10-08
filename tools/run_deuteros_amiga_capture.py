@@ -15,6 +15,7 @@ import hashlib
 import os
 from pathlib import Path
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -91,6 +92,8 @@ MAX_ZERO_ROUTE_OBSERVATION_INVOCATIONS = 16
 MAX_LATE_DISPLAY_RECEIPT_BYTES = 512 * 1024
 MAX_LATE_DISPLAY_WRITES = 2048
 MAX_LATE_DISPLAY_WRITES_PER_REGISTER = 64
+MAX_LATCH_WRITE_BYTES = 16 * 1024
+MAX_LATCH_WRITE_RECORDS = 64
 MAX_LATE_SELECTOR_RECORDS = MAX_LATE_RAW_RECORDS_PER_SITE
 LATE_INPUT_START_ORDINAL = 9
 # 2,048 fixed-format writes can exceed 128 KiB; this remains a strict cap
@@ -152,6 +155,10 @@ LATE_DISPLAY_WRITE_LINE = re.compile(
     r"late-display-write ([1-9][0-9]*) cycles=([0-9]+) vpos=([0-9]+) hpos=([0-9]+) "
     r"origin=(cpu|copper) register=0x([0-9a-f]{4}) value=0x([0-9a-f]{4}) "
     r"input_ordinal=([0-9]+) input_frame=(-?[0-9]+)\n")
+LATCH_WRITE_LINE = re.compile(
+    r"latch-write ([1-9][0-9]*) cycles=([0-9]+) site=0x00021868 next_pc=0x00021870 "
+    r"opcode=0x13fc target=0x00021720 before=0x00 after=0x01 "
+    r"input_ordinal=([1-9][0-9]*) input_frame=(-?[0-9]+)\n")
 TITLE_DISPLAY_REGISTERS = frozenset((
     0x0080, 0x0082, 0x008E, 0x0090, 0x0092, 0x0094,
     *range(0x00E0, 0x00F0, 2), 0x0100, 0x0108, 0x010A,
@@ -198,10 +205,13 @@ CAPTURE_RECEIPT_V19_VERSION = "29"
 CAPTURE_RECEIPT_V20_VERSION = "30"
 CAPTURE_RECEIPT_V21_VERSION = "31"
 CAPTURE_RECEIPT_V22_VERSION = "32"
+CAPTURE_RECEIPT_V23_VERSION = "33"
 TRV2_RECORDER_V21_SHA256 = "2fc7f47425d0fa005bb59bf41eaeccf32d1cba284dee4f227e7e723b853e1b35"
 TRV2_RECORDER_V21_SIZE = 62_030_288
 TRV2_RECORDER_V22_SHA256 = "eb0995c70f7f355f674d448b08c0f3e647430562ffde7d179e5aeb12e5abca71"
 TRV2_RECORDER_V22_SIZE = 62_031_592
+TRV2_RECORDER_V23_SHA256 = "e4e46e84cd75eceffb28d26882fef0062582c251b0ef26baa0fccf6aff2e8dd1"
+TRV2_RECORDER_V23_SIZE = 62_039_312
 SOURCE_LAYOUT_RELEASE = "nested-release-zip"
 SOURCE_LAYOUT_STANDALONE = "standalone-zip-pair"
 SOURCE_LAYOUTS = {SOURCE_LAYOUT_RELEASE, SOURCE_LAYOUT_STANDALONE}
@@ -275,6 +285,7 @@ def reviewed_recorder_hashes() -> dict[str, str]:
             "reviewed-fs-uae-trv2-v20": TRV2_RECORDER_V20_SHA256}
     hashes["reviewed-fs-uae-trv2-v21"] = TRV2_RECORDER_V21_SHA256
     hashes["reviewed-fs-uae-trv2-v22"] = TRV2_RECORDER_V22_SHA256
+    hashes["reviewed-fs-uae-trv2-v23"] = TRV2_RECORDER_V23_SHA256
     return hashes
 
 
@@ -309,6 +320,8 @@ def validate_recorder(path: Path) -> tuple[str, int]:
         raise CaptureError("v21 recorder size does not match the reviewed binary")
     if digest == TRV2_RECORDER_V22_SHA256 and size != TRV2_RECORDER_V22_SIZE:
         raise CaptureError("v22 recorder size does not match the reviewed binary")
+    if digest == TRV2_RECORDER_V23_SHA256 and size != TRV2_RECORDER_V23_SIZE:
+        raise CaptureError("v23 recorder size does not match the reviewed binary")
     return digest, size
 
 
@@ -350,6 +363,19 @@ def require_visible_operator_input(environment: dict[str, str]) -> None:
         raise CaptureError("headless SDL is forbidden; a physical operator must use the visible emulator window")
     if not environment.get("DISPLAY") and not environment.get("WAYLAND_DISPLAY"):
         raise CaptureError("a visible X11 or Wayland display is required for physical input capture")
+    # DISPLAY can be set while X11 authentication still prevents SDL from
+    # creating a window. When the standard probe is installed, verify the
+    # connection before mounting media or starting the reviewed recorder.
+    display = environment.get("DISPLAY")
+    probe = shutil.which("xdpyinfo") if display else None
+    if probe:
+        try:
+            result = subprocess.run([probe, "-display", display], env=environment,
+                capture_output=True, text=True, timeout=5, check=False)
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise CaptureError("unable to verify visible X11 display access") from error
+        if result.returncode != 0:
+            raise CaptureError("X11 display is inaccessible; check DISPLAY and XAUTHORITY")
 
 
 def mount_options(mountpoint: Path) -> set[str]:
@@ -1392,6 +1418,62 @@ def late_display_receipt_status(path: Path, input_path: Path) -> str:
             f"late_display_input_chronology_records={len(records)}\n")
 
 
+def latch_write_receipt_status(path: Path, input_path: Path) -> str:
+    """Validate exact 0→1 writes at the recovered main-stage latch site."""
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return "latch_write=absent\nlatch_write_format=v1\nlatch_write_records=0\n"
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError("latch-write receipt is not a regular non-symlink file")
+    if info.st_size > MAX_LATCH_WRITE_BYTES:
+        raise CaptureError("latch-write receipt exceeds the bounded recorder contract")
+    if info.st_size == 0:
+        return "latch_write=empty\nlatch_write_format=v1\nlatch_write_records=0\n"
+    try:
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
+        with os.fdopen(fd, "rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise CaptureError("latch-write receipt must remain a regular file")
+            payload = stream.read(MAX_LATCH_WRITE_BYTES + 1)
+        if len(payload) > MAX_LATCH_WRITE_BYTES:
+            raise CaptureError("latch-write receipt exceeds the bounded recorder contract")
+        text = payload.decode("ascii")
+    except (OSError, UnicodeDecodeError) as error:
+        raise CaptureError("latch-write receipt is not readable ASCII") from error
+    input_events = _read_zero_route_host_input(input_path)
+    previous_cycles = -1
+    previous_input = 0
+    first_input = 0
+    records = 0
+    for expected, line in enumerate(text.splitlines(keepends=True), start=1):
+        match = LATCH_WRITE_LINE.fullmatch(line)
+        if not match:
+            raise CaptureError("latch-write receipt contains an invalid recorder record")
+        ordinal, cycles, input_ordinal, input_frame = map(int, match.groups())
+        if ordinal != expected:
+            raise CaptureError("latch-write receipt ordinals are not contiguous")
+        if cycles < previous_cycles:
+            raise CaptureError("latch-write receipt cycles are not monotonic")
+        if input_ordinal not in input_events or input_events[input_ordinal] != input_frame:
+            raise CaptureError("latch-write receipt is not linked to exact host-input chronology")
+        if input_ordinal < previous_input:
+            raise CaptureError("latch-write input ordinals are not monotonic")
+        if expected == 1:
+            first_input = input_ordinal
+        previous_cycles, previous_input = cycles, input_ordinal
+        records += 1
+        if records > MAX_LATCH_WRITE_RECORDS:
+            raise CaptureError("latch-write receipt exceeds the recorder record cap")
+    digest, size = hashlib.sha256(payload).hexdigest(), len(payload)
+    return ("latch_write=present\nlatch_write_format=v1\n"
+            f"latch_write_sha256={digest}\nlatch_write_bytes={size}\n"
+            f"latch_write_records={records}\n"
+            f"latch_write_first_input_ordinal={first_input}\n"
+            f"latch_write_last_input_ordinal={previous_input}\n"
+            "latch_write_input_chronology=linked\n")
+
+
 def capture_bounded_console(stream, path: Path, over_limit: threading.Event) -> RecorderConsoleStatus:
     """Drain a console into fixed storage and signal if its total safety cap trips.
 
@@ -1440,7 +1522,8 @@ def identity_status(name: str, identity: tuple[str, int]) -> str:
 
 
 def recorder_config(disk1: Path, disk2: Path, kickstart: Path, output: Path,
-                    timing_profile: str = "realtime") -> str:
+                    timing_profile: str = "realtime",
+                    diagnostic_disk2_in_drive1: bool = False) -> str:
     try:
         warp_mode = TIMING_PROFILES[timing_profile]
     except KeyError as error:
@@ -1451,8 +1534,9 @@ def recorder_config(disk1: Path, disk2: Path, kickstart: Path, output: Path,
         "amiga_model = A500",
         f"kickstart_file = {posix(kickstart)}",
         f"floppy_drive_0 = {posix(disk1)}",
-        # Keep DF1 empty so disk 2 remains available for the game's explicit
-        # disk-in-DF0 prompt through FS-UAE's ordinary removable-media menu.
+        (f"floppy_drive_1 = {posix(disk2)}" if diagnostic_disk2_in_drive1 else
+         "# Keep DF1 empty so disk 2 remains available for the game's explicit"
+         " disk-in-DF0 prompt through FS-UAE's ordinary removable-media menu."),
         f"floppy_image_0 = {posix(disk1)}",
         f"floppy_image_1 = {posix(disk2)}",
         "floppy_write_protect = 1",
@@ -1511,6 +1595,9 @@ def run_capture(args: argparse.Namespace) -> Path:
     kickstart = require_absolute_regular_file(Path(args.kickstart_archive), "Kickstart archive")
     recorder = require_absolute_regular_file(Path(args.recorder), "recorder", executable=True)
     output = reject_unsafe_output(*output_sources, kickstart, output=Path(args.output))
+    diagnostic_disk2_in_drive1 = getattr(args, "diagnostic_disk2_in_drive1", False)
+    if diagnostic_disk2_in_drive1 and args.capture_intent != "diagnostic-no-input":
+        raise CaptureError("Disk 2 in DF1 is allowed only for a no-input diagnostic")
     if not MIN_DURATION_SECONDS <= args.duration_seconds <= MAX_DURATION_SECONDS:
         raise CaptureError(f"duration must be between {MIN_DURATION_SECONDS} and {MAX_DURATION_SECONDS} seconds")
     if not 0 <= args.focus_settle_seconds <= MAX_FOCUS_SETTLE_SECONDS:
@@ -1533,13 +1620,15 @@ def run_capture(args: argparse.Namespace) -> Path:
     is_v20 = recorder_identity[0] == TRV2_RECORDER_V20_SHA256
     is_v21 = recorder_identity[0] == TRV2_RECORDER_V21_SHA256
     is_v22 = recorder_identity[0] == TRV2_RECORDER_V22_SHA256
-    has_late_input_sidecars = is_v19 or is_v20 or is_v21 or is_v22
+    is_v23 = recorder_identity[0] == TRV2_RECORDER_V23_SHA256
+    has_late_input_sidecars = is_v19 or is_v20 or is_v21 or is_v22 or is_v23
     is_v16 = recorder_identity[0] == TRV2_RECORDER_V16_SHA256
-    phased_raw = is_v16 or is_v17 or is_v18 or is_v19 or is_v20 or is_v21 or is_v22
-    raw_format = ("v9-v19-phased" if is_v19 or is_v20 or is_v21 or is_v22 else
+    phased_raw = is_v16 or is_v17 or is_v18 or is_v19 or is_v20 or is_v21 or is_v22 or is_v23
+    raw_format = ("v9-v19-phased" if is_v19 or is_v20 or is_v21 or is_v22 or is_v23 else
                   "v9-v18-phased" if is_v18 else
                   "v9-v16-phased" if phased_raw else "v9")
-    receipt_version = (CAPTURE_RECEIPT_V22_VERSION if is_v22 else
+    receipt_version = (CAPTURE_RECEIPT_V23_VERSION if is_v23 else
+                       CAPTURE_RECEIPT_V22_VERSION if is_v22 else
                        CAPTURE_RECEIPT_V21_VERSION if is_v21 else
                        CAPTURE_RECEIPT_V20_VERSION if is_v20 else
                        CAPTURE_RECEIPT_V19_VERSION if is_v19 else
@@ -1584,7 +1673,8 @@ def run_capture(args: argparse.Namespace) -> Path:
         validate_identity(rom, "Kickstart ROM", EXPECTED_ROM_SHA256, 262_144)
         configuration = output / "deuteros-amiga-capture.fs-uae"
         write_exclusive(configuration, recorder_config(
-            disk1, disk2, rom, output, args.timing_profile))
+            disk1, disk2, rom, output, args.timing_profile,
+            diagnostic_disk2_in_drive1))
         configuration_identity = sha256_file(configuration)
         command = [str(recorder), str(configuration)]
         write_exclusive(output / "command-tail.txt", " ".join(command) + "\n")
@@ -1604,14 +1694,19 @@ def run_capture(args: argparse.Namespace) -> Path:
                 output / "late-input-pc.txt")
             environment["PROJECT_EON_FS_UAE_LATE_SELECTOR_RECORD"] = str(
                 output / "late-selector-dispatch.txt")
-        if is_v22:
+        if is_v22 or is_v23:
             environment["PROJECT_EON_FS_UAE_LATE_DISPLAY_RECORD"] = str(
                 output / "late-display.txt")
         else:
             environment.pop("PROJECT_EON_FS_UAE_LATE_DISPLAY_RECORD", None)
-        if is_v21 or is_v22:
+        if is_v21 or is_v22 or is_v23:
             environment["PROJECT_EON_FS_UAE_ZERO_ROUTE_RECORD"] = str(
                 output / "zero-route-observation.txt")
+        if is_v23:
+            environment["PROJECT_EON_FS_UAE_LATCH_WRITE_RECORD"] = str(
+                output / "latch-write.txt")
+        else:
+            environment.pop("PROJECT_EON_FS_UAE_LATCH_WRITE_RECORD", None)
         for instruction in capture_operator_instructions(
                 args.capture_intent, late_sampling=has_late_input_sidecars):
             print(instruction)
@@ -1706,10 +1801,13 @@ def run_capture(args: argparse.Namespace) -> Path:
         zero_route_status = (zero_route_observation_status(
             output / "zero-route-observation.txt", input_path) if is_v21 or is_v22 else "")
         late_display_status = (late_display_receipt_status(
-            output / "late-display.txt", input_path) if is_v22 else "")
+            output / "late-display.txt", input_path) if is_v22 or is_v23 else "")
+        latch_write_status = (latch_write_receipt_status(
+            output / "latch-write.txt", input_path) if is_v23 else "")
         write_exclusive(output / "run-status.txt",
                         f"capture_receipt_version={receipt_version}\n"
-                        + ("recorder_protocol=deuteros-amiga-fsuae-v22\n" if is_v22 else
+                        + ("recorder_protocol=deuteros-amiga-fsuae-v23\n" if is_v23 else
+                           "recorder_protocol=deuteros-amiga-fsuae-v22\n" if is_v22 else
                            "recorder_protocol=deuteros-amiga-fsuae-v21\n" if is_v21 else
                            "recorder_protocol=deuteros-amiga-fsuae-v20\n" if is_v20 else
                            "recorder_protocol=deuteros-amiga-fsuae-v19\n" if is_v19 else
@@ -1733,6 +1831,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                         + identity_status("configuration", configuration_identity)
                         + intent_status + receipt_status + observation_status + chronology_status + display_status
                         + selector_status + late_status + zero_route_status + late_display_status
+                        + latch_write_status
                         + recorder_console_status(console_result[0]))
         if console_result[0].over_limit:
             raise CaptureError(
@@ -1766,12 +1865,17 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
                         help="Required operator declaration: physical-input or diagnostic-no-input")
     parser.add_argument("--timing-profile", choices=tuple(sorted(TIMING_PROFILES)), default="realtime",
                         help="Recorder timing profile (default: realtime; warp is diagnostic only)")
+    parser.add_argument("--diagnostic-disk2-in-df1", dest="diagnostic_disk2_in_drive1",
+                        action="store_true",
+                        help="No-input diagnostic only: also insert Disk 2 in DF1")
     arguments = parser.parse_args(argv)
     if arguments.source_release:
         if arguments.disk2_archive:
             parser.error("--disk2-archive cannot be used with --source-release")
     elif not arguments.disk1_archive or not arguments.disk2_archive:
         parser.error("provide --source-release or both --disk1-archive and --disk2-archive")
+    if arguments.diagnostic_disk2_in_drive1 and arguments.capture_intent != "diagnostic-no-input":
+        parser.error("--diagnostic-disk2-in-df1 requires --capture-intent diagnostic-no-input")
     return arguments
 
 

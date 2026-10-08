@@ -1611,6 +1611,9 @@ struct DeuterosAmigaMainStageLoopGraphicsPlan {
     std::array<std::uint16_t,4> main_stage_audio_dma_writes{};
     std::array<DeuterosAmigaOwnedAudioResult,2> main_stage_audio_results{};
     std::uint32_t d2_value=0;
+    std::uint16_t outer_input_status_register=0;
+    std::uint64_t outer_input_instruction_count=0;
+    std::vector<m68k::BranchCheckpoint> outer_input_branches;
 };
 struct DeuterosAmigaObservedLoopRequestService {
     std::uint64_t trace_sequence=0;
@@ -2425,6 +2428,11 @@ public:
     main_stage_loop_graphics_plan() const { return main_stage_loop_graphics_plan_; }
     [[nodiscard]] std::span<const std::uint8_t> main_stage_cia_prefix_code() const noexcept {
         constexpr std::size_t offset=0x17e4,length=14;
+        if(main_stage_source_bytes_.size()<offset+length)return {};
+        return std::span<const std::uint8_t>(main_stage_source_bytes_).subspan(offset,length);
+    }
+    [[nodiscard]] std::span<const std::uint8_t> main_stage_outer_input_code() const noexcept {
+        constexpr std::size_t offset=0x185e,length=0x34;
         if(main_stage_source_bytes_.size()<offset+length)return {};
         return std::span<const std::uint8_t>(main_stage_source_bytes_).subspan(offset,length);
     }
@@ -5260,6 +5268,11 @@ public:
             throw std::runtime_error("Deuteros fade return is inconsistent");
         auto plan=current;
         if(!fade&&!release){plan.outer_transition_return=route.caller_return;plan.outer_fade_return=route.fade_return;}
+        if(o.instruction_address==0x2185e){
+            plan.outer_input_status_register=route.status_register;
+            plan.outer_input_instruction_count=route.instructions_executed;
+            plan.outer_input_branches=route.branch_checkpoints;
+        }
         plan.next_instruction_address=route.next_instruction;plan.d0_value=route.d0;
         plan.pending_read_instruction=0;plan.pending_read_address=0;
         plan.next_call_address=0;plan.next_return_address=0;plan.next_vector=0;plan.local_call_target=0;

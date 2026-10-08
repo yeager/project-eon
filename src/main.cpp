@@ -69,6 +69,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -5153,6 +5154,12 @@ int main(int argc, char** argv) {
     };
 
     Screen screen = request.game ? Screen::launching : Screen::menu;
+    bool deuteros_fire_held = false;
+    bool deuteros_keyboard_fire_held = false;
+    bool deuteros_gamepad_fire_held = false;
+    bool deuteros_mouse_fire_held = false;
+    bool deuteros_right_mouse_held = false;
+    std::uint64_t deuteros_outer_input_sequence = 0;
     auto& launcher_page = launcher_route.page;
     eon::Game selected = request.game.value_or(eon::Game::millennium);
     auto& card_focus = launcher_interaction.focus;
@@ -5191,8 +5198,8 @@ int main(int argc, char** argv) {
     };
     // Leave room for the localized language autonym in the bundled UI font;
     // the setting stays clear of the original-data controls to its right.
-    const SDL_FRect data_directory_picker_bounds{640.0F, 16.0F, 398.0F, 34.0F};
-    const SDL_FRect data_archive_picker_bounds{640.0F, 56.0F, 398.0F, 34.0F};
+    const SDL_FRect data_directory_picker_bounds{640.0F, 16.0F, 372.0F, 34.0F};
+    const SDL_FRect data_archive_picker_bounds{640.0F, 56.0F, 372.0F, 34.0F};
     const SDL_FRect launcher_language_bounds{230.0F, 16.0F, 370.0F, 34.0F};
     // These are Eon-shell controls, rendered in the same logical coordinate
     // space as cards. They contain no release identity and therefore cannot
@@ -6058,6 +6065,11 @@ int main(int argc, char** argv) {
                 // original opening after focus returns.
                 static_cast<void>(runtime.observe_input(
                     eon::RuntimeInputObservation::opening_input_held(false)));
+                deuteros_fire_held = false;
+                deuteros_keyboard_fire_held = false;
+                deuteros_gamepad_fire_held = false;
+                deuteros_mouse_fire_held = false;
+                deuteros_right_mouse_held = false;
             }
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F10 && !event.key.repeat) {
                 // F10 is consumed by Project Eon's renderer chrome, never by
@@ -6074,6 +6086,13 @@ int main(int argc, char** argv) {
                 }
                 if (!show_modern_graphics_settings) {
                     clear_deuteros_opening_input();
+                    if (screen == Screen::launching && selected == eon::Game::deuteros) {
+                        deuteros_keyboard_fire_held = false;
+                        deuteros_gamepad_fire_held = false;
+                        deuteros_mouse_fire_held = false;
+                        deuteros_fire_held = false;
+                        deuteros_right_mouse_held = false;
+                    }
                 } else {
                     runtime.set_input_suppressed(false);
                 }
@@ -6224,6 +6243,9 @@ int main(int argc, char** argv) {
                 static_cast<void>(runtime.observe_input(
                     eon::RuntimeInputObservation::opening_input_held(
                         event.type == SDL_EVENT_KEY_DOWN)));
+                deuteros_keyboard_fire_held = event.type == SDL_EVENT_KEY_DOWN;
+                deuteros_fire_held = deuteros_keyboard_fire_held
+                    || deuteros_gamepad_fire_held || deuteros_mouse_fire_held;
             }
             if ((event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
                     || event.type == SDL_EVENT_GAMEPAD_BUTTON_UP)
@@ -6235,6 +6257,20 @@ int main(int argc, char** argv) {
                 static_cast<void>(runtime.observe_input(
                     eon::RuntimeInputObservation::opening_input_held(
                         event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN)));
+                deuteros_gamepad_fire_held = event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN;
+                deuteros_fire_held = deuteros_keyboard_fire_held
+                    || deuteros_gamepad_fire_held || deuteros_mouse_fire_held;
+            }
+            if ((event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP)
+                && screen == Screen::launching && selected == eon::Game::deuteros
+                && event.button.which != SDL_TOUCH_MOUSEID) {
+                const bool held = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
+                if (event.button.button == SDL_BUTTON_LEFT) {
+                    deuteros_mouse_fire_held = held;
+                    deuteros_fire_held = deuteros_keyboard_fire_held
+                        || deuteros_gamepad_fire_held || deuteros_mouse_fire_held;
+                }
+                if (event.button.button == SDL_BUTTON_RIGHT) deuteros_right_mouse_held = held;
             }
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN
                 && event.key.key == SDLK_D && !event.key.repeat) show_scanner = !show_scanner;
@@ -6305,6 +6341,34 @@ int main(int argc, char** argv) {
             // never a route for a diagnostic panel to supply a value, change
             // a scheduler limit, or resurrect a revoked source.
             active_native_session_drive.emplace(runtime.snapshot().generation, std::move(drive));
+            // The admitted main-stage driver stops at these exact custom-chip
+            // reads. Supply a byte from the live SDL device state only at that
+            // boundary; the recovered code still owns all branch and state
+            // transitions. Amiga controller pins are active low: CIAA bit 6
+            // is fire, while POTINP bit 10 maps to byte bit 2 (right mouse).
+            if (selected == eon::Game::deuteros
+                && runtime.state() == eon::NativeSessionState::deuteros_amiga_title_stage_boundary) {
+                if (const auto checkpoint = runtime.deuteros_amiga_title_dependency_chain_checkpoint();
+                    checkpoint && checkpoint->main_stage_loop_graphics) {
+                    const auto instruction = checkpoint->main_stage_loop_graphics->pending_read_instruction;
+                    std::uint32_t port = 0;
+                    std::uint8_t bit = 0;
+                    std::uint8_t value = 0;
+                    if (instruction == 0x21822) {
+                        port = 0xdff016;
+                        bit = 10;
+                        value = deuteros_right_mouse_held ? 0x00U : 0x04U;
+                    } else if (instruction == 0x2185e || instruction == 0x218be) {
+                        port = 0xbfe001;
+                        bit = 6;
+                        value = deuteros_fire_held ? 0x00U : 0x40U;
+                    }
+                    if (port != 0) {
+                        static_cast<void>(runtime.observe_deuteros_amiga_outer_input({
+                            ++deuteros_outer_input_sequence, instruction, port, bit, value}));
+                    }
+                }
+            }
         } else {
             active_native_session_drive.reset();
         }
@@ -6406,19 +6470,66 @@ int main(int argc, char** argv) {
         SDL_SetRenderDrawColor(renderer, 205, 225, 235, 255);
 
         if (screen == Screen::menu) {
-            // Keep the masthead clear so the full game cards below remain the
-            // single source of game artwork and are not repeated behind the
-            // language and data-folder controls.
+            // Keep the game cards as the main source of artwork, while giving
+            // the navigation header a restrained sci-fi console treatment.
             const SDL_FRect masthead_bounds{32.0F, 12.0F, 1216.0F, 154.0F};
             SDL_SetRenderDrawColor(renderer, 5, 16, 28, 255);
             SDL_RenderFillRect(renderer, &masthead_bounds);
-            SDL_SetRenderDrawColor(renderer, 34, 65, 82, 255);
-            SDL_RenderLine(renderer, 48.0F, 22.0F, 1048.0F, 22.0F);
-            SDL_SetRenderDrawColor(renderer, 75, 135, 157, 255);
-            for (int tick = 0; tick < 31; ++tick) {
+            const SDL_FRect masthead_lower_band{32.0F, 128.0F, 1216.0F, 38.0F};
+            SDL_SetRenderDrawColor(renderer, 7, 25, 39, 255);
+            SDL_RenderFillRect(renderer, &masthead_lower_band);
+
+            // A measured cyan grid and amber locator marks echo the games'
+            // instrument panels without using or reproducing game artwork.
+            SDL_SetRenderDrawColor(renderer, 22, 58, 75, 255);
+            SDL_RenderLine(renderer, 48.0F, 22.0F, 1232.0F, 22.0F);
+            SDL_RenderLine(renderer, 48.0F, 126.0F, 1232.0F, 126.0F);
+            SDL_SetRenderDrawColor(renderer, 57, 106, 125, 255);
+            for (int tick = 0; tick < 37; ++tick) {
                 const float x = 54.0F + static_cast<float>(tick) * 32.0F;
                 SDL_RenderLine(renderer, x, 20.0F, x, tick % 4 == 0 ? 29.0F : 24.0F);
             }
+            SDL_SetRenderDrawColor(renderer, 214, 151, 58, 255);
+            SDL_RenderLine(renderer, 48.0F, 34.0F, 48.0F, 112.0F);
+            SDL_RenderLine(renderer, 48.0F, 34.0F, 60.0F, 34.0F);
+            SDL_RenderLine(renderer, 48.0F, 112.0F, 60.0F, 112.0F);
+
+            constexpr std::array<SDL_FPoint, 16> masthead_stars{{
+                {84.0F, 88.0F}, {126.0F, 104.0F}, {176.0F, 82.0F},
+                {302.0F, 116.0F}, {362.0F, 94.0F}, {424.0F, 112.0F},
+                {584.0F, 94.0F}, {610.0F, 116.0F}, {1034.0F, 106.0F},
+                {1064.0F, 88.0F}, {1094.0F, 116.0F}, {1122.0F, 96.0F},
+                {1218.0F, 106.0F}, {1188.0F, 28.0F}, {1222.0F, 48.0F},
+                {1150.0F, 86.0F},
+            }};
+            for (std::size_t index = 0; index < masthead_stars.size(); ++index) {
+                const auto& star = masthead_stars[index];
+                SDL_SetRenderDrawColor(renderer,
+                    index % 4U == 0 ? 221 : 62,
+                    index % 4U == 0 ? 164 : 153,
+                    index % 4U == 0 ? 76 : 178, 255);
+                SDL_RenderLine(renderer, star.x - 2.0F, star.y, star.x + 2.0F, star.y);
+                SDL_RenderLine(renderer, star.x, star.y - 2.0F, star.x, star.y + 2.0F);
+            }
+
+            // The orbital instrument sits in its own clear bay; the folder
+            // controls stop short of it so neither the logo nor its rings get
+            // covered by a button.
+            SDL_SetRenderDrawColor(renderer, 49, 111, 134, 255);
+            constexpr float tau = 6.28318530718F;
+            constexpr int orbit_segments = 48;
+            for (int segment = 0; segment < orbit_segments; ++segment) {
+                const float a0 = tau * static_cast<float>(segment)
+                    / static_cast<float>(orbit_segments);
+                const float a1 = tau * static_cast<float>(segment + 1)
+                    / static_cast<float>(orbit_segments);
+                SDL_RenderLine(renderer,
+                    1184.0F + std::cos(a0) * 46.0F, 67.0F + std::sin(a0) * 31.0F,
+                    1184.0F + std::cos(a1) * 46.0F, 67.0F + std::sin(a1) * 31.0F);
+            }
+            SDL_SetRenderDrawColor(renderer, 213, 149, 57, 255);
+            SDL_RenderLine(renderer, 1139.0F, 67.0F, 1150.0F, 67.0F);
+            SDL_RenderLine(renderer, 1218.0F, 67.0F, 1229.0F, 67.0F);
 
             if (launcher_page != LauncherPage::games) {
                 SDL_SetRenderDrawColor(renderer, 66, 108, 132, 255);
@@ -6429,7 +6540,7 @@ int main(int argc, char** argv) {
                 draw_text(renderer, 76.0F, 50.0F, tr("PROJECT EON"));
             }
             if (project_eon_logo_texture) {
-                const SDL_FRect logo_bounds{1180.0F, 15.0F, 52.0F, 52.0F};
+                const SDL_FRect logo_bounds{1155.0F, 38.0F, 58.0F, 58.0F};
                 SDL_RenderTexture(renderer, project_eon_logo_texture, nullptr, &logo_bounds);
             }
             if (launcher_page == LauncherPage::games) {

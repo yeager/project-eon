@@ -151,6 +151,7 @@ add_executable(project-eon
     src/engine/millennium_dos_video_function_31_session.cpp
     src/engine/millennium_dos_video_function_13_session.cpp
     src/engine/millennium_dos_video_function_13_interrupt_session.cpp
+    src/engine/millennium_dos_int93_text_session.cpp
     src/engine/millennium_dos_paragraph_arena.cpp
     src/engine/millennium_dos_compatibility_runner.cpp
     src/engine/millennium_dos_title_exec_entry_session.cpp
@@ -232,6 +233,7 @@ add_executable(project-eon
     src/data/millennium_dos_title_transition.cpp
     src/data/millennium_dos_title_presentation.cpp
     src/data/millennium_dos_video_driver.cpp
+    src/data/millennium_dos_text_driver.cpp
     src/data/millennium_dos_sound_driver.cpp
     src/data/millennium_dos_reference_trace.cpp
     src/data/millennium_amiga_reference_trace.cpp
@@ -494,6 +496,19 @@ if(BUILD_TESTING)
         endif()
         add_test(NAME millennium-dos-video-driver-profiles-real-media
             COMMAND eon-millennium-dos-video-driver-profile-test "${EON_DIRECT_DATA_DIR}")
+        add_executable(eon-millennium-dos-int93-text-session-test
+            tests/millennium_dos_int93_text_session_test.cpp
+            src/engine/millennium_dos_int93_text_session.cpp
+            src/data/millennium_dos_text_driver.cpp
+            src/data/sha256.cpp)
+        target_include_directories(eon-millennium-dos-int93-text-session-test PRIVATE src)
+        if(MSVC)
+            target_compile_options(eon-millennium-dos-int93-text-session-test PRIVATE /UNDEBUG)
+        else()
+            target_compile_options(eon-millennium-dos-int93-text-session-test PRIVATE -UNDEBUG)
+        endif()
+        add_test(NAME millennium-dos-int93-text-session-real-media
+            COMMAND eon-millennium-dos-int93-text-session-test "${EON_DIRECT_DATA_DIR}")
         add_test(NAME millennium-dos-title-runtime-real-media
             COMMAND eon-native-tests --direct-title-runtime "${EON_DIRECT_DATA_DIR}")
         set_tests_properties(millennium-dos-title-runtime-real-media PROPERTIES

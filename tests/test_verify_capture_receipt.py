@@ -18,6 +18,35 @@ SPEC.loader.exec_module(TOOL)
 
 
 class ReceiptVerifierTests(LfTextFixtureWrites, unittest.TestCase):
+    def test_schema33_pins_v23_and_recomputes_latch_write_fields(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        identity = {
+            "recorder_sha256": runner.TRV2_RECORDER_V23_SHA256,
+            "recorder_bytes": str(runner.TRV2_RECORDER_V23_SIZE),
+            "recorder_protocol": "deuteros-amiga-fsuae-v23",
+        }
+        self.assertIsNone(TOOL.verify_deuteros_recorder_identity(identity, "33", runner))
+        with self.assertRaisesRegex(ValueError, "v23 receipt schema"):
+            TOOL.verify_deuteros_recorder_identity({
+                **identity, "recorder_protocol": "deuteros-amiga-fsuae-v22",
+            }, "33", runner)
+        with temporary_directory() as directory:
+            root = Path(directory)
+            CanonicalReceiptPath(root / "host-input-receipt.txt").write_text(
+                "host-input 1 frame=80 line=2 action=149 state=1\n", encoding="ascii")
+            CanonicalReceiptPath(root / "latch-write.txt").write_text(
+                "latch-write 1 cycles=100 site=0x00021868 next_pc=0x00021870 "
+                "opcode=0x13fc target=0x00021720 before=0x00 after=0x01 "
+                "input_ordinal=1 input_frame=80\n", encoding="ascii")
+            fields = {"capture_receipt_version": "33"}
+            fields.update(dict(line.split("=", 1) for line in
+                runner.latch_write_receipt_status(
+                    root / "latch-write.txt", root / "host-input-receipt.txt").splitlines()))
+            TOOL.verify_deuteros_latch_write(fields, root)
+            fields["latch_write_records"] = "2"
+            with self.assertRaisesRegex(ValueError, "grammar/count"):
+                TOOL.verify_deuteros_latch_write(fields, root)
+
     def test_schema31_zero_route_observation_status_is_exact_and_schema_bound(self) -> None:
         runner = TOOL.load_tool("run_deuteros_amiga_capture")
         with temporary_directory() as directory:
@@ -830,6 +859,21 @@ class ReceiptVerifierTests(LfTextFixtureWrites, unittest.TestCase):
             status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()),
                               encoding="utf-8")
             self.assertEqual(TOOL.verify("deuteros-amiga", root), "32")
+
+            fields["capture_receipt_version"] = "33"
+            fields["recorder_protocol"] = "deuteros-amiga-fsuae-v23"
+            fields["recorder_sha256"] = runner.TRV2_RECORDER_V23_SHA256
+            fields["recorder_bytes"] = str(runner.TRV2_RECORDER_V23_SIZE)
+            v23_status = (runner.zero_route_observation_status(
+                root / "zero-route-observation.txt", root / "host-input-receipt.txt")
+                + runner.late_display_receipt_status(
+                    root / "late-display.txt", root / "host-input-receipt.txt")
+                + runner.latch_write_receipt_status(
+                    root / "latch-write.txt", root / "host-input-receipt.txt"))
+            fields.update(dict(line.split("=", 1) for line in v23_status.splitlines()))
+            status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()),
+                              encoding="utf-8")
+            self.assertEqual(TOOL.verify("deuteros-amiga", root), "33")
 
     def test_schema23_identity_rejects_v16_even_without_raw_observations(self) -> None:
         runner = TOOL.load_tool("run_deuteros_amiga_capture")

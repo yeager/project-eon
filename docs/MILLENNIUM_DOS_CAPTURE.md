@@ -889,6 +889,28 @@ site was reached before this route's established boundary. It does not prove
 that no installer exists elsewhere, nor change any existing handler, title,
 input, display, audio, or gameplay boundary.
 
+### 2026-10-07 hash-gated INT 93h static follow-up
+
+A complete linear candidate disassembly of the four exact English DOS
+`MILL.COM`, `TITLES.EXE`, `2200AD.EXE`, and `2200GX.EXE` members found the
+third `INT 93h` wrapper at `2200GX.EXE+0x51`; its returns and callers remain
+unclassified. It also exposed a candidate title startup route: after the
+`INT 91h` mode query, `TITLES.EXE` selects one of `VGATXT.BIN`, `EG3TXT.BIN`,
+or `EG6TXT.BIN`, reads it through the far pointer at `CS:$011c`, then reaches
+the existing `$2593` Set-Vector candidate. `VGATXT.BIN` is present in the
+admitted direct-media set (1,024 bytes, SHA-256
+`c31cb760d5f62a21b3baf9c09a6be413514780bd88eeac0273620e81b5d69318`) and has
+an interrupt-shaped dispatch prefix with an `IRET`; `EG6TXT.BIN` is also
+present, while `EG3TXT.BIN` is absent. These are linear/static candidate
+facts, not proof that the loader path executes, that the chosen file is a
+handler, or what any handler operation means. The earlier absent V21 receipt
+and zero vector at the captured call remain valid observations; the live
+ordering and successful installation result are still unknown. See
+`PRESERVATION.md` for the complete hashes and uncertainty. Do not add a
+synthetic vector or handler. The next evidence boundary is one reviewed trace
+binding the `INT 91h` mode return, selected filename, completed read,
+Set-Vector result, and first later `INT 93h` call.
+
 ## Audited local route
 
 The only source release eligible for the current English DOS adapter is the

@@ -1149,6 +1149,46 @@ int test_deuteros_title_stage_selector_branches(const std::filesystem::path& dir
     const eon::AmigaAdf disk{std::span<const std::uint8_t>(*bytes)};
     const auto plan = eon::parse_deuteros_amiga_load_plan(disk);
     const auto profile = eon::parse_deuteros_amiga_title_stage(disk, plan);
+    const auto secondary_input_code = disk.bytes(plan.main_stage.disk_offset + 0x185e, 0x34);
+    std::map<std::uint32_t, std::uint8_t> secondary_memory;
+    const auto secondary_put = [&](const std::uint32_t address, const std::uint32_t width,
+                                   const std::uint32_t value) {
+        for (std::uint32_t index = 0; index < width; ++index)
+            secondary_memory[address + index] = static_cast<std::uint8_t>(
+                value >> ((width - index - 1U) * 8U));
+    };
+    const auto secondary_read = [&](const std::uint32_t address, const std::uint32_t width) {
+        std::uint32_t value = 0;
+        for (std::uint32_t index = 0; index < width; ++index)
+            value = (value << 8U) | secondary_memory[address + index];
+        return value;
+    };
+    const auto secondary_write = [&](const std::uint32_t address,
+                                     const eon::MemoryTransferElementWidth width,
+                                     const std::uint32_t value) {
+        secondary_put(address, static_cast<std::uint32_t>(width), value);
+    };
+    secondary_put(0x21696, 2, 2);
+    secondary_put(0x2126a, 4, 1);
+    const auto secondary_route = eon::execute_deuteros_amiga_owned_outer_input(
+        0x2185e, 0x40, 0, secondary_read, secondary_write, secondary_input_code);
+    assert((secondary_route.next_instruction == 0x2181c
+            || secondary_route.next_instruction == 0x21380
+            || secondary_route.next_instruction == 0x222ac)
+        && secondary_read(0xbfe001, 1) == 0x40);
+    auto altered_secondary_input_code = std::vector<std::uint8_t>(
+        secondary_input_code.begin(), secondary_input_code.end());
+    altered_secondary_input_code.back() ^= 1U;
+    const auto secondary_memory_before_rejection = secondary_memory;
+    bool altered_secondary_input_rejected = false;
+    try {
+        static_cast<void>(eon::execute_deuteros_amiga_owned_outer_input(
+            0x2185e, 0, 0, secondary_read, secondary_write, altered_secondary_input_code));
+    } catch (const std::runtime_error&) {
+        altered_secondary_input_rejected = true;
+    }
+    assert(altered_secondary_input_rejected
+        && secondary_memory == secondary_memory_before_rejection);
     const auto read_profile = eon::parse_deuteros_amiga_title_post_exec_load_service_profile(
         disk, plan);
     assert(read_profile.read_vector_call_address == 0x20934);
@@ -6102,6 +6142,15 @@ int main(int argc, char** argv) {
             opening_request.release_language = release.language;
             opening_request.release_sha256 = release.sha256;
             verify_deuteros_worker_scenario_diagnostic({opening_request, release});
+            const auto secondary_input_disk_bytes=eon::extract_asset_by_sha256(release.path,
+                "6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38");
+            assert(secondary_input_disk_bytes);
+            const eon::AmigaAdf secondary_input_disk{
+                std::span<const std::uint8_t>(*secondary_input_disk_bytes)};
+            const auto secondary_input_load_plan=eon::parse_deuteros_amiga_load_plan(
+                secondary_input_disk);
+            const auto secondary_input_code=secondary_input_disk.bytes(
+                secondary_input_load_plan.main_stage.disk_offset+0x185e,0x34);
 
             // Exercise the production host boundary with a real, admitted
             // release. A front-end modal must not let a physical held signal
@@ -8020,8 +8069,16 @@ int main(int argc, char** argv) {
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_primary_input->checksum);
             assert(opening_controller.observe_deuteros_amiga_outer_input(secondary_outer_input).accepted);
             assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x21380);
+            const auto secondary_input_checkpoint=
+                opening_controller.deuteros_amiga_title_dependency_chain_checkpoint();
+            assert(secondary_input_checkpoint&&secondary_input_checkpoint->main_stage_loop_graphics
+                &&secondary_input_checkpoint->main_stage_loop_graphics->outer_input_instruction_count>0
+                &&secondary_input_checkpoint->main_stage_loop_graphics->outer_input_instruction_count<=11
+                &&!secondary_input_checkpoint->main_stage_loop_graphics->outer_input_branches.empty()
+                &&secondary_input_checkpoint->main_stage_loop_graphics->outer_input_branches.front().instruction_address==0x21866);
             const auto after_secondary_input=opening_controller.native_runtime_memory_checkpoint();
-            assert(runtime_byte(*after_secondary_input,0x21720)==1&&runtime_byte(*after_secondary_input,0x21721)==1);
+            assert(runtime_byte(*after_secondary_input,0x21720)==1&&runtime_byte(*after_secondary_input,0x21721)==1
+                &&runtime_byte(*after_secondary_input,0xbfe001)==0);
             assert(!opening_controller.observe_deuteros_amiga_outer_input(secondary_outer_input).accepted);
             assert(opening_controller.advance_deuteros_amiga_main_stage_scheduler_pass().accepted);
             const auto third_pass=opening_controller.native_runtime_memory_checkpoint();
@@ -8121,16 +8178,79 @@ int main(int argc, char** argv) {
             outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x21822,4,0,command_read,command_write);
             assert(outer_route.next_instruction==0x222ac&&outer_route.caller_return==0&&outer_route.fade_return==0x2189e);
             command_write(0x21720,eon::MemoryTransferElementWidth::byte,0);
-            outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0x40,0xabcd0000,command_read,command_write);
-            assert(outer_route.next_instruction==0x21380&&outer_route.d0==0xabcd0000);
-            outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0,0xabcd0000,command_read,command_write);
+            command_write(0xbfe001,eon::MemoryTransferElementWidth::byte,0xff);
+            outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0x40,0xabcd0000,
+                command_read,command_write,secondary_input_code);
+            assert(outer_route.next_instruction==0x21380&&outer_route.d0==0xabcd0000
+                &&command_read(0xbfe001,1)==0x40);
+            outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0,0xabcd0000,
+                command_read,command_write,secondary_input_code);
             assert(outer_route.next_instruction==0x21380&&outer_route.d0==0xabcd0003);
             command_write(0x21696,eon::MemoryTransferElementWidth::word,2);
             command_write(0x21704,eon::MemoryTransferElementWidth::word,0);
-            outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0x40,0xabcd0000,command_read,command_write);
+            outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0x40,0xabcd0000,
+                command_read,command_write,secondary_input_code);
             assert(outer_route.next_instruction==0x222ac&&outer_route.d0==1&&outer_route.caller_return==0);
+            assert(outer_route.instructions_executed==10&&outer_route.status_register==0x0004
+                &&outer_route.branch_checkpoints.size()==5);
+            const auto& branch_trace=outer_route.branch_checkpoints;
+            assert(branch_trace[0].instruction_address==0x21866
+                &&branch_trace[0].target_address==0x21870&&branch_trace[0].taken
+                &&(branch_trace[0].status_register&0x0004U)==0);
+            assert(branch_trace[1].instruction_address==0x21876
+                &&branch_trace[1].target_address==0x21880&&!branch_trace[1].taken
+                &&(branch_trace[1].status_register&0x0004U)!=0);
+            assert(branch_trace[2].instruction_address==0x2187e
+                &&branch_trace[2].target_address==0x21882&&branch_trace[2].taken
+                &&(branch_trace[2].status_register&0x0004U)==0);
+            assert(branch_trace[3].instruction_address==0x2188c
+                &&branch_trace[3].target_address==0x2181c&&!branch_trace[3].taken
+                &&(branch_trace[3].status_register&0x0004U)!=0);
+            assert(branch_trace[4].instruction_address==0x2188e
+                &&branch_trace[4].target_address==0x21982&&branch_trace[4].taken
+                &&(branch_trace[4].status_register&0x0004U)!=0);
             assert(command_read(0x21704,2)==1);
             assert(command_read(0x21720,1)==1);
+            command_write(0x2171e,eon::MemoryTransferElementWidth::byte,0);
+            command_write(0x21720,eon::MemoryTransferElementWidth::byte,0);
+            command_write(0x21696,eon::MemoryTransferElementWidth::word,2);
+            command_write(0x21704,eon::MemoryTransferElementWidth::word,3);
+            outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0,0xabcd0000,
+                command_read,command_write,secondary_input_code);
+            assert(outer_route.next_instruction==0x21380&&outer_route.d0==0xabcd0003
+                &&outer_route.branch_checkpoints.size()==5);
+            assert(command_read(0x21720,1)==1);
+
+            // A nonzero first latch byte skips both the second latch read and
+            // the counter load. Their absence is deliberately preserved.
+            command_write(0x2171e,eon::MemoryTransferElementWidth::byte,1);
+            const auto saved_secondary_memory=owned_command_bytes;
+            owned_command_bytes.erase(0x21720);
+            owned_command_bytes.erase(0x21696);
+            outer_route=eon::execute_deuteros_amiga_owned_outer_input(0x2185e,0x40,0xabcd0000,
+                command_read,command_write,secondary_input_code);
+            assert(outer_route.next_instruction==0x21380&&outer_route.branch_checkpoints.size()==3);
+            owned_command_bytes=saved_secondary_memory;
+
+            // A missing reached cell or a source-byte mismatch rejects before
+            // publishing the local latch store.
+            owned_command_bytes.erase(0x2171e);
+            const auto before_missing_secondary=owned_command_bytes;
+            bool missing_secondary_rejected=false;
+            try{static_cast<void>(eon::execute_deuteros_amiga_owned_outer_input(
+                0x2185e,0,0xabcd0000,command_read,command_write,secondary_input_code));}
+            catch(const std::runtime_error&){missing_secondary_rejected=true;}
+            assert(missing_secondary_rejected&&owned_command_bytes==before_missing_secondary);
+            owned_command_bytes=saved_secondary_memory;
+            std::vector<std::uint8_t> altered_secondary_code(
+                secondary_input_code.begin(),secondary_input_code.end());
+            altered_secondary_code.back()^=1U;
+            const auto before_altered_secondary=owned_command_bytes;
+            bool altered_secondary_rejected=false;
+            try{static_cast<void>(eon::execute_deuteros_amiga_owned_outer_input(
+                0x2185e,0,0xabcd0000,command_read,command_write,altered_secondary_code));}
+            catch(const std::runtime_error&){altered_secondary_rejected=true;}
+            assert(altered_secondary_rejected&&owned_command_bytes==before_altered_secondary);
             for(const unsigned selector:{0U,1U,2U,3U,0x102U,0x103U,0xffffU}){
                 command_write(0x21704,eon::MemoryTransferElementWidth::word,selector);
                 outer_route=eon::execute_deuteros_amiga_owned_outer_transition(

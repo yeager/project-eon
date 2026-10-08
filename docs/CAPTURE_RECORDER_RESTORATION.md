@@ -27,6 +27,7 @@ cache before asking Project Eon to run an evidence capture:
 | Deuteros Amiga | reviewed FS-UAE v20, trv2 x86_64 | `071f1c949409be9ff3faa128d0acc98fcde9136c0aa09ab6a6edb058e7fbc397` | 62,020,224-byte successor; schema 30 adds only `$1fc22/$1fc9c` to the bounded late-input sidecar; no capture has been run |
 | Deuteros Amiga | reviewed FS-UAE v21, trv2 x86_64 | `2fc7f47425d0fa005bb59bf41eaeccf32d1cba284dee4f227e7e723b853e1b35` | Schema 31 records a bounded complete zero-route invocation; physical04 verifies but does not establish a game action |
 | Deuteros Amiga | reviewed FS-UAE v22, trv2 x86_64 | `eb0995c70f7f355f674d448b08c0f3e647430562ffde7d179e5aeb12e5abca71` | Schema 32 adds a separate display-register sidecar after host-input ordinal 20; no capture has been run |
+| Deuteros Amiga | reviewed FS-UAE v23, trv2 x86_64 | `e4e46e84cd75eceffb28d26882fef0062582c251b0ef26baa0fccf6aff2e8dd1` | Schema 33 observes the exact main-stage latch write at `$21868`; 2026-10-07 visible attempt rejected for no host input |
 
 The v16 source patch SHA-256 is
 `1fa61e7984fe5535b42c07614be4f10a219323bf8536a3dc271a80c0b6f5f361`.

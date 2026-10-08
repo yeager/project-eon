@@ -112,9 +112,9 @@ def main() -> None:
     notes.write_text(f"""Project Eon {version}
 
 Preservation-first SDL3 reimplementation of Millennium 2.2 and Deuteros.
-This is a maintenance rebuild of 0.1.3 with synchronized application and
-package version metadata. It contains no new gameplay behavior; complete
-gameplay parity is not yet achieved.
+This release advances the recovered Millennium DOS and Deuteros Amiga runtime
+paths while keeping unsupported behavior behind documented evidence
+boundaries. Complete gameplay parity is not yet achieved.
 
 Includes Linux x86_64 DEB, RPM and AppImage; macOS arm64 and x86_64 apps;
 Windows x64 installer; and an unsigned iPadOS arm64 IPA requiring sideload signing.
