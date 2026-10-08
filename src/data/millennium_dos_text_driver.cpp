@@ -1,7 +1,6 @@
 #include "data/millennium_dos_text_driver.hpp"
 #include "data/sha256.hpp"
 
-#include <algorithm>
 #include <array>
 #include <stdexcept>
 #include <string_view>
@@ -17,24 +16,11 @@ std::uint16_t little16(const std::span<const std::uint8_t> bytes, const std::siz
         | (static_cast<std::uint16_t>(bytes[offset + 1]) << 8U));
 }
 
-bool equals_at(const std::span<const std::uint8_t> bytes, const std::size_t offset,
-    const std::span<const std::uint8_t> expected) {
-    return offset <= bytes.size() && expected.size() <= bytes.size() - offset
-        && std::equal(expected.begin(), expected.end(), bytes.begin()
-            + static_cast<std::ptrdiff_t>(offset));
-}
-
 } // namespace
 
 MillenniumDosTextDriverProfile parse_millennium_dos_text_driver(
     const std::span<const std::uint8_t> bytes, const MillenniumDosTextDriverKind kind) {
-    constexpr std::array<std::uint8_t, 31> dispatcher{{
-        0x1e,0x56,0x51,0x50,0x88,0xe0,0x32,0xe4,0xd1,0xe0,0x0e,0x1f,0xbe,0x27,0x00,
-        0x01,0xc6,0xad,0x89,0xc1,0x58,0xbe,0x1b,0x00,0x56,0x51,0xc3,0x59,0x5e,0x1f,0xcf}};
-    constexpr std::array<std::uint16_t, 10> vga_handlers{{
-        0x0026,0x0330,0x038f,0x0040,0x03e9,0x03ee,0x0026,0x0046,0x03f3,0x004f}};
-    constexpr std::array<std::uint16_t, 10> ega6_handlers{{
-        0x0026,0x068c,0x0724,0x0040,0x07c3,0x07d7,0x0026,0x0046,0x07eb,0x004f}};
+    constexpr std::size_t dispatcher_size = 31;
     constexpr std::string_view dispatcher_hash =
         "26ddd2baacb81d3f61d5c4950c5df444aa1edd4a0d93b02cbf8c82de111c8dad";
     const bool vga = kind == MillenniumDosTextDriverKind::vga;
@@ -45,10 +31,8 @@ MillenniumDosTextDriverProfile parse_millennium_dos_text_driver(
     const std::string_view expected_table_hash = vga
         ? "0d9fc888e3d7e5f611d8857106a201448de0f95645ebb90607119a84246a9525"
         : "31d7a1e5fba25a172ce88ad032a2c7860f9220d5c2adcdfae0302ef73da5e102";
-    const auto& handlers = vga ? vga_handlers : ega6_handlers;
     if (bytes.size() != expected_size || to_hex(sha256(bytes)) != expected_hash
-        || to_hex(sha256(bytes.first(dispatcher.size()))) != dispatcher_hash
-        || !equals_at(bytes, 0, dispatcher)) {
+        || to_hex(sha256(bytes.first(dispatcher_size))) != dispatcher_hash) {
         throw std::runtime_error("Unsupported Millennium DOS INT 93h text driver");
     }
     if (to_hex(sha256(bytes.subspan(0x27, 20))) != expected_table_hash) {
@@ -84,14 +68,12 @@ MillenniumDosTextDriverProfile parse_millennium_dos_text_driver(
             "002151afa70150d562f250674b15cf43432ada43f4487ec9e4f2379b26465a9c")) {
         throw std::runtime_error("Unsupported EG6TXT INT 93h handler spans");
     }
+    std::array<std::uint16_t, 10> handlers{};
     for (std::size_t index = 0; index < handlers.size(); ++index) {
-        if (little16(bytes, 0x27 + index * 2) != handlers[index]
-            || handlers[index] >= bytes.size()) {
+        handlers[index] = little16(bytes, 0x27 + index * 2);
+        if (handlers[index] >= bytes.size()) {
             throw std::runtime_error("Invalid Millennium DOS INT 93h text-driver target");
         }
-    }
-    if (bytes[0x26] != 0xc3) {
-        throw std::runtime_error("Unsupported Millennium DOS INT 93h no-op handler");
     }
     return {kind, bytes.size(), std::string(expected_hash), handlers,
         static_cast<std::uint16_t>(vga ? 0x0a00 : 0x0280)};
