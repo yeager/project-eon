@@ -1,3 +1,9 @@
+project-eon (0.1.7-1) unstable; urgency=medium
+
+  * Package the verified 0.1.7 release.
+
+ -- Daniel Nylander <1206564+yeager@users.noreply.github.com>  Thu, 29 Oct 2026 00:00:00 +0000
+
 project-eon (0.1.6-1) unstable; urgency=medium
 
   * Package the verified 0.1.6 release.

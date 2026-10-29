@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(project_eon VERSION 0.1.6 LANGUAGES C CXX)
+project(project_eon VERSION 0.1.7 LANGUAGES C CXX)
 
 option(EON_DEVELOPER_RESOURCE_FALLBACKS
     "Allow launcher resource lookup to fall back to the source checkout" OFF)
