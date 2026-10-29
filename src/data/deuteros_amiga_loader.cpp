@@ -1,5 +1,4 @@
 #include "data/deuteros_amiga_loader.hpp"
-#include "data/deuteros_amiga_interrupt_worker.hpp"
 #include "data/sha256.hpp"
 
 #include <algorithm>
@@ -32,28 +31,6 @@ void require_long(std::span<const std::uint8_t> bytes, std::size_t offset, std::
 }
 
 } // namespace
-
-DeuterosAmigaVertbHandlerProfile parse_deuteros_amiga_vertb_handler(
-    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
-    constexpr std::uint32_t entry = 0x207ec;
-    constexpr std::uint32_t disk_offset = 0x5fec;
-    constexpr std::size_t length = 0x100;
-    constexpr std::string_view hash =
-        "21356e0e8cfe8b1323a7ffa3a59c8b98720794330251862e9978447c91006d0f";
-    const auto& stage = plan.main_stage;
-    if (disk.kind() != AmigaDiskKind::dos || stage.disk_offset != 0x5800
-        || stage.destination != 0x20000 || stage.length != 0x4200
-        || entry < stage.destination || entry - stage.destination > stage.length
-        || length > stage.length - (entry - stage.destination)
-        || stage.disk_offset + entry - stage.destination != disk_offset) {
-        throw std::runtime_error("Deuteros VERTB handler placement does not match loaded stage");
-    }
-    const auto bytes = disk.bytes(disk_offset, length);
-    if (to_hex(sha256(bytes)) != hash) {
-        throw std::runtime_error("Deuteros VERTB handler hash mismatch");
-    }
-    return {entry, disk_offset, static_cast<std::uint32_t>(length), std::string(hash)};
-}
 
 DeuterosAmigaBootstrapAuxiliaryImage
 decode_deuteros_amiga_bootstrap_auxiliary(const std::span<const std::uint8_t> payload) {

@@ -48,12 +48,12 @@ MillenniumAtariBootstrapSession::MillenniumAtariBootstrapSession(
     if (!entry || entry->directory()) {
         throw std::runtime_error("Unsupported Millennium Atari ST configuration source");
     }
-    config_payload_ = disk.read(*entry);
-    config_entry_ = parse_millennium_atari_config_entry(config_payload_);
+    const auto payload = disk.read(*entry);
+    config_entry_ = parse_millennium_atari_config_entry(payload);
     fread_config_load_address_boundary_ = parse_millennium_atari_fread_config_load_address_boundary(
-        fread_config_transfer_, config_payload_, config_entry_);
+        fread_config_transfer_, payload, config_entry_);
     fread_mapped_config_prelude_ = parse_millennium_atari_fread_mapped_config_prelude(
-        fread_config_transfer_, config_payload_, config_entry_);
+        fread_config_transfer_, payload, config_entry_);
     // One coordinator-owned Atari session is one compatibility generation.
     // RuntimeHost revokes the entire coordinator before any source switch.
     read_only_gemdos_.emplace(1, disk, trap_, fread_frame_prefix_,
@@ -73,32 +73,6 @@ MillenniumAtariBootstrapSession::MillenniumAtariBootstrapSession(
     }
     post_config_module_entry_ = parse_millennium_atari_post_config_module_entry(
         post_config_payload_);
-
-    constexpr std::string_view game_init_sha256 =
-        "de0a95d3e4659a305b3e55b3417a7648127b41866de0a0ca344a81c66979dbc0";
-    const auto* game_init_entry = disk.find("MILL22D.INF");
-    if (!game_init_entry || game_init_entry->directory() || game_init_entry->size != 18428U) {
-        throw std::runtime_error("Unsupported Millennium Atari ST game-init source");
-    }
-    game_init_payload_ = disk.read(*game_init_entry);
-    if (game_init_payload_.size() != 18428U
-        || to_hex(sha256(game_init_payload_)) != game_init_sha256) {
-        throw std::runtime_error("Millennium Atari ST game-init source changed");
-    }
-
-    constexpr std::string_view decoder_sha256 =
-        "a28a49eea33a14210193bbe6e36abf95700ac6789681bf1a9eac5d09a0999055";
-    const auto* decoder_entry = disk.find("MILL22C.INF");
-    if (!decoder_entry || decoder_entry->directory() || decoder_entry->size != 9597U) {
-        throw std::runtime_error("Unsupported Millennium Atari ST decoder source");
-    }
-    game_init_decoder_payload_ = disk.read(*decoder_entry);
-    if (game_init_decoder_payload_.size() != 9597U
-        || to_hex(sha256(game_init_decoder_payload_)) != decoder_sha256) {
-        throw std::runtime_error("Millennium Atari ST decoder source changed");
-    }
-    title_frame_ = std::make_shared<const MillenniumAtariTitleFrameSnapshot>(
-        decode_millennium_atari_title_frame(config_payload_, game_init_decoder_payload_, 1));
 }
 
 NativeRuntimeEffectBatch MillenniumAtariBootstrapSession::make_post_config_fread_effect_batch(
@@ -118,93 +92,6 @@ NativeRuntimeEffectBatch MillenniumAtariBootstrapSession::make_post_config_fread
             {NativeRuntimeAddressSpace::linear, std::nullopt, 0x11e00ULL + index},
             MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian,
             post_config_payload_[index]});
-    }
-    return batch;
-}
-
-NativeRuntimeEffectBatch MillenniumAtariBootstrapSession::make_game_init_second_config_fread_effect_batch(
-    const std::int32_t returned_bytes, std::string id) const {
-    constexpr std::int32_t request_bytes = 0x7d42;
-    if (id.empty() || game_init_payload_.size() != 18428U
-        || returned_bytes < 0 || returned_bytes > request_bytes
-        || returned_bytes > static_cast<std::int32_t>(game_init_payload_.size())
-        || to_hex(sha256(game_init_payload_))
-            != "de0a95d3e4659a305b3e55b3417a7648127b41866de0a0ca344a81c66979dbc0") {
-        throw std::runtime_error("Unsupported Millennium Atari ST second-config Fread result");
-    }
-    const auto byte_count = static_cast<std::size_t>(returned_bytes);
-    NativeRuntimeEffectBatch batch{std::move(id), true, {}};
-    batch.effects.reserve(byte_count);
-    for (std::size_t index = 0; index < byte_count; ++index) {
-        batch.effects.push_back({index + 1,
-            {NativeRuntimeAddressSpace::linear, std::nullopt, 0x2c24aULL + index},
-            MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian,
-            game_init_payload_[index]});
-    }
-    return batch;
-}
-
-NativeRuntimeEffectBatch MillenniumAtariBootstrapSession::make_game_init_decoder_fread_effect_batch(
-    const std::int32_t returned_bytes, std::string id) const {
-    constexpr std::int32_t request_bytes = 0x7d42;
-    if (id.empty() || game_init_decoder_payload_.size() != 9597U
-        || returned_bytes < 0 || returned_bytes > request_bytes
-        || returned_bytes > static_cast<std::int32_t>(game_init_decoder_payload_.size())
-        || to_hex(sha256(game_init_decoder_payload_))
-            != "a28a49eea33a14210193bbe6e36abf95700ac6789681bf1a9eac5d09a0999055") {
-        throw std::runtime_error("Unsupported Millennium Atari ST decoder Fread result");
-    }
-    const auto byte_count = static_cast<std::size_t>(returned_bytes);
-    NativeRuntimeEffectBatch batch{std::move(id), true, {}};
-    batch.effects.reserve(byte_count);
-    for (std::size_t index = 0; index < byte_count; ++index) {
-        batch.effects.push_back({index + 1,
-            {NativeRuntimeAddressSpace::linear, std::nullopt, 0x2c24aULL + index},
-            MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian,
-            game_init_decoder_payload_[index]});
-    }
-    return batch;
-}
-
-NativeRuntimeEffectBatch MillenniumAtariBootstrapSession::make_game_init_second_config_fread_service_effect_batch(
-    std::string id) const {
-    constexpr std::size_t request_bytes = 0x7d42;
-    if (id.empty() || game_init_payload_.size() != 18428U
-        || to_hex(sha256(game_init_payload_))
-            != "de0a95d3e4659a305b3e55b3417a7648127b41866de0a0ca344a81c66979dbc0") {
-        throw std::runtime_error("Unsupported Millennium Atari ST second-config Fread service source");
-    }
-    const auto byte_count = std::min(request_bytes, game_init_payload_.size());
-    NativeRuntimeEffectBatch batch{std::move(id), true, {}};
-    batch.effects.reserve(byte_count);
-    for (std::size_t index = 0; index < byte_count; ++index) {
-        batch.effects.push_back({index + 1,
-            {NativeRuntimeAddressSpace::linear, std::nullopt, 0x2c24aULL + index},
-            MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian,
-            game_init_payload_[index]});
-    }
-    return batch;
-}
-
-NativeRuntimeEffectBatch MillenniumAtariBootstrapSession::make_native_screen_buffer_effect_batch(
-    std::string id) const {
-    const auto& image = prg_load_.checkpoint();
-    const auto image_end = static_cast<std::uint64_t>(image.load_base) + image.image.size();
-    const auto screen_end = static_cast<std::uint64_t>(MillenniumAtariPrgLoadSession::native_screen_base)
-        + MillenniumAtariPrgLoadSession::low_resolution_screen_bytes;
-    if (id.empty() || image.image.size() != 130392U || image_end > 0x30000U
-        || (MillenniumAtariPrgLoadSession::native_screen_base & 0xffU) != 0U
-        || screen_end > 0x00ff8000U) {
-        throw std::runtime_error("Millennium Atari low-resolution screen reservation is not admitted");
-    }
-    NativeRuntimeEffectBatch batch{std::move(id), true, {}};
-    batch.effects.reserve(MillenniumAtariPrgLoadSession::low_resolution_screen_bytes);
-    for (std::size_t index = 0;
-         index < MillenniumAtariPrgLoadSession::low_resolution_screen_bytes; ++index) {
-        batch.effects.push_back({index + 1,
-            {NativeRuntimeAddressSpace::linear, std::nullopt,
-                MillenniumAtariPrgLoadSession::native_screen_base + index},
-            MemoryTransferElementWidth::byte, NativeRuntimeByteOrder::big_endian, 0});
     }
     return batch;
 }

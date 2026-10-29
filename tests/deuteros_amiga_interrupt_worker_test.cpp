@@ -60,75 +60,6 @@ std::vector<std::uint8_t> fixture() {
 
 int main() {
     {
-        constexpr std::array<std::uint8_t, 12> wait_source{
-            0x08, 0x39, 0x00, 0x05, 0x00, 0xdf, 0xf0, 0x1f,
-            0x67, 0xf6, 0x4e, 0x75};
-        std::array<eon::DeuterosAmigaScenarioMemoryCell, wait_source.size()> owned{};
-        for (std::size_t index = 0; index < wait_source.size(); ++index) {
-            owned[index] = {0x216f2U + static_cast<std::uint32_t>(index), wait_source[index]};
-        }
-        const auto original = owned;
-        const auto report = eon::evaluate_deuteros_amiga_vertb_wait_scenarios(
-            wait_source, owned);
-        assert(report.synthetic_scenarios_only);
-        assert(report.source_sha256 ==
-            "3ee8aeaeb214bfb7cf210c7575043595d87340370ea8f85eda94eb51d53961a7");
-        assert(report.owned_image_sha256.size() == 64);
-        assert(report.scenarios[0].label == "synthetic-bit-clear"
-            && report.scenarios[0].synthetic_port_value == 0
-            && !report.scenarios[0].vertb_bit_set
-            && report.scenarios[0].remains_in_wait
-            && report.scenarios[0].next_instruction_address == 0x216f2);
-        assert(report.scenarios[1].label == "synthetic-bit-set"
-            && report.scenarios[1].synthetic_port_value == 0x20
-            && report.scenarios[1].vertb_bit_set
-            && !report.scenarios[1].remains_in_wait
-            && report.scenarios[1].next_instruction_address == 0x216fc);
-        assert(report.missing_runtime_evidence[0].find("$208b4") != std::string::npos);
-        assert(report.missing_runtime_evidence[1].find("$2079e") != std::string::npos);
-        assert(report.missing_runtime_evidence[2].find("$216ee") != std::string::npos);
-        assert(report.missing_runtime_evidence[3].find("$dff01f") != std::string::npos);
-        assert(owned == original);
-
-        auto wrong_source = wait_source;
-        wrong_source[8] ^= 1U;
-        bool rejected = false;
-        try {
-            static_cast<void>(eon::evaluate_deuteros_amiga_vertb_wait_scenarios(
-                wrong_source, owned));
-        } catch (const std::runtime_error&) { rejected = true; }
-        assert(rejected);
-
-        auto changed_owned_image = owned;
-        changed_owned_image[9].value ^= 1U;
-        rejected = false;
-        try {
-            static_cast<void>(eon::evaluate_deuteros_amiga_vertb_wait_scenarios(
-                wait_source, changed_owned_image));
-        } catch (const std::runtime_error&) { rejected = true; }
-        assert(rejected);
-    }
-    {
-        const auto profile = eon::DeuterosAmigaVertbHandlerProfile{
-            0x207ec, 0x5fec, 0x100,
-            "21356e0e8cfe8b1323a7ffa3a59c8b98720794330251862e9978447c91006d0f"};
-        eon::DeuterosAmigaVertbSession session(profile);
-        bool rejected = false;
-        try {
-            static_cast<void>(session.observe_idle_invocation({2, 0x207ec, 0, 0, 0x100}));
-        } catch (const std::runtime_error&) { rejected = true; }
-        assert(rejected);
-        session.observe_registration({1, 0x208b4, 0x208b8, -0xa8, 5, 0x2086a, 0x207ec});
-        const auto effect = session.observe_idle_invocation({2, 0x207ec, 0, 0, 0xfffffffeU});
-        assert(effect.trace_sequence == 2 && effect.address == 0x2079e
-            && effect.before == 0xfffffffeU && effect.after == 2U);
-        rejected = false;
-        try {
-            static_cast<void>(session.observe_idle_invocation({3, 0x207ec, 1, 0, 2}));
-        } catch (const std::runtime_error&) { rejected = true; }
-        assert(rejected);
-    }
-    {
         auto memory = fixture();
         memory[0x229e8 - base] = 0x05;
         put_long(memory, 0x229f2, 0x23000);
@@ -256,6 +187,5 @@ int main() {
             rejected = true;
         }
         assert(rejected);
-
     }
 }

@@ -66,25 +66,14 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def reviewed_hashes(kind: str, protocol: str | None,
-                    experimental_observer: bool = False) -> dict[str, str]:
+def reviewed_hashes(kind: str, protocol: str | None) -> dict[str, str]:
     if kind == "millennium-dos":
         runner = load_runner("run_millennium_dos_capture")
         if protocol:
-            if protocol in runner.RECORDER_PROTOCOLS:
-                return {protocol: runner.RECORDER_PROTOCOLS[protocol][1]}
-            if (experimental_observer
-                    and protocol in runner.AH48_HANDLER_RETURN_PROTOCOLS):
-                hashes = runner.EXPERIMENTAL_OBSERVER_PROTOCOLS[protocol]
-                if len(hashes) == 1:
-                    return {protocol: next(iter(hashes))}
             if protocol not in runner.RECORDER_PROTOCOLS:
                 raise LocatorError("recorder protocol is not in the reviewed finite set")
-        if experimental_observer:
-            raise LocatorError("experimental lookup requires its exact recorder protocol")
+            return {protocol: runner.RECORDER_PROTOCOLS[protocol][1]}
         return {name: value[1] for name, value in sorted(runner.RECORDER_PROTOCOLS.items())}
-    if experimental_observer:
-        raise LocatorError("--experimental-observer is only supported for an exact experimental AH48 DOS protocol")
     if protocol:
         raise LocatorError("--recorder-protocol is valid only for millennium-dos")
     runner = load_runner("run_deuteros_amiga_capture")
@@ -142,15 +131,14 @@ def iter_candidates(roots: list[Path], max_files: int,
 
 
 def locate_with_diagnostics(kind: str, roots: list[Path], protocol: str | None,
-                            max_files: int, experimental_observer: bool = False
-                            ) -> tuple[list[dict[str, object]], dict[str, int]]:
+                            max_files: int) -> tuple[list[dict[str, object]], dict[str, int]]:
     """Locate reviewed recorders while retaining only aggregate scan facts.
 
     The diagnostic counts explain an empty lookup without exposing arbitrary
     executable paths, bytes, or digests from an external developer machine.
     They are operational recovery facts, never capture evidence.
     """
-    expected = reviewed_hashes(kind, protocol, experimental_observer)
+    expected = reviewed_hashes(kind, protocol)
     matches: list[dict[str, object]] = []
     diagnostics = {
         "roots": len(roots),
@@ -169,10 +157,9 @@ def locate_with_diagnostics(kind: str, roots: list[Path], protocol: str | None,
     return matches, diagnostics
 
 
-def locate(kind: str, roots: list[Path], protocol: str | None, max_files: int,
-           experimental_observer: bool = False) -> list[dict[str, object]]:
+def locate(kind: str, roots: list[Path], protocol: str | None, max_files: int) -> list[dict[str, object]]:
     """Compatibility wrapper for callers that require match records only."""
-    return locate_with_diagnostics(kind, roots, protocol, max_files, experimental_observer)[0]
+    return locate_with_diagnostics(kind, roots, protocol, max_files)[0]
 
 
 def parse_arguments(argv: list[str]) -> argparse.Namespace:
@@ -180,9 +167,7 @@ def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--kind", choices=("millennium-dos", "deuteros-amiga"), required=True)
     parser.add_argument("--root", type=Path, action="append", required=True,
                         help="Absolute external directory to search; repeat as needed")
-    parser.add_argument("--recorder-protocol", help="Exact reviewed recorder protocol")
-    parser.add_argument("--experimental-observer", action="store_true",
-                        help="Allow the separately pinned diagnostic-only AH48 DOS recorder")
+    parser.add_argument("--recorder-protocol", help="Reviewed Millennium DOS recorder protocol")
     parser.add_argument("--max-files", type=int, default=DEFAULT_MAX_FILES,
                         help=f"Maximum executable candidates to hash (1-{DEFAULT_MAX_FILES}; default: {DEFAULT_MAX_FILES})")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable match records")
@@ -198,7 +183,7 @@ def main(argv: list[str] | None = None) -> int:
             raise LocatorError(f"max-files must be between 1 and {DEFAULT_MAX_FILES}")
         roots = [require_root(path) for path in args.root]
         matches, diagnostics = locate_with_diagnostics(
-            args.kind, roots, args.recorder_protocol, args.max_files, args.experimental_observer)
+            args.kind, roots, args.recorder_protocol, args.max_files)
     except LocatorError as error:
         print(f"RECORDER LOCATOR REJECTED  {error}", file=sys.stderr)
         return 2
@@ -209,10 +194,8 @@ def main(argv: list[str] | None = None) -> int:
             payload["diagnostics"] = diagnostics
         print(json.dumps(payload, sort_keys=True))
     elif matches:
-        label = ("EXPERIMENTAL DIAGNOSTIC RECORDER FOUND" if args.experimental_observer
-                 else "REVIEWED RECORDER FOUND")
         for match in matches:
-            print(f"{label}  {match['protocol']}  {match['sha256']}  {match['path']}")
+            print(f"REVIEWED RECORDER FOUND  {match['protocol']}  {match['sha256']}  {match['path']}")
     else:
         print("REVIEWED RECORDER NOT FOUND  no supplied executable matched a pinned recorder hash")
         if args.diagnose:

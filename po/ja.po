@@ -9,21 +9,6 @@ msgstr ""
 "Language: ja\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
-msgid "INTERACTIVE AMIGA FLOW IS NOT YET RECOVERED."
-msgstr "Amigaのインタラクティブな進行はまだ復元されていません。"
-
-msgid "ORIGINAL ATARI ST TITLE - SOURCE DECODED"
-msgstr "オリジナルのAtari STタイトル - ソースデータからデコード"
-
-msgid "320 X 200 / 4 PLANES / SOURCE RGB3 PALETTE"
-msgstr "320 × 200 / 4プレーン / ソースのRGB3パレット"
-
-msgid "GAMEPLAY FLOW REMAINS UNRECOVERED."
-msgstr "ゲームプレイの流れはまだ復元されていません。"
-
-msgid "BOOTSTRAP BOUNDARIES ARE STATIC; TITLE PIXELS ARE SOURCE DECODED."
-msgstr "起動境界は静的です。タイトルのピクセルはソースデータからデコードされています。"
-
 msgid "Welcome to Millennium."
 msgstr "Millenniumへようこそ。"
 

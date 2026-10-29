@@ -4,17 +4,10 @@
 #include "engine/millennium_dos_paragraph_arena.hpp"
 
 #include <cstdint>
-#include <array>
 #include <optional>
 #include <string>
 
 namespace eon {
-
-struct MillenniumDosVirtualVectorTarget {
-    std::uint16_t offset = 0;
-    std::uint16_t segment = 0;
-    bool initialized = false;
-};
 
 enum class MillenniumDosTitleInitializationState;
 
@@ -39,17 +32,14 @@ struct MillenniumDosCompatibilityRunnerCheckpoint {
 // used by the recovered selected-driver chain. The private handle identifies
 // the already admitted immutable leaf; it is not claimed as an observed DOS
 // handle. Its allocation and INT $95 vector installation belong to Eon's
-// process-local compatibility state. The parent stack store is derived from
-// the hash-bound COM entry SP and balanced near-call path; it is labelled as
-// an Eon service result, not an original-process observation. Child EXEC
-// admission uses the separate bounded child service.
+// process-local compatibility state. Parent stack state remains an external
+// boundary; child EXEC admission uses the separate bounded child service.
 class MillenniumDosCompatibilityRunner {
 public:
   MillenniumDosCompatibilityRunner(std::uint64_t generation,
                                    std::uint64_t entry_sequence,
                                    std::uint16_t code_segment);
   [[nodiscard]] bool accepts(std::uint64_t sequence) const;
-  [[nodiscard]] std::uint64_t generation() const { return generation_; }
   void commit(std::uint64_t sequence);
   [[nodiscard]] std::uint64_t next_sequence() const {
     return last_sequence_ + 1;
@@ -65,8 +55,6 @@ public:
   allocate_title_paragraphs(std::uint32_t paragraph_count);
   [[nodiscard]] std::uint16_t remaining_title_paragraphs() const;
   [[nodiscard]] std::uint16_t code_segment() const { return code_segment_; }
-  [[nodiscard]] MillenniumDosVirtualVectorTarget get_virtual_vector(std::uint8_t vector);
-  void set_virtual_vector(std::uint8_t vector, std::uint16_t offset, std::uint16_t segment);
   [[nodiscard]] MillenniumDosCompatibilityRunnerCheckpoint
   checkpoint(MillenniumDosSoundDriverLoadState state,
              MillenniumDosSoundDriverLoadBoundary boundary,
@@ -80,8 +68,6 @@ private:
   std::uint64_t automatic_operation_count_ = 0;
   MillenniumDosParagraphArena paragraph_arena_;
   MillenniumDosParagraphArena title_paragraph_arena_;
-  std::array<MillenniumDosVirtualVectorTarget, 256> virtual_ivt_{};
-  std::optional<MillenniumDosParagraphAllocation> opaque_handler_allocation_;
 };
 
 } // namespace eon

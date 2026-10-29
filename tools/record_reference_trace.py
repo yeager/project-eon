@@ -84,11 +84,6 @@ V3_ADAPTERS = {
     },
 }
 V4_ADAPTERS = {
-    "millennium-dos-en-title-exec-entry-v4": {
-        "game": "millennium", "platform": "dos", "language": "en",
-        "sha256": "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
-        "size": 328383,
-    },
     "deuteros-amiga-en-title-display-v4": {
         "game": "deuteros", "platform": "amiga", "language": "en",
         "sha256": "f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04",
@@ -360,9 +355,7 @@ def validate_metadata(fields: dict[str, str], release: dict[str, object]) -> Non
         adapter = fields.get("adapter")
         if adapter not in V4_ADAPTERS:
             raise EvidenceError("v4 metadata must name a registered adapter")
-        expected = COMMON_METADATA | {"adapter"}
-        if "source_media_sha256" in V4_ADAPTERS[adapter]:
-            expected |= {"source_media_sha256", "source_stage_sha256"}
+        expected = COMMON_METADATA | {"adapter", "source_media_sha256", "source_stage_sha256"}
         for key, expected_value in V4_ADAPTERS[adapter].items():
             if key in {"sha256", "size"}:
                 if release.get(key) != expected_value:

@@ -49,36 +49,6 @@ struct MillenniumDosStaticTextCatalog {
     std::vector<MillenniumDosStaticTextRecord> records;
 };
 
-enum class MillenniumDosPresentationOperationKind {
-    private_interrupt_function,
-    cursor_word,
-    glyph_code,
-};
-
-struct MillenniumDosPresentationOperation {
-    MillenniumDosPresentationOperationKind kind =
-        MillenniumDosPresentationOperationKind::glyph_code;
-    std::size_t source_offset = 0;
-    std::uint16_t value = 0;
-    std::uint16_t operand = 0;
-};
-
-struct MillenniumDosPresentationFragment {
-    std::size_t source_offset = 0;
-    std::size_t consumed_size = 0;
-    std::string sha256;
-    std::vector<MillenniumDosPresentationOperation> operations;
-};
-
-struct MillenniumDosF7PresentationProgram {
-    std::string executable_sha256;
-    std::string static_data_sha256;
-    std::size_t pointer_index = 0;
-    std::size_t record_offset = 0;
-    std::size_t record_size = 0;
-    std::vector<MillenniumDosPresentationFragment> fragments;
-};
-
 // A release-specific admission record for the two hash-recognised DOS
 // 2200AD4.BIN editions.  It keeps the shared pointer-table topology and each
 // edition's real celestial-table location inspectable without treating either
@@ -140,15 +110,6 @@ struct MillenniumDosSaveLayout {
 // data. No text is normalized, decoded as a UI command, or assigned gameplay
 // meaning; records report original offsets, lengths and hashes only.
 [[nodiscard]] MillenniumDosStaticTextCatalog parse_millennium_dos_static_text_catalog(
-    std::span<const std::uint8_t> static_data);
-
-// Decompiles only the caller-connected English DOS F7 stream selected at
-// 2200AD.EXE:$7534. Results are typed source operations, not localized UI or
-// executed INT $93 results. Both original leaves must match their exact
-// recognised release hashes; source bytes remain owned by the caller.
-[[nodiscard]] MillenniumDosF7PresentationProgram
-parse_millennium_dos_f7_presentation_program(
-    std::span<const std::uint8_t> game_executable,
     std::span<const std::uint8_t> static_data);
 
 // Accepts only the exact English or Spanish static-data leaf currently

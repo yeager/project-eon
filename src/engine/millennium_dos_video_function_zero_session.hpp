@@ -19,7 +19,6 @@ enum class MillenniumDosVideoFunctionZeroState {
     mode_success_ega_loop_recorded,
     mode_success_pop_prefix_recorded,
     mode_success_store_prefix_recorded,
-    mode_success_mcga_store_prefix_recorded,
     mode_success_returned_boundary,
     mode_mismatch_ret_boundary,
 };
@@ -30,14 +29,8 @@ enum class MillenniumDosVideoFunctionZeroBoundaryKind {
     verify_mode_query,
 };
 
-enum class MillenniumDosVideoBiosResultOrigin : std::uint8_t {
-    external_observation,
-    eon_native_video_policy,
-};
-
-// INT 10h result. External observations retain raw registers; Eon policy
-// results are tagged separately and may define only the fields consumed by
-// the exact caller.
+// INT 10h result as externally observed. AX/BX/CX/DX/FLAGS are captured raw
+// fields; the session assigns no BIOS semantics to them.
 struct MillenniumDosVideoFunctionZeroBiosResult {
     std::uint64_t sequence = 0;
     std::uint16_t instruction_address = 0;
@@ -47,13 +40,6 @@ struct MillenniumDosVideoFunctionZeroBiosResult {
     std::uint16_t cx = 0;
     std::uint16_t dx = 0;
     std::uint16_t flags = 0;
-    MillenniumDosVideoBiosResultOrigin origin =
-        MillenniumDosVideoBiosResultOrigin::external_observation;
-    std::uint16_t ax_known_mask = 0xffff;
-    std::uint16_t bx_known_mask = 0xffff;
-    std::uint16_t cx_known_mask = 0xffff;
-    std::uint16_t dx_known_mask = 0xffff;
-    std::uint16_t flags_known_mask = 0xffff;
     constexpr bool operator==(const MillenniumDosVideoFunctionZeroBiosResult&) const = default;
 };
 
@@ -66,8 +52,6 @@ struct MillenniumDosVideoFunctionZeroBoundary {
     std::uint8_t interrupt_number = 0x10;
     std::uint16_t ax = 0;
     std::uint16_t ax_known_mask = 0;
-    std::uint16_t cx = 0;
-    std::uint16_t cx_known_mask = 0;
     constexpr bool operator==(const MillenniumDosVideoFunctionZeroBoundary&) const = default;
 };
 
@@ -92,9 +76,6 @@ enum class MillenniumDosVideoFunctionZeroPostludeEndpoint {
     mcga_single_count_branch,
     // Stop before DOS-private INT 92h; no handler result is inferred.
     mcga_int92_request,
-    // MCGA's single-count branch has completed its hash-bound local store;
-    // stop at RET without claiming a caller-stack observation.
-    mcga_ret,
 };
 
 enum class MillenniumDosVideoFunctionZeroEgaStackEndpoint {
@@ -195,9 +176,7 @@ struct MillenniumDosVideoFunctionZeroOutcome {
 class MillenniumDosVideoFunctionZeroSession {
 public:
     MillenniumDosVideoFunctionZeroSession(std::span<const std::uint8_t> english_driver,
-        MillenniumDosVideoDriverKind kind, std::uint8_t initial_cached_mode,
-        std::uint64_t first_sequence = 1,
-        std::optional<std::uint16_t> initial_cx = std::nullopt);
+        MillenniumDosVideoDriverKind kind, std::uint8_t initial_cached_mode);
 
     [[nodiscard]] MillenniumDosVideoFunctionZeroState state() const { return state_; }
     [[nodiscard]] std::optional<MillenniumDosVideoFunctionZeroBoundary> boundary() const;
@@ -223,7 +202,6 @@ public:
 
     void observe_bios_result(const MillenniumDosVideoFunctionZeroBiosResult& result);
     void advance_success_postlude_prefix();
-    void advance_mcga_single_count_store_prefix();
     void advance_ega_success_stack_prefix(std::uint16_t ss, std::uint16_t sp);
     void advance_ega_multi_count_loop(std::uint16_t ds);
     void advance_ega_success_pop_prefix();
@@ -235,8 +213,6 @@ private:
     MillenniumDosVideoDriverProfile driver_;
     MillenniumDosVideoFunctionZeroState state_{};
     std::uint64_t next_sequence_ = 1;
-    std::uint16_t current_cx_ = 0;
-    std::uint16_t current_cx_known_mask_ = 0;
     std::optional<std::uint8_t> set_mode_result_al_;
     std::vector<MillenniumDosVideoFunctionZeroBiosResult> bios_results_;
     std::optional<MillenniumDosVideoFunctionZeroLocalWrite> cache_write_;

@@ -50,7 +50,7 @@ DeuterosAmigaTitleExecBoundarySession::DeuterosAmigaTitleExecBoundarySession(
         || big16(bytes, 6) != 0x2c78 || big16(bytes, 8) != 4
         || big16(bytes, 10) != 0x4eae || big16(bytes, 12) != 0xff6a
         || big16(bytes, 14) != 0x203c
-        || big32(bytes, 16) != profile.initialization_user_state_stack_argument
+        || big32(bytes, 16) != profile.initialization_exec_allocation_size
         || big16(bytes, 20) != 0x2c78 || big16(bytes, 22) != 4
         || big16(bytes, 24) != 0x4eae || big16(bytes, 26) != 0xff64
         || to_hex(sha256(bytes)) != expected_sha256) {
@@ -62,7 +62,7 @@ DeuterosAmigaTitleExecBoundarySession::DeuterosAmigaTitleExecBoundarySession(
     checkpoint_.deferred_calls = {{
         {0x40456, 4, 0x4045a, -0x96, 0x4045e, std::nullopt},
         {0x40464, 4, 0x40468, -0x9c, 0x4046c,
-            profile.initialization_user_state_stack_argument},
+            profile.initialization_exec_allocation_size},
     }};
     checkpoint_.boundary_sha256 = std::string(expected_sha256);
 }
@@ -78,32 +78,6 @@ DeuterosAmigaTitleExecBoundarySession::enter_after_local_prefix(
     }
     checkpoint_.state = DeuterosAmigaTitleExecBoundaryState::awaiting_exec_base_read;
     return checkpoint_;
-}
-
-std::optional<DeuterosAmigaTitleNativePrivilegeTransition>
-DeuterosAmigaTitleExecBoundarySession::execute_native_privilege_transition() {
-    if (checkpoint_.state != DeuterosAmigaTitleExecBoundaryState::awaiting_exec_base_read
-        || checkpoint_.native_privilege_transition
-        || checkpoint_.deferred_calls[0].call_address != 0x4045a
-        || checkpoint_.deferred_calls[0].vector != -0x96
-        || checkpoint_.deferred_calls[0].return_address != 0x4045e
-        || checkpoint_.deferred_calls[1].call_address != 0x40468
-        || checkpoint_.deferred_calls[1].vector != -0x9c
-        || checkpoint_.deferred_calls[1].return_address != 0x4046c
-        || checkpoint_.deferred_calls[1].preceding_d0_literal != 0x7fff0U
-        || checkpoint_.boundary_sha256
-            != "24f5fb4f5019bf450f8b6931fe1c77747461704b139bbe14ec079b1008af1f49") {
-        return std::nullopt;
-    }
-
-    const DeuterosAmigaTitleNativePrivilegeTransition transition{
-        0x4045a, -0x96, 0x4045e,
-        0x40468, -0x9c, 0x4046c,
-        0x7fff0, true};
-    checkpoint_.native_privilege_transition = transition;
-    checkpoint_.state = DeuterosAmigaTitleExecBoundaryState::before_open_library_boundary;
-    checkpoint_.stop_before_address = 0x4046c;
-    return transition;
 }
 
 std::optional<DeuterosAmigaTitleExecBoundaryCheckpoint>

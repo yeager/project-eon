@@ -424,11 +424,11 @@ overflow rejection and a completion footer.
 The prototype includes none of the reviewed v21 event, result, or physical
 input observers. The Project Eon runner retains only its separate
 experimental sidecar, and the operator must close the visible emulator after
-the observation window so DOSBox-X can complete and hash the receipt. At the
-time of this initial build, no capture had been run. The later verified
-diagnostic below records bounded DOS open/seek/allocation/read/close returns
-and exact buffer hashes; those observations remain experimental and do not
-explain the existing `INT 6` boundary.
+the observation window so DOSBox-X can complete and hash the receipt. No
+emulator or capture was run for this build. Consequently, there are still no
+observed DOS open/seek/allocation/read/close returns and no evidence yet that
+DOS loaded the supplied `MCGA.BIN` bytes during startup. The observer narrows
+the next experiment; it does not explain the existing `INT 6` boundary.
 
 ### Linux trv2 platform build (2026-10-07)
 
@@ -447,89 +447,6 @@ yet been run with it. The repo runner and verifier bind this hash to its exact
 size alongside the macOS arm64 identity, while preserving the explicit
 experimental-only gate.
 
-### Re-restored Linux identity (2026-10-08)
-
-Before use, the documented Linux path was found to contain a different binary:
-133,101,000 bytes, SHA-256
-`648af9a3da54be6c8546d8ceec5a46a5690c6b2bd7aa657873ddc101565213e0`. It was
-not run and is preserved at
-`/home/trv2/.cache/project-eon-tools/dosbox-driver-load-return-20261007-unverified-20261008/`.
-
-The exact experimental build was restored from upstream commit
-`234797680781567e18c374c9e62da24de5423db0` and the unchanged source patch
-SHA-256 `78f2926989e8db4d52b60603208df43acffdc881aa3ffb128d2b09315be8f44a`.
-On trv2, GCC is `15.2.0-16ubuntu1`; the clean build used SDL2, disabled
-OpenGL and SDL tests, and the documented absolute source/build paths. Its
-executable at
-`/home/trv2/.cache/project-eon-tools/dosbox-driver-load-return-20261007/build/src/dosbox-x`
-reproduces the documented 132,933,552-byte identity exactly:
-`942f30f2199350a51d0ff1e7c024f4e226d29b5576dc6ea0d61b7556c12468e8`.
-The unverified predecessor was retained intact under the path above. This
-restores the experimental observer prerequisite only; its sidecar is still
-diagnostic-only, and visible manual closure remains required to finalize a
-run.
-
-### Experimental Linux window-close repair (2026-10-08)
-
-Captures 03–05 showed that the pinned v1 recorder did not leave its machine loop
-when the X11 window manager closed its SDL2 window. SDL2 reports this as
-`SDL_WINDOWEVENT_CLOSE`; v1 handles `SDL_QUIT` only. A separate v2 candidate
-adds a gated close-event branch to both normal and paused DOSBox-X event loops,
-calling the existing `CheckQuit()` and exception-based exit path. It does not
-write guest memory, assign guest registers, inject input, or alter the guest
-scheduler. The independent source review approved this narrow host-event
-change for a new experimental pin only.
-
-The trv2 build uses upstream commit
-`234797680781567e18c374c9e62da24de5423db0`, the v1 source plus the isolated
-window-close patch (SHA-256
-`15aece6d946c691591adaeaf095182337b57db5e74532d17e9c536966eb1c473`), and
-the separate executable identity SHA-256
-`a03a43372a31b89514007c5053a8890c2b13a653c1562c379c3eaee6edc030e6`,
-132,934,416 bytes. The runner's v2 protocol also sets DOSBox-X
-`quit warning=false` so the existing graceful host-close path can finish
-without a modal warning. V1 configuration and pins remain unchanged.
-
-Capture 06 used `xdotool windowclose`, which destroys an X11 window resource
-instead of sending `WM_DELETE_WINDOW`. This removed the XID and caused DOSBox-X
-to emit `BadWindow`; it did not exercise the new SDL handler. Capture 07 then
-sent a real `WM_DELETE_WINDOW` client message to the DOSBox-X client after
-checking its advertised protocol. Capture 07's normal emulator exit and footer
-are consistent with that path: `CheckQuit()` accepts the v2
-`quit warning=false` configuration, and the existing `throw(0)` exit path
-stops the machine loop. The independent verifier accepted capture 07 with
-experimental opt-in. This confirms the host shutdown/finalization path only.
-
-V2 remains experimental and non-admitted. Its 12 returned records are opaque
-register/buffer observations; neither the guest's DOS result nor a playable
-state can be inferred from the footer. Keep this exact binary pin separate
-from v1 and require review of any new guest-visible inference or runtime step.
-
-### v6 read-only CD-ROM mount for TITLE.LIB
-
-The v6 build is pinned at SHA-256
-`a67ea94cf02abb786ad070b28a41b168c3217a9a9893059b179f3d528b42eeef`
-(123,683,760 bytes), based on source commit
-`234797680781567e18c374c9e62da24de5423db0`. Its finite INT 21h whitelist
-covers the title loader, `$0549` open, and up to nine `$057c` reads. The
-post-IRET sidecar is paired with the handler sidecar by exact ordered site,
-caller segment, and return IP.
-
-The capture runner mounts the original archive read-only and mounts that
-directory in DOSBox-X as `C:` with `-t cdrom -noioctl`. DOSBox-X's built-in
-CD-ROM file-open path converts the game's AL=`$02` read/write request to a
-read-only file handle and rejects write/create operations. The independent
-verifier requires this exact v6 mount configuration. This lets the original
-`TITLE.LIB` be read without copying or mutating the supplied archive.
-
-Visible capture `/home/trv2/.cache/millennium-dos-ah48-v6-20261009-05/`
-passed the independent receipt verifier with experimental opt-in. AH=`$3d`
-returned handle 5 with CF clear at `$0549/$054b`; nine AH=`$3f` calls at
-`$057c` read 18,907 bytes on the first call and zero on the remaining eight.
-Two visible SDL key events advanced the title logo to the `OUTER SYSTEM`
-planetary view. There is no close-site sample in this capture. V6 remains
-experimental and is not recovery-admissible.
-
 ## Review and admission
 
 Before a patched build is used, review that the diff changes only the four
@@ -543,34 +460,3 @@ Use the existing assembler and then the independent CLI validator. A valid
 `--reference-trace` result admits diagnostic provenance only. It does not
 authorize Eon to cross the DOS/private-driver/child-process boundary or to
 claim Millennium gameplay parity.
-
-### Linux v4 SDL input receipt and AH48/AH49 capture (2026-10-09)
-
-The v4 experimental build integrates a bounded SDL key-event buffer into the
-event polling/waiting wrappers, enabled only after the exact hash-bound
-`TITLES.EXE` is selected. On graceful DOSBox-X shutdown it writes a private,
-exclusive host-input receipt beside the AH48 sidecar. It does not inject
-guest input or capture guest memory. Source commit, patch hash, executable
-identity, and external cache locations are recorded in `PRESERVATION.md`.
-
-The visible capture at
-`/home/trv2/.cache/millennium-dos-ah48-v4-20261009-01/` has a verified
-10-event host receipt and one exact-site record each at `$1bca` (AH=`$48`)
-and `$1bd5` (AH=`$49`). DOSBox-X exited normally through the visible window
-control. The game surface stayed black. The receipt passes integrity
-verification only with `--allow-experimental-observer`; v4 is not admitted
-for recovery. Its current boundary ends before guest IRET, so the resumed
-caller flags and any resulting display/game action remain open.
-
-### Linux v5 caller-after-IRET capture (2026-10-09)
-
-The v5 successor keeps v4's bounded host-key receipt and pre-IRET DOS sidecar,
-and records a separate register snapshot only after the matching real-mode
-IRET returns to TITLES `$1bcc` or `$1bd7`. The site, caller segment, and IP are
-checked against the pending exact-image DOS event. The external capture at
-`/home/trv2/.cache/millennium-dos-ah48-v5-20261009-02/` passed the receipt
-verifier with experimental opt-in. It reports AX=`$0008`/FLAGS `$7247` after
-the AH48 call and AX=`$0009`/FLAGS `$7247` after the AH49 call. The restored
-carry flags directly confirm both failures in this DOSBox-X run. The screen
-remained black; v5 is still not admitted for recovery and does not observe the
-subsequent library open/read or video output.

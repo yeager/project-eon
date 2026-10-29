@@ -9,21 +9,6 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "INTERACTIVE AMIGA FLOW IS NOT YET RECOVERED."
-msgstr "Etkileşimli Amiga akışı henüz yeniden oluşturulmadı."
-
-msgid "ORIGINAL ATARI ST TITLE - SOURCE DECODED"
-msgstr "Özgün Atari ST başlık ekranı - kaynak verilerden çözümlendi"
-
-msgid "320 X 200 / 4 PLANES / SOURCE RGB3 PALETTE"
-msgstr "320 × 200 / 4 düzlem / özgün RGB3 paleti"
-
-msgid "GAMEPLAY FLOW REMAINS UNRECOVERED."
-msgstr "Oynanış akışı henüz yeniden oluşturulmadı."
-
-msgid "BOOTSTRAP BOUNDARIES ARE STATIC; TITLE PIXELS ARE SOURCE DECODED."
-msgstr "Önyükleme sınırları statiktir; başlık pikselleri kaynak verilerden çözümlenmiştir."
-
 msgid "Welcome to Millennium."
 msgstr "Millennium'a hoş geldiniz."
 

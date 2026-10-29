@@ -22,8 +22,7 @@ enum class MillenniumDosVideoDriverLoadState {
     ivt_observation_recorded,
 };
 
-enum class MillenniumDosVideoSelectorSource { command_tail, hardware_detector, eon_native_default };
-enum class MillenniumDosVideoDriverVectorProvenance { none, observed, eon_dos_compatibility_service };
+enum class MillenniumDosVideoSelectorSource { command_tail, hardware_detector };
 struct MillenniumDosVideoSelectorObservation {
     std::uint64_t sequence = 0;
     std::uint16_t instruction_address = 0x0204;
@@ -85,9 +84,6 @@ public:
     [[nodiscard]] const MillenniumDosVideoDriverIvtVector* ivt_observation() const {
         return ivt_observation_ ? &*ivt_observation_ : nullptr;
     }
-    [[nodiscard]] MillenniumDosVideoDriverVectorProvenance vector_provenance() const {
-        return vector_provenance_;
-    }
     [[nodiscard]] bool ivt_observation_matches_loaded_driver() const {
         return ivt_observation_ && ivt_observation_->offset == 0
             && ivt_observation_->segment == load_segment_;
@@ -110,8 +106,6 @@ public:
         std::uint16_t ax, std::uint16_t dx);
     void observe_set_vector_dos_result(std::uint16_t instruction, bool carry, std::uint16_t ax);
     void observe_ivt_vector(std::uint8_t interrupt, std::uint16_t offset, std::uint16_t segment);
-    void install_compatibility_set_vector(std::uint16_t instruction, std::uint16_t ax,
-        std::uint16_t dx, std::uint16_t ds);
 
 private:
     MillenniumDosVideoSelectorSource selector_source_ = MillenniumDosVideoSelectorSource::command_tail;
@@ -129,8 +123,6 @@ private:
     bool set_vector_carry_ = false;
     std::uint16_t set_vector_ax_ = 0;
     std::optional<MillenniumDosVideoDriverIvtVector> ivt_observation_;
-    MillenniumDosVideoDriverVectorProvenance vector_provenance_ =
-        MillenniumDosVideoDriverVectorProvenance::none;
 };
 
 } // namespace eon

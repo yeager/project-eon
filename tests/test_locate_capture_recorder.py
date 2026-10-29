@@ -43,8 +43,7 @@ class LocateCaptureRecorderTests(unittest.TestCase):
             ignored.write_bytes(b"recorder bytes")
             original = TOOL.reviewed_hashes
             try:
-                TOOL.reviewed_hashes = lambda kind, protocol, experimental=False: {
-                    "fixture": hashlib.sha256(recorder.read_bytes()).hexdigest()}
+                TOOL.reviewed_hashes = lambda kind, protocol: {"fixture": hashlib.sha256(recorder.read_bytes()).hexdigest()}
                 self.assertEqual(TOOL.locate("millennium-dos", [root], None, 2), [{
                     "protocol": "fixture", "sha256": hashlib.sha256(recorder.read_bytes()).hexdigest(),
                     "bytes": len(recorder.read_bytes()), "path": str(recorder)}])
@@ -62,7 +61,7 @@ class LocateCaptureRecorderTests(unittest.TestCase):
             empty.chmod(0o700)
             original = TOOL.reviewed_hashes
             try:
-                TOOL.reviewed_hashes = lambda kind, protocol, experimental=False: {"fixture": "0" * 64}
+                TOOL.reviewed_hashes = lambda kind, protocol: {"fixture": "0" * 64}
                 matches, diagnostics = TOOL.locate_with_diagnostics(
                     "millennium-dos", [root], None, 3)
             finally:
@@ -97,24 +96,6 @@ class LocateCaptureRecorderTests(unittest.TestCase):
         self.assertEqual(TOOL.reviewed_hashes("deuteros-amiga", None), runner.reviewed_recorder_hashes())
         self.assertEqual(runner.reviewed_recorder_hashes()["reviewed-fs-uae"],
                          "0e0bfb1fe73a6f37dc38992b39e34e355564adc516106c399c8be86fb38232ec")
-
-    def test_ah48_lookup_requires_an_explicit_experimental_protocol(self) -> None:
-        runner = TOOL.load_runner("run_millennium_dos_capture")
-        expected = {
-            runner.AH48_HANDLER_RETURN_PROTOCOL:
-                "3c3b6d9312d59cfada0f4b75466f90da5193e61e0450271cbe268fbb2b85c65c",
-            runner.AH48_SITE_1B4F_RETURN_PROTOCOL:
-                "75ddc62f68817bfb37cb59d8a283ea06e89cf8d46104bf3458c0d99fcfa2b6ef",
-        }
-        for protocol, digest in expected.items():
-            with self.subTest(protocol=protocol):
-                with self.assertRaisesRegex(TOOL.LocatorError, "reviewed finite set"):
-                    TOOL.reviewed_hashes("millennium-dos", protocol)
-                self.assertEqual(TOOL.reviewed_hashes(
-                    "millennium-dos", protocol, experimental_observer=True),
-                    {protocol: digest})
-        with self.assertRaisesRegex(TOOL.LocatorError, "exact recorder protocol"):
-            TOOL.reviewed_hashes("millennium-dos", None, experimental_observer=True)
 
 
 if __name__ == "__main__":

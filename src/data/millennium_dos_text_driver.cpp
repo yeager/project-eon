@@ -52,9 +52,7 @@ MillenniumDosTextDriverProfile parse_millennium_dos_text_driver(
         throw std::runtime_error("Unsupported Millennium DOS INT 93h cursor handlers");
     }
     if (vga) {
-        if (!has_span_hash(0x330, 0x5f,
-                "6664f6be4c9809e959615f618e775bca46b0024f133c760b1c307b3ba4a6e891")
-            || !has_span_hash(0x3e9, 5,
+        if (!has_span_hash(0x3e9, 5,
                 "fff2bdc122ec8ad7a50cdf881578dabc4cfdab87c6c18984c2cf2186b2ab5b41")
             || !has_span_hash(0x3ee, 5,
                 "ae698ba77c3bdb5bab4fa9c58b791e7f6e81beb3c4ae3a7f607fa46f5fca09dc")

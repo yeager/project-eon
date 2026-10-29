@@ -27,175 +27,6 @@ class MillenniumDosCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
                 "ax=0001 bx=0002 cx=0010 dx=0000 si=0000 di=0000 ds=0e70 es=0e70 "
                 f"ss=0e70 sp=ff00 flags=0000 buffer={buffer}\n")
 
-    @staticmethod
-    def _ah48_event(sequence: int, site: int, *, before_ax: int | None = None,
-                    expected_ah: dict[int, int] | None = None) -> str:
-        expected_ah = expected_ah or TOOL.AH48_EXPECTED_AH
-        values = {name: (0x1000 + index) for index, name in enumerate(
-            ("ax", "bx", "cx", "dx", "si", "di", "bp", "cs", "ip", "ds", "es", "ss", "sp", "flags"))}
-        values.update({"ax": expected_ah[site] << 8 | 1, "cs": 0x0E70,
-                       "ip": site + 2, "sp": 0xFF00, "flags": 0x7202})
-        if before_ax is not None:
-            values["ax"] = before_ax
-        parts = [f"event", f"sequence={sequence}", f"site={site:04x}",
-                 f"observed_return_ip={site + 2:04x}", "dispatch_return=before-IRET"]
-        for phase in ("pre", "post"):
-            for name, value in values.items():
-                if phase == "post":
-                    value = (value + 3) & 0xFFFF
-                parts.append(f"{phase}_{name}={value:04x}")
-        return "\t".join(parts) + "\n"
-
-    def test_ah48_experimental_sidecar_is_bounded_hash_bound_and_diagnostic_only(self) -> None:
-        protocol = TOOL.AH48_HANDLER_RETURN_PROTOCOL
-        self.assertNotIn(protocol, TOOL.RECORDER_PROTOCOLS)
-        digest = "3c3b6d9312d59cfada0f4b75466f90da5193e61e0450271cbe268fbb2b85c65c"
-        self.assertEqual(TOOL.EXPERIMENTAL_OBSERVER_PROTOCOLS[protocol], {digest})
-        self.assertEqual(TOOL.EXPERIMENTAL_OBSERVER_SIZES[protocol][digest], 122_502_752)
-        self.assertEqual(TOOL.EXPERIMENTAL_OBSERVER_RECEIPT_VERSIONS[protocol], "22")
-        with mock.patch.object(TOOL, "sha256_file", return_value=(digest, 122_502_752)):
-            self.assertEqual(TOOL.validate_recorder(Path("/external/dosbox-x"), {digest}),
-                             (digest, 122_502_752))
-        args = TOOL.parse_arguments((
-            "--source-release", "/release.zip", "--recorder", "/recorder", "--output", "/capture",
-            "--capture-intent", "physical-input", "--recorder-protocol", protocol,
-            "--experimental-observer",
-        ))
-        self.assertEqual(args.capture_intent, "physical-input")
-        self.assertIn("visible manual input required", TOOL.experimental_ah48_operator_instructions()[0])
-        self.assertIn("operating-system window controls", TOOL.experimental_ah48_operator_instructions()[1])
-
-        with temporary_directory() as directory:
-            root = Path(directory)
-            generated = CanonicalReceiptPath(root / "dos-ah48-test.tsv")
-            rows = "".join(self._ah48_event(sequence, site) for sequence, site in enumerate(
-                (0x1B26, 0x1B2D, 0x1B38, 0x1B3F), start=1))
-            payload = (TOOL.AH48_HEADER.decode("ascii") + rows + "end\tstatus=complete\tevents=4\n")
-            generated.write_text(payload, encoding="ascii")
-            generated.chmod(0o600)
-            status = TOOL.ah48_handler_return_status(root, protocol)
-            self.assertIn("ah48_return=present\n", status)
-            self.assertIn("ah48_return_events=4\n", status)
-            self.assertIn("ah48_return_site_counts=0x1b26:1,0x1b2d:1,0x1b38:1,0x1b3f:1\n", status)
-            self.assertTrue((root / "dos-ah48-return.raw").is_file())
-            self.assertFalse(generated.exists())
-
-    def test_ah48_sidecar_rejects_wrong_sites_overflow_and_truncation(self) -> None:
-        protocol = TOOL.AH48_HANDLER_RETURN_PROTOCOL
-        with temporary_directory() as directory:
-            root = Path(directory)
-            header = TOOL.AH48_HEADER.decode("ascii")
-            row = self._ah48_event(1, 0x1B2D)
-            cases = (
-                (row.replace("site=1b2d", "site=1b30", 1) + "end\tstatus=complete\tevents=1\n", "exact reviewed INT 21h site"),
-                (row.replace("pre_ax=4801", "pre_ax=4a01", 1) + "end\tstatus=complete\tevents=1\n", "exact reviewed INT 21h site"),
-                (row + "overflow\treason=event-limit\tevents=1\nend\tstatus=overflow\tevents=1\n", "overflowed"),
-                (row, "completion records"),
-            )
-            for index, (body, message) in enumerate(cases):
-                candidate = root / f"dos-ah48-{index}.tsv"
-                candidate.write_text(header + body, encoding="ascii")
-                candidate.chmod(0o600)
-                with self.assertRaisesRegex(TOOL.CaptureError, message):
-                    TOOL.ah48_handler_return_status(root, protocol)
-                candidate.unlink()
-
-    def test_ah48_v2_is_separate_and_accepts_only_the_third_allocator_site(self) -> None:
-        protocol = TOOL.AH48_SITE_1B4F_RETURN_PROTOCOL
-        self.assertNotIn(protocol, TOOL.RECORDER_PROTOCOLS)
-        digest = "75ddc62f68817bfb37cb59d8a283ea06e89cf8d46104bf3458c0d99fcfa2b6ef"
-        self.assertEqual(TOOL.EXPERIMENTAL_OBSERVER_PROTOCOLS[protocol], {digest})
-        self.assertEqual(TOOL.EXPERIMENTAL_OBSERVER_SIZES[protocol][digest], 122_505_616)
-        self.assertEqual(TOOL.AH48_SITE_1B4F_EXPECTED_AH, {0x1B4F: 0x48})
-        with mock.patch.object(TOOL, "sha256_file", return_value=(digest, 122_505_616)):
-            self.assertEqual(TOOL.validate_recorder(Path("/external/dosbox-x-v2"), {digest}),
-                             (digest, 122_505_616))
-        with temporary_directory() as directory:
-            root = Path(directory)
-            row = self._ah48_event(1, 0x1B4F, expected_ah=TOOL.AH48_SITE_1B4F_EXPECTED_AH)
-            candidate = CanonicalReceiptPath(root / "dos-ah48-v2.tsv")
-            candidate.write_text(TOOL.AH48_SITE_1B4F_HEADER.decode("ascii")
-                                 + row + "end\tstatus=complete\tevents=1\n", encoding="ascii")
-            candidate.chmod(0o600)
-            status = TOOL.ah48_handler_return_status(root, protocol)
-            self.assertIn("ah48_return_site_counts=0x1b4f:1\n", status)
-            self.assertIn("ah48_return_boundary=dos-handler-before-iret-site-1b4f\n", status)
-
-        wrong_site = row.replace("site=1b4f", "site=1b2d", 1)
-        wrong_site = wrong_site.replace("observed_return_ip=1b51", "observed_return_ip=1b2f", 1)
-        wrong_site = wrong_site.replace("pre_ip=1b51", "pre_ip=1b2f", 1)
-        with temporary_directory() as directory:
-            candidate = Path(directory) / "dos-ah48-v2-wrong-site.tsv"
-            candidate.write_text(TOOL.AH48_SITE_1B4F_HEADER.decode("ascii") + wrong_site
-                                 + "end\tstatus=complete\tevents=1\n", encoding="ascii")
-            candidate.chmod(0o600)
-            with self.assertRaisesRegex(TOOL.CaptureError, "exact reviewed INT 21h site"):
-                TOOL.ah48_handler_return_status(candidate, protocol)
-
-        wrong_header = TOOL.AH48_HEADER.decode("ascii") + self._ah48_event(1, 0x1B26)
-        with temporary_directory() as directory:
-            root = Path(directory)
-            candidate = root / "dos-ah48-wrong-version.tsv"
-            candidate.write_text(wrong_header + "end\tstatus=complete\tevents=1\n", encoding="ascii")
-            candidate.chmod(0o600)
-            with self.assertRaisesRegex(TOOL.CaptureError, "invalid header"):
-                TOOL.ah48_handler_return_status(candidate, protocol)
-
-    def test_ah48_v3_requires_exact_allocator_and_matching_free_sites(self) -> None:
-        protocol = TOOL.AH48_SITES_1BCA_1BD5_RETURN_PROTOCOL
-        self.assertNotIn(protocol, TOOL.RECORDER_PROTOCOLS)
-        digest = "c8d0795e32e566a7a998ef9f26542fd85652f27b957144a06858181ae9379d41"
-        self.assertEqual(TOOL.EXPERIMENTAL_OBSERVER_PROTOCOLS[protocol], {digest})
-        self.assertEqual(TOOL.EXPERIMENTAL_OBSERVER_SIZES[protocol][digest], 134_030_152)
-        self.assertEqual(TOOL.EXPERIMENTAL_OBSERVER_RECEIPT_VERSIONS[protocol], "22")
-        with mock.patch.object(TOOL, "sha256_file", return_value=(digest, 134_030_152)):
-            self.assertEqual(TOOL.validate_recorder(Path("/external/dosbox-x-v3"), {digest}),
-                             (digest, 134_030_152))
-        self.assertEqual(TOOL.AH48_SITES_1BCA_1BD5_EXPECTED_AH,
-                         {0x1BCA: 0x48, 0x1BD5: 0x49})
-        with temporary_directory() as directory:
-            root = Path(directory)
-            rows = (self._ah48_event(1, 0x1BCA,
-                                     expected_ah=TOOL.AH48_SITES_1BCA_1BD5_EXPECTED_AH)
-                    + self._ah48_event(2, 0x1BD5,
-                                       expected_ah=TOOL.AH48_SITES_1BCA_1BD5_EXPECTED_AH))
-            candidate = CanonicalReceiptPath(root / "dos-ah48-v3.tsv")
-            candidate.write_text(TOOL.AH48_SITES_1BCA_1BD5_HEADER.decode("ascii")
-                                 + rows + "end\tstatus=complete\tevents=2\n", encoding="ascii")
-            candidate.chmod(0o600)
-            status = TOOL.ah48_handler_return_status(root, protocol)
-            self.assertIn("ah48_return_events=2\n", status)
-            self.assertIn("ah48_return_site_counts=0x1bca:1,0x1bd5:1\n", status)
-            self.assertIn("ah48_return_boundary=dos-handler-before-iret-sites-1bca-1bd5\n", status)
-
-        for wrong_site, wrong_ah in ((0x1BCA, 0x49), (0x1BD3, 0x48)):
-            with temporary_directory() as directory:
-                root = Path(directory)
-                record = self._ah48_event(1, wrong_site,
-                    expected_ah={wrong_site: wrong_ah})
-                candidate = CanonicalReceiptPath(root / "dos-ah48-wrong.tsv")
-                candidate.write_text(TOOL.AH48_SITES_1BCA_1BD5_HEADER.decode("ascii")
-                                     + record + "end\tstatus=complete\tevents=1\n",
-                                     encoding="ascii")
-                candidate.chmod(0o600)
-                with self.assertRaisesRegex(TOOL.CaptureError,
-                                            "exact reviewed INT 21h site|missing its exact"):
-                    TOOL.ah48_handler_return_status(candidate, protocol)
-
-    def test_ah48_observer_requires_private_direct_cache_output(self) -> None:
-        with temporary_directory() as directory:
-            home = Path(directory)
-            cache = home / ".cache"
-            cache.mkdir(mode=0o700)
-            output = cache / "millennium-dos-capture-test"
-            environment = {"HOME": str(home)}
-            TOOL.require_ah48_cache_output(output, environment)
-            with self.assertRaisesRegex(TOOL.CaptureError, "direct child"):
-                TOOL.require_ah48_cache_output(output / "nested", environment)
-            cache.chmod(0o770)
-            with self.assertRaisesRegex(TOOL.CaptureError, "non-group/world-writable"):
-                TOOL.require_ah48_cache_output(output, environment)
-
     def test_driver_load_return_sidecar_is_bounded_and_preserves_opaque_results(self) -> None:
         with temporary_directory() as directory:
             sidecar = CanonicalReceiptPath(Path(directory) / "driver-load-return.raw")
@@ -280,32 +111,11 @@ class MillenniumDosCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
         self.assertIn("operating-system window controls",
                       TOOL.experimental_driver_return_operator_instructions()[1])
 
-    def test_experimental_graceful_close_protocol_has_a_distinct_exact_pin(self) -> None:
-        protocol = TOOL.DRIVER_LOAD_RETURN_GRACEFUL_CLOSE_PROTOCOL
-        self.assertEqual(protocol, "millennium-dos-en-driver-load-return-v2")
-        self.assertNotIn(protocol, TOOL.RECORDER_PROTOCOLS)
-        accepted_hashes = TOOL.EXPERIMENTAL_OBSERVER_PROTOCOLS[protocol]
-        self.assertEqual(accepted_hashes, {
-            "a03a43372a31b89514007c5053a8890c2b13a653c1562c379c3eaee6edc030e6"})
-        self.assertEqual(TOOL.EXPERIMENTAL_OBSERVER_SIZES[protocol], {
-            "a03a43372a31b89514007c5053a8890c2b13a653c1562c379c3eaee6edc030e6": 132_934_416})
-        self.assertEqual(TOOL.EXPERIMENTAL_OBSERVER_RECEIPT_VERSIONS[protocol], "22")
-        config = TOOL.recorder_config(Path("/safe/read-only/game-root"), graceful_host_close=True)
-        self.assertIn("quit warning=false", config)
-        args = TOOL.parse_arguments((
-            "--source-release", "/release.zip", "--recorder", "/recorder", "--output", "/capture",
-            "--capture-intent", "diagnostic-no-input", "--recorder-protocol", protocol,
-            "--experimental-observer",
-        ))
-        self.assertEqual(args.recorder_protocol, protocol)
-
     def test_generated_configuration_handles_real_mode_wrap_and_never_injects_input(self) -> None:
         configuration = TOOL.recorder_config(Path("/safe/read-only/game-root"))
         self.assertIn("core=normal", configuration)
         self.assertIn("segment limits=false", configuration)
         self.assertIn("machine=svga_s3", configuration)
-        self.assertNotIn("quit warning=false", configuration)
-        self.assertIn("[log]\nlogfile=/dev/null\ncpu=never\n", configuration)
         self.assertIn('mount c "/safe/read-only/game-root"', configuration)
         self.assertNotIn("AUTOTYPE", configuration)
         self.assertNotIn("KEYBOARD_AddKey", configuration)
@@ -448,11 +258,9 @@ class MillenniumDosCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
                    "host_input_receipt_sha256=" + "a" * 64 + "\n"
                    "host_input_receipt_bytes=1\nhost_input_receipt_records=1\n")
         self.assertEqual(TOOL.capture_intent_status("physical-input", present, True),
-                         "capture_intent=physical-input\ncapture_intent_input_requirement=required\n"
-                         "capture_intent_input_observation=observed-during-capture\n")
+                         "capture_intent=physical-input\ncapture_intent_input_requirement=required\n")
         self.assertEqual(TOOL.capture_intent_status("diagnostic-no-input", "host_input_receipt=absent\n", False),
-                         "capture_intent=diagnostic-no-input\ncapture_intent_input_requirement=forbidden\n"
-                         "capture_intent_input_observation=none\n")
+                         "capture_intent=diagnostic-no-input\ncapture_intent_input_requirement=forbidden\n")
         with self.assertRaisesRegex(TOOL.CaptureError, "requires"):
             TOOL.capture_intent_status("physical-input", "host_input_receipt=absent\n", False)
         with self.assertRaisesRegex(TOOL.CaptureError, "must not"):

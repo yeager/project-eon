@@ -39,20 +39,6 @@ struct DeuterosAmigaObservedExecReturn {
     std::uint16_t result_sr = 0;
 };
 
-// Native Project Eon translation of the title's SuperState/UserState pair.
-// The host remains in its ordinary process context; this record is distinct
-// from observed Amiga register returns and does not create an Amiga stack.
-struct DeuterosAmigaTitleNativePrivilegeTransition {
-    std::uint32_t super_state_call_address = 0;
-    std::int16_t super_state_vector = 0;
-    std::uint32_t super_state_return_address = 0;
-    std::uint32_t user_state_call_address = 0;
-    std::int16_t user_state_vector = 0;
-    std::uint32_t user_state_return_address = 0;
-    std::uint32_t user_state_stack_argument = 0;
-    bool host_privilege_transition_elided = false;
-};
-
 struct DeuterosAmigaTitleExecBoundaryCheckpoint {
     DeuterosAmigaTitleExecBoundaryState state =
         DeuterosAmigaTitleExecBoundaryState::awaiting_local_prefix;
@@ -61,7 +47,6 @@ struct DeuterosAmigaTitleExecBoundaryCheckpoint {
     std::uint32_t exec_base_source_address = 0;
     std::array<DeuterosAmigaDeferredExecCall, 2> deferred_calls{};
     std::array<std::optional<DeuterosAmigaObservedExecReturn>, 2> observed_returns{};
-    std::optional<DeuterosAmigaTitleNativePrivilegeTransition> native_privilege_transition;
     std::string boundary_sha256;
 };
 
@@ -77,11 +62,6 @@ public:
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleExecBoundaryCheckpoint>
     enter_after_local_prefix(std::uint32_t stack_pointer_value);
-    // Translates the exact privilege pair into the native host context. It
-    // does not invoke Exec, fabricate return registers, or materialize D0 as
-    // a guest-memory stack. It stops before the graphics.library call.
-    [[nodiscard]] std::optional<DeuterosAmigaTitleNativePrivilegeTransition>
-    execute_native_privilege_transition();
     // Accepts only the next exact call in the byte-validated sequence. A
     // second observation completes this narrow bridge at $4046c, immediately
     // before the first unresolved title setup/library call.

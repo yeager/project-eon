@@ -52,7 +52,7 @@ def require_external_output(path: Path) -> Path:
     return resolved
 
 
-def linear_listing(data: bytes, address_base: int = 0) -> list[str]:
+def linear_listing(data: bytes) -> list[str]:
     try:
         from capstone import CS_ARCH_M68K, CS_MODE_BIG_ENDIAN, CS_MODE_M68K_000, Cs
     except ImportError as error:
@@ -61,10 +61,9 @@ def linear_listing(data: bytes, address_base: int = 0) -> list[str]:
     lines: list[str] = []
     offset = 0
     while offset < len(data):
-        address = address_base + offset
-        item = next(decoder.disasm(data[offset:], address, count=1), None)
-        if item is None or item.address != address or item.size <= 0 or item.size > len(data) - offset:
-            lines.append(f"+0x{address:05x}  .byte      0x{data[offset]:02x} ; code/data-unclassified")
+        item = next(decoder.disasm(data[offset:], offset, count=1), None)
+        if item is None or item.address != offset or item.size <= 0 or item.size > len(data) - offset:
+            lines.append(f"+0x{offset:05x}  .byte      0x{data[offset]:02x} ; code/data-unclassified")
             offset += 1
         else:
             lines.append(f"+0x{item.address:05x}  {item.mnemonic:<10} {item.op_str}".rstrip())
@@ -81,16 +80,8 @@ def main() -> None:
     parser.add_argument("--disk-member", required=True)
     parser.add_argument("--disk-sha256", required=True)
     parser.add_argument("--file-sha256", required=True)
-    parser.add_argument("--alternate-entry-offset", type=lambda value: int(value, 0))
-    parser.add_argument("--alternate-entry-size", type=lambda value: int(value, 0))
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    if (args.alternate_entry_offset is None) != (args.alternate_entry_size is None):
-        parser.error("--alternate-entry-offset and --alternate-entry-size must be supplied together")
-    if (args.alternate_entry_offset is not None
-            and (args.alternate_entry_offset < 0 or args.alternate_entry_offset & 1
-                 or args.alternate_entry_size <= 0)):
-        parser.error("alternate entry must have a nonnegative even offset and positive size")
     output = require_external_output(args.output)
     try:
         require_sha256(args.archive_sha256, "outer archive SHA-256")
@@ -116,13 +107,6 @@ def main() -> None:
     config_hash = hashlib.sha256(config).hexdigest()
     if disk_hash != args.disk_sha256 or config_hash != args.file_sha256:
         raise SystemExit("exact Atari ST disk or MILL22A.INF SHA-256 mismatch")
-    alternate_entry = None
-    if args.alternate_entry_offset is not None:
-        start = args.alternate_entry_offset
-        end = start + args.alternate_entry_size
-        if end > len(config):
-            raise SystemExit("alternate entry range lies outside hash-verified MILL22A.INF")
-        alternate_entry = (start, args.alternate_entry_size, config[start:end])
     report = [
         "# Hash-locked Millennium Atari ST MILL22A.INF linear candidate disassembly", "",
         f"- Source: `{args.archive.name}!" + (f"{args.nested_member}!" if args.nested_member else "") + f"{args.disk_member}:MILL22A.INF`",
@@ -136,15 +120,6 @@ def main() -> None:
         "- Coverage: every source byte is rendered as an instruction or explicit `.byte`.", "", "```asm",
         *linear_listing(config), "```", "",
     ]
-    if alternate_entry is not None:
-        start, size, code = alternate_entry
-        report.extend([
-            "## Alternate entry candidate", "",
-            f"- File-relative range: `[0x{start:x}, 0x{start + size:x})`",
-            "- Address space: file-image-relative; runtime load address and reachability remain unproven.",
-            "- Scope: decode starts at the requested even offset to preserve an alternate instruction alignment.",
-            "", "```asm", *linear_listing(code, start), "```", "",
-        ])
     output.write_text("\n".join(report), encoding="utf-8")
 
 

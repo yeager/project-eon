@@ -16,7 +16,6 @@
 #include <optional>
 #include <span>
 #include <stdexcept>
-#include <string>
 #include <vector>
 
 namespace eon {
@@ -345,8 +344,6 @@ public:
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDoIoReturnPlan>
     observe_return(const DeuterosAmigaObservedTitleLoadDoIoReturn& observation) {
-        if (native_service_mode_)
-            throw std::runtime_error("Deuteros raw-read gate is already using the native service path");
         if (failed_)
             throw std::runtime_error("Deuteros raw-read gate is terminal after a failed observation");
         if (!started_ || complete_ || pending_) return std::nullopt;
@@ -357,17 +354,16 @@ public:
         if (completed_ >= total
             || observation.exec_base_source_address != profile_.read_exec_base_source_address
             || observation.request_pointer_cell_address != profile_.read_request_pointer_cell_address
-            || observation.request_address != 0x205e4U
+            || observation.request_address == 0 || (observation.request_address & 1U) != 0
+            || observation.request_address > 0x1000000U - 0x30U
             || (request_address_ != 0 && observation.request_address != request_address_)
             || observation.observed_exec_base != exec_base_
             || observation.call_address != profile_.read_vector_call_address
             || observation.vector != profile_.read_vector
             || observation.return_address != profile_.read_vector_return_address
             || observation.request_command != profile_.read_command
-            || observation.request_buffer_address
-                != profile_.read_staging_pointer_initial_value
-            || (request_buffer_address_ != 0
-                && observation.request_buffer_address != request_buffer_address_)) {
+            || observation.request_buffer_address != profile_.read_buffer_address
+                + completed_ * profile_.read_chunk_bytes) {
             failed_ = true;
             last_sequence_ = observation.trace_sequence;
             throw std::runtime_error("Deuteros raw-read DoIO return does not match the hash-bound request");
@@ -384,7 +380,6 @@ public:
         }
         pending_ = observation;
         request_address_ = observation.request_address;
-        request_buffer_address_ = observation.request_buffer_address;
         last_sequence_ = observation.trace_sequence;
         return DeuterosAmigaTitleLoadDoIoReturnPlan{observation,
             profile_.read_status_instruction_address,
@@ -393,8 +388,6 @@ public:
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDoIoStatusPlan>
     observe_status(const DeuterosAmigaObservedTitleLoadDoIoStatus& observation) {
-        if (native_service_mode_)
-            throw std::runtime_error("Deuteros raw-read gate is already using the native service path");
         if (failed_)
             throw std::runtime_error("Deuteros raw-read gate is terminal after a failed observation");
         if (!pending_) return std::nullopt;
@@ -426,21 +419,6 @@ public:
     [[nodiscard]] bool complete() const noexcept { return complete_ && !pending_; }
     [[nodiscard]] bool failed() const noexcept { return failed_; }
     [[nodiscard]] std::uint64_t last_sequence() const noexcept { return last_sequence_; }
-    [[nodiscard]] std::optional<std::uint32_t> next_native_ordinal() const noexcept {
-        if (!started_ || failed_ || complete_ || pending_
-            || (completed_ != 0 && !native_service_mode_)) return std::nullopt;
-        return completed_;
-    }
-    [[nodiscard]] bool complete_native_ordinal(const std::uint32_t ordinal) noexcept {
-        const auto expected = next_native_ordinal();
-        if (!expected || *expected != ordinal) return false;
-        native_service_mode_ = true;
-        ++completed_;
-        const auto total = profile_.read_full_chunk_count
-            + (profile_.read_tail_bytes != 0 ? 1U : 0U);
-        complete_ = completed_ == total;
-        return true;
-    }
 
 private:
     DeuterosAmigaTitlePostExecLoadServiceProfile profile_;
@@ -448,12 +426,10 @@ private:
     std::uint32_t completed_ = 0;
     std::uint32_t exec_base_ = 0;
     std::uint32_t request_address_ = 0;
-    std::uint32_t request_buffer_address_ = 0;
     std::uint64_t last_sequence_ = 0;
     bool started_ = false;
     bool complete_ = false;
     bool failed_ = false;
-    bool native_service_mode_ = false;
 };
 
 enum class DeuterosAmigaTitleLoadServiceOutcome { zero_retry_boundary, one_exit, copy_boundary };
@@ -865,39 +841,6 @@ struct DeuterosAmigaObservedTitleCommandNegativeService {
     std::uint32_t service_return_address = 0;
     std::uint32_t service_d0 = 0;
     std::uint32_t service_d1 = 0;
-    // v25's hash-bound compare/branch at $1fbfe selects the service path.
-    // Retain the instruction snapshot and observed next PC so the native
-    // session never infers suppression from the command byte alone.
-    std::uint32_t gate_address = 0;
-    std::uint32_t gate_opcode0 = 0;
-    std::uint32_t gate_opcode1 = 0;
-    std::uint32_t gate_d0 = 0;
-    std::uint16_t gate_sr = 0;
-    std::uint32_t selected_path_address = 0;
-};
-
-enum class DeuterosAmigaTitleCommandNegativePhase : std::uint8_t {
-    dispatch, branch, gate, call, callee, service_return, skip, epilogue, caller
-};
-
-// One recorder row from schema 35. Each row is consumed separately so a
-// route cannot advance past unobserved branch, service, or caller boundaries.
-struct DeuterosAmigaObservedTitleCommandNegativePhase {
-    std::uint64_t trace_sequence = 0;
-    std::uint64_t cycles = 0;
-    std::uint32_t route = 0;
-    DeuterosAmigaTitleCommandNegativePhase phase =
-        DeuterosAmigaTitleCommandNegativePhase::dispatch;
-    std::uint32_t pc = 0;
-    std::uint32_t opcode0 = 0;
-    std::uint32_t opcode1 = 0;
-    std::uint32_t d0 = 0;
-    std::uint32_t d1 = 0;
-    std::uint16_t sr = 0;
-    std::uint8_t selector = 0;
-    std::uint8_t secondary = 0;
-    std::uint32_t input_ordinal = 0;
-    std::int32_t input_frame = 0;
 };
 
 struct DeuterosAmigaTitleCommandNegativeServicePlan {
@@ -1490,42 +1433,25 @@ struct DeuterosAmigaTitleProfileTwoBootstrapPlan {
 };
 struct DeuterosAmigaObservedMainStageReentryD0 {
     std::uint64_t trace_sequence=0;
-    std::uint32_t entry_address=0;
-    std::optional<std::uint32_t> result_d0;
-};
-enum class DeuterosAmigaMainStageReentryProvenance {
-    hash_bound_profile_two_execution,
-    observed_runtime_entry,
+    std::uint32_t entry_address=0,result_d0=0;
 };
 struct DeuterosAmigaMainStageReentryPrefixPlan {
-    std::optional<DeuterosAmigaObservedMainStageReentryD0> observation;
-    DeuterosAmigaMainStageReentryProvenance provenance{};
+    DeuterosAmigaObservedMainStageReentryD0 observation;
     std::uint32_t controller_destination=0,controller_value=0;
     std::uint32_t mode_destination=0;
     std::uint16_t mode_value=0;
     std::uint32_t stack_pointer=0,exec_base_source=0,exec_call_address=0,exec_return_address=0;
     std::int16_t exec_vector=0;
-    std::uint32_t d0_word_instruction_address=0,d0_word_source_address=0;
-    std::uint32_t d0_word_source_span_address=0,d0_word_source_span_size=0;
-    std::uint16_t d0_word_source_value=0;
-    std::string d0_word_source_sha256;
-};
-enum class DeuterosAmigaMainStageExecReturnOrigin : std::uint8_t {
-    external_observation,
-    eon_native_compatibility,
 };
 struct DeuterosAmigaObservedMainStageExecReturn {
     std::uint64_t trace_sequence=0;
     std::uint32_t call_address=0;
     std::int16_t vector=0;
     std::uint32_t return_address=0,result_d0=0;
-    // Register image immediately before the external call. Call sites that
-    // consume this image validate only the registers established by their
-    // source: OpenDevice at $209f0 and LoadView at $216ee.
-    std::uint32_t call_a0=0,call_a1=0,call_d0=0,call_d1=0,call_a6=0;
-    DeuterosAmigaMainStageExecReturnOrigin origin =
-        DeuterosAmigaMainStageExecReturnOrigin::external_observation;
-    bool result_d0_defined = true;
+    // Register image immediately before the external call. These are
+    // mandatory at $209f0, where the call is specifically OpenDevice; other
+    // Exec return boundaries do not consume these fields.
+    std::uint32_t call_a0=0,call_a1=0,call_d0=0,call_d1=0;
 };
 struct DeuterosAmigaMainStageFirstExecReturnPlan {
     DeuterosAmigaObservedMainStageExecReturn observation;
@@ -2496,17 +2422,12 @@ public:
     [[nodiscard]] DeuterosAmigaMainStageState main_stage_state() const noexcept {
         return main_stage_state_;
     }
-    [[nodiscard]] std::uint64_t main_stage_last_command_sequence() const noexcept {
-        return last_command_sequence_;
-    }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>
     main_stage_loop_prepare_body_plan() const { return main_stage_loop_prepare_body_plan_; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
     main_stage_loop_graphics_plan() const { return main_stage_loop_graphics_plan_; }
     [[nodiscard]] std::span<const std::uint8_t> main_stage_cia_prefix_code() const noexcept {
-        // The hash-locked 26-byte source profile covers the native 14-byte
-        // BSET/MOVE.W prefix and the following external BSR boundary.
-        constexpr std::size_t offset=0x17e4,length=26;
+        constexpr std::size_t offset=0x17e4,length=14;
         if(main_stage_source_bytes_.size()<offset+length)return {};
         return std::span<const std::uint8_t>(main_stage_source_bytes_).subspan(offset,length);
     }
@@ -2518,7 +2439,6 @@ public:
 
     DeuterosAmigaTitleServiceBatchBoundarySession(
         const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan) {
-        disk_ = &disk;
         const auto at = [&](std::uint32_t address, std::size_t length) {
             return disk.bytes(plan.title_stage.disk_offset
                 + address - plan.title_stage.destination, length);
@@ -3332,15 +3252,6 @@ public:
         return plan;
     }
 
-    [[nodiscard]] std::optional<std::uint32_t> next_native_load_doio_ordinal() const noexcept {
-        return load_doio_gate_ ? load_doio_gate_->next_native_ordinal() : std::nullopt;
-    }
-
-    [[nodiscard]] bool complete_native_load_doio_ordinal(
-        const std::uint32_t ordinal) noexcept {
-        return load_doio_gate_ && load_doio_gate_->complete_native_ordinal(ordinal);
-    }
-
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadServiceSelectorPlan>
     observe_load_selector(const DeuterosAmigaObservedLoadSelector& observation) {
         if (!observed_load_service_return_ || observed_load_selector_) return std::nullopt;
@@ -3493,8 +3404,6 @@ public:
             || observation.source_address != next_command_address_) {
             throw std::runtime_error("Deuteros command opcode does not match boundary");
         }
-        validate_index_one_source_byte(observation.source_address,
-            observation.observed_value);
         if (next_command_address_ == std::numeric_limits<std::uint32_t>::max()) {
             throw std::runtime_error("Deuteros command stream address overflows");
         }
@@ -3970,147 +3879,39 @@ public:
     }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandNegativeServicePlan>
-    observe_command_negative_service_phase(
-        const DeuterosAmigaObservedTitleCommandNegativePhase& observation) {
+    observe_command_negative_service(
+        const DeuterosAmigaObservedTitleCommandNegativeService& observation) {
         if (!pending_command_call_ || pending_command_call_->address != 0x1fac2
             || pending_command_call_->target != 0x1fbe6
             || pending_command_call_->opcode < 0x20
             || pending_command_call_->opcode >= 0x90) return std::nullopt;
         if (observation.trace_sequence <= last_command_sequence_
-            || observation.route == 0 || observation.input_ordinal == 0) {
-            throw std::runtime_error("Deuteros negative-service phase is stale or unlinked");
+            || observation.mode_instruction_address != 0x1fbe6
+            || observation.mode_source_address != 0x1f98c
+            || observation.observed_mode_value < 0x80) {
+            throw std::runtime_error("Deuteros negative service gate does not match boundary");
         }
-
-        auto pending = pending_negative_service_.value_or(PendingNegativeServiceRoute{});
-        if (pending.next_phase == 0) {
-            if (observation.phase != DeuterosAmigaTitleCommandNegativePhase::dispatch
-                || observation.route != last_negative_service_route_ + 1U
-                || observation.route > 96U || observation.pc != 0x1fbe6
-                || observation.selector < 0x80U) {
-                throw std::runtime_error("Deuteros negative-service route must start at a signed-negative dispatch");
+        const bool suppressed = pending_command_call_->opcode == 0x20;
+        if (suppressed) {
+            if (observation.service_called || observation.service_call_address != 0
+                || observation.service_target != 0
+                || observation.service_return_address != 0
+                || observation.service_d0 != 0 || observation.service_d1 != 0) {
+                throw std::runtime_error("Deuteros space command must suppress the negative service");
             }
-            pending.route = observation.route;
-            pending.input_ordinal = observation.input_ordinal;
-            pending.input_frame = observation.input_frame;
-            pending.selector = observation.selector;
-            pending.secondary = observation.secondary;
-        } else if (observation.route != pending.route
-            || observation.input_ordinal != pending.input_ordinal
-            || observation.input_frame != pending.input_frame
-            || observation.selector != pending.selector
-            || observation.secondary != pending.secondary
-            || observation.cycles <= pending.last_cycles) {
-            throw std::runtime_error("Deuteros negative-service phase detached from its route or input");
+        } else if (!observation.service_called
+            || observation.service_call_address != 0x1fc08
+            || observation.service_target != 0x3fbf8
+            || observation.service_return_address != 0x1fc0e
+            || observation.service_d0 != 0x13
+            || observation.service_d1 != 0x0c) {
+            throw std::runtime_error("Deuteros negative nested service does not match boundary");
         }
-
-        const auto expected_phase = [&]() {
-            if (pending.next_phase == 0) return DeuterosAmigaTitleCommandNegativePhase::dispatch;
-            if (pending.next_phase == 1) return DeuterosAmigaTitleCommandNegativePhase::branch;
-            if (pending.next_phase == 2) return DeuterosAmigaTitleCommandNegativePhase::gate;
-            if (pending.suppressed) {
-                if (pending.next_phase == 3) return DeuterosAmigaTitleCommandNegativePhase::skip;
-                if (pending.next_phase == 4) return DeuterosAmigaTitleCommandNegativePhase::epilogue;
-                return DeuterosAmigaTitleCommandNegativePhase::caller;
-            }
-            if (pending.next_phase == 3) return DeuterosAmigaTitleCommandNegativePhase::call;
-            if (pending.next_phase == 4) return DeuterosAmigaTitleCommandNegativePhase::callee;
-            if (pending.next_phase == 5) return DeuterosAmigaTitleCommandNegativePhase::service_return;
-            if (pending.next_phase == 6) return DeuterosAmigaTitleCommandNegativePhase::epilogue;
-            return DeuterosAmigaTitleCommandNegativePhase::caller;
-        }();
-        if (observation.phase != expected_phase) {
-            throw std::runtime_error("Deuteros negative-service phases are missing or out of order");
-        }
-
-        switch (observation.phase) {
-        case DeuterosAmigaTitleCommandNegativePhase::dispatch:
-            if (observation.pc != 0x1fbe6) throw std::runtime_error("Detached Deuteros negative dispatch PC");
-            break;
-        case DeuterosAmigaTitleCommandNegativePhase::branch: {
-            if (observation.pc != 0x1fbee || observation.opcode0 != 0x6a0000ac
-                || ((observation.opcode1 >> 16U) != 0x2f00U
-                    && (observation.opcode1 & 0xffffU) != 0x6100U)
-                || (observation.sr & 0x0008U) == 0) {
-                throw std::runtime_error("Deuteros signed-negative branch observation is inconsistent");
-            }
-            break;
-        }
-        case DeuterosAmigaTitleCommandNegativePhase::gate:
-            if (observation.pc != 0x1fbfe || observation.opcode0 != 0x67127013
-                || observation.opcode1 != 0x720c2f08
-                || static_cast<bool>(observation.sr & 0x0004U)
-                    != (static_cast<std::uint16_t>(observation.d0) == 0x20U)) {
-                throw std::runtime_error("Deuteros negative-service compare gate is inconsistent");
-            }
-            pending.suppressed = (observation.sr & 0x0004U) != 0;
-            pending.gate_d0 = observation.d0;
-            pending.gate_sr = observation.sr;
-            break;
-        case DeuterosAmigaTitleCommandNegativePhase::call:
-            if (observation.pc != 0x1fc08 || observation.opcode0 != 0x4eb90003
-                || (observation.opcode1 >> 16U) != 0xfbf8U
-                || observation.d0 != 0x13U || observation.d1 != 0x0cU) {
-                throw std::runtime_error("Deuteros negative-service call observation is inconsistent");
-            }
-            break;
-        case DeuterosAmigaTitleCommandNegativePhase::callee:
-            if (observation.pc != 0x3fbf8 || observation.d0 != 0x13U
-                || observation.d1 != 0x0cU) {
-                throw std::runtime_error("Deuteros opaque service entry is inconsistent");
-            }
-            break;
-        case DeuterosAmigaTitleCommandNegativePhase::service_return:
-            if (observation.pc != 0x1fc0e) throw std::runtime_error("Detached Deuteros service return PC");
-            break;
-        case DeuterosAmigaTitleCommandNegativePhase::skip:
-            if (observation.pc != 0x1fc12 || (observation.opcode0 >> 16U) != 0x203cU
-                || (observation.opcode1 >> 16U) != 0x4e20U) {
-                throw std::runtime_error("Deuteros service-skip path is inconsistent");
-            }
-            break;
-        case DeuterosAmigaTitleCommandNegativePhase::epilogue:
-            if (observation.pc != 0x1fc20 || (observation.opcode0 >> 16U) != 0x4e75U) {
-                throw std::runtime_error("Deuteros negative-service epilogue is inconsistent");
-            }
-            break;
-        case DeuterosAmigaTitleCommandNegativePhase::caller:
-            if (observation.pc != 0x1fac6 || observation.opcode0 != 0x4a390001U) {
-                throw std::runtime_error("Deuteros negative-service caller continuation is inconsistent");
-            }
-            break;
-        }
-
-        pending.last_cycles = observation.cycles;
-        ++pending.next_phase;
         last_command_sequence_ = observation.trace_sequence;
-        if (observation.phase != DeuterosAmigaTitleCommandNegativePhase::caller) {
-            pending_negative_service_ = pending;
-            return std::nullopt;
-        }
-
-        DeuterosAmigaObservedTitleCommandNegativeService completed{
-            observation.trace_sequence, 0x1fbe6, 0x1f98c, pending.selector,
-            !pending.suppressed, pending.suppressed ? 0U : 0x1fc08U,
-            pending.suppressed ? 0U : 0x3fbf8U,
-            pending.suppressed ? 0U : 0x1fc0eU,
-            pending.suppressed ? 0U : 0x13U,
-            pending.suppressed ? 0U : 0x0cU,
-            0x1fbfe, 0x67127013, 0x720c2f08, pending.gate_d0,
-            pending.gate_sr, pending.suppressed ? 0x1fc12U : 0x1fc08U};
-        pending_negative_service_.reset();
-        last_negative_service_route_ = pending.route;
         pending_command_call_.reset();
-        return DeuterosAmigaTitleCommandNegativeServicePlan{completed,
-            pending.suppressed, 0x4e20, 0x1fc20, 0x1fac6,
-            next_command_address_, command_interpreter_.opcode_read_address};
-    }
-
-    // The former aggregate could assert every phase in one packet and is no
-    // longer accepted; callers must submit each schema-35 CPU boundary.
-    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandNegativeServicePlan>
-    observe_command_negative_service(
-        const DeuterosAmigaObservedTitleCommandNegativeService&) {
-        throw std::runtime_error("Deuteros negative-service phases must be observed separately");
+        return DeuterosAmigaTitleCommandNegativeServicePlan{observation,
+            suppressed, 0x4e20, 0x1fc20, 0x1fac6, next_command_address_,
+            command_interpreter_.opcode_read_address};
     }
 
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandPointerRoutePlan>
@@ -5088,52 +4889,19 @@ public:
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageReentryPrefixPlan>
     observe_main_stage_reentry_d0(const DeuterosAmigaObservedMainStageReentryD0&o){
-        if(!title_profile_two_bootstrap_advanced_||main_stage_reentry_d0_advanced_
+        if(!title_profile_two_bootstrap_advanced_||main_stage_reentry_d0_
             ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_reentry_d0)
             return std::nullopt;
-        // The hash-bound profile-two path stores 2 in $12a34, then executes
-        // MOVE.W $12a34,D0 at $12b14 immediately before returning to $20000.
-        // The loaded stage begins with JMP $21734, which leaves D0 untouched;
-        // only its low word is known because the preceding service may leave
-        // the upper word arbitrary. A recorder that observes the full register
-        // can cross-check that low word, but it is not required to supply it.
-        constexpr std::uint16_t profile_two_word=2;
-        if(o.trace_sequence<=last_command_sequence_||o.entry_address!=0x21734
-            ||(o.result_d0&&static_cast<std::uint16_t>(*o.result_d0)!=profile_two_word))
+        if(o.trace_sequence<=last_command_sequence_||o.entry_address!=0x21734)
             throw std::runtime_error("Deuteros main-stage re-entry D0 does not match boundary");
-        main_stage_reentry_d0_=o;main_stage_reentry_d0_advanced_=true;
-        last_command_sequence_=o.trace_sequence;
+        main_stage_reentry_d0_=o;last_command_sequence_=o.trace_sequence;
         main_stage_state_=DeuterosAmigaMainStageState::awaiting_first_exec_return;
-        return DeuterosAmigaMainStageReentryPrefixPlan{o,
-            DeuterosAmigaMainStageReentryProvenance::observed_runtime_entry,
-            0x20976,title_tail_bootstrap_->value,
-            0x21704,profile_two_word,0x22296,4,0x2174a,0x2174e,-0x96,
-            0x12b14,0x12a34,0x12b0e,14,profile_two_word,
-            "858d0a08e8d6fe8200fb71a0866731feabffcadc232bfdeff5be669446bae0fd"};
-    }
-    [[nodiscard]] std::optional<DeuterosAmigaMainStageReentryPrefixPlan>
-    advance_main_stage_reentry_d0(){
-        if(!title_profile_two_bootstrap_advanced_||main_stage_reentry_d0_advanced_
-            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_reentry_d0
-            ||!title_tail_bootstrap_)
-            return std::nullopt;
-        // The authenticated profile-two path copies the selected word 2 to
-        // $12a34; the hash-bound MOVE.W at $12b14 puts that word in D0 before
-        // the loaded stage's initial JMP to $21734. No external register
-        // observation is needed for this local instruction sequence.
-        constexpr std::uint16_t profile_two_word=2;
-        main_stage_reentry_d0_advanced_=true;
-        main_stage_state_=DeuterosAmigaMainStageState::awaiting_first_exec_return;
-        return DeuterosAmigaMainStageReentryPrefixPlan{std::nullopt,
-            DeuterosAmigaMainStageReentryProvenance::hash_bound_profile_two_execution,
-            0x20976,title_tail_bootstrap_->value,0x21704,profile_two_word,
-            0x22296,4,0x2174a,0x2174e,-0x96,
-            0x12b14,0x12a34,0x12b0e,14,profile_two_word,
-            "858d0a08e8d6fe8200fb71a0866731feabffcadc232bfdeff5be669446bae0fd"};
+        return DeuterosAmigaMainStageReentryPrefixPlan{o,0x20976,title_tail_bootstrap_->value,
+            0x21704,static_cast<std::uint16_t>(o.result_d0),0x22296,4,0x2174a,0x2174e,-0x96};
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageFirstExecReturnPlan>
     observe_main_stage_first_exec_return(const DeuterosAmigaObservedMainStageExecReturn&o){
-        if(!main_stage_reentry_d0_advanced_||main_stage_first_exec_return_
+        if(!main_stage_reentry_d0_||main_stage_first_exec_return_
             ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_first_exec_return)
             return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x2174a
@@ -5328,7 +5096,6 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopServiceReturnPlan>
     observe_main_stage_loop_service_return(const DeuterosAmigaObservedLocalCallReturn&o){
         if(!main_stage_resource_load_||main_stage_loop_service_return_
-            ||main_stage_loop_service_native_executed_
             ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_initial_loop_service_return)
             return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x217f8
@@ -5340,20 +5107,10 @@ public:
             {0x21720,0x2171e,0x210f2},{0,0,1},0x21816,0x21276,0x2181c,
             "382932f57f5d3d181f93727198a6f5b7d6fff91522eed0438778a43e8ca417d5"};
     }
-    [[nodiscard]] bool advance_main_stage_loop_service_native(){
-        if(!main_stage_resource_load_||main_stage_loop_service_return_
-            ||main_stage_loop_service_native_executed_
-            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_initial_loop_service_return)
-            return false;
-        main_stage_loop_service_native_executed_=true;
-        main_stage_state_=DeuterosAmigaMainStageState::awaiting_loop_prepare_body;
-        return true;
-    }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>
     advance_main_stage_loop_prepare_body(const std::uint32_t a1_value=0,
         const std::uint32_t a6_value=0){
-        if((!main_stage_loop_service_return_&&!main_stage_loop_service_native_executed_)
-            ||main_stage_loop_prepare_body_plan_
+        if(!main_stage_loop_service_return_||main_stage_loop_prepare_body_plan_
             ||main_stage_loop_prepare_return_)return std::nullopt;
         DeuterosAmigaMainStageLoopPrepareBodyPlan result{
             0x21276,0x32a24,0x210f4,0x32a28,0x21248,
@@ -5382,38 +5139,18 @@ public:
         if(!main_stage_loop_prepare_body_plan_||main_stage_loop_graphics_returns_>=2)
             return std::nullopt;
         const bool first=main_stage_loop_graphics_returns_==0;
-        const auto expected_a0=first?main_stage_loop_prepare_body_plan_->a0_value:
-            (main_stage_loop_graphics_plan_?main_stage_loop_graphics_plan_->a0_value:0U);
-        const auto expected_a1=first?main_stage_loop_prepare_body_plan_->a1_value:
-            (main_stage_loop_graphics_plan_?main_stage_loop_graphics_plan_->a1_value:0U);
-        const auto expected_d0=first?std::uint32_t(main_stage_loop_prepare_body_plan_->d0_value):
-            (main_stage_loop_graphics_plan_?main_stage_loop_graphics_plan_->d0_value:0U);
-        const auto expected_a6=first?main_stage_loop_prepare_body_plan_->a6_value:
-            (main_stage_loop_graphics_plan_?main_stage_loop_graphics_plan_->a6_value:0U);
         if(o.trace_sequence<=last_command_sequence_||o.vector!=-0xc0
             ||o.call_address!=(first?0x21310U:0x2132aU)
-            ||o.return_address!=(first?0x21314U:0x2132eU)
-            ||o.call_a0!=expected_a0||o.call_a1!=expected_a1
-            ||o.call_d0!=expected_d0||o.call_a6!=expected_a6)
+            ||o.return_address!=(first?0x21314U:0x2132eU))
             throw std::runtime_error("Deuteros loop graphics return does not match boundary");
         DeuterosAmigaMainStageLoopGraphicsPlan plan;
         if(first){
-            plan.next_call_address=0x2132a;
-            plan.next_return_address=0x2132e;
-            plan.a0_value=0x12f12;
-            plan.a1_value=a1;
-            plan.a6_value=a6;
-            plan.d0_value=(o.result_d0&0xffff0000U)|0x10U;
-            plan.next_vector=-0xc0;
+            plan={0x2132a,0x2132e,0x12f12,a1,a6,
+                (o.result_d0&0xffff0000U)|0x10U,-0xc0,0};
         }else{
             // Enter the direct local call. No opaque return from $20888 is
             // asserted: its four literal stores run before the ExecBase read.
-            plan.next_call_address=0x208b4;
-            plan.next_return_address=0x208b8;
-            plan.a1_value=0x2086a;
-            plan.d0_value=5;
-            plan.next_vector=-0xa8;
-            plan.local_call_target=0x20888;
+            plan={0x208b4,0x208b8,0,0x2086a,0,5,-0xa8,0x20888};
             plan.pending_read_instruction=0x208b0;
             plan.pending_read_address=4;
             plan.write_addresses={0x20872,0x20873,0x20878,0x2087c};
@@ -5433,68 +5170,6 @@ public:
         return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
-    advance_main_stage_loop_graphics_native_service(const std::uint32_t a1,
-        const std::uint32_t a6){
-        if(!main_stage_loop_prepare_body_plan_||main_stage_loop_graphics_returns_>=2
-            ||last_command_sequence_==std::numeric_limits<std::uint64_t>::max())
-            return std::nullopt;
-        const bool first=main_stage_loop_graphics_returns_==0;
-        if(!first&&!main_stage_loop_graphics_plan_)return std::nullopt;
-        const auto call_address=first?0x21310U:0x2132aU;
-        const auto return_address=first?0x21314U:0x2132eU;
-        const auto a0_value=first?main_stage_loop_prepare_body_plan_->a0_value:
-            main_stage_loop_graphics_plan_->a0_value;
-        const auto a1_value=first?main_stage_loop_prepare_body_plan_->a1_value:
-            main_stage_loop_graphics_plan_->a1_value;
-        const auto d0_value=first?main_stage_loop_prepare_body_plan_->d0_value:
-            main_stage_loop_graphics_plan_->d0_value;
-        const auto a6_value=first?main_stage_loop_prepare_body_plan_->a6_value:
-            main_stage_loop_graphics_plan_->a6_value;
-        const auto pending_call=first?main_stage_loop_prepare_body_plan_->next_call_address:
-            main_stage_loop_graphics_plan_->next_call_address;
-        const auto pending_return=first?main_stage_loop_prepare_body_plan_->next_return_address:
-            main_stage_loop_graphics_plan_->next_return_address;
-        const auto pending_vector=first?main_stage_loop_prepare_body_plan_->next_vector:
-            main_stage_loop_graphics_plan_->next_vector;
-        if(pending_call!=call_address||pending_return!=return_address
-            ||pending_vector!=-0xc0||a0_value!=(first?0x12e12U:0x12f12U)
-            ||a1_value==0||a6_value==0||static_cast<std::uint16_t>(d0_value)!=16)
-            return std::nullopt;
-        DeuterosAmigaMainStageLoopGraphicsPlan plan;
-        if(first){
-            plan.next_call_address=0x2132a;
-            plan.next_return_address=0x2132e;
-            plan.a0_value=0x12f12;
-            plan.a1_value=a1;
-            plan.a6_value=a6;
-            // LoadRGB4 consumes only D0.W. Its D0 return is unspecified, and
-            // the caller overwrites the next call's low word with 16.
-            plan.d0_value=0x10;
-            plan.next_vector=-0xc0;
-            main_stage_state_=DeuterosAmigaMainStageState::awaiting_second_loop_graphics_return;
-        }else{
-            plan.next_call_address=0x208b4;
-            plan.next_return_address=0x208b8;
-            plan.a1_value=0x2086a;
-            plan.d0_value=5;
-            plan.next_vector=-0xa8;
-            plan.local_call_target=0x20888;
-            plan.pending_read_instruction=0x208b0;
-            plan.pending_read_address=4;
-            plan.write_addresses={0x20872,0x20873,0x20878,0x2087c};
-            plan.write_values={2,0xc4,0x20880,0x207ec};
-            plan.write_widths={MemoryTransferElementWidth::byte,
-                MemoryTransferElementWidth::byte,MemoryTransferElementWidth::longword,
-                MemoryTransferElementWidth::longword};
-            plan.write_count=4;
-            main_stage_state_=DeuterosAmigaMainStageState::awaiting_loop_request_service;
-        }
-        ++main_stage_loop_graphics_returns_;
-        ++last_command_sequence_;
-        main_stage_loop_graphics_plan_=plan;
-        return plan;
-    }
-    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
     observe_main_stage_view_wait(const DeuterosAmigaObservedViewWait&o){
         if(!main_stage_loop_graphics_plan_)return std::nullopt;
         const auto& current=*main_stage_loop_graphics_plan_;
@@ -5508,8 +5183,7 @@ public:
         if(first){
             const auto& call=*o.library_return;
             if(call.trace_sequence<=last_command_sequence_||call.trace_sequence>=o.trace_sequence
-                ||call.call_address!=0x216ee||call.return_address!=0x216f2||call.vector!=-0xde
-                ||call.call_a1!=current.a1_value||call.call_a6!=current.a6_value)
+                ||call.call_address!=0x216ee||call.return_address!=0x216f2||call.vector!=-0xde)
                 throw std::runtime_error("Deuteros view return does not match boundary");
             plan.d0_value=call.result_d0;
         }
@@ -5594,7 +5268,7 @@ public:
             throw std::runtime_error("Deuteros fade return is inconsistent");
         auto plan=current;
         if(!fade&&!release){plan.outer_transition_return=route.caller_return;plan.outer_fade_return=route.fade_return;}
-        if(o.instruction_address==0x2185e||o.instruction_address==0x217e4){
+        if(o.instruction_address==0x2185e){
             plan.outer_input_status_register=route.status_register;
             plan.outer_input_instruction_count=route.instructions_executed;
             plan.outer_input_branches=route.branch_checkpoints;
@@ -5943,8 +5617,7 @@ public:
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareReturnPlan>
     observe_main_stage_loop_prepare_return(const DeuterosAmigaObservedLocalCallReturn&o){
-        if((!main_stage_loop_service_return_&&!main_stage_loop_service_native_executed_)
-            ||main_stage_loop_prepare_body_plan_
+        if(!main_stage_loop_service_return_||main_stage_loop_prepare_body_plan_
             ||main_stage_loop_prepare_return_)return std::nullopt;
         if(o.trace_sequence<=last_command_sequence_||o.call_address!=0x21816
             ||o.call_target!=0x21276||o.return_address!=0x2181c)
@@ -6070,40 +5743,12 @@ public:
     }
 
 private:
-    void validate_index_one_source_byte(
-        const std::uint32_t source_address, const std::uint8_t observed_value) const {
-        if (!load_dispatch_.index_one_source_candidate_admitted
-            || !observed_load_dispatch_table_base_
-            || !observed_load_dispatch_table_word_
-            || observed_load_dispatch_table_base_->observed_value
-                != load_dispatch_.source_table_base_value
-            || observed_load_dispatch_table_word_->observed_value
-                != static_cast<std::uint16_t>(load_dispatch_.index_one_signed_offset)) {
-            return;
-        }
-        const auto stream_begin = load_dispatch_.index_one_stream_address;
-        const auto stream_end = static_cast<std::uint64_t>(stream_begin)
-            + load_dispatch_.index_one_stream_prefix_size;
-        if (source_address < stream_begin || source_address >= stream_end) return;
-        if (!disk_) {
-            throw std::runtime_error("Deuteros command stream lost its original media source");
-        }
-        const auto source_offset = load_dispatch_.index_one_stream_disk_offset
-            + (source_address - stream_begin);
-        const auto expected = disk_->bytes(source_offset, 1).front();
-        if (observed_value != expected) {
-            throw std::runtime_error(
-                "Deuteros command opcode differs from the hash-admitted original stream");
-        }
-    }
-
     void reset_main_stage_loop_continuations(){
         main_stage_loop_prepare_body_plan_.reset();
         main_stage_loop_prepare_return_.reset();main_stage_loop_scheduler_return_.reset();
         main_stage_loop_graphics_returns_=0;main_stage_loop_request_returned_=false;
         main_stage_initial_view_caller_=true;
     }
-    const AmigaAdf* disk_ = nullptr;
     bool armed_ = false;
     std::uint64_t preceding_sequence_ = 0;
     std::uint32_t graphics_library_base_ = 0;
@@ -6239,7 +5884,6 @@ private:
         DeuterosAmigaMainStageState::awaiting_profile_two_bootstrap;
     std::vector<std::uint8_t> main_stage_source_bytes_;
     std::optional<DeuterosAmigaObservedMainStageReentryD0> main_stage_reentry_d0_;
-    bool main_stage_reentry_d0_advanced_=false;
     std::optional<DeuterosAmigaObservedMainStageExecReturn> main_stage_first_exec_return_;
     std::optional<DeuterosAmigaObservedMainStageExecReturn> main_stage_second_exec_return_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> main_stage_first_local_return_;
@@ -6261,7 +5905,6 @@ private:
     bool main_stage_initial_view_caller_=true;
     std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> main_stage_loop_graphics_plan_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> main_stage_loop_service_return_;
-    bool main_stage_loop_service_native_executed_=false;
     std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan>
         main_stage_loop_prepare_body_plan_;
     std::optional<DeuterosAmigaObservedLocalCallReturn> main_stage_loop_prepare_return_;
@@ -6276,21 +5919,7 @@ private:
         std::uint32_t return_address;
         std::uint8_t opcode;
     };
-    struct PendingNegativeServiceRoute {
-        std::uint32_t route = 0;
-        std::uint8_t next_phase = 0;
-        std::uint64_t last_cycles = 0;
-        std::uint32_t input_ordinal = 0;
-        std::int32_t input_frame = 0;
-        std::uint8_t selector = 0;
-        std::uint8_t secondary = 0;
-        bool suppressed = false;
-        std::uint32_t gate_d0 = 0;
-        std::uint16_t gate_sr = 0;
-    };
     std::optional<PendingCommandCall> pending_command_call_;
-    std::optional<PendingNegativeServiceRoute> pending_negative_service_;
-    std::uint32_t last_negative_service_route_ = 0;
     std::optional<DeuterosAmigaObservedTitleCommandTwoOperandMode>
         command_two_operand_mode_;
     std::optional<DeuterosAmigaObservedTitleCommandTwoOperands>

@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <array>
 #include <span>
 #include <string>
 #include <string_view>
@@ -76,37 +75,5 @@ parse_millennium_dos_sound_selection(std::span<const std::uint8_t> mill_com);
 // rejected.
 [[nodiscard]] MillenniumDosSoundDriverLeaf
 admit_millennium_dos_sound_driver_leaf(std::span<const std::uint8_t> bytes);
-
-// Exact SIBM calls made by the English 2200AD startup helper at $d07a. The
-// profile records dispatch identities and stack-independent literal inputs;
-// it does not execute the private interrupt or infer driver return values.
-struct MillenniumDosSibmStartupProfile {
-    std::array<std::uint16_t, 17> dispatch_targets{};
-    std::array<std::uint16_t, 14> function_eleven_name_addresses{};
-    std::array<std::string, 14> function_eleven_filenames{};
-    std::uint16_t function_zero_target = 0;
-    std::uint16_t function_eleven_target = 0;
-    std::uint16_t function_twelve_target = 0;
-    std::uint16_t startup_helper_address = 0;
-    std::uint16_t first_private_interrupt_address = 0;
-    std::uint16_t function_zero_wrapper_address = 0;
-    std::uint16_t function_twelve_wrapper_address = 0;
-    std::uint16_t function_eleven_wrapper_address = 0;
-    std::uint16_t function_eleven_argument_table = 0;
-    std::uint16_t function_twelve_requested_bytes = 0;
-    std::uint16_t function_eleven_first_argument = 0;
-    std::uint16_t function_eleven_last_argument = 0;
-    std::uint8_t function_eleven_call_count = 0;
-    std::uint16_t function_zero_input_for_mode_one = 0;
-    std::uint16_t function_zero_input_for_other_modes = 0;
-    std::string driver_sha256;
-    std::string startup_helper_sha256;
-    std::string function_eleven_argument_table_sha256;
-};
-
-[[nodiscard]] MillenniumDosSibmStartupProfile
-parse_millennium_dos_sibm_startup_profile(
-    std::span<const std::uint8_t> game_executable,
-    std::span<const std::uint8_t> sibm_driver);
 
 } // namespace eon

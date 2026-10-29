@@ -72,7 +72,6 @@ class OperandCaptureRunnerTests(unittest.TestCase):
             source.write_bytes(b"synthetic test fixture")
             cache = root / "external-cache" / "operand-captures"
             cache.mkdir(parents=True)
-            cache.chmod(0o700)
             TOOL.OUTPUT_ROOT = cache
             output = cache / "run-1"
             self.assertEqual(TOOL.output_directory(source, output), output)

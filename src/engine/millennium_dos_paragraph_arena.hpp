@@ -34,7 +34,6 @@ struct MillenniumDosParagraphAllocationResult {
     std::string error;
 };
 
-
 // A native segmented-address namespace used only by recovered DOS services.
 // Its segment values are deterministic engine keys, never captured original
 // DOS allocation results or assertions about original physical memory.
@@ -42,7 +41,7 @@ class MillenniumDosParagraphArena {
 public:
     explicit MillenniumDosParagraphArena(std::uint64_t generation,
         std::uint16_t begin_segment = 0xe100,
-        std::uint16_t end_segment_exclusive = 0xffff);
+        std::uint16_t end_segment_exclusive = 0xf000);
     [[nodiscard]] MillenniumDosParagraphAllocationResult allocate(
         std::uint32_t paragraph_count);
     [[nodiscard]] MillenniumDosParagraphArenaCheckpoint checkpoint() const;

@@ -52,10 +52,6 @@ runtime, are visibly identified as Modern, and never overwrite, cache inside,
 or replace the original archive. Project Eon will not distribute unlicensed
 original assets or derivative asset packs.
 
-The native-recovery work can use bounded static recompilation of admitted
-original code regions. Its release binding, host-contract and verification
-requirements are documented in [Static recompilation strategy](docs/STATIC_RECOMPILATION.md).
-
 Modern also has a deliberately external **asset-pack admission format** for
 future lawful high-resolution art layers. A user may place a pack below a
 separate, user-selected Modern-pack root; its `pack.eonmodern` manifest is

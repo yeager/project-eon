@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(project_eon VERSION 0.1.6 LANGUAGES C CXX)
+project(project_eon VERSION 0.1.5 LANGUAGES C CXX)
 
 option(EON_DEVELOPER_RESOURCE_FALLBACKS
     "Allow launcher resource lookup to fall back to the source checkout" OFF)
@@ -115,7 +115,6 @@ add_executable(project-eon
     src/presentation_preferences.cpp
     src/presentation/modern_presentation_pipeline.cpp
     src/engine/deuteros_amiga_opening.cpp
-    src/engine/deuteros_amiga_eon_memory_arena.cpp
     src/engine/deuteros_amiga_bootstrap_frame.cpp
     src/engine/deuteros_amiga_main_stage_frame.cpp
     src/engine/bounded_memory_transfer.cpp
@@ -126,8 +125,6 @@ add_executable(project-eon
     src/engine/deuteros_amiga_title_display_trace_session.cpp
     src/engine/deuteros_amiga_title_planar_patch.cpp
     src/engine/deuteros_amiga_title_program_entry_session.cpp
-    src/engine/deuteros_amiga_title_descriptor_model.cpp
-    src/engine/deuteros_amiga_title_inline_stream.cpp
     src/engine/menu_runtime_launch.cpp
     src/engine/native_session_controller.cpp
     src/engine/runtime_host.cpp
@@ -140,14 +137,8 @@ add_executable(project-eon
     src/engine/deuteros_atari_bootstrap_session.cpp
     src/engine/millennium_dos_sound_selection_session.cpp
     src/engine/millennium_dos_sound_driver_load_session.cpp
-    src/engine/millennium_dos_sibm_function_zero_session.cpp
-    src/engine/millennium_dos_sibm_startup_session.cpp
-    src/engine/millennium_dos_sibm_audio.cpp
-    src/engine/millennium_dos_sibm_timer_session.cpp
-    src/engine/millennium_dos_sibm_native_service_session.cpp
     src/engine/millennium_dos_video_driver_load_session.cpp
     src/engine/millennium_dos_video_function_zero_session.cpp
-    src/engine/millennium_dos_video_int91_dispatch_session.cpp
     src/engine/millennium_dos_video_function_six_clip_session.cpp
     src/engine/millennium_dos_video_function_six_mcga_table_session.cpp
     src/engine/millennium_dos_video_function_six_mcga_pointer_setup_session.cpp
@@ -166,16 +157,11 @@ add_executable(project-eon
     src/engine/millennium_dos_title_exec_entry_session.cpp
     src/engine/millennium_dos_title_child_compatibility_service.cpp
     src/engine/millennium_dos_title_initialization_session.cpp
-    src/engine/millennium_dos_title_p00_recompilation.cpp
     src/engine/millennium_dos_title_session.cpp
     src/engine/millennium_dos_title_to_game_session.cpp
     src/engine/millennium_dos_game_session.cpp
     src/engine/millennium_dos_native_process.cpp
-    src/engine/millennium_dos_file_read_session.cpp
-    src/engine/millennium_dos_static_data_load_session.cpp
     src/engine/millennium_dos_native_process_admission.cpp
-    src/engine/millennium_dos_game_function_four_dispatch.cpp
-    src/engine/millennium_dos_ega_startup_palette_session.cpp
     src/engine/millennium_dos_post_overlay_loop_session.cpp
     src/engine/millennium_dos_function_dispatch_admission.cpp
     src/engine/millennium_dos_owned_function_diagnostics.cpp
@@ -201,16 +187,12 @@ add_executable(project-eon
     src/engine/millennium_dos_title_handoff_trace_admission.cpp
     src/engine/millennium_dos_save_session.cpp
     src/engine/millennium_atari_bootstrap_session.cpp
-    src/engine/millennium_atari_title_frame.cpp
     src/engine/atari_st_prg_load_session.cpp
-    src/engine/millennium_atari_stx_exec_session.cpp
     src/engine/millennium_atari_read_only_gemdos_session.cpp
-    src/engine/millennium_atari_save_load_session.cpp
     src/engine/millennium_atari_config_consumer_session.cpp
     src/engine/millennium_atari_post_config_entry_session.cpp
     src/engine/millennium_amiga_bootstrap_session.cpp
     src/engine/millennium_amiga_bootstrap_relocator_session.cpp
-    src/engine/millennium_amiga_input_device_compatibility.cpp
     src/data/amiga_adf.cpp
     src/data/amiga_ofs.cpp
     src/data/atari_st_prg.cpp
@@ -476,36 +458,13 @@ if(BUILD_TESTING)
     endif()
     file(MAKE_DIRECTORY "${EON_TEST_TMPDIR}")
     add_test(NAME native-data-detection COMMAND eon-native-tests)
-    add_test(NAME deuteros-amiga-graphics-library-compatibility
-        COMMAND eon-native-tests --deuteros-graphics-library-compatibility)
-    if(EON_REAL_DATA_DIR)
-        add_test(NAME millennium-dos-sibm-native-voices-real-media
-            COMMAND eon-native-tests --millennium-dos-sibm-native-voices "${EON_REAL_DATA_DIR}")
-        set_tests_properties(millennium-dos-sibm-native-voices-real-media PROPERTIES
-            SKIP_RETURN_CODE 77
-            TIMEOUT 180)
-    endif()
     set_tests_properties(native-data-detection PROPERTIES
         ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
     if(EON_DIRECT_DATA_DIR)
-        add_test(NAME millennium-atari-st-stx-paired-source-real-media
-            COMMAND eon-native-tests --millennium-atari-stx-pair
-                "${EON_DIRECT_DATA_DIR}")
-        set_tests_properties(millennium-atari-st-stx-paired-source-real-media PROPERTIES
-            ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
-            SKIP_RETURN_CODE 77
-            TIMEOUT 180)
         add_test(NAME deuteros-amiga-worker-scenario-real-media
             COMMAND eon-native-tests --deuteros-amiga-worker-scenario
                 "${EON_DIRECT_DATA_DIR}")
         set_tests_properties(deuteros-amiga-worker-scenario-real-media PROPERTIES
-            ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
-            SKIP_RETURN_CODE 77
-            TIMEOUT 180)
-        add_test(NAME deuteros-amiga-native-post-exec-seed-real-media
-            COMMAND eon-native-tests --deuteros-native-post-exec-seed
-                "${EON_DIRECT_DATA_DIR}")
-        set_tests_properties(deuteros-amiga-native-post-exec-seed-real-media PROPERTIES
             ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
             SKIP_RETURN_CODE 77
             TIMEOUT 180)
@@ -516,23 +475,8 @@ if(BUILD_TESTING)
             ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
             SKIP_RETURN_CODE 77
             TIMEOUT 180)
-        add_test(NAME deuteros-amiga-title-inline-stream-real-media
-            COMMAND eon-native-tests --deuteros-title-inline-stream
-                "${EON_DIRECT_DATA_DIR}")
-        set_tests_properties(deuteros-amiga-title-inline-stream-real-media PROPERTIES
-            ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
-            SKIP_RETURN_CODE 77
-            TIMEOUT 180)
-        add_test(NAME deuteros-amiga-response-queue-boundary-real-media
-            COMMAND eon-native-tests --deuteros-response-queue
-                "${EON_DIRECT_DATA_DIR}")
-        set_tests_properties(deuteros-amiga-response-queue-boundary-real-media PROPERTIES
-            ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
-            SKIP_RETURN_CODE 77
-            TIMEOUT 180)
         add_executable(eon-millennium-dos-video-driver-profile-test
             tests/millennium_dos_video_driver_profile_test.cpp
-            src/engine/millennium_dos_video_int91_dispatch_session.cpp
             src/engine/millennium_dos_video_function_zero_session.cpp
             src/engine/millennium_dos_video_function_six_clip_session.cpp
             src/engine/millennium_dos_video_function_six_mcga_table_session.cpp
@@ -573,64 +517,6 @@ if(BUILD_TESTING)
             COMMAND eon-native-tests --millennium-dos-native-bios-return
                 "${EON_DIRECT_DATA_DIR}/millennium-return-to-earth-2-2")
         set_tests_properties(millennium-dos-native-bios-return-real-media PROPERTIES
-            SKIP_RETURN_CODE 77
-            TIMEOUT 180)
-        add_executable(eon-millennium-dos-game-function-four-dispatch-test
-            tests/millennium_dos_game_function_four_dispatch_test.cpp
-            src/engine/millennium_dos_game_function_four_dispatch.cpp
-            src/engine/millennium_dos_ega_startup_palette_session.cpp
-            src/engine/millennium_dos_native_process.cpp
-            src/engine/millennium_dos_gx_startup_session.cpp
-            src/data/millennium_dos_video_driver.cpp
-            src/data/millennium_dos_game_flow.cpp
-            src/data/millennium_dos_title_flow.cpp
-            src/data/sha256.cpp)
-        target_include_directories(eon-millennium-dos-game-function-four-dispatch-test PRIVATE src)
-        if(MSVC)
-            target_compile_options(eon-millennium-dos-game-function-four-dispatch-test PRIVATE /UNDEBUG)
-        else()
-            target_compile_options(eon-millennium-dos-game-function-four-dispatch-test PRIVATE -UNDEBUG)
-        endif()
-        add_test(NAME millennium-dos-game-function-four-dispatch-real-media
-            COMMAND eon-millennium-dos-game-function-four-dispatch-test
-                "${EON_DIRECT_DATA_DIR}/millennium-return-to-earth-2-2")
-        set_tests_properties(millennium-dos-game-function-four-dispatch-real-media PROPERTIES
-            SKIP_RETURN_CODE 77
-            TIMEOUT 180)
-        add_executable(eon-millennium-dos-sibm-startup-profile-test
-            tests/millennium_dos_sibm_startup_profile_test.cpp
-            src/data/millennium_dos_sound_driver.cpp
-            src/data/millennium_dos_game_flow.cpp
-            src/data/sha256.cpp)
-        target_include_directories(eon-millennium-dos-sibm-startup-profile-test PRIVATE src)
-        if(MSVC)
-            target_compile_options(eon-millennium-dos-sibm-startup-profile-test PRIVATE /UNDEBUG)
-        else()
-            target_compile_options(eon-millennium-dos-sibm-startup-profile-test PRIVATE -UNDEBUG)
-        endif()
-        add_test(NAME millennium-dos-sibm-startup-profile-real-media
-            COMMAND eon-millennium-dos-sibm-startup-profile-test
-                "${EON_DIRECT_DATA_DIR}/millennium-return-to-earth-2-2")
-        set_tests_properties(millennium-dos-sibm-startup-profile-real-media PROPERTIES
-            SKIP_RETURN_CODE 77
-            TIMEOUT 180)
-        add_executable(eon-millennium-dos-sibm-timer-session-test
-            tests/millennium_dos_sibm_timer_session_test.cpp
-            src/engine/millennium_dos_sibm_function_zero_session.cpp
-            src/engine/millennium_dos_sibm_timer_session.cpp
-            src/data/millennium_dos_sound_driver.cpp
-            src/data/millennium_dos_game_flow.cpp
-            src/data/sha256.cpp)
-        target_include_directories(eon-millennium-dos-sibm-timer-session-test PRIVATE src)
-        if(MSVC)
-            target_compile_options(eon-millennium-dos-sibm-timer-session-test PRIVATE /UNDEBUG)
-        else()
-            target_compile_options(eon-millennium-dos-sibm-timer-session-test PRIVATE -UNDEBUG)
-        endif()
-        add_test(NAME millennium-dos-sibm-timer-session-real-media
-            COMMAND eon-millennium-dos-sibm-timer-session-test
-                "${EON_DIRECT_DATA_DIR}/millennium-return-to-earth-2-2")
-        set_tests_properties(millennium-dos-sibm-timer-session-real-media PROPERTIES
             SKIP_RETURN_CODE 77
             TIMEOUT 180)
         add_executable(eon-millennium-dos-video-function-six-mcga-register-setup-test
@@ -768,10 +654,7 @@ if(BUILD_TESTING)
     add_test(NAME native-runtime-memory COMMAND eon-native-runtime-memory-tests)
     add_executable(eon-deuteros-amiga-title-descriptor-model-test
         tests/deuteros_amiga_title_descriptor_model_test.cpp
-        src/engine/deuteros_amiga_title_descriptor_model.cpp
-        src/engine/native_runtime_memory.cpp
-        src/engine/bounded_memory_transfer.cpp
-        src/data/sha256.cpp)
+        src/engine/deuteros_amiga_title_descriptor_model.cpp)
     target_include_directories(eon-deuteros-amiga-title-descriptor-model-test PRIVATE src)
     if(MSVC)
         target_compile_options(eon-deuteros-amiga-title-descriptor-model-test PRIVATE /UNDEBUG)
@@ -780,29 +663,9 @@ if(BUILD_TESTING)
     endif()
     add_test(NAME deuteros-amiga-title-descriptor-model
         COMMAND eon-deuteros-amiga-title-descriptor-model-test)
-    add_executable(eon-deuteros-amiga-outer-input-test
-        tests/deuteros_amiga_outer_input_test.cpp)
-    target_include_directories(eon-deuteros-amiga-outer-input-test PRIVATE src)
-    if(MSVC)
-        target_compile_options(eon-deuteros-amiga-outer-input-test PRIVATE /UNDEBUG)
-    else()
-        target_compile_options(eon-deuteros-amiga-outer-input-test PRIVATE -UNDEBUG)
-    endif()
-    add_test(NAME deuteros-amiga-outer-input COMMAND eon-deuteros-amiga-outer-input-test)
-    add_executable(eon-deuteros-amiga-trackdisk-compatibility-test
-        tests/deuteros_amiga_trackdisk_compatibility_test.cpp)
-    target_include_directories(eon-deuteros-amiga-trackdisk-compatibility-test PRIVATE src)
-    if(MSVC)
-        target_compile_options(eon-deuteros-amiga-trackdisk-compatibility-test PRIVATE /UNDEBUG)
-    else()
-        target_compile_options(eon-deuteros-amiga-trackdisk-compatibility-test PRIVATE -UNDEBUG)
-    endif()
-    add_test(NAME deuteros-amiga-trackdisk-compatibility
-        COMMAND eon-deuteros-amiga-trackdisk-compatibility-test)
     add_executable(eon-deuteros-amiga-interrupt-worker-test
         tests/deuteros_amiga_interrupt_worker_test.cpp
-        src/data/deuteros_amiga_interrupt_worker.cpp
-        src/data/sha256.cpp)
+        src/data/deuteros_amiga_interrupt_worker.cpp)
     target_include_directories(eon-deuteros-amiga-interrupt-worker-test PRIVATE src)
     if(MSVC)
         target_compile_options(eon-deuteros-amiga-interrupt-worker-test PRIVATE /UNDEBUG)
@@ -833,16 +696,12 @@ if(BUILD_TESTING)
     add_executable(eon-atari-st-prg-load-session-test
         tests/atari_st_prg_load_session_test.cpp
         src/engine/atari_st_prg_load_session.cpp
-        src/engine/millennium_atari_stx_exec_session.cpp
         src/engine/millennium_atari_bootstrap_session.cpp
-        src/engine/millennium_atari_title_frame.cpp
         src/engine/millennium_atari_read_only_gemdos_session.cpp
-        src/engine/millennium_atari_save_load_session.cpp
         src/engine/millennium_atari_config_consumer_session.cpp
         src/engine/millennium_atari_post_config_entry_session.cpp
         src/engine/native_runtime_memory.cpp
         src/data/atari_st_prg.cpp
-        src/data/atari_st_stx.cpp
         src/data/m68k_executor.cpp
         src/data/fat12.cpp
         src/data/sha256.cpp)
@@ -853,39 +712,6 @@ if(BUILD_TESTING)
         target_compile_options(eon-atari-st-prg-load-session-test PRIVATE -UNDEBUG)
     endif()
     add_test(NAME atari-st-prg-native-load COMMAND eon-atari-st-prg-load-session-test)
-    add_executable(eon-atari-st-stx-pair-source-test
-        tests/atari_st_stx_pair_source_test.cpp
-        src/data/atari_st_stx.cpp
-        src/data/sha256.cpp)
-    target_include_directories(eon-atari-st-stx-pair-source-test PRIVATE src)
-    if(MSVC)
-        target_compile_options(eon-atari-st-stx-pair-source-test PRIVATE /UNDEBUG)
-    else()
-        target_compile_options(eon-atari-st-stx-pair-source-test PRIVATE -UNDEBUG)
-    endif()
-    add_test(NAME atari-st-stx-paired-file-source COMMAND eon-atari-st-stx-pair-source-test)
-    add_executable(eon-millennium-atari-save-load-session-test
-        tests/millennium_atari_save_load_session_test.cpp
-        src/engine/millennium_atari_save_load_session.cpp
-        src/engine/native_runtime_memory.cpp
-        src/engine/bounded_memory_transfer.cpp
-        src/data/fat12.cpp
-        src/data/sha256.cpp)
-    target_include_directories(eon-millennium-atari-save-load-session-test PRIVATE src)
-    if(MSVC)
-        target_compile_options(eon-millennium-atari-save-load-session-test PRIVATE /UNDEBUG)
-    else()
-        target_compile_options(eon-millennium-atari-save-load-session-test PRIVATE -UNDEBUG)
-    endif()
-    if(EON_REAL_DATA_DIR)
-        add_test(NAME millennium-atari-save-load-real-media
-            COMMAND "${Python3_EXECUTABLE}"
-                "${CMAKE_CURRENT_SOURCE_DIR}/tests/millennium_atari_save_load_real_media_test.py"
-                "$<TARGET_FILE:eon-millennium-atari-save-load-session-test>"
-                "${EON_REAL_DATA_DIR}")
-        set_tests_properties(millennium-atari-save-load-real-media PROPERTIES
-            ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}")
-    endif()
     add_executable(eon-m68k-executor-test
         tests/m68k_executor_test.cpp
         src/data/m68k_executor.cpp)
@@ -941,10 +767,8 @@ if(BUILD_TESTING)
             src/engine/millennium_dos_title_exec_entry_session.cpp
             src/engine/millennium_dos_title_child_compatibility_service.cpp
             src/engine/millennium_dos_title_initialization_session.cpp
-            src/engine/millennium_dos_video_function_13_session.cpp
             src/engine/millennium_dos_paragraph_arena.cpp
             src/engine/native_runtime_memory.cpp
-            src/data/millennium_dos_video_driver.cpp
             src/data/sha256.cpp)
         target_include_directories(eon-millennium-dos-title-exec-entry-test PRIVATE src)
         if(MSVC)
@@ -962,30 +786,6 @@ if(BUILD_TESTING)
                 "$<TARGET_FILE:project-eon>"
                 "${EON_DIRECT_DATA_DIR}")
         set_tests_properties(cli-real-direct-directory-start PROPERTIES
-            ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
-            TIMEOUT 180)
-        add_test(NAME cli-deuteros-native-continuation-real-media
-            COMMAND "${Python3_EXECUTABLE}"
-                "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_deuteros_continuation_test.py"
-                "$<TARGET_FILE:project-eon>"
-                "${EON_DIRECT_DATA_DIR}")
-        set_tests_properties(cli-deuteros-native-continuation-real-media PROPERTIES
-            ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
-            TIMEOUT 180)
-        add_test(NAME cli-millennium-dos-process-prefix-real-media
-            COMMAND "${Python3_EXECUTABLE}"
-                "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_millennium_process_prefix_test.py"
-                "$<TARGET_FILE:project-eon>"
-                "${EON_DIRECT_DATA_DIR}")
-        set_tests_properties(cli-millennium-dos-process-prefix-real-media PROPERTIES
-            ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
-            TIMEOUT 180)
-        add_test(NAME cli-millennium-atari-native-tos-services-real-media
-            COMMAND "${Python3_EXECUTABLE}"
-                "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_millennium_atari_native_service_test.py"
-                "$<TARGET_FILE:project-eon>"
-                "${EON_DIRECT_DATA_DIR}")
-        set_tests_properties(cli-millennium-atari-native-tos-services-real-media PROPERTIES
             ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
             TIMEOUT 180)
     endif()

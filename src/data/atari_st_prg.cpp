@@ -1,5 +1,6 @@
 #include "data/atari_st_prg.hpp"
 
+#include "data/m68k_executor.hpp"
 #include "data/sha256.hpp"
 
 #include <algorithm>
@@ -348,8 +349,8 @@ MillenniumAtariBootstrapExecution execute_millennium_atari_bootstrap_prefix(
     std::span<const std::uint8_t> bytes, const AtariStPrg& prg,
     const MillenniumAtariBootstrap& bootstrap, const MillenniumAtariBssEntry& entry) {
     // The entry uses MOVE.L (A0)+,(A2)+ followed by a BGE backedge. Its
-    // source/last-longword relation has already been validated; materialize
-    // that exact bounded copy directly in native memory.
+    // source/last-longword relation has already been validated, but execute
+    // each original longword instead of treating this as opaque host copying.
     constexpr std::size_t header_bytes = 28;
     if (bootstrap.entry_offset != 0 || bootstrap.branch_target_offset != 0x24
         || bootstrap.stage_bytes == 0 || bootstrap.stage_bytes % 4U != 0U
@@ -391,43 +392,26 @@ MillenniumAtariBootstrapExecution execute_millennium_atari_bootstrap_prefix(
     result.second_copy_words = entry.copied_words;
     result.target.source_address = entry.copy_source_address;
     result.target.target_address = entry.copy_destination_address;
-    constexpr ExecutableByteAnchor<28> bss_copy_profile{
-        "bae3f526a7a7e42ca59d840ed80606f0f2b5a9f420fe221ddd30f04d9388e30b"};
-    constexpr std::size_t bss_code_offset = 0;
-    if (entry.entry_offset != 0x1d636U || entry.copy_source_address != 0x1d652U
-        || entry.copy_destination_address != 0x77000U || entry.initial_d0 != 0x0100U
-        || entry.copied_words != 0x0101U || entry.jump_address != 0x77000U
-        || bss_code_offset > result.copied_stage_bytes.size()
-        || bss_copy_profile.size() > result.copied_stage_bytes.size() - bss_code_offset
-        || !bss_copy_profile.matches(std::span<const std::uint8_t>(
-            result.copied_stage_bytes).subspan(bss_code_offset, bss_copy_profile.size()))) {
-        throw std::runtime_error("MILLENIUM.TOS BSS copy instruction profile changed");
-    }
-    result.target.bytes.resize(bss_source.bytes.size());
+    result.target.bytes.assign(bss_source.bytes.size(), 0);
     const auto source_sha256_before = to_hex(sha256(bss_source.bytes));
-    for (std::size_t word = 0; word < entry.copied_words; ++word) {
-        const auto offset = word * 2U;
-        result.target.bytes[offset] = bss_source.bytes[offset];
-        result.target.bytes[offset + 1U] = bss_source.bytes[offset + 1U];
-    }
-    const auto final_source = static_cast<std::uint64_t>(bss_source.source_address)
-        + bss_source.bytes.size();
-    const auto final_target = static_cast<std::uint64_t>(result.target.target_address)
-        + result.target.bytes.size();
-    if (final_source > std::numeric_limits<std::uint32_t>::max()
-        || final_target > std::numeric_limits<std::uint32_t>::max()
-        || entry.initial_d0 != 0x0100U
-        || (static_cast<std::uint16_t>(entry.initial_d0 - entry.copied_words)) != 0xffffU
+    std::array<m68k::MemoryRange, 2> memory{{
+        {bss_source.source_address, bss_source.bytes, false},
+        {result.target.target_address, result.target.bytes, true},
+    }};
+    m68k::MachineState initial;
+    initial.pc = result.bss_entry_address;
+    const auto execution = m68k::execute(result.copied_stage_bytes,
+        result.bss_entry_address, initial, memory, 600, result.target.target_address);
+    if (execution.reason != m68k::StopReason::requested_address
+        || execution.instructions_executed != 518U
+        || execution.state.address[0] != bss_source.source_address + bss_source.bytes.size()
+        || execution.state.address[1] != result.target.target_address + result.target.bytes.size()
+        || (execution.state.data[0] & 0xffffU) != 0xffffU
         || to_hex(sha256(bss_source.bytes)) != source_sha256_before) {
-        throw std::runtime_error("MILLENIUM.TOS bounded BSS copy exceeds its admitted span");
+        throw std::runtime_error("MILLENIUM.TOS bounded 68000 BSS copy did not reach its admitted JMP boundary");
     }
-    result.second_copy_instruction_count = 3U + entry.copied_words * 2U + 1U;
-    result.second_copy_stop_address = entry.jump_address;
-    if (result.second_copy_instruction_count != 518U
-        || final_source != static_cast<std::uint64_t>(bss_source.source_address) + 0x202U
-        || final_target != static_cast<std::uint64_t>(result.target.target_address) + 0x202U) {
-        throw std::runtime_error("MILLENIUM.TOS BSS copy did not reach its exact JMP boundary");
-    }
+    result.second_copy_instruction_count = static_cast<std::uint32_t>(execution.instructions_executed);
+    result.second_copy_stop_address = execution.state.pc;
     result.target.first_opcode = read_be16(result.target.bytes, 0);
     result.target.first_immediate_word = read_be16(result.target.bytes, 2);
     result.target.first_immediate_longword = read_be32(result.target.bytes, 6);

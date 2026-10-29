@@ -65,11 +65,6 @@ public:
     // Eon's native address map deliberately owns this address. It is not a
     // claim about the address chosen by an original TOS installation.
     static constexpr std::uint32_t native_load_base = 0x00010000U;
-    // Reserved in Eon's 24-bit guest address map after the hash-verified
-    // 130392-byte TEXT+DATA+BSS image, rounded up to the ST's 256-byte
-    // screen-base alignment. This is an Eon allocation, not a TOS address.
-    static constexpr std::uint32_t native_screen_base = 0x00030000U;
-    static constexpr std::size_t low_resolution_screen_bytes = 320U * 200U / 2U;
 
     explicit MillenniumAtariPrgLoadSession(std::span<const std::uint8_t> program);
 

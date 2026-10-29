@@ -143,30 +143,6 @@ NativeRuntimeMemoryApplyResult NativeRuntimeMemory::apply(const NativeRuntimeEff
     return {true,{}};
 }
 
-NativeRuntimeMemoryApplyResult NativeRuntimeMemory::forget(
-    std::string batch_id, const std::span<const NativeRuntimeLocation> locations) {
-    if (batch_id.empty() || locations.empty())
-        return {false,"Runtime memory invalidation requires a named nonempty batch"};
-    if (applied_batch_ids_.contains(batch_id))
-        return {false,"Runtime memory effect batch was already applied"};
-    std::set<NativeRuntimeLocation> unique;
-    for (const auto& location : locations) {
-        const auto limit = location.address_space == NativeRuntimeAddressSpace::linear
-            ? linear_limit_exclusive_ : segmented_offset_limit_exclusive_;
-        if ((location.address_space != NativeRuntimeAddressSpace::linear
-                && location.address_space != NativeRuntimeAddressSpace::dos_segmented)
-            || (location.address_space == NativeRuntimeAddressSpace::dos_segmented)
-                != location.segment.has_value()
-            || location.offset >= limit || !unique.insert(location).second) {
-            return {false,"Runtime memory invalidation location is invalid, duplicated, or out of bounds"};
-        }
-    }
-    const auto inserted = applied_batch_ids_.insert(std::move(batch_id)).second;
-    if (!inserted) return {false,"Runtime memory effect batch was already applied"};
-    for (const auto& location : unique) bytes_.erase(location);
-    return {true,{}};
-}
-
 std::optional<std::uint8_t> NativeRuntimeMemory::read_byte(
     const NativeRuntimeLocation& location) const {
     const auto found=bytes_.find(location);

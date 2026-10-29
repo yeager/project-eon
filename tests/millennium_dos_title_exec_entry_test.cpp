@@ -77,14 +77,9 @@ eon::MillenniumDosTitleInitializationSession make_mode_four_descriptor_fixture(
     session.execute_post_relocation(step(),title_library);
     session.execute_post_library_setup(step(),0x1bef,0x1aac);
     session.observe_dos_vector_result({step(),0x10f4,0x10f6,0x3500,0x1234,0xabcd,0x0246});
-    assert(session.checkpoint().state==eon::MillenniumDosTitleInitializationState::dos_set_vector_zero_result_boundary
-        &&session.checkpoint().vector_installs.empty());
-    session.execute_dos_set_vector_compatibility(step());
+    session.observe_dos_vector_result({step(),0x1106,0x1108,0x9999,0x2222,0x3333,0x0247});
     session.observe_dos_vector_result({step(),0x110b,0x110d,0x3504,0x5678,0xcdef,0x0202});
-    assert(session.checkpoint().state==eon::MillenniumDosTitleInitializationState::dos_set_vector_four_result_boundary
-        &&session.checkpoint().vector_installs.size()==1
-        &&session.checkpoint().vector_installs[0].vector==0);
-    session.execute_dos_set_vector_compatibility(step());
+    session.observe_dos_vector_result({step(),0x111d,0x111f,0x7777,0x9a9b,0x8888,0x0246});
     session.observe_setup_bios_result({step(),0x1ab9,0x1abb,0xdead,0x7654,0x0247});
     session.observe_setup_bios_result({step(),0x1ac1,0x1ac3,0xbeef,0x1357,0x0203});
     session.execute_next_setup(step(),0x1bf2,0x11a7);
@@ -112,7 +107,7 @@ eon::MillenniumDosTitleInitializationSession make_mode_four_descriptor_fixture(
     session.observe_far_word({step(),0x13d0,0x3000,0x001c,0x00c8});
     session.observe_far_word({step(),0x13e2,0x3000,0x001a,0});
     session.observe_far_byte({step(),0x13e9,0x3000,0x0007,0x23});
-    session.observe_far_byte({step(),0x13f2,0x3000,0x000a,2});
+    session.observe_far_byte({step(),0x13f2,0x3000,0x000a,0});
     session.observe_private_interrupt_result({step(),0x0127,0x0129,0x1357,0x0246});
     const std::vector<std::uint8_t> function_001a_record{
         0x10,0x20,0x30,0x40,0x50,0x60,0x70,0x80,0x68,0x24};
@@ -193,7 +188,7 @@ int main(int argc, char** argv) {
     const auto allocation=arena.allocate(
         eon::MillenniumDosTitleChildCompatibilityService::required_paragraphs());
     assert(allocation.allocation&&allocation.allocation->segment==0xe100
-        &&allocation.allocation->paragraph_count==0x0da0);
+        &&allocation.allocation->paragraph_count==455);
     eon::MillenniumDosTitleChildCompatibilityService child(
         titles,*allocation.allocation);
     const auto child_checkpoint=child.checkpoint();
@@ -744,80 +739,38 @@ int main(int argc, char** argv) {
         &&other_success.checkpoint().memory_effects[18924].value==0xabcd
         &&other_success.checkpoint().dos_boundary.interrupt_address==0x1106
         &&other_success.checkpoint().dos_boundary.service==0x25
-        &&other_success.checkpoint().dos_boundary.ax_known_value==0x2500
-        &&other_success.checkpoint().vector_installs.empty());
-    other_success.execute_dos_set_vector_compatibility(51);
-    assert(other_success.checkpoint().state
-        ==eon::MillenniumDosTitleInitializationState::dos_get_vector_four_result_boundary
-        &&other_success.checkpoint().dos_boundary.interrupt_address==0x110b
-        &&other_success.checkpoint().vector_installs.size()==1
-        &&other_success.checkpoint().vector_installs.back().vector==0
-        &&other_success.checkpoint().vector_installs.back().offset==0x1124);
-    other_success.observe_dos_vector_result({52,0x110b,0x110d,0x3504,0x5678,0xcdef,0x0202});
-    assert(other_success.checkpoint().state
-        ==eon::MillenniumDosTitleInitializationState::dos_set_vector_four_result_boundary);
-    other_success.execute_dos_set_vector_compatibility(53);
-    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::bios_int15_first_result_boundary
+        &&other_success.checkpoint().dos_boundary.dx==0x1124);
+    const auto vector_write_effect_count=other_success.checkpoint().memory_effects.size();
+    other_success.observe_dos_vector_result({51,0x1106,0x1108,0x9999,0x2222,0x3333,0x0247});
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::dos_get_vector_four_result_boundary
         &&other_success.checkpoint().dos_vector_results.size()==2
-        &&other_success.checkpoint().memory_effects[18927].offset==0x10e8
-        &&other_success.checkpoint().memory_effects[18927].value==0x5678
-        &&other_success.checkpoint().memory_effects[18928].offset==0x10ea
-        &&other_success.checkpoint().memory_effects[18928].value==0xcdef
-        &&other_success.checkpoint().vector_installs.size()==2
-        &&other_success.checkpoint().vector_installs.back().vector==4
-        &&other_success.checkpoint().vector_installs.back().offset==0x1124
+        &&other_success.checkpoint().dos_vector_results.back().flags==0x0247
+        &&other_success.checkpoint().memory_effects.size()==vector_write_effect_count
+        &&other_success.checkpoint().dos_boundary.interrupt_address==0x110b
+        &&other_success.checkpoint().dos_boundary.ax_known_value==0x3504);
+    other_success.observe_dos_vector_result({52,0x110b,0x110d,0x3504,0x5678,0xcdef,0x0202});
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::dos_set_vector_four_result_boundary
+        &&other_success.checkpoint().dos_vector_results.size()==3
+        &&other_success.checkpoint().memory_effects[18925].offset==0x10e8
+        &&other_success.checkpoint().memory_effects[18925].value==0x5678
+        &&other_success.checkpoint().memory_effects[18926].offset==0x10ea
+        &&other_success.checkpoint().memory_effects[18926].value==0xcdef
+        &&other_success.checkpoint().dos_boundary.interrupt_address==0x111d
+        &&other_success.checkpoint().dos_boundary.ax_known_value==0x2504
+        &&other_success.checkpoint().dos_boundary.dx==0x1124);
+    const auto saved_vector_effect_count=other_success.checkpoint().memory_effects.size();
+    other_success.observe_dos_vector_result({53,0x111d,0x111f,0x7777,0x9a9b,0x8888,0x0246});
+    assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::bios_int15_first_result_boundary
+        &&other_success.checkpoint().dos_vector_results.size()==4
+        &&other_success.checkpoint().dos_vector_results.back().ax==0x7777
+        &&other_success.checkpoint().dos_vector_results.back().flags==0x0246
+        &&other_success.checkpoint().memory_effects.size()==saved_vector_effect_count
         &&other_success.checkpoint().setup_bios_boundary.interrupt_address==0x1ab9
         &&other_success.checkpoint().setup_bios_boundary.interrupt==0x15
         &&other_success.checkpoint().setup_bios_boundary.ax_known_mask==0xffff
         &&other_success.checkpoint().setup_bios_boundary.ax_known_value==0x011b
-        &&other_success.checkpoint().setup_bios_boundary.bx_known_mask==0x00ff
-        &&other_success.checkpoint().setup_bios_boundary.bx_known_value==0x0046);
-    auto compatibility_noop = other_success;
-    compatibility_noop.execute_setup_bios_compatibility_noop(54);
-    assert(compatibility_noop.checkpoint().setup_bios_results.empty()
-        && compatibility_noop.checkpoint().setup_bios_returns.size() == 1
-        && compatibility_noop.checkpoint().setup_bios_returns[0].provenance
-            == eon::MillenniumDosTitleSetupBiosReturnProvenance::
-                eon_ah01_cassette_off_compatibility_noop
-        && compatibility_noop.checkpoint().setup_bios_boundary.bx_known_mask == 0x00ff);
-    compatibility_noop.execute_setup_bios_compatibility_noop(55);
-    assert(compatibility_noop.checkpoint().state
-            == eon::MillenniumDosTitleInitializationState::post_library_next_setup_call_boundary
-        && compatibility_noop.checkpoint().setup_bios_results.empty()
-        && compatibility_noop.checkpoint().setup_bios_returns.size() == 2
-        && compatibility_noop.checkpoint().setup_bios_returns[1].provenance
-            == eon::MillenniumDosTitleSetupBiosReturnProvenance::
-                eon_ah01_cassette_off_compatibility_noop);
-    auto return_only = other_success;
-    return_only.observe_setup_bios_return({54,0x1ab9,0x1abb});
-    assert(return_only.checkpoint().state
-            == eon::MillenniumDosTitleInitializationState::bios_int15_second_result_boundary
-        && return_only.checkpoint().setup_bios_results.empty()
-        && return_only.checkpoint().setup_bios_returns.size() == 1
-        && return_only.checkpoint().setup_bios_boundary.interrupt_address == 0x1ac1
-        && return_only.checkpoint().setup_bios_boundary.ax_known_mask == 0xffff
-        && return_only.checkpoint().setup_bios_boundary.ax_known_value == 0x011c
-        && return_only.checkpoint().setup_bios_boundary.bx_known_mask == 0x00ff
-        && return_only.checkpoint().setup_bios_boundary.bx_known_value == 0x0046);
-    auto rejected_return = return_only;
-    bool detached_bios_return_rejected = false;
-    try { rejected_return.observe_setup_bios_return({55,0x1ac1,0x1ac4}); }
-    catch (const std::runtime_error&) { detached_bios_return_rejected = true; }
-    assert(detached_bios_return_rejected
-        && rejected_return.checkpoint().last_sequence == return_only.checkpoint().last_sequence
-        && rejected_return.checkpoint().setup_bios_returns.size() == 1);
-    return_only.observe_setup_bios_return({55,0x1ac1,0x1ac3});
-    assert(return_only.checkpoint().state
-            == eon::MillenniumDosTitleInitializationState::post_library_next_setup_call_boundary
-        && return_only.checkpoint().setup_bios_results.empty()
-        && return_only.checkpoint().setup_bios_returns.size() == 2
-        && return_only.checkpoint().continuation_address == 0x1bf2);
-    return_only.execute_next_setup(56,0x1bf2,0x11a7);
-    return_only.execute_followup_setup(57,0x1bf5,0x114e);
-    assert(return_only.checkpoint().state
-            == eon::MillenniumDosTitleInitializationState::timer_vector_far_read_boundary
-        && return_only.checkpoint().continuation_address == 0x115d
-        && return_only.checkpoint().far_read_boundary.source_offset == 0x0070);
+        &&other_success.checkpoint().setup_bios_boundary.bx_known_mask==0xffff
+        &&other_success.checkpoint().setup_bios_boundary.bx_known_value==0x9a46);
     other_success.observe_setup_bios_result({54,0x1ab9,0x1abb,0xdead,0x7654,0x0247});
     assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::bios_int15_second_result_boundary
         &&other_success.checkpoint().setup_bios_results.size()==1
@@ -837,10 +790,10 @@ int main(int argc, char** argv) {
     other_success.execute_next_setup(56,0x1bf2,0x11a7);
     assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_library_followup_call_boundary
         &&other_success.checkpoint().continuation_address==0x1bf5
-        &&other_success.checkpoint().memory_effects[18931].offset==0x118d
-        &&other_success.checkpoint().memory_effects[18932].offset==0x1181
-        &&other_success.checkpoint().memory_effects[18933].value==0x0444
-        &&other_success.checkpoint().memory_effects[18934].value==0x1178);
+        &&other_success.checkpoint().memory_effects[18927].offset==0x118d
+        &&other_success.checkpoint().memory_effects[18928].offset==0x1181
+        &&other_success.checkpoint().memory_effects[18929].value==0x0444
+        &&other_success.checkpoint().memory_effects[18930].value==0x1178);
     other_success.execute_followup_setup(57,0x1bf5,0x114e);
     assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::timer_vector_far_read_boundary
         &&other_success.checkpoint().continuation_address==0x115d
@@ -854,15 +807,15 @@ int main(int argc, char** argv) {
     assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_vector_hook_call_boundary
         &&other_success.checkpoint().continuation_address==0x1bf8
         &&other_success.checkpoint().far_word_observations.size()==1
-        &&other_success.checkpoint().memory_effects[18935].value==0xaaaa
-        &&other_success.checkpoint().memory_effects[18936].value==0xbbbb
-        &&other_success.checkpoint().memory_effects[18937].explicit_segment
-        &&other_success.checkpoint().memory_effects[18937].segment==0
-        &&other_success.checkpoint().memory_effects[18937].offset==0x0070
-        &&other_success.checkpoint().memory_effects[18937].value==0x11d8
-        &&other_success.checkpoint().memory_effects[18938].value==0x2468
-        &&other_success.checkpoint().memory_effects[18939].offset==0x112c
-        &&other_success.checkpoint().memory_effects[18939].value==1);
+        &&other_success.checkpoint().memory_effects[18931].value==0xaaaa
+        &&other_success.checkpoint().memory_effects[18932].value==0xbbbb
+        &&other_success.checkpoint().memory_effects[18933].explicit_segment
+        &&other_success.checkpoint().memory_effects[18933].segment==0
+        &&other_success.checkpoint().memory_effects[18933].offset==0x0070
+        &&other_success.checkpoint().memory_effects[18933].value==0x11d8
+        &&other_success.checkpoint().memory_effects[18934].value==0x2468
+        &&other_success.checkpoint().memory_effects[18935].offset==0x112c
+        &&other_success.checkpoint().memory_effects[18935].value==1);
     other_success.execute_video_hook_setup(59,0x1bf8,0x12a0);
     assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::video_vector_far_read_boundary
         &&other_success.checkpoint().continuation_address==0x12ad
@@ -875,17 +828,17 @@ int main(int argc, char** argv) {
     assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_video_hook_mode_call_boundary
         &&other_success.checkpoint().continuation_address==0x1c02
         &&other_success.checkpoint().far_word_observations.size()==2
-        &&other_success.checkpoint().memory_effects[18940].offset==0x1266
-        &&other_success.checkpoint().memory_effects[18940].value==0xcccc
-        &&other_success.checkpoint().memory_effects[18941].offset==0x1268
-        &&other_success.checkpoint().memory_effects[18941].value==0xdddd
-        &&other_success.checkpoint().memory_effects[18942].explicit_segment
-        &&other_success.checkpoint().memory_effects[18942].segment==0
-        &&other_success.checkpoint().memory_effects[18942].offset==0x0024
-        &&other_success.checkpoint().memory_effects[18942].value==0x126a
-        &&other_success.checkpoint().memory_effects[18943].explicit_segment
-        &&other_success.checkpoint().memory_effects[18943].offset==0x0026
-        &&other_success.checkpoint().memory_effects[18943].value==0x2468);
+        &&other_success.checkpoint().memory_effects[18936].offset==0x1266
+        &&other_success.checkpoint().memory_effects[18936].value==0xcccc
+        &&other_success.checkpoint().memory_effects[18937].offset==0x1268
+        &&other_success.checkpoint().memory_effects[18937].value==0xdddd
+        &&other_success.checkpoint().memory_effects[18938].explicit_segment
+        &&other_success.checkpoint().memory_effects[18938].segment==0
+        &&other_success.checkpoint().memory_effects[18938].offset==0x0024
+        &&other_success.checkpoint().memory_effects[18938].value==0x126a
+        &&other_success.checkpoint().memory_effects[18939].explicit_segment
+        &&other_success.checkpoint().memory_effects[18939].offset==0x0026
+        &&other_success.checkpoint().memory_effects[18939].value==0x2468);
     other_success.execute_post_video_mode_call(61,0x1c02,0x1ada);
     assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::selected_callee_private_interrupt_result_boundary
         &&other_success.checkpoint().continuation_address==0x0127
@@ -899,91 +852,41 @@ int main(int argc, char** argv) {
     assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_video_setup_call_boundary
         &&other_success.checkpoint().last_sequence==79
         &&other_success.checkpoint().continuation_address==0x1c0e
-        &&other_success.checkpoint().memory_effects.size()==18945
+        &&other_success.checkpoint().memory_effects.size()==18941
         &&other_success.checkpoint().memory_effects.back().offset==0x010a
         &&other_success.checkpoint().memory_effects.back().value==0xb800);
     other_success.execute_post_video_setup(80,0x1c0e,0x135e);
     assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_video_graphics_call_boundary
         &&other_success.checkpoint().continuation_address==0x1c11
-        &&other_success.checkpoint().memory_effects.size()==18948
-        &&other_success.checkpoint().memory_effects[18945].offset==0x1341
-        &&other_success.checkpoint().memory_effects[18945].value==0
-        &&other_success.checkpoint().memory_effects[18946].offset==0x1343
-        &&other_success.checkpoint().memory_effects[18946].value==0x5000
-        &&other_success.checkpoint().memory_effects[18947].offset==0x134b
-        &&other_success.checkpoint().memory_effects[18947].value==0x2468);
+        &&other_success.checkpoint().memory_effects.size()==18944
+        &&other_success.checkpoint().memory_effects[18941].offset==0x1341
+        &&other_success.checkpoint().memory_effects[18941].value==0
+        &&other_success.checkpoint().memory_effects[18942].offset==0x1343
+        &&other_success.checkpoint().memory_effects[18942].value==0x5000
+        &&other_success.checkpoint().memory_effects[18943].offset==0x134b
+        &&other_success.checkpoint().memory_effects[18943].value==0x2468);
     bool detached_post_video_setup_rejected=false;
     try {
         other_success.execute_post_video_setup(81,0x1c0e,0x135f);
     } catch(const std::runtime_error&) { detached_post_video_setup_rejected=true; }
     assert(detached_post_video_setup_rejected
-        &&other_success.checkpoint().memory_effects.size()==18948);
+        &&other_success.checkpoint().memory_effects.size()==18944);
     auto detached_graphics=other_success;
     bool detached_graphics_rejected=false;
     try {
         detached_graphics.execute_post_video_graphics_call(81,0x1c11,0x0ff4);
     } catch(const std::runtime_error&) { detached_graphics_rejected=true; }
     assert(detached_graphics_rejected
-        &&detached_graphics.checkpoint().memory_effects.size()==18948);
+        &&detached_graphics.checkpoint().memory_effects.size()==18944);
     other_success.execute_post_video_graphics_call(81,0x1c11,0x0ff3);
     assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_video_private_interrupt_result_boundary
         &&other_success.checkpoint().continuation_address==0x0127
         &&other_success.checkpoint().boundary.call_address==0x1000
         &&other_success.checkpoint().boundary.function==0x0019
         &&other_success.checkpoint().boundary.record_offset==0x0fe9
-        &&other_success.checkpoint().memory_effects.size()==18949
+        &&other_success.checkpoint().memory_effects.size()==18945
         &&other_success.checkpoint().memory_effects.back().offset==0x0ff1
         &&other_success.checkpoint().memory_effects.back().value==0x2468);
-    auto ega_native_return=other_success;
-    bool detached_ega_return_rejected=false;
-    try {
-        ega_native_return.execute_post_video_ega_function_nineteen_return(
-            82,0x0127,0x0128,0x0234,0x0032,0x0032);
-    } catch(const std::runtime_error&) { detached_ega_return_rejected=true; }
-    assert(detached_ega_return_rejected
-        &&ega_native_return.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_video_private_interrupt_result_boundary
-        &&ega_native_return.checkpoint().last_sequence==81);
-    ega_native_return.execute_post_video_ega_function_nineteen_return(
-        82,0x0127,0x0129,0x0234,0x0032,0x0032);
-    assert(ega_native_return.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_video_followup_call_boundary
-        &&ega_native_return.checkpoint().post_video_ega_function_nineteen_return_native
-        &&ega_native_return.checkpoint().post_video_observed_ax==0x0032
-        &&ega_native_return.checkpoint().post_video_observed_flags==0);
-    ega_native_return.execute_post_video_followup(83,0x1c17,0x1725);
-    assert(ega_native_return.checkpoint().state==eon::MillenniumDosTitleInitializationState::graphics_descriptor_far_read_boundary
-        &&ega_native_return.checkpoint().continuation_address==0x13aa);
-    auto mcga_native_return=other_success;
-    auto mcga_detached_return=other_success;
-    bool detached_mcga_return_rejected=false;
-    try {
-        mcga_detached_return.execute_post_video_mcga_function_nineteen_return(
-            82,0,eon::MillenniumDosMcgaFunctionNineteenReturn{});
-    } catch(const std::runtime_error&) { detached_mcga_return_rejected=true; }
-    assert(detached_mcga_return_rejected
-        &&mcga_detached_return.checkpoint().state
-            ==eon::MillenniumDosTitleInitializationState::post_video_private_interrupt_result_boundary
-        &&mcga_detached_return.checkpoint().last_sequence==81);
-    mcga_native_return.execute_post_video_mcga_function_nineteen_return(
-        82,0x5000,eon::MillenniumDosMcgaFunctionNineteenReturn{});
-    const auto mcga_native_checkpoint=mcga_native_return.checkpoint();
-    assert(mcga_native_checkpoint.state
-            ==eon::MillenniumDosTitleInitializationState::post_video_followup_call_boundary
-        &&mcga_native_checkpoint.post_video_mcga_function_nineteen_return_native
-        &&mcga_native_checkpoint.post_video_observed_ax==0x0100
-        &&!mcga_native_checkpoint.post_video_observed_flags_known
-        &&mcga_native_checkpoint.dac_writes.size()==255
-        &&mcga_native_checkpoint.dac_writes.front()
-            ==(eon::MillenniumDosTitleDacWrite{82,0,0,0,0})
-        &&mcga_native_checkpoint.dac_writes.back()
-            ==(eon::MillenniumDosTitleDacWrite{82,254,0,0,0})
-        &&mcga_native_checkpoint.memory_effects.back().explicit_segment
-        &&mcga_native_checkpoint.memory_effects.back().segment==0x5000
-        &&mcga_native_checkpoint.memory_effects.back().offset==0x01e4
-        &&mcga_native_checkpoint.memory_effects.back().value==0);
-    mcga_native_return.execute_post_video_followup(83,0x1c17,0x1725);
-    assert(mcga_native_return.checkpoint().state
-            ==eon::MillenniumDosTitleInitializationState::graphics_descriptor_far_read_boundary
-        &&mcga_native_return.checkpoint().continuation_address==0x13aa);
     other_success.observe_private_interrupt_result({82,0x0127,0x0129,0xabcd,0x0246});
     assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::post_video_followup_call_boundary
         &&other_success.checkpoint().continuation_address==0x1c17
@@ -1005,18 +908,18 @@ int main(int argc, char** argv) {
     } catch(const std::runtime_error&) { contradictory_descriptor_rejected=true; }
     assert(contradictory_descriptor_rejected
         &&contradictory_descriptor.checkpoint().far_word_observations.size()==2
-        &&contradictory_descriptor.checkpoint().memory_effects.size()==18949);
+        &&contradictory_descriptor.checkpoint().memory_effects.size()==18945);
     other_success.observe_far_words({84,0x13aa,0x3481,0x0003,6,0});
     assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::graphics_record_word_read_boundary
         &&other_success.checkpoint().continuation_address==0x13cd
         &&other_success.checkpoint().far_read_boundary.source_segment==0x3000
         &&other_success.checkpoint().far_read_boundary.source_offset==0x001e
         &&other_success.checkpoint().far_read_boundary.word_count==1
-        &&other_success.checkpoint().memory_effects.size()==18951
-        &&other_success.checkpoint().memory_effects[18949].offset==0x138c
-        &&other_success.checkpoint().memory_effects[18949].value==6
-        &&other_success.checkpoint().memory_effects[18950].offset==0x138e
-        &&other_success.checkpoint().memory_effects[18950].value==0x3000);
+        &&other_success.checkpoint().memory_effects.size()==18947
+        &&other_success.checkpoint().memory_effects[18945].offset==0x138c
+        &&other_success.checkpoint().memory_effects[18945].value==6
+        &&other_success.checkpoint().memory_effects[18946].offset==0x138e
+        &&other_success.checkpoint().memory_effects[18946].value==0x3000);
     auto contradictory_record=other_success;
     bool contradictory_record_rejected=false;
     try { contradictory_record.observe_far_word({85,0x13cd,0x3000,0x001e,0x0141}); }
@@ -1042,11 +945,11 @@ int main(int argc, char** argv) {
         &&other_success.checkpoint().continuation_address==0x13e2
         &&other_success.checkpoint().far_single_word_observations.size()==2
         &&other_success.checkpoint().far_read_boundary.source_offset==0x001a
-        &&other_success.checkpoint().memory_effects.size()==18954
-        &&other_success.checkpoint().memory_effects[18951].offset==0x1357
-        &&other_success.checkpoint().memory_effects[18951].value==0x00c8
-        &&other_success.checkpoint().memory_effects[18952].value==0x0140
-        &&other_success.checkpoint().memory_effects[18953].value==0xfa00);
+        &&other_success.checkpoint().memory_effects.size()==18950
+        &&other_success.checkpoint().memory_effects[18947].offset==0x1357
+        &&other_success.checkpoint().memory_effects[18947].value==0x00c8
+        &&other_success.checkpoint().memory_effects[18948].value==0x0140
+        &&other_success.checkpoint().memory_effects[18949].value==0xfa00);
     auto contradictory_third_record=other_success;
     bool contradictory_third_record_rejected=false;
     try { contradictory_third_record.observe_far_word({87,0x13e2,0x3000,0x001a,1}); }
@@ -1061,7 +964,7 @@ int main(int argc, char** argv) {
         &&other_success.checkpoint().far_byte_boundary.source_segment==0x3000
         &&other_success.checkpoint().far_byte_boundary.source_offset==0x0007
         &&other_success.checkpoint().far_byte_boundary.destination_offset==0x1389
-        &&other_success.checkpoint().memory_effects.size()==18955
+        &&other_success.checkpoint().memory_effects.size()==18951
         &&other_success.checkpoint().memory_effects.back().offset==0x138a
         &&other_success.checkpoint().memory_effects.back().value==0xfa00);
     auto contradictory_first_byte=other_success;
@@ -1070,7 +973,7 @@ int main(int argc, char** argv) {
     catch(const std::runtime_error&) { contradictory_first_byte_rejected=true; }
     assert(contradictory_first_byte_rejected
         &&contradictory_first_byte.checkpoint().far_byte_observations.empty()
-        &&contradictory_first_byte.checkpoint().memory_effects.size()==18955);
+        &&contradictory_first_byte.checkpoint().memory_effects.size()==18951);
     other_success.observe_far_byte({88,0x13e9,0x3000,0x0007,0x23});
     assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::graphics_record_second_byte_read_boundary
         &&other_success.checkpoint().continuation_address==0x13f2
@@ -1079,7 +982,7 @@ int main(int argc, char** argv) {
         &&other_success.checkpoint().far_byte_boundary.instruction_address==0x13f2
         &&other_success.checkpoint().far_byte_boundary.source_segment==0x3000
         &&other_success.checkpoint().far_byte_boundary.source_offset==0x000a
-        &&other_success.checkpoint().memory_effects.size()==18956
+        &&other_success.checkpoint().memory_effects.size()==18952
         &&other_success.checkpoint().memory_effects.back().offset==0x1389
         &&other_success.checkpoint().memory_effects.back().value==0x24);
     auto contradictory_second_byte=other_success;
@@ -1088,19 +991,19 @@ int main(int argc, char** argv) {
     catch(const std::runtime_error&) { contradictory_second_byte_rejected=true; }
     assert(contradictory_second_byte_rejected
         &&contradictory_second_byte.checkpoint().far_byte_observations.size()==1
-        &&contradictory_second_byte.checkpoint().memory_effects.size()==18956);
-    other_success.observe_far_byte({89,0x13f2,0x3000,0x000a,2});
+        &&contradictory_second_byte.checkpoint().memory_effects.size()==18952);
+    other_success.observe_far_byte({89,0x13f2,0x3000,0x000a,0});
     assert(other_success.checkpoint().state==eon::MillenniumDosTitleInitializationState::graphics_record_private_interrupt_result_boundary
         &&other_success.checkpoint().continuation_address==0x0127
         &&other_success.checkpoint().far_byte_observations.size()==2
         &&other_success.checkpoint().boundary.call_address==0x1764
         &&other_success.checkpoint().boundary.function==6
         &&other_success.checkpoint().boundary.record_offset==0x1349
-        &&other_success.checkpoint().memory_effects.size()==18961
-        &&other_success.checkpoint().memory_effects[18956].offset==0x1388
-        &&other_success.checkpoint().memory_effects[18957].offset==0x1351
-        &&other_success.checkpoint().memory_effects[18959].value==0x00c8
-        &&other_success.checkpoint().memory_effects[18960].value==0x0140);
+        &&other_success.checkpoint().memory_effects.size()==18957
+        &&other_success.checkpoint().memory_effects[18952].offset==0x1388
+        &&other_success.checkpoint().memory_effects[18953].offset==0x1351
+        &&other_success.checkpoint().memory_effects[18955].value==0x00c8
+        &&other_success.checkpoint().memory_effects[18956].value==0x0140);
     auto detached_graphics_result=other_success;
     bool detached_graphics_result_rejected=false;
     try { detached_graphics_result.observe_private_interrupt_result(
@@ -1108,22 +1011,7 @@ int main(int argc, char** argv) {
     catch(const std::runtime_error&) { detached_graphics_result_rejected=true; }
     assert(detached_graphics_result_rejected
         &&detached_graphics_result.checkpoint().state==eon::MillenniumDosTitleInitializationState::graphics_record_private_interrupt_result_boundary
-        &&detached_graphics_result.checkpoint().memory_effects.size()==18961);
-    auto owned_graphics_return=other_success;
-    owned_graphics_return.execute_graphics_record_function_six_return(90);
-    const auto owned_post_descriptor=owned_graphics_return.checkpoint();
-    assert(owned_post_descriptor.state==eon::MillenniumDosTitleInitializationState::post_descriptor_private_interrupt_result_boundary
-        &&owned_post_descriptor.last_sequence==90
-        &&owned_post_descriptor.graphics_record_observed_ax==0
-        &&owned_post_descriptor.graphics_record_observed_flags==0
-        &&owned_post_descriptor.continuation_address==0x0127
-        &&owned_post_descriptor.boundary.call_address==0x1011
-        &&owned_post_descriptor.boundary.function==0x001a
-        &&!owned_post_descriptor.boundary.result_observed
-        &&owned_post_descriptor.memory_effects.size()==18962
-        &&owned_post_descriptor.memory_effects.back().instruction_address==0x100b
-        &&owned_post_descriptor.memory_effects.back().offset==0x0fe7
-        &&owned_post_descriptor.memory_effects.back().value==0x2468);
+        &&detached_graphics_result.checkpoint().memory_effects.size()==18957);
     other_success.observe_private_interrupt_result(
         {90,0x0127,0x0129,0x1357,0x0246});
     const auto post_descriptor=other_success.checkpoint();
@@ -1139,7 +1027,7 @@ int main(int argc, char** argv) {
         &&post_descriptor.boundary.record_segment==0x2468
         &&post_descriptor.boundary.record_offset==0x0fdf
         &&!post_descriptor.boundary.result_observed
-        &&post_descriptor.memory_effects.size()==18962
+        &&post_descriptor.memory_effects.size()==18958
         &&post_descriptor.memory_effects.back().instruction_address==0x100b
         &&post_descriptor.memory_effects.back().offset==0x0fe7
         &&post_descriptor.memory_effects.back().value==0x2468);
@@ -1149,7 +1037,7 @@ int main(int argc, char** argv) {
     catch(const std::runtime_error&) { duplicate_graphics_result_rejected=true; }
     assert(duplicate_graphics_result_rejected
         &&other_success.checkpoint().last_sequence==90
-        &&other_success.checkpoint().memory_effects.size()==18962);
+        &&other_success.checkpoint().memory_effects.size()==18958);
     auto incomplete_function_001a=other_success;
     bool incomplete_function_001a_rejected=false;
     try { incomplete_function_001a.observe_private_interrupt_result(
@@ -1158,7 +1046,7 @@ int main(int argc, char** argv) {
     assert(incomplete_function_001a_rejected
         &&incomplete_function_001a.checkpoint().state
             ==eon::MillenniumDosTitleInitializationState::post_descriptor_private_interrupt_result_boundary
-        &&incomplete_function_001a.checkpoint().memory_effects.size()==18962);
+        &&incomplete_function_001a.checkpoint().memory_effects.size()==18958);
     const std::vector<std::uint8_t> observed_function_001a_record{
         0x10,0x20,0x30,0x40,0x50,0x60,0x70,0x80,0x68,0x24};
     // Explicitly synthetic external returns exercise the mode-one caller;
@@ -1167,9 +1055,9 @@ int main(int argc, char** argv) {
     const auto step=[&](){return mode_one_loop.checkpoint().last_sequence+1;};
     mode_one_loop.execute_post_library_setup(step(),0x1bef,0x1aac);
     mode_one_loop.observe_dos_vector_result({step(),0x10f4,0x10f6,0,0x1234,0xabcd,0});
-    mode_one_loop.execute_dos_set_vector_compatibility(step());
+    mode_one_loop.observe_dos_vector_result({step(),0x1106,0x1108,0,0,0,0});
     mode_one_loop.observe_dos_vector_result({step(),0x110b,0x110d,0,0x5678,0xcdef,0});
-    mode_one_loop.execute_dos_set_vector_compatibility(step());
+    mode_one_loop.observe_dos_vector_result({step(),0x111d,0x111f,0,0,0,0});
     mode_one_loop.observe_setup_bios_result({step(),0x1ab9,0x1abb,0,0,0});
     mode_one_loop.observe_setup_bios_result({step(),0x1ac1,0x1ac3,0,0,0});
     mode_one_loop.execute_next_setup(step(),0x1bf2,0x11a7);
@@ -1198,7 +1086,7 @@ int main(int argc, char** argv) {
     mode_one_loop.observe_far_word({step(),0x13d0,0x4fa1,0x1c,0x00c8});
     mode_one_loop.observe_far_word({step(),0x13e2,0x4fa1,0x1a,0});
     mode_one_loop.observe_far_byte({step(),0x13e9,0x4fa1,7,0x23});
-    mode_one_loop.observe_far_byte({step(),0x13f2,0x4fa1,10,2});
+    mode_one_loop.observe_far_byte({step(),0x13f2,0x4fa1,10,0});
     mode_one_loop.observe_private_interrupt_result({step(),0x0127,0x0129,0,0});
     mode_one_loop.observe_private_interrupt_result({step(),0x0127,0x0129,0,0,0x2468,0x0fdf,
         observed_function_001a_record});
@@ -1285,15 +1173,15 @@ int main(int argc, char** argv) {
         &&first_title_loop.far_read_boundary.word_count==2
         &&first_title_loop.far_read_boundary.destination_segment==0x2468
         &&first_title_loop.far_read_boundary.destination_offset==0x138c
-        &&first_title_loop.memory_effects.size()==18974
-        &&first_title_loop.memory_effects[18962].offset==0x0fdf
-        &&first_title_loop.memory_effects[18962].value==0x10
-        &&first_title_loop.memory_effects[18971].offset==0x0fe8
-        &&first_title_loop.memory_effects[18971].value==0x24
-        &&first_title_loop.memory_effects[18972].offset==0x010c
-        &&first_title_loop.memory_effects[18972].value==0x0170
-        &&first_title_loop.memory_effects[18973].offset==0x0110
-        &&first_title_loop.memory_effects[18973].value==0x0170);
+        &&first_title_loop.memory_effects.size()==18970
+        &&first_title_loop.memory_effects[18958].offset==0x0fdf
+        &&first_title_loop.memory_effects[18958].value==0x10
+        &&first_title_loop.memory_effects[18967].offset==0x0fe8
+        &&first_title_loop.memory_effects[18967].value==0x24
+        &&first_title_loop.memory_effects[18968].offset==0x010c
+        &&first_title_loop.memory_effects[18968].value==0x0170
+        &&first_title_loop.memory_effects[18969].offset==0x0110
+        &&first_title_loop.memory_effects[18969].value==0x0170);
     auto contradictory_first_loop_descriptor=other_success;
     // Start only at the real first directory read. No decoded source bytes
     // or lookup aliases are supplied by this complete-loop regression.
@@ -1379,30 +1267,6 @@ int main(int argc, char** argv) {
             &&!waiting.boundary.result_observed&&!waiting.boundary.stack_storage_modeled);
         assert(waiting.register_effects[completed.register_effects.size()].value==10
             &&waiting.register_effects[completed.register_effects.size()+1].value==5);
-        auto animation=whole_loop;
-        animation.execute_descriptor_loop_wait_function_thirteen_return(
-            waiting.last_sequence+1,
-            {0x0912,{{1,0x0908,0x03da,0},{2,0x090d,0x03da,0x08}}});
-        const auto after_wait=animation.checkpoint();
-        assert(after_wait.state==eon::MillenniumDosTitleInitializationState::descriptor_loop_post_wait_animation_call_boundary
-            &&after_wait.continuation_address==0x1917);
-        animation.execute_descriptor_loop_animation_selector(
-            {after_wait.last_sequence+1,0,0,0});
-        const auto animation_record=animation.checkpoint();
-        assert(animation_record.state==eon::MillenniumDosTitleInitializationState::descriptor_loop_animation_record_word_boundary
-            &&animation_record.continuation_address==0x174a
-            &&animation_record.far_read_boundary.instruction_address==0x174a
-            &&animation_record.far_read_boundary.source_segment==animation_record.child_code_segment
-            &&animation_record.far_read_boundary.source_offset==0x187c
-            &&animation_record.far_read_boundary.word_count==2
-            &&animation_record.memory_effects.back().instruction_address==0x171a
-            &&animation_record.memory_effects.back().offset==0x1341
-            &&animation_record.memory_effects.back().value==0x0170);
-        rejected=false;
-        try { animation.execute_descriptor_loop_animation_selector(
-            {animation_record.last_sequence+1,0,0,0}); }
-        catch(const std::runtime_error&){rejected=true;}
-        assert(rejected&&animation.checkpoint().last_sequence==animation_record.last_sequence);
         assert(whole_memory.checkpoint().checksum==caller_memory.checksum
             &&whole_memory.checkpoint().applied_batch_count==caller_memory.applied_batch_count);
         rejected=false;
@@ -1486,7 +1350,7 @@ int main(int argc, char** argv) {
     assert(contradictory_first_loop_descriptor_rejected
         &&contradictory_first_loop_descriptor.checkpoint().state
             ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary
-        &&contradictory_first_loop_descriptor.checkpoint().memory_effects.size()==18974);
+        &&contradictory_first_loop_descriptor.checkpoint().memory_effects.size()==18970);
     other_success.observe_far_words(
         {92,0x13aa,0x3481,0x000f,0x2941,0x0000});
     // External arithmetic fixtures below cannot be promoted to an owned loop.
@@ -1503,11 +1367,11 @@ int main(int argc, char** argv) {
         &&first_title_record.far_read_boundary.word_count==1
         &&first_title_record.far_read_boundary.destination_segment==0x2468
         &&first_title_record.far_read_boundary.destination_offset==0x1359
-        &&first_title_record.memory_effects.size()==18976
-        &&first_title_record.memory_effects[18974].offset==0x138c
-        &&first_title_record.memory_effects[18974].value==0x0001
-        &&first_title_record.memory_effects[18975].offset==0x138e
-        &&first_title_record.memory_effects[18975].value==0x3294);
+        &&first_title_record.memory_effects.size()==18972
+        &&first_title_record.memory_effects[18970].offset==0x138c
+        &&first_title_record.memory_effects[18970].value==0x0001
+        &&first_title_record.memory_effects[18971].offset==0x138e
+        &&first_title_record.memory_effects[18971].value==0x3294);
     auto detached_first_title_record=other_success;
     bool detached_first_title_record_rejected=false;
     try { detached_first_title_record.observe_far_word(
@@ -1516,7 +1380,7 @@ int main(int argc, char** argv) {
     assert(detached_first_title_record_rejected
         &&detached_first_title_record.checkpoint().last_sequence==92
         &&detached_first_title_record.checkpoint().far_single_word_observations.size()==3
-        &&detached_first_title_record.checkpoint().memory_effects.size()==18976);
+        &&detached_first_title_record.checkpoint().memory_effects.size()==18972);
     other_success.observe_far_word({93,0x13cd,0x3294,0x0019,0xa55a});
     const auto first_title_second_word=other_success.checkpoint();
     assert(first_title_second_word.state
@@ -1530,7 +1394,7 @@ int main(int argc, char** argv) {
         &&first_title_second_word.far_read_boundary.source_offset==0x0017
         &&first_title_second_word.far_read_boundary.word_count==1
         &&first_title_second_word.far_read_boundary.destination_offset==0x1357
-        &&first_title_second_word.memory_effects.size()==18976);
+        &&first_title_second_word.memory_effects.size()==18972);
     auto detached_first_title_second_word=other_success;
     bool detached_first_title_second_word_rejected=false;
     try { detached_first_title_second_word.observe_far_word(
@@ -1540,7 +1404,7 @@ int main(int argc, char** argv) {
     }
     assert(detached_first_title_second_word_rejected
         &&detached_first_title_second_word.checkpoint().last_sequence==93
-        &&detached_first_title_second_word.checkpoint().memory_effects.size()==18976);
+        &&detached_first_title_second_word.checkpoint().memory_effects.size()==18972);
     other_success.observe_far_word({94,0x13d0,0x3294,0x0017,0x0010});
     const auto first_title_third_word=other_success.checkpoint();
     assert(first_title_third_word.state
@@ -1554,13 +1418,13 @@ int main(int argc, char** argv) {
         &&first_title_third_word.far_read_boundary.source_offset==0x0015
         &&first_title_third_word.far_read_boundary.word_count==1
         &&first_title_third_word.far_read_boundary.destination_offset==0x138a
-        &&first_title_third_word.memory_effects.size()==18979
-        &&first_title_third_word.memory_effects[18976].offset==0x1357
-        &&first_title_third_word.memory_effects[18976].value==0x0010
-        &&first_title_third_word.memory_effects[18977].offset==0x1359
-        &&first_title_third_word.memory_effects[18977].value==0xa55a
-        &&first_title_third_word.memory_effects[18978].offset==0x133b
-        &&first_title_third_word.memory_effects[18978].value==0x55a0);
+        &&first_title_third_word.memory_effects.size()==18975
+        &&first_title_third_word.memory_effects[18972].offset==0x1357
+        &&first_title_third_word.memory_effects[18972].value==0x0010
+        &&first_title_third_word.memory_effects[18973].offset==0x1359
+        &&first_title_third_word.memory_effects[18973].value==0xa55a
+        &&first_title_third_word.memory_effects[18974].offset==0x133b
+        &&first_title_third_word.memory_effects[18974].value==0x55a0);
     auto detached_first_title_third_word=other_success;
     bool detached_first_title_third_word_rejected=false;
     try { detached_first_title_third_word.observe_far_word(
@@ -1570,7 +1434,7 @@ int main(int argc, char** argv) {
     }
     assert(detached_first_title_third_word_rejected
         &&detached_first_title_third_word.checkpoint().last_sequence==94
-        &&detached_first_title_third_word.checkpoint().memory_effects.size()==18979);
+        &&detached_first_title_third_word.checkpoint().memory_effects.size()==18975);
     other_success.observe_far_word({95,0x13e2,0x3294,0x0015,0x0050});
     const auto first_title_byte=other_success.checkpoint();
     assert(first_title_byte.state
@@ -1583,7 +1447,7 @@ int main(int argc, char** argv) {
         &&first_title_byte.far_byte_boundary.source_segment==0x3294
         &&first_title_byte.far_byte_boundary.source_offset==0x0002
         &&first_title_byte.far_byte_boundary.destination_offset==0x1389
-        &&first_title_byte.memory_effects.size()==18980
+        &&first_title_byte.memory_effects.size()==18976
         &&first_title_byte.memory_effects.back().instruction_address==0x13e5
         &&first_title_byte.memory_effects.back().offset==0x138a
         &&first_title_byte.memory_effects.back().value==0x5550);
@@ -1594,7 +1458,7 @@ int main(int argc, char** argv) {
     catch(const std::runtime_error&) { detached_first_title_byte_rejected=true; }
     assert(detached_first_title_byte_rejected
         &&detached_first_title_byte.checkpoint().last_sequence==95
-        &&detached_first_title_byte.checkpoint().memory_effects.size()==18980);
+        &&detached_first_title_byte.checkpoint().memory_effects.size()==18976);
     other_success.observe_far_byte({96,0x13e9,0x3294,0x0002,0xfe});
     const auto first_title_second_byte=other_success.checkpoint();
     assert(first_title_second_byte.state
@@ -1607,7 +1471,7 @@ int main(int argc, char** argv) {
         &&first_title_second_byte.far_byte_boundary.source_segment==0x3294
         &&first_title_second_byte.far_byte_boundary.source_offset==0x0005
         &&first_title_second_byte.far_byte_boundary.destination_offset==0x1388
-        &&first_title_second_byte.memory_effects.size()==18981
+        &&first_title_second_byte.memory_effects.size()==18977
         &&first_title_second_byte.memory_effects.back().instruction_address==0x13ee
         &&first_title_second_byte.memory_effects.back().offset==0x1389
         &&first_title_second_byte.memory_effects.back().value==0x00ff);
@@ -1623,7 +1487,7 @@ int main(int argc, char** argv) {
         &&encoded_payload.far_byte_boundary.instruction_address==0x1419
         &&encoded_payload.far_byte_boundary.source_segment==0x3294
         &&encoded_payload.far_byte_boundary.source_offset==0x001d
-        &&encoded_payload.memory_effects.size()==18982
+        &&encoded_payload.memory_effects.size()==18978
         &&encoded_payload.memory_effects.back().offset==0x1388
         &&encoded_payload.memory_effects.back().value==1);
     auto detached_encoded_payload=encoded_first_title_record;
@@ -1633,7 +1497,7 @@ int main(int argc, char** argv) {
     catch(const std::runtime_error&) { detached_encoded_payload_rejected=true; }
     assert(detached_encoded_payload_rejected
         &&detached_encoded_payload.checkpoint().last_sequence==97
-        &&detached_encoded_payload.checkpoint().memory_effects.size()==18982);
+        &&detached_encoded_payload.checkpoint().memory_effects.size()==18978);
     encoded_first_title_record.observe_far_byte({98,0x1419,0x3294,0x001d,0x7a});
     const auto encoded_stream=encoded_first_title_record.checkpoint();
     assert(encoded_stream.state
@@ -1645,7 +1509,7 @@ int main(int argc, char** argv) {
         &&encoded_stream.far_byte_boundary.instruction_address==0x1428
         &&encoded_stream.far_byte_boundary.source_segment==0x3294
         &&encoded_stream.far_byte_boundary.source_offset==0x001e
-        &&encoded_stream.memory_effects.size()==18983
+        &&encoded_stream.memory_effects.size()==18979
         &&encoded_stream.memory_effects.back().instruction_address==0x141c
         &&encoded_stream.memory_effects.back().offset==0x0170
         &&encoded_stream.memory_effects.back().value==0x7a);
@@ -2158,7 +2022,7 @@ int main(int argc, char** argv) {
         ==eon::MillenniumDosTitleInitializationState::post_descriptor_first_loop_encoded_high_nibble_byte_boundary);
     assert(mode_two_run.continuation_address==0x1428);
     assert(mode_two_run.far_byte_boundary.source_offset==0x001f);
-    assert(mode_two_run.memory_effects.size()==18988);
+    assert(mode_two_run.memory_effects.size()==18984);
     assert(mode_two_run.memory_effects.back().offset==0x0175);
     assert(mode_two_run.memory_effects.back().value==0x7a);
     encoded_first_title_record.observe_far_byte({99,0x1428,0x3294,0x001e,0xab});
@@ -2184,7 +2048,7 @@ int main(int argc, char** argv) {
     catch(const std::runtime_error&) { detached_first_title_second_byte_rejected=true; }
     assert(detached_first_title_second_byte_rejected
         &&detached_first_title_second_byte.checkpoint().last_sequence==96
-        &&detached_first_title_second_byte.checkpoint().memory_effects.size()==18981);
+        &&detached_first_title_second_byte.checkpoint().memory_effects.size()==18977);
     other_success.observe_far_byte({97,0x13f2,0x3294,0x0005,0x03});
     const auto second_title_loop=other_success.checkpoint();
     assert(second_title_loop.state
@@ -2198,13 +2062,13 @@ int main(int argc, char** argv) {
         &&second_title_loop.far_read_boundary.source_offset==0x001b
         &&second_title_loop.far_read_boundary.word_count==2
         &&second_title_loop.far_read_boundary.destination_offset==0x138c
-        &&second_title_loop.memory_effects.size()==18984
-        &&second_title_loop.memory_effects[18981].offset==0x1388
-        &&second_title_loop.memory_effects[18981].value==3
-        &&second_title_loop.memory_effects[18982].offset==0x010c
-        &&second_title_loop.memory_effects[18982].value==0x02e0
-        &&second_title_loop.memory_effects[18983].offset==0x0110
-        &&second_title_loop.memory_effects[18983].value==0x02e0);
+        &&second_title_loop.memory_effects.size()==18980
+        &&second_title_loop.memory_effects[18977].offset==0x1388
+        &&second_title_loop.memory_effects[18977].value==3
+        &&second_title_loop.memory_effects[18978].offset==0x010c
+        &&second_title_loop.memory_effects[18978].value==0x02e0
+        &&second_title_loop.memory_effects[18979].offset==0x0110
+        &&second_title_loop.memory_effects[18979].value==0x02e0);
     auto detached_second_descriptor=other_success;
     bool detached_second_descriptor_rejected=false;
     try { detached_second_descriptor.observe_far_words(
@@ -2212,7 +2076,7 @@ int main(int argc, char** argv) {
     catch(const std::runtime_error&) { detached_second_descriptor_rejected=true; }
     assert(detached_second_descriptor_rejected
         &&detached_second_descriptor.checkpoint().last_sequence==97
-        &&detached_second_descriptor.checkpoint().memory_effects.size()==18984);
+        &&detached_second_descriptor.checkpoint().memory_effects.size()==18980);
     other_success.observe_far_words({98,0x13aa,0x3481,0x001b,0x2a16,0x0000});
     const auto second_descriptor=other_success.checkpoint();
     assert(second_descriptor.state
@@ -2225,11 +2089,11 @@ int main(int argc, char** argv) {
     assert(second_descriptor.far_read_boundary.instruction_address==0x13cd);
     assert(second_descriptor.far_read_boundary.source_segment==0x32a1);
     assert(second_descriptor.far_read_boundary.source_offset==0x001e);
-    assert(second_descriptor.memory_effects.size()==18986);
-    assert(second_descriptor.memory_effects[18984].offset==0x138c);
-    assert(second_descriptor.memory_effects[18984].value==6);
-    assert(second_descriptor.memory_effects[18985].offset==0x138e);
-    assert(second_descriptor.memory_effects[18985].value==0x32a1);
+    assert(second_descriptor.memory_effects.size()==18982);
+    assert(second_descriptor.memory_effects[18980].offset==0x138c);
+    assert(second_descriptor.memory_effects[18980].value==6);
+    assert(second_descriptor.memory_effects[18981].offset==0x138e);
+    assert(second_descriptor.memory_effects[18981].value==0x32a1);
     auto detached_second_record_word=other_success;
     bool detached_second_record_word_rejected=false;
     try { detached_second_record_word.observe_far_word(

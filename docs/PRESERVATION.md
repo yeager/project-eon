@@ -922,48 +922,19 @@ reach the first `INT 10h` palette request at `$0476`; selector two additionally
 performs its encoded `$0107=$b800` word store. Eon reports that first request
 as register zero/value zero and does not invoke BIOS, infer further loop
 iterations, fabricate either interrupt result, or modify executable/save
-media. The `MillenniumDosEgaStartupPaletteSession` is now connected to the
-active native process only after its exact EGA function-four result and owned
-driver/vector path are admitted. Sixteen ordered INT `$10` return observations
-must each match AX `$1000`, the next source-derived BX register/value pair,
-child CS, return IP `$0478`, and increasing sequence. The process then stops
-at the hash-bound loop RET `$047c`; it records the completed request count,
-not a visible palette effect. After the sixteenth return, it now reads owned
-CS:`$da05` and stack words `$d1c3` and `$d2e5`, then executes the hash-bound
-14-byte `$d1c3..$d1d0` caller (SHA-256
-`0ab3b7a8bbd26341b2b8e7a475159a649e3277cb9090ab45a3a1cb59b59b2ad6`). The
-conditional `$0107=$b800` store is committed to owned child memory only when
-the selector equals two. The caller RET consumes `$d2e5`; the exact shared
-startup prefix then reaches the DOS `INT $21/AH=$4a` request at `$d201`. The
-runtime records unknown saved DX and the `$d2eb` call return in owned stack
-memory, but does not invent DOS results. EGA device/rendering and subsequent
-allocator work remain open. A trv2
-NDISASM 3.01 pass of the exact English executable confirms that the 23-byte
-callee is `$0466..$047c` (file `+$0366`, SHA-256
-`b17db26fa4fa8b7307fb767ff98351bd6dcca202829dd2d9348ff4991942d779`): it
-loads `$0456`'s 16-byte table, sets `CX=$10`, `BL=0`, and executes
-`AX=$1000; INT $10` at `$0476`, incrementing BL until RET. The post-loop caller
-is statically bounded at `$d1b5..$d1d0` (file `+$d0b5`, 28 bytes, SHA-256
-`2f61098eb45bb48ea7a38ab2fcc2e065ae0d0b2ad08ea9973e3fe464943fba9b`): after
-its INT `$91` wrapper and call to `$0466`, it reads `$da05`; value two stores
-`$b800` at `$0107`, then returns at `$d1d0`. The bytes after the palette call
-alone are `$d1c3..$d1d0` (file `+$d0c3`, 14 bytes, SHA-256
-`0ab3b7a8bbd26341b2b8e7a475159a649e3277cb9090ab45a3a1cb59b59b2ad6`). This
-static continuation does not prove that the caller is live-reachable, establish
-BIOS effects, or supply the native EGA screen contents. This is a recovery
-boundary, not a claim that the original private ABI has been reimplemented.
+media. This is a recovery boundary, not a claim that the original private ABI
+has been reimplemented.
 
 The typed startup continuation can record a BIOS return only after the
 hash-bound selector path reaches the first palette `INT 10h` instruction at
 `$0476`. Its hash-checked 23-byte callee span covers the `CD 10` instruction
 and its following bytes; the immediate post-INT return IP is `$0478` (the
-callee's later RET address is `$047c`). Each observation carries its monotonic
-sequence, INT instruction address/number, raw return CS:IP, returned `AX`,
-`FLAGS`, and `BX`. For the admitted EGA function-four path, the active process
-requires 16 ordered returns whose BX values match the source-derived table,
-then advances to the local RET boundary `$047c`. This records verified loop
-progress only; it does not render a palette, invent a BIOS result, or advance
-the caller. Wrong instruction PC, INT number, return CS:IP, AX/BX, stale,
+callee's later RET address is `$047c`). The observation carries its monotonic
+sequence, INT instruction address/number, raw return CS:IP, returned `AX`, and
+`FLAGS`. The runtime accepts only `$0476`/INT `$10`, return IP `$0478`, and the
+observed child CS, then stores the receipt in a copy-only checkpoint. It does
+not apply palette writes, invent loop iterations, or advance execution beyond
+that external return. Wrong instruction PC, INT number, return CS:IP, stale,
 duplicate, and pre-child observations are rejected.
 
 The external DOSBox-X build at pinned source commit
@@ -978,87 +949,13 @@ dispatch and post-INT site, and `CD 21` source bytes. It records raw registers
 and FLAGS. At `$0315` it snapshots only a carry-clear 1–4,366-byte DS:`$0000`
 read buffer, hashes after guest execution stops, and writes only the digest.
 The bounded sidecar uses mode `0600`, exclusive/no-follow creation and a
-terminal count/overflow footer. A Linux v2 build adds only gated SDL2
-`SDL_WINDOWEVENT_CLOSE` handling and is described below. The observer still
-contains no reviewed v21 event/result/input instrumentation; its receipts are
-experimental and cannot establish playable behavior.
+terminal count/overflow footer. No game run or capture used this observer.
 
-### Millennium DOS experimental driver-load returns, 2026-10-08
-
-Capture 07 used the separately pinned Linux v2 executable
-`a03a43372a31b89514007c5053a8890c2b13a653c1562c379c3eaee6edc030e6`
-(132,934,416 bytes), against the unchanged English archive
-`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`.
-The raw sidecar is 2,176 bytes, SHA-256
-`77e301c8fe0d2678c8a9754ea3d157f069352bad3146c8f34a9f13b66668f180`; its
-final receipt is SHA-256
-`1c25be2f50c8e22670fd7653356356653290dccebc7cea2a034f0c9bd2f00a6d`. The
-independent receipt verifier accepts it only with experimental-observer
-opt-in. There was no host input, and `termination_reason=emulator-exit`.
-
-The sidecar contains two ordered passes through `MILL.COM` return sites
-`$02d4`, `$02ed`, `$02fc`, `$030b`, `$0315`, and `$031b`, all with `CS=$0812`.
-The first `$0315` buffer is 4,366 bytes, SHA-256
-`bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228`; hashing
-that prefix-sized payload against the original archive identifies the complete
-member `millennium-return-to-earth-2-2/MCGA.BIN` (4,366 bytes, same hash). The
-second buffer is 2,871 bytes, SHA-256
-`f3224caa43c1149907f852fa98816ed68c489b70f1ba795592d684d4e51f31b1`; it
-identifies the complete member `millennium-return-to-earth-2-2/SIBM.DRV`
-(2,871 bytes, same hash). The archive members were streamed read-only for
-comparison; no files were extracted or copied.
-
-The observed return at `$02fc` supplied segments `$087e` and `$0990`; the
-observed allocation paragraph counts were `$0111` and `$00b4`, respectively.
-At `$0315`, AX was `$110e` (4,366) for MCGA and `$0b37` (2,871) for SIBM. These
-values and full-buffer hash matches establish the exact two loaded byte spans
-for this no-input `MILL.COM 0` run. They do not establish private-driver
-initialization, DOS private-INT success, title/child handoff, or any playable
-state. Raw registers remain observations without inferred ABI meaning, and
-the capture remains non-admitted for recovery.
-
-The hash-verified `SIBM.DRV` source begins with an entry candidate at file
-offset `$0000`. The earlier COM-style load-address candidate `$0100` is not
-established: this driver is read as a raw byte span into `DS:0000`, and the
-dispatcher reads its table at offset `$0020`. Its first 34 bytes,
-file range `[$0020,$0042)`, hash to
-`46598959f558b112e7331f904fa3d289aba73dcb284d8e5e768245c079c3af81` and
-contain 17 little-endian words that the entry candidate indexes after
-doubling AX. The raw target candidates by selector 0–16 are:
-`04a8,04c8,0524,055f,05a1,05dc,06b3,066f,0691,048b,049b,09e7,0a27,0a9d,0acf,0b04,0b33`.
-All are inside the 2,871-byte member. This table is a hash-bound data range
-used by the candidate dispatcher; capture 07 did not observe any selector
-call or prove that execution entered the allocation. Keep the table as a
-candidate map, not an admitted driver ABI.
-
-An offset-zero linear decode puts all 17 table targets on candidate
-instruction boundaries. This is consistent with a raw segment-base image,
-but the listing does not classify code and data, and no runtime selector call
-or driver entry was captured. The selector table's function-pointer
-interpretation and executed target boundaries remain unverified. The earlier
-single listing decoded with origin `$0100` had placed 8 targets inside
-candidate instruction spans; that alignment is superseded as a static
-hypothesis, not as runtime evidence. The original report remains external at
-`~/.cache/project-eon-tools/millennium-sibm-analysis-20261008/SIBM-candidate-disassembly.md`
-(31,815 bytes; SHA-256
-`a97010545c317a36d0db7286cbff0ed62b827cc2987e39aa76ca296e92e065b1`). No
-listing body or original-derived bytes are stored in the repository. The
-read-only offset-zero decode is also external at
-`~/.cache/project-eon-tools/millennium-sibm-analysis-20261008/SIBM-offset-zero-disassembly.txt`
-(47,531 bytes; SHA-256
-`84a93fcd162e33e66bbafe22e9c76e00132fcd1724a203a1b8e162fa56e1f`).
-
-The hash-bound `MILL.COM` linear candidate supplies a compatible raw-segment
-installation path: after the loader call at runtime `$0231` (file offset
-`$0131`), it sets `DX=0`, loads `AX=$2595`, and issues `INT $21` at `$0239`.
-The loader at `$02cf` allocates a segment, reads the whole driver at
-`DS:0000`, and returns with `DS` set to that segment. If this candidate call
-path ran and DOS accepted `AH=$25/AL=$95`, the requested vector target would
-be `segment:0000`, matching the offset-zero SIBM dispatch decode. Capture 07
-independently identifies a complete loaded SIBM byte span and its allocation,
-but did not observe the `$0231` caller, `$0239` Set Vector, IVT result, or any
-subsequent SIBM PC. This is a static caller/loader cross-check, not proof of
-installation or execution.
+This build contains no reviewed v21 event/result/input observers, so any future
+receipt stays experimental and cannot establish playable behavior. A valid
+loader-return observation could distinguish a DOS open/read issue from a
+later driver problem; it would not prove that the digest matches the supplied
+driver leaf unless that comparison is separately made.
 
 The English DOS source is present in Downloads as
 `Millennium-Return-to-Earth_DOS_EN.zip` (328,383 bytes, SHA-256
@@ -1120,23 +1017,6 @@ name as a semantic property of the original program.
 | Deuteros Amiga | Clean system/data ADFs plus comparative alternate, save, and modified images | The clean system disk is `DOS\0`; clean data disk is `DEU\0`, whose logical block 880 is custom raw data rather than an AmigaDOS root. | The clean system boot path loads `$5800` to `$20000` and has entry `$21734`; title-stage transfer remains separately bounded. | A genuine on-disk text block contains load/save prompts, but no caller-connected input binding is yet recovered. |
 | Millennium Atari ST | Two physical-dump `.stx` images, one save image, and four one-disk `.st` variants | `.stx` is retained as a physical-media container and is not silently converted to a flat FAT image.  Five of the seven supplied images have a valid FAT12 volume. | The hash-identified Equinox FAT12 image admits a fully relocated native `MILENIUM.TOS` image and an exact read-only `MILL22A.inf` compatibility load. Native control follows `JSR $2a500`; an explicit typed SR observation selects either exact branch at `$2aa88`. A typed XBIOS selector-2 result then advances both paths from `$2a520` through the exact result store to selector 3 at `$2a52e`. The original Disk 1 STX has a bounded sector index, but no executable handoff has yet been linked to its physical loader bytes. | Original physical-dump bytes contain visible mouse/keyboard and prompt text, but no code-to-input map has been recovered. |
 | Deuteros Atari ST | Eleven 737,280/1,056,768-byte `.st` images | The 737,280-byte game-media candidates have a BPB-shaped boot sector, but their apparent root records are not a live FAT12 namespace: entries carry impossible cluster/size combinations.  The raw protected boot chain is authoritative. | The hash-identified raw chain reaches the first and second stages through explicit nine-sector reads; its XBIOS callback and state selection remain boundaries. | The supplied game-media variants contain no standalone manual.  Embedded prompts are preserved as raw text only; a separate 1,056,768-byte development/tools disk is excluded from game-control evidence. |
-
-### Deuteros `save disk` filename false positives, 2026-10-24
-
-The two user-supplied ZIP members named `Deuteros - The Next Millennium
-(1991)(Activision)(M3)[save disk].adf` and its `[a]` variant are each 901,120
-bytes, but neither is a Deuteros ADF or save disk. Their member SHA-256 values
-are `19dcb795782ef2b34cd4aec7ff8f0f0abfb939093a35d597d7d01d6783b2e11a` and
-`e59a67eec0ad1c464df78ccf9af6b390e5f3c2f04cf26246d507475e1464d520`; both
-begin with the Microsoft Cabinet signature `MSCF`, and the CAB header declares
-364,999 bytes, one folder and 25 files. The names include `ICWCONN1.exe`,
-`ICWDIAL.dll`, and `ReadMe.txt`; no CAB payload was extracted. The outer ZIP
-SHA-256 values are
-`143ca04670aa7ff7746795c08f7d2157b77c0cbd792f18db7ec6ac037687242f` and
-`23b8e7af55a60833fe9d2ba9a7510de891949df87c1fa61cb8900c3fc4b39344`.
-These catalogue-name matches are unrelated data and must not be admitted as
-Deuteros media, save states, or gameplay evidence. The inspection read the
-ZIP members in memory and left the supplied archives unchanged.
 
 This protects two easy-to-make mistakes: a structurally plausible BPB does not
 prove a usable FAT filesystem, and a printable string does not prove an input
@@ -1200,142 +1080,20 @@ six live 8.3 records are retained (`EXEC.TOS`, `MILL22A.INF` through
 identical: their exact five-sector SHA-256 values are
 `2421cedef5612bca7bbc90168a7338d904f82ea1fdc09214c684424b428d9417` and
 `22c2c826ed3de246e506187e16aea375dc2fee09a03abbc9140ebdd251640879`.
-`AtariStStxFat12Root` reports both and does not choose one as the global FAT.
-The new `tools/analyze_atari_st_stx_prg.py` and the native
-`AtariStStxFat12Root::read_file` instead follow a requested file through both
-copies independently and admit it only when both complete cluster chains
-and byte streams agree. The proof condition is that both complete
-cluster chains and byte streams agree for each file. Native-media tests read the original `EXEC.TOS` and
-`MILL22A.INF` directly through that API and verify their complete byte counts
-and SHA-256 values. This per-file consensus recovered
-`EXEC.TOS` from cluster 2 as a 221-byte PRG (SHA-256
-`e8ecdb43275ecf1a69d159a4c7a170b2462dd4a430fb09804f7bd0e9823627a5`); both
-FAT copies give the same one-cluster chain. It also recovered `MILL22A.INF`
-through `MILL22D.INF` identically through both FATs, and their payload hashes
-match the separately hash-identified Equinox copies. No member was written
-or installed. Direct
+`AtariStStxFat12Root` reports both and deliberately declines to certify any
+cluster chain or select either copy when they differ. It neither flattens the
+STX container nor extracts a file or claims a boot or program handoff. Direct
 original spans are T0/H0/S1 at container `$c0` (512 bytes,
 SHA-256 `d0601ec6e1bbea0d5f4d5ba37130148e6670225b6337d001f4d4e6b8fc45fd08`)
 and T1/H0/S9 at `$1570` (512 bytes, SHA-256
 `096869a11a3f601c587bb915c6c93d7985f8eb2185dc2d0f2839286df9905dad`).
-The latter contains the literal `MILL22B.inf` at sector-relative `$be`. The
-boot sector has the documented BPB geometry, but its 16-bit Atari boot checksum
-is `$28cf`, not `$1234`; it is not admitted as a TOS-bootable sector. The
-`EXEC.TOS` relocation table contains offsets `$8`, `$22`, and `$6a`, whose
-original longwords are `$1c`, `$ae`, and `$a2`. The first relocates the copy
-source to the PRG load base plus `$1c`; the latter two point into the PRG's
-`MILL22A.INF` and `MILL22B.INF` filename strings. The image-relative candidate
-begins with a copy loop from that relocated text address to `$77000`, followed
-by a jump to `$77000`. `MOVE.W #$100,D0` plus `DBRA` copies 257 words
-(514 bytes). Its source begins at TEXT offset `$1c`, leaving only 158 bytes
-inside the `$ba`-byte initialized segment. The next source read is at load-base
-+ `$ba`; the remaining 356 requested bytes lie outside initialized TEXT.
-Although the PRG file has a 7-byte relocation stream after TEXT and the
-allocated STX cluster contains zero padding after EOF, neither provides the
-process-memory preimage after the loaded segment. The native prefix therefore
-executes only those 158 known bytes and stops before the next read. The later
-linear candidate
-opens `MILL22A.INF` with a maximum Fread count of `$20000` into buffer
-`$2a500`, closes it, and calls `$2a500`; the exact file is 7,506 bytes and
-matches the separately admitted Equinox `MILL22A.INF` payload. It then opens
-`MILL22B.INF` with a maximum Fread count of `$20000` into buffer `$11e00`.
-The text segment is `$ba` bytes, while the copy loop's bound exceeds that
-segment; the observed stack, process memory layout, and actual Fread byte
-counts are unknown. A full external candidate listing is retained only at
-`~/.cache/project-eon-analysis/millennium-atari-stx-boot-20261024/exec-tos-relocated-v2.md`
-(SHA-256 `16ed58c9b11be5909d533ba5eb05dcc373708dc146cb6f8272c7b2c393bdd6a4`).
-This is static loader evidence, not a boot observation, runtime load address,
-or executable handoff. The sector reader leaves the physical STX unchanged
-and does not create a flat filesystem image.
-
-A fresh full linear candidate decode of the exact 221-byte `EXEC.TOS` confirms
-its downstream service sequence independently of the larger Equinox PRG. After
-the copy-and-jump stub, it opens `MILL22A.INF`, requests at most `$20000` bytes
-to `$2a500`, closes the handle, and calls `$2a500`; after that call returns it
-opens `MILL22B.INF`, requests at most `$20000` bytes to `$11e00`, closes the
-handle, and returns. Its complete source hash remains
-`e8ecdb43275ecf1a69d159a4c7a170b2462dd4a430fb09804f7bd0e9823627a5`. The
-listing is external at
-`~/.cache/project-eon-analysis/millennium-atari-stx-exec-20261025/exec-tos.md`.
-The actual STX Disk 1 files `MILL22A.INF` through `MILL22D.INF` hash-match the
-Equinox disk's respective files, and actual STX Disk 2 `MILL22E.INF` and
-`MILL22F.INF` hash-match both the Equinox image and supplied save-disk image.
-This pins the resource pair to the already analyzed data bytes, but not the
-loader execution environment: the active native Atari bootstrap still admits
-only Equinox `MILENIUM.TOS` and a single `Fat12Disk`, while the original STX
-release starts at `EXEC.TOS` and keeps Disk 1 and Disk 2 as physical containers.
-`AtariStStxPairedFileSource` now owns both unchanged physical STX images and
-looks up each file on its actual disk through the matching root's per-file
-FAT-consensus reader. Synthetic fixtures cover lookup and duplicate rejection;
-a real-media CTest opens both original archives by exact outer SHA-256 and
-verifies `EXEC.TOS`, Disk 1 `MILL22A.INF`, and Disk 2 `MILL22E.INF` by exact
-payload hashes. That same CTest now feeds the exact `EXEC.TOS` bytes to the
-bounded Atari ST PRG parser and verifies its TEXT/DATA/BSS image bound and
-relocation-record count. This proves the disk-paired launcher has a valid,
-bounded PRG structure; it does not execute the program or prove its runtime
-load base, post-text memory, or GEMDOS return state. This source is not yet
-connected to the runtime. The remaining integration work is a source-backed
-entry from this exact launcher and a read-only GEMDOS file service over the
-paired source. Do not synthesize runtime states from matching resource hashes.
-
-The first launcher operation can now be admitted without a TOS stack or
-basepage. `MillenniumAtariStxExecSession` reads `EXEC.TOS` through the paired
-physical STX source, requires Disk 1 and its exact PRG SHA-256, parses the
-three relocation records, and materializes the image at Eon's explicitly
-owned native address `$10000`. This is a native address-map choice, not a claim
-about GEMDOS's runtime allocation. The relocated 28-byte entry must match the
-exact `MOVEA`/`MOVE`/`DBRA`/`JMP` instruction sequence in the hash-pinned PRG.
-The session then copies only the 158 initialized source bytes at image `+$1c`
-to `$77000`, exactly 79 words, and stops at the next source read `$100ba`.
-At that boundary A0 is `$100ba`, A1 is `$7709e`, D0 is `$00b1`, and PC is
-`$10010`; the requested copy still has 178 words left. Bytes after image
-`+$b9` are outside initialized TEXT+DATA, regardless of bytes that happen to
-follow TEXT in the PRG file or sector cluster. The batch therefore leaves
-both the remaining destination and post-text process memory absent. A real
-paired-STX test applies the admitted PRG image and this bounded copy to owned
-`NativeRuntimeMemory`, checks all 158 destination bytes, and confirms the next
-source byte remains unknown. The exact launcher does not yet reach its first
-GEMDOS service or the Equinox game entry; TOS allocation, tail bytes, trap
-results, and gameplay remain unproven.
-
-### STX copy-tail direct-reference scan (2026-10-25)
-
-To test whether the uninitialized copy tail blocks the first module entry, the
-hash-pinned Disk 1 STX (`081d8bc102b8c7669c5cb21abace9b08532bc0b34164f11465d0c87b63a422fd`,
-from outer ZIP `72a00c9801670d41ba965cea50960e6d959d4101469f729f8fe5309aad90d83f`)
-was read in memory through its FAT-consensus file chains. The reproducible
-`tools/scan_atari_stx_address_literals.py` scan checked every even-offset
-big-endian longword in `MILL22A.INF` through `MILL22D.INF` for values in
-`[$77000,$77202)`, the range written by the `$77000` copy loop. It found zero
-matches in all four files; their exact hashes are in the Atari root inventory
-above. This is only a direct-literal negative: code/data boundaries are
-unclassified, it does not exclude computed or indirect aliases, and it does
-not establish what executes after the call to `$2a500`. The 356 unknown source
-bytes are still not admitted as zero or otherwise assigned values. The scan
-narrows the search for a bounded native bridge to the first source-backed
-file service; it does not prove that the copied tail is universally unread.
-
-The matching English Electric Dreams Disk 2 is independently identified by
-outer ZIP SHA-256
-`5e9622895714620554be4707cf585c6fca8cdbe81fb6281e3f866f1107b327d3`
-(185,335 bytes) and STX leaf SHA-256
-`4b55a53285240541c42374dc8275ae7c73d182fc3872514727d9d1795d8ce7f8`
-(381,456 bytes). Its 80 physical tracks contain 720 sectors. The BPB declares
-512-byte sectors, two sectors per cluster, one head, nine sectors per track,
-720 total sectors, two five-sector FATs, and 112 root entries. The
-consensus-checked root files are `MILL22E.INF` (302,892 bytes, SHA-256
-`9aeb6aafceab228521725ffe687cd3d95406d7f272bca77f855ebb600664b2af`) and
-`MILL22F.INF` (22,123 bytes, SHA-256
-`26ef995a9c6a43647e7905477168980159d1426d90f901d4f4c32f7cf13e455e`). Both
-original FAT copies resolve each complete file chain and byte stream
-identically. The Disk 1 and Disk 2 outer/leaf identities produce ordered
-container-set digest
-`c895b150d2102f235cac08fd10c59b47f43bac4ab55d98da7253b7a47b244279` under
-the existing outer-hash/size then leaf-hash/size recipe. This is a candidate
-set identity only: the STX pair is not yet a registered launchable release.
-The matching names and successful FAT reads establish available original
-files, not that the game requests Disk 2, loads `MILL22E.INF`, or reaches a
-playable state.
+The latter contains the literal `MILL22B.inf` at sector-relative `$be`.
+These are physical-container provenance facts only: Project Eon performs no
+STX flattening, file-payload extraction, boot interpretation, or executable
+handoff from them. The sector-backed root/FAT scan is read-only metadata, not
+a claim that the container has been turned into a flat filesystem image. This
+is read-only metadata traversal of physical sectors, never a flattened-media
+substitute.
 
 ### Millennium Atari ST relocation evidence
 
@@ -1531,69 +1289,6 @@ written anywhere. This makes later
 user-save preservation work auditable without confusing file-format validity
 with an assertion of original-media identity or save compatibility.
 
-### Millennium Atari ST alternate save-disk inventory (2026-10-24)
-
-The user-supplied archive
-`Millenium 2.2 (1989)(Electric Dreams)(Disk 2 of 2)[a savegames].zip`
-has SHA-256 `86c3d4de4998c4876ddcf330d8b66d49316de09718c7f34ad326fd881d834e44`.
-Its sole member is a 368,640-byte `.st` image read directly from the ZIP into
-memory (member SHA-256
-`16072aa944d08388f5341d29b164e69d6d16ba516142bbf5b9bf1d4da78330a0`). The
-image has 512-byte sectors, two sectors per cluster, two FAT copies and a
-112-entry root. Both FAT copies agree on the four `2200SAVE.*` chains, which
-terminate at `0xfff` without loops. No archive member or disk image was
-written to disk.
-
-| Root file | First cluster | Bytes | SHA-256 |
-| --- | ---: | ---: | --- |
-| `2200SAVE.I` | 320 | 7,313 | `d94e075d228949f325cd9c3a13da7d5158f8ae5820a4cb320381645cb031634b` |
-| `2200SAVE.II` | 328 | 7,313 | `4164255267a6553e748db821e56c616b0935aadf2d4bee8c1dce426558a6b715` |
-| `2200SAVE.III` | 336 | 7,313 | `7948a169acdeb3abfa4bebdc7f1cde1431c17328b3cba081519374b29d523e45` |
-| `2200SAVE.IV` | 344 | 7,168 | `ec2a39c1644c1c9914879e7acc677dfa8a65a537edf680f87beeed7cd86b1dff` |
-
-The Equinox `MILL22B.INF` source names these four files in its save-slot
-table at file offsets `$a318`, `$a326`, `$a334`, and `$a342` (runtime
-`$1c118`..`$1c151`). Its reader at runtime `$1c342` selects one 14-byte name,
- opens it with GEMDOS Fopen mode 2, and requests 20,000 bytes into the buffer
- pointer initialized by original code to `$27326`. The post-read source consumes
- exactly 7,313 bytes and checks marker `$81` at payload offset `$155`. This
-consumer is the 284-byte original span `$1c392..$1c4ad` (file offsets
-`$a592..$a6ad`, SHA-256
-`182389db54b7cf1fab678da226937906352e131b3b4d227f57e7522c67ebe358`). Its
-bounded DBRA counts total 7,313 source-byte reads: 344 + 4 + 2,640 + 4,024 +
-6 + 14 + 122 + 152 + 7 one-byte fields. There is no read beyond EOF for
-I–III. The source's only pre-copy payload check is the marker at offset
-`$155`; it does not validate the meaning of the loaded state. All three
-alternate saves have the exact consumed length and marker, so they satisfy
-the original loader's observed structural gate. This is enough to implement
-an exact read-only load service, but not to claim the resulting states are
-valid or playable without running the native consumer and observing its
-result. The alternate disk also contains `MILL22E.INF` and `MILL22F.INF`
-with exact hashes matching the Equinox disk's 302,892-byte and 22,123-byte
-files (`9aeb6aafceab228521725ffe687cd3d95406d7f272bca77f855ebb600664b2af`
-and `26ef995a9c6a43647e7905477168980159d1426d90f901d4f4c32f7cf13e455e`).
-These shared executable-named resources are evidence that the save disk belongs
-to the same data set, though they do not prove the disk's complete release
-identity. Save IV is 145 bytes short and unsafe for this reader. The hashes,
-the slot-name table hash `27779e6f71c57806c653873b03b63e0279e5dfaa88614915ad6b1c870a54140b`,
-and the 74-byte reader hash
-`3ba177dc5981cc6f5ea6c95266be0c514c227478834b6e5cac2feae7f0798c2f` are
-preservation metadata only; original media remains unmodified and unextracted.
-
-The original slot callbacks now have a bounded static caller map. At
-`$1c50c`, `$1c512`, `$1c51a`, and `$1c522`, code sets D0 to slot 0–3 and
-branches to `$1c526`. The 58-byte dispatch span `$1c50c..$1c545` (file
-`$a70c..$a745`) hashes to
-`f45db7bc691f0237ccea71f1b24b71e43793244a77b114c75fdb5296640d5101`.
-It selects the legacy reader `$1c1d6` when `$165e8` is zero, or the
-hash-bound save reader `$1c342` otherwise, pushes the completion address
-`$1c546`, and tail-dispatches through RTS. Four code-pointer references at
-`$1446a/$14478/$14486/$14494` lead to the four slot callbacks. This establishes
-the native slot/caller code shape, but the current runtime has no scheduler
-that reaches these addresses and `$165e8` is not yet owned at a live caller.
-The new save-load adapter therefore remains an exact memory-effect plan, not
-an invoked game load or a playable-state claim.
-
 The nonnegative fall-through after the self-loop is byte-verified. At
 reconstructed target `+$1a`, 26 original bytes have
 SHA-256 `663d5f1418326aa9c0efde064ad95bda21c84d7f23241ce3505f21f1f07474d0`.
@@ -1626,19 +1321,20 @@ explicit generation-owned SR/privilege observation may select its branch.
 Both exact branches converge at `JSR $2a51c` and stop before XBIOS `TRAP #14`
 selector 2 at `$2a520`.
 
-The live Millennium Atari bootstrap session now validates the 28-byte BSS
-copy routine at `$1d636` (SHA-256
-`bae3f526a7a7e42ca59d840ed80606f0f2b5a9f420fe221ddd30f04d9388e30b`) and
-reproduces its 257 word copies directly in native memory. It records the
-equivalent 518-instruction count and stops at the original `$77000` JMP
-target; no 68000 instruction interpreter runs during PRG materialization.
-The earlier 54-longword bootstrap transfer is also native byte materialization.
-The Fopen argument prefix and GEMDOS boundary at `$7700e` remain separately
-modeled; no trap is invoked and no host stack address is invented. Production
-acquisition also owns the exact PRG relocation image and narrow read-only
-config service described above. It reaches `$2aa88` autonomously and `$2a520`
-after a typed SR observation. This is not a general 68000 decoder or GEMDOS
-implementation, and no Atari display state or gameplay is fabricated.
+The live Millennium Atari bootstrap session now executes a bounded 68000
+instruction subset for the self-initializing BSS copy routine at `$1d636`.
+The exact 28-byte instruction span hashes to
+`bae3f526a7a7e42ca59d840ed80606f0f2b5a9f420fe221ddd30f04d9388e30b`. Starting
+with the routine's own immediate register loads, it executes 518 instructions,
+including 257 original word copies from the hash-bound DATA/zeroed-BSS source
+to `$77000`, and stops at that original JMP target. The earlier 54-longword
+bootstrap transfer remains bounded byte materialization. The Fopen argument
+prefix and GEMDOS boundary at `$7700e` remain separately modeled; no trap is
+invoked and no host stack address is invented. Production acquisition also
+owns the exact PRG relocation image and narrow read-only config service
+described above. It reaches `$2aa88` autonomously and `$2a520` after a typed SR
+observation. This is not a general 68000 decoder or GEMDOS implementation,
+and no Atari display state or gameplay is fabricated.
 
 The static evidence records below are the contracts used to validate that
 narrow service. Statements that a parser does not select a result describe
@@ -1735,22 +1431,15 @@ The separately inventoried file-`+$107c` candidate maps to `$2b57c` and remains
 rejected. Direct inspection of the admitted memory at `$2b55a` instead yields
 `48e7fffe61000038`, hash
 `b1b4328c9f54737553994259dac4dfb0247bf422414ed05a1c5c6166ec37ba62`.
-The native path executes its MOVEM save and BSR control transfer to `$2b598`.
+The native path executes its MOVEM save and BSR control transfer, stopping at
+the newly exact external callee boundary `$2b59a`.
 The first 16 genuine callee bytes hash to
 `967cb0022c8e29e0bef0dae618b95750fff3afa255094f9356210f1c89686fa3`.
 Native execution preserves the BSR return `$2b562`, derives A3 `$2b0e8`, and
-atomically clears `$2b6b8`. The callee begins with `MOVEQ #0,D0`; production
-derives D0=0 from that instruction and reads both operands of the byte writes
-from owned memory: `$2bdfd` and `$2b6ae`. The writes to `$2b6b0/$2b6b1` commit
-atomically. Production then performs the bounded setup and all three DBF
-iterations, reading each indexed word from owned memory and committing the
-corresponding original writes. The 15 saved values and absolute stack address
-are not initialized by the supported TOS prefix. The native path therefore
-keeps those register values opaque rather than supplying a synthetic frame.
-Since the caller's next hash-locked helper reads no restored registers, Eon
-applies the exact MOVEM/RTS stack-depth transition and continues to the helper's
-XBIOS `$26` boundary at `$2aa72`. The real-media CLI test verifies this stop
-and hashes the source directory before and after execution.
+atomically clears `$2b6b8`; it stops before the D0-indexed instruction at
+`$2b5a6`. No source index or register value is invented. A generation- and
+sequence-owned observation supplies D0 and the byte at derived address
+`$2bdfd + sign_extend(D0.W)`. Production verifies it against owned memory.
 The exact 12-byte instruction pair hashes to
 `e87859079e18a266cc359d7e0be47667c5cfe79dbffa05daad80ee951fa777d7`;
 both writes to `$2b6b0/$2b6b1` commit atomically. Contradictory, stale, and
@@ -1782,16 +1471,13 @@ second indexed reads both resolve to `$2be0c` from carried D0.W state. A1 advanc
 falls through to `$2b600`. Its 28-byte epilogue hashes to
 `51ea54e46ad38380435c7a367889825fce566b4f33036fb5dd38846dafdf4ab7`.
 Six direct initialization effects commit atomically, RTS returns to `$2b562`,
-and the bounded path reaches the saved `MOVEM.L (A7)+` restore. The explicit
-observation API still accepts a real frame with all 15 longwords in mask
-`$7fff` order and its A7 address. The active native driver instead validates
-the same hash-locked restore and caller path while leaving those values and the
-absolute A7 address unknown; its RTS return `$2aac8` is derived from the
-anchored caller JSR.
+and execution stops before the saved `MOVEM.L (A7)+` restore frame.
+That frame is one typed observation containing all 15 longwords in mask
+`$7fff` order, its A7 address, and the required caller return `$2aac8`.
 The exact MOVEM/RTS bytes hash to
 `7f09b538ef863cae65b4a16e1301251bde1fed37c1dba591dd4ec9f4b34106b1`.
-The opaque register-preservation transition accounts for the MOVEM frame and
-return without materializing guest stack bytes. The caller's six-byte absolute JSR hashes
+Restoration and RTS commit as one checkpoint transition; A7 advances by 64
+bytes including the return longword. The caller's six-byte absolute JSR hashes
 to `fd41f7c5a0cdb684768c3da230cb9ca56bac136abd2254b55090d6b1cf58da78`.
 Execution stops before its target `$2aa68`.
 The admitted bytes at `$2aa68` are not the older 22-byte-shifted candidate.
@@ -1799,46 +1485,6 @@ Their exact 12-byte prefix is `2f3c0002aa423f3c00264e4e`, SHA-256
 `fd6e1ace58bbc4108fcc0b8a7f75103c04337c41d24b2c9de5907f9538aaf439`.
 It pushes pointer `$2aa42` and XBIOS selector `$26`, then stops before
 `TRAP #14` at `$2aa72`; no firmware result is inferred.
-An independent decode beginning at the callback target resolves the earlier
-linear-listing alignment ambiguity. `$2aa3a` is an eight-byte
-`JSR $2b568; RTS` sequence (`4eb90002b5684e75`), SHA-256
-`62db63aef97d106af047adbac22d59b287003e47c4ff43d2217a394c125e6d40`.
-The callback at `$2aa42` reads TOS Physbase at `$4ba`, stores it at `$2aa34`,
-then writes `$2aa3a` into the second longword of the TOS VBL queue pointed to
-by `$456`; its exact 26 bytes hash to
-`bf3647c5a7d9979e1a58728581128b34b19575a0e266ade769a5877097fb2bf9`.
-The called wrapper at `$2b568` is the 16-byte sequence
-`48e7fffe610001584cdf7fff4e75`, SHA-256
-`3c29f42b124191b0cfed7977fcca6aac2bf7c2da1d9e598ae0a21ee31ea53cd2`: it
-saves D0-D7/A0-A6, calls `$2b6c6`, restores those registers, and returns. The
-first 64 bytes at `$2b6c6` hash to
-`76538e87961cc33e3a082ebff2c94f84c3d042437a31215f39b89a1b0064c668`; this
-prefix accesses hardware locations `$fffa01` and `$ff820a`. The alternate-entry decodes use the original hash-verified
-`MILL22A.INF` bytes and do not establish a native Supexec return, VBL cadence,
-or equivalent SDL/audio effects. Reproduce the alternate decode with
-`tools/analyze_atari_st_config.py --alternate-entry-offset 0x53a
---alternate-entry-size 0x22`; the real-media CLI check asserts the callback
-and wrapper instructions. Keep this callback behind the hardware-service
-boundary until those effects are modeled.
-
-The callback's post-read state pointer is source-resolvable. At
-`MILL22A.INF+0x11c6`, `LEA $0be6(PC),A3` uses the 68000 PC-relative base at
-the extension word and resolves to file-image offset `+0x1dae`, runtime
-`$2c2ae`. After the verified `MILL22D.INF` Fread into `$2c24a`, this is offset
-`+0x64` in the authentic 18,428-byte D file (SHA-256
-`de0a95d3e4659a305b3e55b3417a7648127b41866de0a0ca344a81c66979dbc0`). The
-VBL routine's first state fields `A3+$5c6..+$5dc` therefore read D-file bytes
-`+0x62a..+0x641`; the exact 23-byte span SHA-256 is
-`765fb0c1e1f0f03bfcb397dab5e96efc86a1589c8fb8fe4659c822ece341a25b`.
-The VBL entry was queued earlier, before this D-file read, so this mapping
-does not establish whether a prior VBL used pre-read memory at the same
-address. That first-event preimage and cadence remain unresolved. The callback
-still reads MFP/video/PSG hardware and calls local routines. The
-hash-bound 1,024-byte alternate-entry report for `$2b6c6` is external-cache
-only (SHA-256 `bc51443b99b9fbe608e2c77fa265a639e0de25ef78aae2d2f541c355edfd9346`);
-its source span `$11c6..$15c6` hashes to
-`3a29b97d1383787903ff090796536d9d2df6c1d7c1fe84e92f3b52fe350455f3`. It
-does not prove that a VBL occurred or select PAL/NTSC timing.
 A typed selector-`$26` D0 return advances through exact cleanup and RTS bytes
 (SHA-256 `59f7345ed980fd79117e7ad10db1a93c3872cafca3000afb7ef3f7eda5603adc`).
 The caller then sets D7 to `$2a640` and reaches absolute `JSR $2aa0c`; its
@@ -2000,8 +1646,8 @@ the selector-`$3e` Fclose boundary. The six post-Fclose bytes hash to
 and reach RTS `$2a5ec`. A separate typed stack observation admits only its
 second-caller return `$2ab10`. The exact 22-byte caller span hashes to
 `eea2683953b1fe18e3e7b88e1744fa10a9684444fe183d283efee9f54302c1a0`;
-it restores A3 `$2a64c`, A4 `$2a66c`, pushes the PC-relative callback entry
-`$2ab2a` and selector `$26`, and stops at XBIOS trap `$2ab24`. The selector result and
+it restores A3 `$2a64c`, A4 `$2a66c`, pushes the PC-relative pointer `$2ab2c`
+and selector `$26`, and stops at XBIOS trap `$2ab24`. The selector result and
 all referenced-data meaning remain external until supplied as a typed raw D0
 observation. The exact four-byte cleanup/RTS suffix hashes to
 `2b1d33a613d225ccb932ee7c7ad5efb29dcdd736ba28ad3c4b75162694bc09ed`
@@ -2108,21 +1754,6 @@ before Line-A opcode `$a000`. The 44-byte prefix through that opcode hashes to
 opcode word alone hashes to
 `20b64b56f584ec6c5184846cbeb974347b5e4c25cb49628ce1426fd0d2128ae7`. No
 graphics effect, frame, or gameplay meaning is inferred.
-
-### Millennium Atari game-init second configuration read (2026-10-25)
-
-The game-init caller opens `MILL22B.INF` at runtime `$2a5b4`, then requests
-`$7d42` bytes at `$2a5d0` into `$2c24a`. The bootstrap retains the 84,720-byte
-FAT12 file only after checking the full source digest
-`e315b0ec01f2fe429fdce101765577b893d031389c540de1fbe43eca121d53e9`.
-When a generation- and sequence-checked Fread result is supplied, the native
-coordinator applies exactly the returned prefix from those authenticated
-source bytes at `$2c24a`, bounded by the caller's `$7d42` request. This is
-source-backed memory materialization; it does not synthesize the GEMDOS return,
-claim a captured file-service result, modify the disk image, or admit execution
-past the subsequent Fclose/RTS/XBIOS observations. The focused test verifies
-the first and last byte of a full requested prefix and rejects an over-request
-length. The Fread return and caller continuation remain external boundaries.
 
 The exact post-opcode local continuation is also hash addressed. File `+$44`
 through the Line-A suffix RTS is 22 bytes, SHA-256
@@ -2624,57 +2255,6 @@ both hashes and the first-stage checksum, then records the second-stage
 dispatcher. It stops before `Floprd`, callback/XBIOS behavior, state
 selection, or a display is invented; other protected disks are detected but
 never substituted for this profile.
-
-Two additional supplied Replicants Disk 1 images have independently been
-checked in place against this exact chain. Outer ZIP hashes
-`4a0f9569829beb872363cc49bb206a084d8a498bba825a43672cbc2865c59a94` and
-`4ed2865b0e080eaccd0a97020cd2616157d66ab0bcdb5879e01b7492e5dc373c` contain
-disk hashes `a49f509b33ac3d5e59ce496999f28883014c0242c66cfc5e817dd07eb5e65fc8`
-and `5def9740c010decd32ac263cf933698a8371c2f542fbceab73abfad44576714f`,
-respectively. Their track-70 and track-2 raw ranges match the hashes above
-exactly. Their boot sectors both retain the `$1e` branch, valid BPB, and
-`$1234` checksum; the only differing boot-sector bytes in the second image
-are offsets `$08..$0a` and the checksum word at `$1fe..$1ff`. The bootstrap
-session therefore admits only these two additional whole-disk hashes and the
-two observed boot-sector hashes. This broadens the same static bootstrap
-boundary; it does not add XBIOS behavior, a screen, or gameplay evidence.
-The later Disk 1 state-1 raw interval (`+$55800`, `$5e400` bytes) differs from
-the canonical Replicants image at exactly one observed byte, disk offset
-`+$93baa`; both alternate images hash that complete interval as
-`fc7dd59628db9ec05397ec74e197515e1c866646493bebf6bd44ef6d12c7d6e6`, and
-the state-5 overlapping prefix as
-`3a47c5f9153c5c693cbad3fafd6083f84a1b4c47b18e924fc1cd5bb394abea51`.
-The byte's gameplay meaning is unknown. The validator preserves the exact
-same-prefix relationship and requires the matching pair of variant hashes;
-it does not normalize or overwrite that byte.
-
-The matching Replicants `[a]` Disk 2 is a separate boot path, not the current
-KILLER_BOOT profile. Its image SHA-256 is
-`91e296ddbc005f756d05786a58660e0e4f8feee22016157fa3c751601bdf5fa7`; its
-512-byte boot sector is at disk offset `$0`, loads at `$1000`, and hashes to
-`6f90222faa5630be91578058794146aa47d453314ad416714ea0f1679fc47957`. The
-sector has `$1234` checksum and standard 720 KiB BPB; its first short branch
-targets `$103a`, and the literal `KILLER_BOOT` anchor is absent. A complete
-512-byte linear candidate listing (155 lines, SHA-256
-`e2ed63bde909b853f0eb57ef0c6420307e6fad21b389a0619d3772c86b396b69`) is in
-the external analysis cache. After loading `_dskbufp` at `$1098`, the code
-compares the buffer's first word with `$6038` and skips the following
-update/write path when equal. Otherwise it copies boot bytes into the TOS 1
-KiB floppy buffer, calls XBIOS Protobt at `$10de` with buffer `_dskbufp`,
-serial `$ffffffff`, disktype `-1` (leave unchanged), and execflag `1`, then
-calls XBIOS Flopwr at `$10fa`. The Flopwr stack gives buffer `_dskbufp`, filler
-`0`, device from the callback frame at `8(A6)`, sector `1`, track `0`, side
-`0`, and count `1`; it therefore attempts to write the boot sector to the
-selected floppy drive. TOS-HYP documents Protobt as a boot-sector generator
-and Flopwr as a physical-sector write [Protobt and Flopwr reference](https://www.exxosforum.co.uk/atari/mirror/toshyp/00400d.html).
-The runtime `_dskbufp` contents, callback frame value, branch taken, and
-Flopwr return are not observed. This conditional write path does not prove
-that the supplied disk writes at boot. A native implementation must keep any
-such write in a private disk overlay; it must never alter the original image.
-The `[a2]`
-Disk 2 is 1,056,768 bytes with 2,064 sectors and 12 sectors per track; its
-boot bytes fail the existing 720 KiB/`$1234` envelope and remain a separate
-unclassified format.
 The release-neutral protected-media preflight borrows the already verified
 disk span only long enough to derive its boot profile; it no longer creates a
 second full-disk buffer for that inspection. A later bootstrap session retains
@@ -3194,68 +2774,6 @@ records the eleven literal `DEUTEROSDATA` markers in that prefix but does not
 treat them as a directory, decode a data file, or attach semantics to the
 remaining custom-media sectors.
 
-### Read-only original-media locator, 2026-10-24
-
-`tools/locate_real_game_media.py` scans user-supplied ZIPs without extracting
-members to disk. It reports member/archive SHA-256 values, nonzero-sector
-locations, literal `DEUTEROSDATA` offsets, and a small set of English game-text
-markers. It also reads standard Atari ST FAT12 root entries and hashes only
-files whose complete chains agree across both FAT copies; it never writes the
-file payloads. It rejects disk members larger than 4 MiB before allocating
-per-sector state. The diagnostic is a search aid only; its synthetic
-byte/sector summaries do not establish executable behavior, file semantics,
-or language identity.
-
-A read-only scan of the local Atari ST candidates now identifies the
-Robocop-labelled disk's 221-byte `MILLE.TOS` and the 4AFC-labelled disk's
-221-byte `4AFC.TOS` with the same PRG hash as the Electric Dreams STX
-`EXEC.TOS`. Both roots also contain the byte-identical 7,506-byte
-`MILL22A.INF`. Their 84,720-byte `MILL22B.INF` files have distinct hashes
-(`119b6d03…7c7a1` and `8d5ac3e6…67844`) that differ from the clean Equinox
-source. This locates alternate real loader/data bytes but does not prove
-release identity or authorize substituting their configuration into the clean
-runtime. The tool reports root file names, sizes and hashes only; no media file
-was written.
-
-The Software Studios Defjam-labelled Millennium Amiga ZIP in `~/.projecteon`
-has SHA-256
-`ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd`; its ADF
-member hashes to
-`8263e19b431b61c3c34363bb282703476145a45259c94132be82b529ec13b53c`. It is a
-standard 901,120-byte image and contains the text markers `COLONY`,
-`CONTINUE`, `DISK`, `GAME OVER`, `INSERT`, `LOAD`, `PLANET`, `PRESS`, `SAVE`,
-`SHIP`, and `SYSTEM`. These strings are consistent with the English-labelled
-release, but do not prove it is byte-compatible with the already admitted
-Defjam profile. Its raw loader and stage hashes must be independently derived
-before runtime admission.
-
-The canonical Deuteros Amiga Disk 2 ZIP hashes to
-`b98ee3c36141773485c5e03dd8bb4aa59784eaf08a1363fa6a2951a5eb5fdc0a`; its ADF
-member retains the already admitted hash
-`99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a`. The
-sector census found 1,697 sectors containing at least one nonzero byte. This
-confirms the custom disk is substantially populated but does not show how the
-game addresses it. Results and any derived reports remain in the external
-analysis cache; original ZIPs and media were read in place only.
-
-The same canonical Disk 2 contains German briefing text embedded among other
-resource bytes beginning at ADF offset `0x13400`. The bounded search window
-`0x13400..0x15600` (8,704 bytes) hashes to
-`e28a72a111bcb47b6d619a154db9cb25ecb2fcda0a21637757da8259ca297591`; it
-contains 21 occurrences of `Forschungsleiter.`, and the markers
-`Wir haben einige Vorentw`, `Operations-Schiff (IOS)`, and
-`WIR MACHEN DEN REST ...`. The window includes non-text asset bytes and is not
-a decoded text table. The same phrase offsets occur on the `[a]` Disk 2
-variant; the `[a2]` variant retains the briefing markers with shifted later
-records. Those variants differ from canonical Disk 2 in 24 and 80 sectors
-respectively, so neither is admitted as a replacement for the clean data disk.
-The English Disk 1 ADF does not contain these briefing phrases. The source
-language-selection path and how these records become visible are not yet
-connected to the owned runtime or localization keys. The locator now reports
-these exact German marker offsets while streaming the original archive member;
-this is a real-media lead, not evidence of a language choice or rendered
-briefing.
-
 After the verified opening handoff, `DeuterosAmigaTitleStageSession` now
 executes the complete local profile-one prefix exactly once: its two sparse
 title-RAM stores followed by `A7 = $40b62`. It records that result in a
@@ -3652,40 +3170,14 @@ stage.
 For mode five it copies the byte to `$3717e` and writes `$0101` to `$38092`;
 every other path writes byte one to `$19d52`. The shared prefix is now
 opcode-validated through `$40574`: it installs stack `$40b62`, loads Exec base
-from `$4`, calls Exec vectors `-$96` (`SuperState`) and `-$9c` (`UserState`),
-then calls the original internal setup sequence, copies `$1f168` to `$1f974` and `$410d8`,
+from `$4`, calls vectors `-$96` and `-$9c` with literal `D0=$7fff0`, calls the
+original internal setup sequence, copies `$1f168` to `$1f974` and `$410d8`,
 and prepares custom base `$dff000` with words `$7fff/$7fff/$c000/$87ff` at
 offsets `$40/$42/$9a/$96`. It then distinguishes a mode-five call to `$36a8c`
 from the normal call to `$1fb9a`. `DeuterosAmigaTitleStageProfile` records all
 of these as initialization requirements only: Project Eon does not call Exec,
 write the custom chip, allocate memory, or infer the calls' higher-level
-effects. The bytes set D0 to `$0007fff0` immediately before `UserState`; its
-documented ABI takes a system-stack pointer in D0. This value is recorded as
-the literal call argument, not an allocation size, and its validity or memory
-ownership is not established. The `SuperState` return is overwritten before
-`UserState`, so that return cannot supply this argument. The vector names and
-argument contract follow the Exec [`SuperState` and `UserState` autodocs](https://developer.amigaos3.net/autodocs/exec.library/SuperState.html)
-and [function offsets](https://developer.amigaos3.net/autodocs/exec.library/).
-The available Kickstart v1.3 r34.005 image hashes to
-`ee05862d8102a08436ac4056da7d549db31625c7d47b24dfb7b3c9a5c113ca53` and was
-read from its supplied archive without extraction. Its ROM offsets `$1184`
-(44 bytes; SHA-256
-`93ac3f036396eaaa80b4d09dcc025e345990d46a0b79cb058c222e7546e30094`) and
-`$11b0` (26 bytes; SHA-256
-`20e1d0a1403bb3b7cb0bbd9ef1bcc87a47d1d2907de17bd765d5e2c3ccc8e8e8`)
-contain the corresponding `SuperState` and `UserState` entries. In the latter,
-ROM `$fc11be..$fc11c8` copies active A7 to USP, installs D0 in supervisor A7,
-clears the saved supervisor bit, and writes SR. The mode change restores active
-A7 from USP; `$7fff0` is therefore the supervisor-stack argument, not the
-post-return user A7. This confirms the intended bank-switch sequence but does
-not establish that `$7fff0` is a valid or owned stack region, nor that the
-Kickstart V34.005 defect is patched for this title. The native runtime records
-the two source call sites and literal argument, elides the host privilege
-transition, and stops at `$1ed8c` before `OpenLibrary`; it neither calls Exec
-nor fabricates observed register returns. The bounded external analysis is under
-`~/.cache/project-eon-analysis/kickstart-20261013/`; no ROM bytes or listing
-are stored in the repository.
-After that shared setup, the recovered
+effects. After that shared setup, the recovered
 recurring loop starts at `$40574`, calls `$222c0` then `$23e4e`; a mode/input
 change clears `$40410`, and the loop compares it with `$0000ea60` before the
 original `$4069a` dispatch, subject to another original-state check. The strict
@@ -4007,40 +3499,6 @@ unrecovered concurrent writer may change the word. The helper does not call a
 callback, decide how a frame was produced, write title memory, or bind either
 result to host presentation/input.
 
-A separate source-execution path now starts at the exact caller `$407b4` and
-runs the hash-locked title-stage bytes through `$1f230` and the local feedback
-tail `$407ba..$407e4`. Instruction fetch uses the original stage image
-(SHA-256
-`48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03`);
-data reads and writes use a distinct mutable runtime copy. It is admitted only
-with a nonzero owned `$1eed6` count, verifies the one-byte dequeue and
-20-byte shift against the preimage, and stops at `$4078c` for looping
-responses or `$407e4` for return responses. A composed real-media regression
-executes the callback and this consumer using explicit synthetic event frames:
-raw key 1 produces `$31` and reaches the unchanged control word, while the
-comma physical usage produces `$2c` and changes `$407e6` to `$00ff`. This
-verifies the isolated local machine-code path and its source-backed memory
-effects. It does not emulate `OpenDevice`/`IND_ADDHANDLER`, establish the
-response byte's visible meaning, or demonstrate a playable game action. SDL
-delivery was added later through the separate compatibility path below.
-
-An observation-gated runtime adapter now joins exactly one complete v31
-response-queue sequence: `$407b4`, `$1f230`, `$1f23e`, `$1f258`, `$407ba`,
-`$407e4`. It requires increasing emulator cycles, nondecreasing host-input
-ordinals, the three captured stack returns to `$407ba`, a nonempty and
-unchanged preimage through the second read, the matching D0/Z result, and the
-instruction-consistent postimage through caller resume and loop exit. Before
-admission, the coordinator compares the capture preimage with its owned
-`$1eec0..$1eed4` bytes and `$1eed6` word. It then atomically commits only the
-twenty original queue-byte shifts and pending-word decrement. The captured
-low byte returned at `$1f258` is exposed as a value for a later caller-tail
-step; it is not assigned an event or gameplay meaning. The dedicated
-`deuteros-amiga-response-queue-boundary-real-media` test drives the gate with
-constructed observation values against the hash-identified ADF. It proves
-the stage-session sequence gate and queue arithmetic, not the coordinator's
-owned-memory commit, a live capture, or a playable action. No complete
-admitted input-linked queue pass is currently available.
-
 Static backtracking identifies a producer for that same byte region but also
 the next hard input boundary. During title setup, `$1ef74` places callback
 address `$1f056` in the original descriptor at `$1ef48 + $12`, then reaches
@@ -4052,80 +3510,30 @@ local byte-one path reads caller-owned A0 offsets `$8` and `$6`, rejects a
 repeat, values at or above `$50`, and a pending count at or above `$14`, then
 copies one byte from table `$1ee20` to `$1eec0 + [$1eed6]` and increments
 `$1eed6`. That connects the static callback path to the recovered response
-queue, but does not identify the full A0 ABI, table semantics, registration
-service, or broader input vocabulary. At the time of this static
-backtracking, no integrated title-input runtime existed; the later bounded
-raw-key compatibility route is recorded below.
-
-A later visible, hash-bound run adds a limited runtime observation of that
-producer. Deuteros capture receipt v37 at
-`~/.cache/project-eon-captures/deuteros-amiga-playability-v28-callback-snapshot-20261008-01/`
-passed the local verifier. On the recorded visible `1` input, callback entry
-`$1f056` had `A0+$4 = 1`, `A0+$6 = 1`, and an empty queue; its matching
-`$1f14e` return had byte `$31` at `$1eec0`, pending count 1 at `$1eed6`, and
-mirror byte 1 at `$1ef2e`. The following visible Space input likewise returned
-with `$20` queued and pending count 1. This joins the already hash-locked local
-producer instructions to two runtime callback effects. It does not establish
-the complete callback ABI, callback-to-`$4077e` caller path, or game meaning of
-the events. The sidecars and original-derived bytes remain in the external
-cache; only these bounded facts and artifact hashes are retained here.
-
-The runtime now has a typed, owned continuation for this byte-one producer
-only. `DeuterosAmigaObservedTitleCallbackProducer` carries ordered samples at
-`$1f056` and `$1f14e`, the caller event byte and words, and before/after
-snapshots of `$1ef2e`, `$1ee0e`, `$1eec0..$1eed4`, and `$1eed6`.
-`DeuterosAmigaTitleStageSession::observe_callback_producer` reuses the
-hash-checked source-table evaluator and accepts only the observed event-byte-1
-route. `ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_callback_producer`
-requires the complete before-image to match owned runtime memory, validates
-the returned queue/mirror/selector/count values, then commits the four exact
-guest writes atomically. This does not map a host key or identify the event. A
-later change added an observation-gated runtime adapter for one complete
-`$407b4` response-queue pass; no admitted live caller trace has exercised it.
-The `$00ff` arm still stops before `$20118`; its arguments, service return,
-and display effect remain unadmitted. At the time of this earlier entry, the
-callback-producer continuation had not yet been tested.
+queue, but does not identify A0's ABI or values, table semantics, the
+registration service, or a real input device. Project Eon consequently leaves
+title input and response production unimplemented rather than inventing a
+keyboard, mouse, or host event mapping.
 
 `DeuterosAmigaTitleCallbackRegistrationProfile` now hash-locks both the
 registration body (`$1ef74..$1f051`, ADF `+$79f74`, 222 bytes, SHA-256
 `f571a8e5e48c29fe3d6f493e503e2a3a0b3328ac4cafb425808eff48804c4f27`) and
-the callback. A bounded opcode check now also binds the earlier OpenDevice
-call: the request pointer is `$1eefa`, the name argument pointer is `$1edfc`,
-D0 (unit) and D1 (flags) are zero, and Exec vector `-$1bc` is called at
-`$1efb0`. The request's reply-port word is initialized from `$1eed8`; the
-OpenDevice return remains unobserved. The later Exec call at `$1f04e` uses
-vector `-$1ce`; its request has command 9 and data pointer `$1ef48`. The
-[AmigaOS Input Device documentation](https://wiki.amigaos.net/wiki/Input_Device)
-defines command 9 as `IND_ADDHANDLER` with an
-`Interrupt` descriptor in `io_Data`. This identifies the static handler
-registration ABI, but not the opened device's return, handler installation or
-removal effects, or a live callback invocation. The runtime still stops at
-these external results.
-
-`encode_deuteros_amiga_title_input_event_prefix` now serializes the callback's
-bounded `$00..$0d` `InputEvent` prefix in big-endian Amiga order: next-event
-pointer, class, subclass, code, qualifier, X, and Y. The native test covers a
-negative signed-word delta. It intentionally supplies no timestamp, event
-meaning, or SDL key mapping; it is a byte-layout primitive for a future owned
-input-device path, not evidence that the game callback has run.
-
-Direct instructions establish request `$1eefa + $1c = 9`,
+the callback. Direct instructions establish request `$1eefa + $1c = 9`,
 `$1eefa + $28 = $1ef48`, descriptor `$1ef48 + $12 = $1f056`, and the call to
 Exec base `$4`, vector `-$1ce`. The immediately following original instruction
 at `$1f052` is `RTS`, so the local routine does not inspect a service result
-before returning. The callsite and request layout, together with the public
-Input Device command definition, identify this as the `IND_ADDHANDLER`
-request; its acceptance and installed-handler effects remain unobserved. The
-callback's producer route begins only for
+before returning; this still does not identify the service ABI or establish
+that it returns. The callback's producer route begins only for
 the byte-one comparison at caller-owned `A0 + $4`; its direct bounds are word
 `A0 + $6 < $50` and pending word `$1eed6 < $14`, after which it indexes
 the exact 160-byte original interval `$1ee20..$1eebf` (SHA-256
 `2f00ffdf05ab28379e97e91e98fa764e45769d7ea55363846543becf7552e265`) and
 writes `$1eec0 + [$1eed6]`. The `$50` bound plus the original conditional
 `+$50` adjustment proves this is the complete locally addressable source
-interval; it does not prove the meaning of any byte. These facts establish a
-hash-locked input-handler ABI and bounded callback data path, not a live
-callback invocation, mapped host event, or runtime value supplied by Exec.
+interval; it does not prove the meaning of any byte. These are an ABI-shaped
+data path,
+not proof of the request type, callback event names, input device, or any
+runtime value supplied by Exec.
 
 The same hash-locked callback has two additional locally bounded routes. Before
 its branch checks it mirrors caller byte `A0+$4` into `$1ef2e`. The byte-two
@@ -4340,10 +3748,8 @@ verbatim to longword `$20976` and word `$21704`, install stack `$22296`, then
 request the literal memory ceiling `$7fff0`, then call raw addresses `$20068`
 and `$2013a`.
 
-The profile-two runtime owns that first entry prefix. A hash-bound continuation
-derives D0.W=`2` at exact entry `$21734` from the selected profile cell; a full
-register observation is optional and, when present, its low word is checked.
-D0[31:16] remains unknown. A1 is not caller-supplied again,
+The profile-two runtime now owns that first entry prefix. It accepts only a
+typed D0 observation at exact entry `$21734`; A1 is not caller-supplied again,
 but comes from the controller longword already admitted at `$206a0`, copied
 through `$12ff8`, and retained by the same title session. Before committing,
 the coordinator reconstructs all `$4200` resident bytes at `$20000` and
@@ -4411,26 +3817,20 @@ The next typed observation owns the prior byte read at CIA-A port A `$bfe001`
 and the word read at `$21704`. The exact 26-byte span beginning at `$217e4`,
 SHA-256 `cb9046ad20fffc0a52f43431949927b4d159ecc795fe5f62dbbd01accd0684c7`,
 begins with `BSET #1,$bfe001; MOVE.W $21704,D0; BSR $21926`. Both the initial
-main-stage path and recurring outer-input path apply a native C++ model of
-the first 14 bytes, after verifying this complete 26-byte source profile.
-The model updates the observed CIA byte, D0's low word, and MOVE.W condition
-codes while preserving D0's upper word and the unaffected SR bits; it stops
-before the external BSR at `$217f2`. `$21926` remains a distinct typed call
-boundary. On the initial path, the caller plan also mirrors the admitted word
-to `$21704` and `$21706` as one memory batch. The owned word must agree with
-resident runtime memory; a mismatch, wrong address/bit, replay, or memory
-failure commits none of the expected writes. The CIA operation is retained
-only as raw stateful hardware evidence; no device, audio, timing, or gameplay
-meaning is assigned.
-The initial `$217f8->$22a5a` call is now a deterministic local compatibility
-operation, not a fabricated external return. Before any write, runtime memory
-must match the validated 16-byte `$22a5a` hash, the `$22ab8..$22b89` sound
-staging hash, and the caller's 30-byte `$217fe` hash. The existing native
-`$22ab8` model stages sound zero across all four software channels with
-read-through writes; the `$217fe` continuation then clears `$21720/$2171e`,
-sets `$210f2` to one, and advances to `$21816->$21276` in one atomic batch.
-This performs no AmigaOS call and makes no claim that Paula audio played. A
-bounded native-body candidate describes the
+main-stage path and recurring outer-input path execute the exact 14-byte
+prefix in the bounded 68000 interpreter, seeded only with the observed CIA
+byte and owned `$21704` word. They verify the changed port byte and D0 word and
+stop before the BSR; `$21926` remains a distinct typed call boundary. On the
+initial path, the caller plan also mirrors the admitted word to `$21704` and
+`$21706` as one memory batch. The owned word must agree with resident runtime
+memory; a mismatch, wrong address/bit, replay, or memory failure commits none
+of the expected writes. The CIA operation is retained only as raw stateful
+hardware evidence; no device, audio, timing, or gameplay meaning is assigned.
+The ordered typed `$217f8->$22a5a` return
+then admits the exact 30-byte span at `$217fe`, SHA-256
+`382932f57f5d3d181f93727198a6f5b7d6fff91522eed0438778a43e8ca417d5`.
+It atomically clears words `$21720` and `$2171e`, writes word one at `$210f2`,
+and reaches `$21816->$21276`. A bounded native-body candidate describes the
 deterministic first `$9a` bytes of that callee, SHA-256
 `f86946a0b1323b9f85c0ab5259395fa11962961c72ca17bc02ab230bc008dbed`.
 It requires every source byte through `$32a24+$3b` and the longword at
@@ -4489,13 +3889,7 @@ store. A missing counter byte rejects the whole transaction; the runtime no
 longer records this deterministic effect without executing it.
 
 The two subsequent `-$c0(A6)` returns now have a strict ordered continuation:
-`$21310->$21314`, then `$2132a->$2132e`. Each return observation must also
-carry the A0, A1, D0, and A6 register image at the vector call, exactly
-matching the hash-owned prepared call on the first return and the first
-return's resulting plan on the second. Wrong or omitted call registers leave
-the session and runtime memory unchanged. This records the call contract; it
-does not simulate `graphics.library` or infer its side effects. The 32 bytes
-at clean disk-1 ADF
+`$21310->$21314`, then `$2132a->$2132e`. The 32 bytes at clean disk-1 ADF
 offset `$6b14` (runtime `$21314..$21333`) hash to
 `3c03bd624f997572d76c303a2e14e9f1838f8473d8efa30be4484e9ad61e047f`.
 After the first return, Eon reloads A1 from owned `$21266` and A6 from owned
@@ -4512,19 +3906,6 @@ or service result is fabricated. Out-of-order, mismatched, and replayed returns
 do not advance the session or repeat the stores. The first graphics-return
 continuation remains register-only, and library-internal effects are not
 synthesized.
-
-The explicit owned-byte API can execute this exact boundary without an external
-register observation: it requires the live checkpoint at `$d2fd`, reads only
-the authenticated child `CS:$0082` cell from `NativeRuntimeMemory`, and chooses
-the next event sequence from the current coordinator counters. After an
-externally observed DOS `AH=$25` return at `$4273` is accepted, the coordinator
-automatically runs that local read when the checked continuation reaches
-`$d2fd`. The process checkpoint retains both the source byte/address and
-decoded selector value at `$0122`. Missing memory, a different PC, or a
-detached child mapping returns a precise local-step error while preserving the
-accepted DOS observation. No DOS service result is implied by the local step.
-The coordinator integration remains untested end to end because the current
-test path does not supply the required `$4273` result.
 
 The owned dependency-chain checkpoint now includes value copies of the loop
 preparation and graphics-continuation plans. After preparation its stop is
@@ -4561,57 +3942,6 @@ is installed before returning to `$21342`. The interrupt body itself is not
 executed or assigned semantics. Every access and write remains in cloned
 owned memory until the full operation and state transition commit; invalid,
 missing, stale, repeated, odd, or out-of-range input publishes nothing.
-
-#### Deuteros VERTB registration and handler
-
-The exact linear decode of the 256-byte span at runtime `$207ec` (disk 1 ADF
-offset `$5fec`, SHA-256
-`21356e0e8cfe8b1323a7ffa3a59c8b98720794330251862e9978447c91006d0f`) identifies
-the handler installed by the `$208b4` call. It saves D0-D7/A0-A6, calls local
-body `$207fe`, restores those registers, returns D0=0, and leaves the caller's
-register state intact. The body adds four to the longword `$2079e` on every
-invocation. If byte `$207ea` is nonzero, it increments word `$207b0`, selects
-one of four 10-byte records at `$207b2 + (($207b0+1)&3)*10`, then copies the
-first two words to the two buffer pointers stored at `$2197a/$2197e`, at
-offsets `$2a` and `$2e` (each word write is spaced four bytes apart). If byte
-`$207eb` is nonzero, it calls `$22bea`, the separately documented sound
-consumer.
-
-The `$208b4` operands establish D0=5 and A1=`$2086a`; the node fields encode
-type `$02`, priority `$c4`, data `$20880`, and code `$207ec`. Exec Autodocs
-identify LVO `-$a8` as `AddIntServer(D0,A1)`. This is the VERTB server
-registration path. Static decoding does not establish that registration
-returned successfully, the live flags and pointers, or the callback timing
-delivered to SDL. Eon does not invoke this handler from the render loop or
-synthesize its effects on a host cadence. The explicit event-gated adapter
-below accepts only a supplied handler-entry observation and owned state.
-
-`DeuterosAmigaVertbSession` admits the exact 256-byte handler span only when it
-maps from ADF `$5fec` to runtime `$207ec` in the verified main-stage load. It
-requires an ordered return from the exact `AddIntServer` call
-(`$208b4->$208b8`, vector `-$a8`, level 5, node `$2086a`, handler `$207ec`)
-before accepting an observed handler entry at `$207ec`. The runtime records
-that registration return and exposes an explicit VERTB-entry observation; it
-does not create a host timer or infer a cadence. Each entry translates over a
-private sparse view of owned runtime memory and publishes nothing until every
-read and the memory batch validates.
-
-The translator always applies `$2079e += 4` with 32-bit wrap. If `$207ea` is
-nonzero, it increments `$207b0`, selects the record at
-`$207b2 + (($207b0_after)&3)*10`, reads its first four words, and writes two
-words to each owned buffer pointer at `$2197a/$2197e + $2a`, with the original
-four-byte spacing. If `$207eb` is nonzero, it first verifies the owned
-`$22bea..$23021` code span (1080 bytes, SHA-256
-`ac71cc9f850f2b1165a42d7583d22c8ef7091fbc960f5610537311ee732b3dc7`) and
-invokes the existing bounded audio consumer over the same private state. It
-returns its ordered AUD/custom-register writes as intents; those intents are
-not applied as hardware or SDL audio by this VERTB adapter. Missing code,
-flags, records, pointers, audio state or ROM bytes rejects the whole
-translation. Unit coverage includes event order, counter wrap and flag
-rejection. The real-media regression layers explicit fixture state over the
-original loaded ADF code, exercises both buffer copies and audio register
-intents, and verifies missing-dependency rejection. This is not a capture of
-AddIntServer or VERTB delivery, nor a playable-state claim.
 
 The main-stage loader contract proves disk `+$5800` is loaded at `$20000` for
 `$4200` bytes. Using that exact mapping, `$224cc` corresponds to ADF `+$7ccc`.
@@ -4703,14 +4033,8 @@ without publishing earlier record updates; its command interpreter is not
 silently treated as a completed call. The real four-record initialization
 uses type 3 and decrements each countdown from 1 to 0 while preserving its
 continuation pointer. The next boundary is the bit-5 read at `$2143a` from
-`$dff01f`, before `$21442->$21698`. The Commodore Amiga Hardware Reference
-Manual identifies `$dff01e` as read-only `INTREQR`; its low byte at `$dff01f`
-therefore exposes bit 5 `VERTB`, the vertical-blank request raised at the start
-of a video frame (1989 manual, p. 214,
-[interrupt registers](https://www.ikod.se/wp-content/uploads/2020/08/Amiga_Hardware_Reference_Manual_1989.pdf)).
-This assigns the hardware flag's meaning, but does not establish when the
-original interrupt request is observed by this routine, the monitor standard,
-or a host-side event source.
+`$dff01f`, before `$21442->$21698`. No timing, frame, audio, or input meaning
+is assigned to that raw hardware read.
 
 The first buffer switch now accepts an exact typed `$2143a/$dff01f` bit-5
 read and the counter-selected buffer-pointer read. The 56-byte clear routine
@@ -4742,14 +4066,8 @@ return address `$216f2`. Its library effects and following hardware wait
 remain separate from the native prefix.
 
 The first view return and its hardware wait now have ordered typed admission.
-The `-$de(A6)` call is graphics.library `LoadView`; its A1 view argument must
-match the counter-selected `$12e00/$12f00` address and A6 must match the
-reloaded owned library base. This follows both the caller bytes and the
-[official LoadView autodoc](https://developer.amigaos3.net/autodocs/graphics.library/LoadView.html),
-which specifies the `View` pointer in A1. The typed return must be exactly
-`$216ee/-$de->$216f2` and precede the sample sequence. Mismatched or missing
-call registers leave the state unchanged. The return's D0 remains raw
-unassigned data. The 12-byte wait/RTS span at ADF `$6ef2` has SHA-256
+The library return must be exactly `$216ee/-$de->$216f2` and precede the
+sample sequence. The 12-byte wait/RTS span at ADF `$6ef2` has SHA-256
 `3ee8aeaeb214bfb7cf210c7575043595d87340370ea8f85eda94eb51d53961a7`.
 Each sample is the exact bit-5 read at `$216f2/$dff01f`. A clear bit retains
 the wait and requires a fresh sample, without accepting another library
@@ -4875,10 +4193,6 @@ set those bits. Each sample is submitted only when the owned main-stage plan
 stops at that exact read; other port boundaries remain external. This restores
 the host-to-owned-input path but does not establish a complete playable game
 or prove later screen transitions.
-Space and Return retain separate held states before they are combined onto
-that CIAA line, so releasing one key cannot clear the sample while the other
-remains held. Focus loss clears both states. This is host-input bookkeeping;
-it does not establish that either key triggers a particular game action.
 
 For a possible physical-input probe, the exact bytes at `$21866` are `66 08`
 (`BNE.B $21870`) immediately after `$2185e`'s `BTST.B #6,$bfe001`. A trv2
@@ -5297,19 +4611,6 @@ unsupported cases. The byte-level path and raw memory addresses do not establish
 controller meanings, gameplay effects, or runtime reachability beyond the
 observed held-Fire entry.
 
-The branch at `$21866` is `BNE.B $21870`. The active-low fire sample clears
-bit 6 and falls through to set byte `$21720`; the released sample takes the
-branch and leaves that latch unchanged. Both paths then inspect `$2171e`; the
-native mode-`$14` scheduler executes a record only when `$2171e` and `$21720`
-are both nonzero. Existing tests include a fire-driven owned-memory path into
-the scheduler and frame producer, but the later no-fire sample runs in the
-same evolving session. It changes the frame after counters, records, and
-buffers have also advanced, so those frame hashes do not isolate the input as
-the cause. A causal visual comparison still needs both branches from the same
-owned preimage, followed by matching scheduler records and typed graphics
-returns to the frame boundary. The disassembly establishes the branch and
-latch effects; it does not yet establish a fire-triggered visible action.
-
 The complete native `$219f8` transition is now separately hash-gated and its
 bounded local execution is implemented. The 84-byte caller span at ADF
 `$71f8` has SHA-256
@@ -5632,14 +4933,6 @@ composition and BIOS-visible output remain unknown. No post-key loading frame,
 transition, resource effect, process exit, launcher return, or game startup is
 executed or drawn by Project Eon.
 
-At the later `$1917` animation-selector boundary, the native diagnostic now
-derives the single required process-prefix offset from the already-owned words
-at `CS:$1181` and `CS:$18f7`, using the original ten-bit mask. It reports that
-one byte at `$1909`; it does not read, initialize, or infer its value. For the
-admitted English DOS run currently this is `CS:$0000`, but that segment is an
-Eon allocation identity, not a recovered historical DOS process segment. The
-byte and its caller environment remain external evidence boundaries.
-
 `MillenniumDosTitleExitClosure` now preserves the narrower local tail as its
 own hash-locked profile. `$1c54..$1c69` (file `+$1b54`, 22 bytes, SHA-256
 `d0981a03e0f8fdc9449e080668b7808952a48d0d3de4beb3a528ba5fc0f05951`) first
@@ -5663,20 +4956,6 @@ It requires exact returns `$1c54->$1c57` and `$1c57->$1c5a`, records only the
 instruction-defined `$1a0e := 0` write, explicitly observes the stack word at
 `$1c60` from `$1aa0`, then requires `$1c64->$1c67` and `$1a0f->$1a12`.
 The DOS termination observation must be exactly `$1a18`, `AX=$4c00`.
-
-A focused disassembly of the same hash-verified `TITLES.EXE` confirms a
-candidate save/restore pair: `$1ba5` stores SP to `DS:$1aa0`, while `$1c60`
-loads SP from `DS:$1aa0`. The 12-byte source span `$1b9e..$1ba9` (file offset
-`$1a9e`, SHA-256
-`bfa354ed19619575c5331a11428edeb07711443efd5eaa3d7791005feae157ea`) and
-the four-byte `$1c60..$1c63` span (file offset `$1b60`, SHA-256
-`bb3beb622e32ea9856c68bdd1b4572dd8bc7f7d84d3486eff808aa3c5f32b43a`) are
-both tied to the 7,022-byte image hash above. Both memory operands use the
-default DS segment. This is a static save/restore shape, not proof that DS or
-the word at `DS:$1aa0` remains unchanged across intervening DOS calls. A
-runtime continuation needs the observed DS, SP and two-byte `DS:$1aa0` value
-at both sites, with ordered intervening calls/returns; do not infer that the
-restored value equals the earlier saved SP.
 
 The parent half is equally strict. After the title child terminates, the
 original title EXEC at `$0337` must return with carry clear; its child-status
@@ -6106,33 +5385,8 @@ byte effects at the observed segment and offset zero. The session exposes the
 `INT 21h` request at `$020c` (`AX=$2591`, `DX=0`) and retains its separately
 supplied raw DOS result. Native tests use synthetic selector and DOS-result
 observations; no captured selector, DOS return, IVT content, INT 91h handler
-dispatch, or handler return is established by those observations. The separate
-Eon-owned native compatibility route and its provenance are described below.
-
-### 2026-10-24 Native MILL.COM video-driver compatibility path
-
-The native DOS startup now follows the hash-bound `MILL.COM` order at
-`$01de..$023b`: it selects a video leaf, loads it through the exact
-`$02cf` file path, installs INT `$91` at `$020c`, then proceeds to the sound
-driver and `TITLES.EXE` paths. Eon has no DOS PSP command tail or original
-video detector result, so this native route records the selector source as
-`eon_native_default` and selects MCGA (`selector=$02`). This is an explicit
-Eon runtime policy, not a claim that original hardware detection
-returned `$02` or that the original user chose command-tail `m`.
-
-The compatibility service reads the exact supplied English `MCGA.BIN`
-(4,366 bytes, SHA-256
-`bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228`) into
-the Eon-owned paragraph arena, then records its INT `$91` vector at
-`0000:$0244..$0247` with explicit provenance
-`eon_dos_compatibility_service`. It does not modify source media or claim an
-original DOS allocation address, DOS return, IVT observation, or hardware
-detector result. The title dispatch is admitted only when the complete
-hash-verified driver image and this owned vector agree. The first function-$00
-dispatch now reaches its exact BIOS query boundary at MCGA `$01f4` (INT `$10`,
-AH=`$0f`); the BIOS result and native display-mode mapping remain unresolved.
-The Eon compatibility vector is not a capture or original-runtime parity
-evidence.
+dispatch, or handler return is established. No private service may yet be
+selected from these profiles.
 
 The exact English EGA640 and MCGA function-$00 spans are hash-bound against
 the full leaf identities and checked instruction by instruction through the
@@ -6207,13 +5461,9 @@ the RET opcode `$0234`. An exhaustive raw-byte scan of the hash-admitted
 EGA640 leaf found no `E8 rel16` encoding whose target is function-zero entry
 `$01c8`; this does not exclude indirect dispatch or callers outside this
 driver. The session accepts the near-RET word only as a typed stack
-observation at the exact `SS:SP` restored by the local POP. The full
-hash-admitted EGA640 image has `FF 95 20 00` at `$000e..$0011` (span SHA-256
-`936850254bdec3e2b31c115a67fe987b350012357ea99776c90d02a9eded01ce`), an
-indirect near call through the dispatch table whose return IP is `$0012`; the
-next byte at `$0012` is `CF` (`IRET`). The session therefore rejects any other
-near-RET word, then records the 16-bit `SP+2` effect without executing the
-return or dispatcher `IRET`. The outcome records the outgoing `$ff08` write to VGA port `$03ce` at
+observation at the exact `SS:SP` restored by the local POP, then records the
+16-bit `SP+2` effect without interpreting or executing the supplied return
+IP. The outcome records the outgoing `$ff08` write to VGA port `$03ce` at
 `$0207` as an I/O intent; no device response or graphics effect is inferred.
 These local effects are driven by the typed BIOS `CX` scenario input, not
 captured runtime observations.
@@ -6242,20 +5492,6 @@ postlude at file `+$0012`, 19 bytes, SHA-256
 nonzero driver cell `$01e5` invokes `$0d22` before IRET. A completed retrace
 poll alone therefore does not establish a completed MCGA interrupt return.
 No device values, selected driver, or callback result are inferred here.
-
-The complete function-`$13` leaf modifies DX and AL for the status-port loop
-but contains no instruction that writes BX. Its successful return therefore
-preserves caller BX, including BH; this is exposed as a hash-bound
-`return_bx_for_entry` result only after ordered status reads reach RET, and the
-EGA/MCGA test covers distinct input words. In the game's `$d0c9` sound
-dispatcher, INT `$91` wrapper `$0124` calls this leaf with AX=`$0013` and saves
-and restores AX. Although BX survives that call, `$d0ef` then clears BX,
-copies entry AH into BL, and clears AH via the now-zero BH. Wrapper `$cfc7`
-pushes BX, AX, and function `$0e`; `$cf8f` places its return address at BP, so
-the SIBM handler's `[BP+4]` reads the first argument, AX: zero-extended caller
-AL. Caller AH is the separate BX argument, and entry BH does not reach the
-voice index. A live `$d0c9` register/gate observation and loaded voice state
-are still needed before native playback can be connected.
 
 A separate hash-bound interrupt session now connects a typed request at the
 title wrapper's `$0127` (`AX=$0013`) to the exact driver table entry and
@@ -6299,18 +5535,11 @@ of its first three-byte slot to the end of that span; this structural reading
 does not establish the caller field's semantic meaning. The driver supplies
 no bound check for the far pointer or the target buffer extent, and a base
 offset above `$fcff` can wrap the 16-bit string offset. The 768-byte arithmetic
-ceiling therefore does not prove the actual buffer is safe to access. The
-standalone callback session now validates this exact 37-byte span, accepts typed
-descriptor word/byte reads at `$0cb0/$0cb3`, and accepts the typed count byte at
-CS:`$0c8b`. It applies the bounded `3*CL` forward copy to an explicit source
-byte span, records the descriptor writeback at `$0ccc/$0ccf`, performs the
-local register setup, and stops before `IN AL,DX` at `$0cd8`. Offsets wrap as
-16-bit values; the copied extent is at most 765 bytes and no buffer safety is
-inferred. These are scenario inputs, not captured title-runtime observations.
-The next instruction starts VGA status-port polling at `$0cd8`; the later palette loop
+ceiling therefore does not prove the actual buffer is safe to access. The next
+instruction starts VGA status-port polling at `$0cd8`; the later palette loop
 restores the caller's saved `SI` offset while `DS` still equals the target
-buffer's segment, then reads that byte stream and writes the VGA DAC. This
-session does not execute those device operations or admit descriptor bytes as
+buffer's segment, then reads that byte stream and writes the VGA DAC. This static
+profile does not execute those device operations or admit descriptor bytes as
 runtime evidence. A nonzero value
 executes the hash-bound decrement/jump `[$0d11,$0d18)` (7 bytes, SHA-256
 `ac86356c47ac73bde697d8ca755674ac5b0847c8f18a82e5bc8b821140359ef4`), then
@@ -6495,37 +5724,27 @@ paragraph arena allocates the exact rounded-up leaf size without overlap and
 labels the resulting segment as compatibility provenance; the segment is an
 Eon address-space key, never a claimed DOS capture. One tick performs open,
 exact-length discovery, arena allocation, rewind, complete read, atomic byte
-commit, and close, then stops at the INT 95h SetVect request. The DOS return
-and IVT contents are not observed or synthesized. Arena exhaustion,
+commit, close, and process-local INT 95h vector installation, then stops at
+the parent-SP observation. Arena exhaustion,
 zero/overflowing requests, and detached sequences fail without partial state.
-The vector request follows a statically identified path: hash-verified
+The vector installation is a native compatibility operation: hash-verified
 `MILL.COM:$02fe` leaves DS at the driver allocation, `$0234` zeros DX, and
-`$0236..$023a` selects `AX=$2595; INT $21`. Runtime stops at `$0239` until an
-exact DOS return observation is supplied. It does not synthesize an IVT write
-at `0000:$0254..$0257`; the return's carry/register state and resulting vector
-remain unobserved. Repeated ticks at this boundary leave sequence and memory
-unchanged. Parent stack data, EXEC outcome, and child entry still require their
-respective observation or compatibility contracts.
+`$0236..$023a` selects `AX=$2595; INT $21`. The tick requires the destination
+segment to belong to its arena and atomically installs offset zero and that
+segment at Eon's segmented `0000:$0254..$0257`. This is not an observed DOS
+vector or a call to the driver. Repeated ticks at the stack boundary leave
+both sequence and memory unchanged. Parent stack data, EXEC outcome, and child
+entry still require their respective observation or compatibility contracts.
 Reset destroys the generation-owned arena, and revocation
 prevents its state or allocator from being reached.
 
 Only after the exact read result does the session expose byte effects for the
 original leaf at observed allocation segment offset zero. These are transient
 runtime-memory effects, never writes to the archive or game-data directory.
-The vector boundary is an observation after the interrupt at `$023b`, together
-with the actual IVT words for INT 95h. Runtime accepts continuation only when
-the observed tuple is `0000:<owned-driver-segment>`; it then mirrors those
-observed words into its DOS address space. The carry bit is preserved in the
-incoming trace record but is not interpreted as a success result: the reviewed
-DOSBox-X source at commit `234797680781567e18c374c9e62da24de5423db0`,
-`src/dos/dos.cpp` SHA-256
-`673621cd63b37c42488a347445875e7b0bf0c53f7aa614231701c45c3863fe10`, handles
-INT 21h/AH=25 by calling `RealSetVec` without setting CF. A request-site
-snapshot at `$0239` or the literal request registers `AX=$2595`, `DX=0` still
-cannot advance the session. This remains an observation contract, not captured
-evidence. The common EXEC helper then
-requires an explicit parent SP
-observation at `$032f/$05f7`, records the three original
+The following vector-install observation is exactly `$0239`, `AX=$2595`,
+`DX=0`; it records the original INT 95h vector request but does not claim DOS
+accepted it or execute driver code. The common EXEC helper then requires an
+explicit parent SP observation at `$032f/$05f7`, records the three original
 parameter-block segment words `$067e/$0682/$0686` from explicit CS, and stops
 at the literal title request `$0336`, `AX=$4b00`, `DX=$068f`, parameter block
 `$067a` (`TITLES.EXE`). Reaching `title_exec_requested` is the only safe point
@@ -6569,11 +5788,10 @@ driver initialization, private-interrupt results, a rendered frame or parity.
 For the admitted English release, the compatibility runner can now produce
 that record without an emulator after the exact EXEC request. Its shared
 paragraph arena has already reserved the selected driver image. It reserves
-`$0da0` paragraphs, enough to contain the verified `SS=CS`, `SP=$da00`
-startup stack as well as the original 7,022-byte `TITLES.EXE` leaf, which is
-copied unchanged only to child offsets `$0100..$1c6d`. The first 16
-paragraphs remain uninitialised: reserving their addresses prevents overlap
-but does **not** invent a PSP. The allocation's
+another 455 paragraphs for offsets `$0000..$1c6f`; the original 7,022-byte
+`TITLES.EXE` leaf is copied unchanged only to child offsets
+`$0100..$1c6d`. The first 16 paragraphs remain uninitialised: reserving their
+addresses prevents overlap but does **not** invent a PSP. The allocation's
 `native_compatibility_arena` provenance, generation and allocation ID remain
 in diagnostics. Allocation, image admission, compatibility child entry and
 the exact seven-byte prefix are committed atomically with native runtime
@@ -6803,9 +6021,7 @@ the 9-byte span (SHA-256
 `ed46676eb54a03e725cbb96371e4fd13852a350ba5b027e5c59dda07c78b8ecf`)
 increments and atomically stores `$24` at `CS:$1389`. The next exact boundary
 is external byte `$3000:$000a` at `$13f2`.
-The second byte is admitted as genuine `$02` from `TITLE.LIB+$000a`. The
-source instruction is `MOV CL,[SI]` at `TITLES.EXE+$13f0`; its following
-`TEST CL,$01` takes the same clear branch for `$02`. Its 20-byte branch suffix
+The second byte is admitted as genuine `$00`. Its 20-byte branch suffix
 (SHA-256 `172d30853354efec879699618dd36f3fbda28ddd07d8ea66bc2a23ace6ee6753`)
 returns locally; the 39-byte caller suffix (SHA-256
 `d095399b2a968131f10112f1895b1449f6d1572052c032e48289218e5d07355b`)
@@ -6833,82 +6049,6 @@ selects descriptor index one, and re-enters the already verified `$1390`
 decoder prefix. The largest static continuation ends at `$13aa` before two
 external words at `$3481:$000f`, mapped to `TITLE.LIB+$481f`. This is a typed preservation
 boundary, not a rendering or descriptor-value claim.
-
-#### MCGA function-$001a static-recompilation audit
-
-The admitted MCGA dispatch table `$0032..$0069` has SHA-256
-`7d0e024ea8f57445a74997544ae2ff06e3b80a7409c33ab6731406d23d3f9b3a`.
-Its word for selector `$001a` is `$0b67`; the complete handler
-`$0b67..$0c87` is 289 bytes with SHA-256
-`3d4e4739180dd45e984a7c4e974ed6b4312752b1c1ea3c2aad028851163e2ec1`.
-This replaces the earlier classification of the selector as wholly opaque: it
-is a candidate for a literal, source-bounded native translation, not a reason
-to emulate an entire DOS machine.
-
-The exact caller supplies the ten-byte `CS:$0fdf` record already identified
-above: byte 0 is the DAC start index, word 2 is the colour count, byte 4 is
-the high phase byte, and bytes 6--9 are the far RGB6 source pointer. The
-handler derives a three-byte component count from the colour count, uses two
-aligned scratch buffers of that length, and emits ordered writes to VGA DAC
-ports `$03c8/$03c9`. Its status-port polls at `$03da` control pacing only.
-The admitted initial driver has both `$09c6` and `$09c7` equal to zero. The
-`$09c7 != 0` branch copies a derived buffer through the separately configured
-far destination at `$09be/$09c0`; it remains forbidden without provenance.
-The zero branch does not dereference that destination.
-
-For the verified title request, count `$00ff`, phase byte `$19`, start index
-zero, and source `CS:$014c` establish a bounded 765-byte RGB6 input. The
-handler's first instruction clears `$09c6`, so it is not an external input on
-this entry; the phase count is consequently source-defined. Its `$09c7` byte
-selects the unresolved-copy branch. A native translation must check the live
-`$09c7` byte, the loaded table and handler hashes, the exact record, and all
-765 owned source bytes before it may create DAC effects. It must preserve the
-complete ordered DAC sequence or state explicitly that an Eon presentation
-adapter collapses it; it must not invent VGA beam timing, returned AX/FLAGS,
-scratch-memory contents, or the unknown nonzero-`$09c7` destination.
-
-The zero-`$09c7` translation is now connected to the native title startup
-route. It verifies the active MCGA table and handler, the loaded `$09c7` byte,
-the source-bounded record and the live `CS:$014c` bytes against the admitted
-`TITLE.LIB+$25f9` palette before committing its ordered 25 × 255 DAC entries.
-It then follows the source-local return through `$1c1d -> $1941`, retaining
-unknown AX and FLAGS. With direct English media and startup input `0`, native
-diagnostics advance from the former function-$001a stop to the later
-descriptor-loop function-$0013 request at `$0127`. Function `$0013` has no
-established record ABI and remains a separate preservation boundary.
-
-The function-$0013 boundary is now resolved for the admitted MCGA route. Its
-complete handler is the 14-byte status-port loop `$0905..$0912`; it reads
-`$03da` until retrace is first clear and then set, has no record access or
-memory write, and returns. Eon's timing adapter records only that source order
-(`$0908` clear, `$090d` set) and does not claim a physical VGA beam position.
-The wrapper return preserves unknown AX and FLAGS and advances to the exact
-next title call `$193a -> $1917`. Direct English-media diagnostics now reach
-that call after 225 native steps. The `$1917` animation loop invokes further
-recovered title helpers.
-
-Static audit bounds that next loop without assigning it a visual result. The
-hash-bound `$1917..$1930` body initializes 15 entries from the original table
-at `CS:$1768`, calls `$18f9..$1916` to update and normalize a source-derived
-index, increments AL, and calls `$1712`. The static table contains 15 far
-pairs from `$001c:$007c` through `$0118:$007c`; the initial `$1181` index
-word is zero. `$1712` computes a `320`-byte-row offset and reads two words at
-`CS:$170c + offset` before copying descriptor fields to the existing
-function-$0006 record. That latter address is a dynamic area: for several
-normalized indices it lies beyond the 7,022-byte static EXE image. Thus it is
-not a static table that Eon may infer from the executable alone. Eon now
-literally recompiles the selector half through `$174a`: it reads the current
-native words at `$1181` and `$18f7` and the exact indexed byte from the DOS
-child prefix (`CS:$0000..$03ff`; this is not a `TITLES.EXE` file byte),
-commits only the resulting accumulator and `$1341` displacement, then stops
-before the two dynamic record words. Missing code-image bytes or an absent
-dynamic record remains a stop, never a synthesized animation descriptor. The
-loop is
-not evidence that the first P00 title frame can be repeated: each iteration
-has an independently selected source and may use a different encoded record.
-A future translation must hash-address the dynamic producer, each selected
-`TITLE.LIB` record, and its decoder/output relationship before it may render
-any animation frame.
 The corrected directory provenance is $3481:$000f -> TITLE.LIB+$481f,
 not file +$000f. The first normalized record is $3294:$0001 (file +$2941);
 the second is $32a1:$0006 (file +$2a16). Earlier $5050 and $3c80 source
@@ -7133,39 +6273,28 @@ by game media rather than replacing effects.
 `SFX1.VOC` through `SFXE.VOC` at loaded address `$cfdd` (file `+$cedd`,
 SHA-256 `5bc252a34057b25239c81ce4ead178c294456e9af233bdd98d2d6f0f3cb4d008`).
 The parser validates this bank against the whole executable identity and
-reports all fourteen original names. The game also has a static sound-dispatch
-route at `$d0c9`: with its `$0121` gate satisfied, nonzero caller AL selects
-SIBM function `$0e`, while zero selects `$10`. The dispatcher clears BX after
-function `$13`, copies caller AH into BL, and clears AH. The `$cfc7` wrapper
-places AX at the SIBM handler's `[BP+4]`, so the function-`$0e` voice index is
-zero-extended caller AL; caller BH is discarded. This proves an ABI route, but
-not an admitted live event, caller AL value, or host trigger.
+reports all fourteen original names. This establishes the original resource
+family, but it is not a playback trace: no direct code reference from a
+startup or UI path to that table, nor a verified sound-driver call with a
+selected entry, has yet been recovered. Project Eon therefore does not attach
+any VOC file to a host event, title transition, or timer. The existing decoder
+is retained as a source-byte parser only until a real caller and trigger are
+established.
 
 `--inspect` additionally resolves every one of those fourteen executable-named
 assets through the authenticated archive inventory and decodes them in memory.
 The supplied English bank contains 37,100 unsigned PCM samples across the
-original 10,000 Hz and 6,024 Hz rates. These source bytes feed an isolated
-native function-`$0e` voice player, but live game dispatch remains unconnected
-until an admitted caller supplies the function-`$0e` index.
+original 10,000 Hz and 6,024 Hz rates. This is a read-only completeness check
+of the resource family, not an audio subsystem: no sound is scheduled or sent
+to SDL without a recovered event-to-index and driver-ABI chain.
 
 The admitted English native session now carries the same fourteen-entry voice
 bank catalogue (original filename/hash, decoded sample rate and sample count)
-after revalidating each leaf through its already verified media snapshot. The
-native startup translation writes their exact headers and decoded PCM into
-Eon-owned segmented memory after its modeled function-zero checkpoint. A
-separate SIBM function-`$0e` voice player accepts only that complete startup
-state and source-ordered bank, then produces stereo float frames from unsigned
-PCM using an output clock. The game's function-`$05` path is the timer-stream
-interpreter, whose ES:DI points to event bytes that dispatch PIT/speaker
-callbacks; it is not PCM playback. Function-`$0e` instead reads VOC PCM and
-drives the original PIT/speaker output routine. SDL playback is a host PCM
-replacement and does not reproduce that hardware waveform exactly. Direct-media
-CTest covers voice start, replacement, invalid-index silence, and sample
-completion. The player is not wired to live function-call dispatch: active startup accepts ordered AH=$35/AH=$25
-returns only through the `$0248` SIBM stack boundary, and no event-to-index
-mapping or timer cadence is established. Spanish DOS has no such catalogue
-because its matching executable/resource chain has not been recovered for that
-release.
+after revalidating each leaf through its already verified media snapshot. PCM
+bytes are discarded after this validation and the catalogue has no playback,
+event-selection, mixer, SDL-device or save-write API. Spanish DOS has no such
+catalogue because the matching executable/resource chain has not been
+recovered for that release.
 
 `2200AD.EXE`, `2200GX.EXE`, and `TITLES.EXE` are flat 16-bit binaries despite
 their suffix. `MILL.COM` provides a private runtime through interrupts 91h,
@@ -7198,34 +6327,6 @@ and near-returns to the `RETF` at `+$0014`. The caller-connected observed
 selectors `$0e/$0f/$12/$14` map to original overlay offsets
 `$0090/$009f/$0097/$00a7`. No selector policy, handler return, overlay state,
 resource, or display effect is inferred or executed.
-
-The same hash-locked table's slot 5 (table word at `2200GX.EXE+$001f`, bytes
-`13 2e`, SHA-256
-`b7be555ada28da9d10cea4d34a4283486384df89ba8f9eb38bc6524a26f4abc5`)
-points to overlay offset `$2e13`. Its exact 16-byte local routine
-`$2e13..$2e23` (SHA-256
-`12201799aeaea7e780bb0181758e61962f552df6183123977117ddd29b0d42aa`)
-checks byte `$2453`, returns when it is nonzero, otherwise stores `$06` there,
-clears AX, and returns. It makes no INT `$95` call and has no source-proven
-edge to SIBM function `$05`; overlay selector 5 is not evidence of audio
-function 5. This decoded selector target does not establish that runtime ever
-selects slot 5.
-
-An in-place NDISASM 3.02 linear pass over the full `2200GX.EXE` (origin zero)
-produced the external candidate
-`~/.cache/project-eon-analysis/millennium-callers-20261024/2200GX-linear.asm`
-(22,776 lines, 957,305 bytes; SHA-256
-`8112f8454ca2492dce4db3d0a790aa8a053ad1c50c6d0a1e801e42e71067b1ad`). It has
-no literal `INT $95`; the literal software interrupts are `INT $91` at
-`+$0044` and `INT $93` at `+$0051`. `GX.LIB` (312,748 bytes, SHA-256
-`4adf9991226deab4749ac07ad637851994f57d11f6dc45f3f5ce862b5bc34c2f`) and
-`TITLE.LIB` (18,907 bytes, SHA-256
-`6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678`) have
-hash-validated bank directories of bitmap/resource names, not executable
-members. The linear GX listing contains far-indirect call decodes in spans
-without an established code path; they do not identify an imported INT `$95`
-wrapper. This does not rule out self-modifying or data-driven dispatch, but
-no source-proven GX/LIB caller to SIBM function `$05` has been recovered.
 
 There is a caller-connected selector prefix immediately before the adapter:
 `2200AD.EXE` `$d343..$d375` (file `+$d243`, 51 bytes, SHA-256
@@ -7302,12 +6403,14 @@ If either selected private-wrapper path returns, `$d2e5` preserves DX,
 restores DS from CS, and calls `$d1fa` at `$d2e8`. The callee's first nine
 bytes end at its `INT $21` site `$d201`, with literal AH `$4a`; this is an
 external DOS boundary, so Project Eon neither invokes it nor supplies AX, DX,
-carry, or a return. If that INT returns, `$d203` loads BX `$fa00`, `$d206`
-loads AH `$48`, and the next external request is `INT $21` at `$d208`. The
-native observer stops there and does not infer that the allocator returns to
-`$d2eb`, stores AX at `$d128`, tests DX at `$d2ee`, branches to `$d2f5`, or
-jumps to `$d44b`. Those later addresses are static code facts only; this
-single DOS return does not establish that path.
+carry, or a return. Only if that call returns do the following bytes store AX
+at `$d128`, test DX at `$d2ee`, branch on zero to `$d2f5` (whose first local
+call is `$d2f5 → $1161`), or jump on nonzero from `$d2f2` to `$d44b`. These
+are raw static control-flow operands, not an allocation result, startup
+decision, or executable path. The 20-byte continuation and 9-byte callee
+prefix are both SHA-256-validated by
+`MillenniumDosStartupAllocationBoundary` against the full original English
+`2200AD.EXE`; mutations are rejected before the facts are exposed.
 
 The DX-zero successor is now independently bounded as a separate static
 chain. `$d2f5` calls `$1161`, which reads the native byte `$da05`; literal
@@ -7317,81 +6420,17 @@ NUL-padded names are `VGATXT.BIN`, `EG3TXT.BIN`, `EG6TXT.BIN`, and
 `TDYTXT.BIN`, in raw storage order `$1131/$113d/$1149/$1155` (48 bytes,
 SHA-256 `153a0b62bdec1702cdd36ff6e7dc33ec4ed6673ad5d3f5f8bc07b748f7e06d76`).
 The selector then has direct call `$117c → $053a`. That callee's fixed prefix
-preserves the selected DX name, sets DS to CS, and reaches `INT $21` at
-`$054d` with `AH=$3d`, `AL=$02`. For the native startup's known
-`$da05=$01`, DX is `$1131` (`VGATXT.BIN`). The same helper has an alternate
-entry at `$0541` that replaces DX with the separate in-image
-`A:\\2200AD\\SECURITY.HID` name at `$2f6a` (23 bytes, SHA-256
-`1a95edb6109f3db1af0c0389f1aa5d597a184f26725e095f771b6622f654ec6a`); the
-`$117c → $053a` call skips that alternate-entry MOV.
+replaces DX with the in-image `A:\\2200AD\\SECURITY.HID` name at `$2f6a`
+(23 bytes, SHA-256 `1a95edb6109f3db1af0c0389f1aa5d597a184f26725e095f771b6622f654ec6a`)
+before first reaching `INT $21` at `$0550` with `AH=$3d`, `AL=$02`.
 `MillenniumDosStartupZeroPathBoundary` locks the three-byte zero successor
 (SHA-256 `798bd5318e00348848f0ca4b876d687fec5c606abe88236ff4e922a77fe08b65`),
 30-byte selector (SHA-256
 `fffa1b0e03e9abf90bfde3bfb86bf1125ae579ede767eea68223e098d641992f`), and
 24-byte callee prefix (SHA-256
 `328e11edf0653b0e0f21db3b61cf9ff95795ec9431f07c0198a700358f75ed74`) against
-the full original executable. The native startup process now accepts the
-selector continuation only at its allocator-return boundary and requires the
-`$da05` byte already written by the observed startup prefix. It evaluates the
-literal selector comparisons to retain the corresponding in-image DX name,
-models the helper's DS=CS and AH/AL setup, then stops at `$054d` as a DOS
-`INT $21/AH=$3d/AL=$02` request. This is an externally handled request: no
-file-open result, carry, or AX is inferred. A typed DOS return observation at
-`$054f` is required. Its raw AX is stored at `$da00`; observed carry selects
-the existing `$05a7` file-error branch. On success, the source-checked `$117f`
-branch reaches the `$0574` read helper and exposes the next request at `$0580`
-with `AH=$3f`, `BX=$da00`, `CX=$ffff`, and `DS:DX` from the allocation pointer
-at `$011a` (`DX=$0000`, DS from the observed `$d23e` allocation result).
-Relevant source spans are independently anchored by SHA-256: `$054f` (8
-bytes) `5a8be199cf08143cbaf8396f5e76c4e621b27a2d93ce4645963ff59fcb03bfe7`,
-`$117f` (5 bytes) `91ff7e5d3139966833ffe09d7c9ac5ded1f6ce3898036462a1c7d392166f7646`,
-and `$0574` (15 bytes) `8898a6fec2ad72ebb0b5dfdf5b393632e421875f42bb0dce172553e3d9be10ad`.
-An observed read return at `$0582` is required before the helper's return and
-carry branch are followed. A successful read exposes close at `$05a2`
-(`AH=$3e`, BX from `$da00`); a failed read stops at `$05a7`. The close request
-preserves the raw read return's CX/DX and AL-derived request value. Read bytes
-remain external and are not copied into a fabricated DOS segment. A successful
-close return follows the `$1197` success branch and exposes the first INT
-`$21/AH=$35/AL=$93` request at `$4260`, which begins the original vector
-discovery/installation routine. The observed DOS return's BX and ES words are
-stored by the checked continuation at `$4255` and `$4257`, respectively, then
-`LDS DX,CS:[011a]` loads the allocated destination segment and exposes INT
-`$21/AH=$25/AL=$93` at `$4271` with the old vector offset in BX and segment in
-CX. The query continuation at `$4262` (17 bytes) hashes to
-`e595b01819c1dbf8cb0c9f537385a79a581df889510253aca6fb21fa7b7eb405`.
-Its relevant source spans are hash-locked:
-`$05a2` (5 bytes) `b1355acb1623a8dc2c264c4f3a43b0055dfd3e33a39d17488d57cba330aef049`,
-`$1197` (12 bytes) `c5e960e2300c3692fd5aa1faa5d08a3c210199393e679b214ed5d8c2e3474686`,
-`$4259` (26 bytes) `f67c06c92b7d8e2624049b2631ebafb731c240788ece0a3a56fa2c9b4b632e5b`,
-and `$4271` (7 bytes) `da42e6bcab4f7e408aa2797fab89d9f1e84fc7560a8ee7dfd36fc91a5d8a3c9d`.
-The DOS INT `$25` result must be observed at return IP `$4273`; the checked
-eight-byte local epilogue hashes to
-`4e56863d015f9cf472c6d632265064924f22b2bab01ff8999bc39042053bb238` and is
-retained without synthesizing DOS state. The call site `$d2f5` targets the
-selector at `$1161`; after its tail-jump routine returns, the hash-locked
-caller continuation begins at `$d2f8`. That continuation remains conditional
-on the runtime byte at `CS:$0082` and the local helper's external INT `$95`
-results. The static parser itself remains provenance-only.
-
-### 2026-10-24 Millennium DOS startup text selector inventory
-
-The native zero-path startup open reads its filename from one of four
-hash-addressed strings in `2200AD.EXE`. The table at `$1131` (48 bytes) hashes
-to `153a0b62bdec1702cdd36ff6e7dc33ec4ed6673ad5d3f5f8bc07b748f7e06d76` and
-contains, in order, `VGATXT.BIN`, `EG3TXT.BIN`, `EG6TXT.BIN`, and
-`TDYTXT.BIN`. The selector at `$1161` (34 bytes, SHA-256
-`98b727cb9ad63d48bcf4aeeeb31c0af6f606390de68a43a4dafa359da4051e89`)
-chooses VGA for mode 1, EG3 for mode 3, TDY for mode 2, and EG6 otherwise.
-The current read-only `.projecteon` installation has `VGATXT.BIN` (1,024 bytes,
-SHA-256 `c31cb760d5f62a21b3baf9c09a6be413514780bd88eeac0273620e81b5d69318`)
-and `EG6TXT.BIN` (2,040 bytes, SHA-256
-`063eefa58c98360d0ca2b4eaf9a77f8f9d13c619aee605dff6b0d0ee8b4a6b20`), but
-not the EG3 or TDY names. A read-only inventory of
-`Downloads/Millennium-Return-to-Earth_DOS_EN.zip` likewise lists only the VGA
-and EG6 variants. This establishes a current media-availability gap for two
-selector outcomes; it does not establish whether those files were generated
-by an installer or supplied in another distribution. Keep DOS open failure
-observable for those cases and do not substitute another mode's file.
+the full original executable. This does not choose `$da05`, infer a selected
+name's use, invoke DOS, provide carry/AX, or claim the code path executes.
 
 There is a further caller-connected static continuation after that selector,
 but only if the selector and its DOS-facing loader both return. The 23 bytes
@@ -7543,13 +6582,7 @@ host meaning. The loop then accepts address-bound call returns, AL values at
 the exact encoded tests, and runtime bytes at the exact encoded loads. It
 publishes a copy-only checkpoint containing its current typed boundary,
 counts, observed action byte, optional table index, and deterministic local
-byte effects. At the exact `$d3be` read of `CS:$07f9`, the active coordinator
-now commits the session's hash-bound `value XOR 1` result to offset `$07f9` in
-the observed DOS child code segment. It stages both the session and memory
-before publication; an already-owned byte must match the observed preimage.
-This preserves the original loop's guest-memory effect for later native
-continuations. It does not establish that the loop is reached by ordinary
-launch, map an SDL control, or prove a visible gameplay change.
+byte effects.
 
 This successor is the no-capability runtime state `MILLENNIUM DOS
 POST-OVERLAY LOOP`. It has no SDL input mapping, renderer, audio, device ABI,
@@ -7560,14 +6593,6 @@ the loop is destroyed before that owner on reset or source revocation. The
 current public launch path still cannot reach the preceding GX state until
 the driver/title handoff and genuine GX trace exist, so this code is not a
 claim that `$d39d` is presently reachable.
-
-The action-`$0b` helper entry now also requires the loop's observed action
-byte and the exact active DOS child segment. Its `$07f9` value must match the
-owned segmented memory cell; if the cell has not been materialized, the exact
-runtime observation initializes that one byte before the hash-bound game
-prefix consumes it. A conflicting owned value rejects the entry. This carries
-the source-observed loop state into the native action prefix without assigning
-new meaning to the SDL input or claiming a visible action.
 
 The terminal scaled-dispatch boundary now has one narrower typed successor.
 `MILLENNIUM DOS TENTH-FUNCTION HANDLER` can be created only while the live
@@ -7702,38 +6727,11 @@ the handlers mean or how they alter state.
 
 `MillenniumDosGameFlow` validates the exact entry and loop bytes before
 exposing those values to preservation tests and inspection. The SDL launcher
-now queues F1–F10 only while the matching post-overlay native session is
-active. This does not make the title input boundary prove the DOS return or
-`2200AD.EXE` startup. No host action claims a handler meaning or mutates
-`2200SAVE.I`. The special `$0b`/`$0c` paths remain documented but are not
-host-bound until their input production and state prerequisites are recovered.
-
-The poll leaf itself is independently anchored in the same 54,391-byte
-English DOS executable: loaded `$0f05` (file offset `$0e05`), seven bytes
-`B4 06 B2 FF CD 21 C3`, SHA-256
-`96715350de2c4a159dd994b1c40dafb21c038f38f52937aa1a54491485146dc6`.
-The verified caller is `$d3db` (`CALL $0f05`), followed by the `AL` test at
-`$d3de`. The leaf's instructions establish only the INT `$21` service request
-`AH=$06, DL=$ff`; they do not establish the DOS implementation's returned
-`AL` or flags. RBIL reports `AL=0` when the queue is empty but explicitly says
-that result is undocumented; the DOS 5 reference describes `AL` as undefined,
-usually zero. Both describe ZF as the availability signal and the two-call
-extended-key sequence, while this game's caller tests `AL` and ignores ZF.
-Thus an Eon compatibility service can choose zero for its empty-queue value,
-but that policy must be labelled and cannot be claimed as universal original
-DOS behavior. The post-overlay loop now owns a bounded console-byte queue.
-SDL F1–F10 keydown events map to the statically recovered PC scan-code range
-`$3b..$44`; the queue emits the documented two-poll extended-key sequence
-(zero, then scan code) only when the hash-verified `$d3db -> $0f05` call
-returns. Losing window focus clears pending bytes so a stale held event cannot
-fire after focus returns. The caller then evaluates AL and reaches its
-existing dispatch path.
-This is Eon's host-to-DOS compatibility policy, not a claim about an original
-DOS return. A live native game process still does not drive this session from
-SDL; scan-code meaning, the dispatch guard, handler services, and rendered
-gameplay remain unverified. The poll leaf parser is not evidence of runtime
-reachability or game parity. See the [RBIL entry](https://fd.lod.bz/rbil/interrup/dos_kernel/2106_dlff.html)
-and [DOS 5 reference](https://norton-guides.davep.dev/dos5/dos5-6264.html).
+does not map F1–F10 into this loop: the title input boundary proves neither the
+DOS return nor `2200AD.EXE` startup. No host action invokes a handler, mutates
+`2200SAVE.I`, or claims menu/action names. The special `$0b`/`$0c` paths remain
+documented but are not host-bound until their input production and state
+prerequisites are recovered.
 
 The declarative function map separately names the ten table handler entries
 (`$6f9a`, `$71ca`, `$6faa`, `$72f9`, `$7597`, `$7415`, `$7521`, `$7306`,
@@ -7936,20 +6934,9 @@ without weakening that game-session gate. It begins with the caller-supplied
 `$0669` / `CS:$0116`, and requires a far word observation at `$0678` using
 that exact segment and the instruction-defined offset `(AX << 1) & $ffff`.
 The selected word is retained as the resulting `SI`; it is never sourced from
-host or synthetic memory. Once the `$0669` segment read is observed in an
-active DOS child, the coordinator commits the session's earlier literal
-`$066e` store of zero to that same segmented `CS:$05c8` cell, before it admits
-the later `$0678` table read and `$067b -> $05f7` call-return pair (`$067e`).
-This preserves the store's source order for the following helper. Other
-effects of `$05f7`, the table contents, and all gameplay meaning remain
-external observations.
-
-The `$0678` far-word observation is also materialized at its exact DOS
-segment:offset in native memory, in little-endian order. If either byte was
-already owned, both must be present and agree with the observed word. This
-preserves the selected `SI` indirection for a future bounded decode of the
-`$05f7` stream; the pointed-to stream bytes and its handler effects are still
-not inferred or executed.
+host or synthetic memory. The session then requires the exact `$067b -> $05f7`
+call-return pair (`$067e`) before reaching RET `$0681`. Effects of `$05f7`,
+the table contents, and all gameplay meaning remain external observations.
 
 Active runtime ownership is deliberately narrower than the helper's many
 static callers. It admits the helper only while the owned F7 session is at its
@@ -9063,39 +8050,10 @@ The first nested call of that batch is independently bounded at
 complete callee `$403c8..$403e5` / ADF `+0x9b3c8` is 30 bytes, SHA-256
 `3f9cf2302a4078faddd0796fc05268386d46c4be64f294b8082ba085b9609f5f`:
 it assigns `$1ed24` to A1, `$12e12` to A0, literal D0 `$14`, and A6 from
-`$12fec`, then executes `JSR -$c0(A6)` and RTS. The graphics.library ABI
-identifies LVO `-$c0` as `LoadRGB4(ViewPort, colors, count)`, with A0, A1, and
-D0 carrying those arguments. Thus this call supplies ViewPort `$12e12`, color
-table `$1ed24`, and count `$14` (20). This names the library operation, but
-does not establish that its ViewPort/ColorMap preimage is owned and valid in
-the active Eon runtime, does not observe a return, and does not establish the
-resulting SDL palette. The launch-linked driver still stops before this call
-at `$404ce`; no LoadRGB4 result or visible title effect is claimed. ABI
-reference: [graphics.library LoadRGB4 Autodoc](https://developer.amigaos3.net/autodocs/graphics.library/LoadRGB4.html).
-
-A read-only ownership audit of `NativeRuntimeMemoryCheckpoint` immediately
-after the direct-media driver stops at `$404ce` found 0 of 16 bytes owned in
-`$12e12..$12e21` (the candidate ViewPort address), 10 of 12 bytes owned in
-`$12ec4..$12ecf`, and all 40 bytes of the source color table at `$1ed24`.
-The partial neighboring range is not sufficient to identify a valid ColorMap
-or to service `LoadRGB4`; the active title route does not own a ViewPort
-preimage. A separate bootstrap initializer is identified below. This audit
-used the hash-recognized Deuteros Amiga release
-`f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` and did
-not write or copy original media.
-
-A second read-only scan of its canonical Disk 1 ADF (901,120 bytes, SHA-256
-`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`)
-searched the complete in-memory image for the exact big-endian longword
-`$00012e16`, the ViewPort ColorMap-pointer field. It found no literal
-occurrence. That literal scan was insufficient: the separately hash-bound
-bootstrap routine at `$1310c` sets A1 to `$12e12` and writes `$12ec4` to
-`4(A1)`, initializing `$12e16` without embedding that destination as a
-longword. The complete `$1306c..$1330c` layout path is already modeled with
-ordered graphics returns and owned writes, but the launch-linked profile-one
-title route does not currently execute it before stopping at `$404ce`. The
-next task is to connect the correct bootstrap lifecycle to title launch while
-preserving its typed service dependencies; do not reseed the state directly.
+`$12fec`, then executes `JSR -$c0(A6)` and RTS. `DeuterosAmigaTitlePostExecGraphicsVectorProfile`
+hash-locks the caller and routine, including return `$403e6`, but does not
+call the graphics-library vector, establish its ABI or return, or name any
+visual/title effect.
 
 The next batch edge at `$403fa..$403ff` / ADF `+0x9b3fa` hashes to
 `f31dc5923e4b39eb1726fc9b05ac7f56c0209f5d60c9499b979ebfc7c08a58a2` and
@@ -9109,15 +8067,6 @@ four straight-line operands followed by RTS: word literals `$0000` and
 byte provenance. It does not perform those writes or infer their meanings:
 reaching this second batch call still requires the preceding graphics vector
 and every earlier unresolved original call to return.
-
-At the launch-linked `$404ce` boundary, the actual native memory image contains
-the source word at `$20276` as `$0000`. Its bytes are the canonical Disk 1 ADF
-range `+$7b276..+$7b277` (SHA-256
-`96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7`). The
-direct-media regression reads this value from owned runtime memory; no guest
-trace or synthesized word is used. The next active continuation can therefore
-execute the hash-bound `$20510` read from native memory once the preceding
-graphics-library service is represented.
 
 The third batch edge at `$40400..$40405` / ADF `+0x9b400` hashes to
 `901b0ad5740a3e6aea3eba28b6aadf5ac5c187e961cc848f6f1a882b3592f464` and
@@ -9234,62 +8183,6 @@ its cadence. It is therefore not a no-op library return: runtime continuation
 must preserve the registered server and its interrupt effects before the
 following caller can be treated as executable.
 Source: [Exec Autodocs, AddIntServer](https://www.theflatnet.de/pub/cbm/amiga/amigadev.elowar.com/read/ADCD_2.1/Includes_and_Autodocs_2._guide/node059D.html).
-
-The node written by this caller contains handler pointer `$202ca`, separate
-from the recurring main-stage node `$2086a` / handler `$207ec`. The earlier
-candidate at ADF `+$5aca` was mapped from the main-stage load at `$20000`; it is
-not the handler bytes active at this address. The later title-handoff image
-loads ADF `+$6e000` at `$13000` for `$6ca00` bytes and overlays `$202ca`. Under
-that mapping, runtime `$202ca` is ADF `+$7b2ca`. The 698-byte range at this
-correct source offset has SHA-256
-`e49fd6cf6d44759bdf59448b163e2d6903beaffdd5da4a8609842cd1d242bd3d`. The
-source archive SHA-256 is
-`7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533`. Its
-byte-complete linear candidate was regenerated from the canonical disk SHA-256
-`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`; the
-external report has 174 lines and SHA-256
-`17ad9fef850b62cef982f47bd840651bb059495262f860995e434708dc8f4705` at
-`~/.cache/project-eon-analysis/deuteros-amiga-addintserver-20261024/title-overlay-handler-202ca.md`.
-
-Control-flow decoding from this corrected image identifies the handler entry:
-`$202ca` saves D0-D7/A0-A6, calls `$202dc`, restores those registers, returns
-D0=0, then RTS at `$202da`. The body calls the local `$20584` routine from
-`$203aa`; this entry overlaps the linear decode of the instruction beginning
-at `$20580`, so linear decoding alone is insufficient. The bounded reachable
-graph also exposes calls at `$20340`, `$2039e`, `$203a4`, `$2046c`, `$20472`,
-and `$205dc`. Their library/state effects, dynamic inputs, and return behavior
-remain unmodeled. This corrects code identity and wrapper semantics only; it
-does not establish successful AddIntServer registration, interrupt delivery,
-or equivalence to the distinct `$207ec` callback.
-
-Bounded inspection of the title-overlay image clarifies several reachable
-targets without supplying their runtime state. The local `$20584` entry is
-`TST.W $202c8; BNE $2058e; RTS`; bytes after the return are a separate
-overlapping decode and are excluded. The `$79e86` target jumps to `$79e1c`,
-whose first instruction is RTS, so this path is a return stub in this exact
-image. The `$41a68` entry computes a destination from `$410d8`, derives a
-source from table `$41faa`, then `$41b24` copies three four-byte groups with
-destination stride `$1f40`; the outer DBRA repeats this pattern 16 times.
-The `$3fdac` entry reads channel records starting at `$3f7c2`, updates Paula
-registers through `$dff000`, and advances channel state; `$40358` changes
-`$40357` and may route event values through `$3fbf8`. These are static
-instruction effects, not proof that the title's registered handler invokes
-each branch under live state or that their pointed-to buffers are valid.
-
-The exact inspected slices use the canonical disk hash above and the
-title-overlay mapping ADF `+$6e000` to runtime `$13000`: runtime `$20584`
-(ADF `+$7b584`), length `$80`, SHA-256
-`353cef23ea6ee342aa72e3193f17ac567ab145ab947746ddc11590d8f53f0ce9`;
-`$41a68` (ADF `+$9ca68`), length `$150`, SHA-256
-`f915c1245d07cbf141667ebdfcbffbb780b36e37b59bee049b410a8e52685434`;
-`$41b24` (ADF `+$9cb24`), length `$90`, SHA-256
-`78c7ebb0866b737b6963ce57c5ca7d4a5f88345dea9a62f604a855251125c1c5`;
-`$79e1c` (ADF `+$d4e1c`), length `$70`, SHA-256
-`9924d4a94477e6d86e1f71298801642bfc6aeac39bec7d66120a31aeaf7bd5fe`;
-`$3fdac` (ADF `+$9adac`), length `$200`, SHA-256
-`fdc719f3c024b6e236c52d1d1cbfaf81b1babfa2e421a170965c85c45feca542`;
-and `$40358` (ADF `+$9b358`), length `$60`, SHA-256
-`42511b825dcf11237278571b72fd81e96b48cf9b5eb8cccd530b238875e3b13e`.
 
 The next call site `$404f0..$404f5` hashes to
 `1385698c6c854ab133e3e7cd75417c90025916dd0a1dd303347dce0636114bea`
@@ -9541,43 +8434,20 @@ return address or literal input rejects the complete transition without
 advancing live command state. The delay is retained as an original timing
 fact in the native plan; it is not implemented as a host busy-wait.
 
-The `$3fbf8` body now has a bounded C++ translation over owned runtime memory.
-The recognised English Amiga release is
-`f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04`; the
-184-byte body at runtime `$3fbf8..$3fcaf` hashes to
-`a2301bf08c6c1c5615368687c620f17293d3f148e19934092854762ca91507b2` and is
-present at ADF `+0x9abf8`. The title loader's two reads establish this map:
-ADF `+$6e000`, length `$b000` -> memory `$13000`, followed by ADF `+$79000`,
-length `$55400` -> memory `$1e000`. Therefore the routine's second-read offset
-is `$79000 + ($3fbf8 - $1e000) = $9abf8`; the earlier `$4dbf8` linear-map
-interpretation was incorrect. The `$1fc08` absolute call bytes hash to
-`3b5800403216783e327c5c1d83bae66d5da6ea9ad89b952f6b1811d2d70e4d7e` and
-target `$3fbf8`, returning to `$1fc0e`.
-
-The native advance requires an explicit call-boundary receipt (PC, stack
-return, D0/D1, release identity and sequence), verifies the exact owned code,
-caller and stack bytes, then reads the gate, selected descriptor row and flags
-from initialized `NativeRuntimeMemory`. The `$1fc08` selector route accepts
-D0=`$13`/D1=`$0c`; its loaded descriptor at `$3f904` has marker `$0003ce50`
-and selects its direct 14-byte row, which is copied to `$3f7de` and `$3f7ec`
-with flags reaching `$000c` in instruction order. The native model also
-supports the hash-bound response-loop tail route: `$40786` calls `$3f7a8`
-(six bytes, SHA-256
-`3ae9f056e47c93fdd96ea96910bcd05db63b3813a433f62b214794d272c8211c`); its
-20-byte prefix (ADF `+$9a7a8`, SHA-256
-`2ed49faf9d9a87986b075890b247f699e89a8e9e1b2970eca7d9830bd952a9ed`) clears
-the gate/scratch cells, sets D0=`0`/D1=`$0f`, and tail-branches to `$3fbf8`.
-The owned translation then selects the first descriptor row and performs four
-ordered flag updates/copies to `$3f7c2`, `$3f7d0`, `$3f7de`, and `$3f7ec`.
-D0 selectors and D1 masks are bounded to the loaded title-stage interval and
-the routine's four-bit selection width. Both call paths return effect batches;
-neither is wired to the SDL scheduler:
-the repository does not yet prove that the active response loop reaches this
-call for a host action. This native local-memory translation alone does not
-establish action semantics, title transition, display change, frame or
-playability. The focused genuine-media test seeds only the needed runtime
-ranges from the admitted profile-5 reads and checks both call paths, ordered
-writes and fail-closed call/preimage cases.
+An isolated static model now records one narrowly bounded implementation
+candidate for `$3fbf8` in `engine/deuteros_amiga_title_descriptor_model.*`.
+Its source profile is the recognised English Amiga release
+`f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04`, routine
+`$3fbf8..$3fcaf` (184 bytes), SHA-256
+`a2301bf08c6c1c5615368687c620f17293d3f148e19934092854762ca91507b2`, called
+from `$1fbe6` with D0/D1 `$13`/`$0c`. For that exact route, and only when the
+caller supplies explicit runtime gate, row address/bytes and flags preimage,
+the model returns ordered writes to `$3f7be`, `$3f7de`, and `$3f7ec`. The row
+bytes are copied verbatim; the flag word ORs `$000c`. This model is not
+capture-backed, is not connected to release runtime, and establishes neither
+the runtime preimages nor action, title, display, or frame semantics. Static
+disk bytes cannot stand in for the required runtime observations. Its focused
+test uses explicit fixture bytes solely to verify this deterministic model.
 
 After opcode zero returns to `$404fe`, the native state machine now follows
 the next two caller-connected services to the first post-command state
@@ -10754,13 +9624,16 @@ preserving D0's upper word. The local BSR at `$217f2` reaches `$21926` with
 the exact return `$217f6`; no physical sample is synthesized from a prior
 memory value or from host mouse/keyboard state.
 
-The coordinator now applies the hash-gated native C++ prefix `$217e4..$217f1`
-and stops at `$217f2` before BSR. The observed CIA byte and owned `$21704`
-word are the only input state; the model preserves the original BSET result,
-D0 upper word, and MOVE.W condition-code behavior, including X and upper SR
-bits. It then commits the hardware-byte write and admits the `$21926` call
-route. This slice does not execute the callee or model CIA hardware, and it
-does not claim captured physical input or gameplay parity.
+The coordinator now executes the hash-gated native prefix `$217e4..$217f1`
+with the bounded 68000 interpreter and stops at `$217f2` before BSR. The
+observed CIA byte is exposed only through a one-byte scratch MMIO range; the
+owned `$21704` word is separately mapped read-only. Only after the interpreter
+reaches that exact stop with the expected bit-set result does the coordinator
+verify the `MOVE.W` condition-code result from the loaded word, including
+preservation of X and the upper status-register bits. It then commits the
+hardware-byte write and admits the `$21926` call route. This slice does not
+execute the callee or model CIA hardware, and it does not claim captured
+physical input or gameplay parity.
 
 The existing bounded resource-0/1 transfer now recognizes `$217f6` as well
 as the already supported `$21854` caller. On a successful transfer it follows
@@ -10782,99 +9655,29 @@ they are not a full hardware-driven restart capture or gameplay-parity claim.
 
 ### Deuteros bootstrap graphics memory-selection prefix
 
-The native Exec compatibility layer installs only an explicitly Eon-labelled
-virtual ExecBase pointer at cell `$4` for the bootstrap OpenLibrary prefix.
-Its value is the Eon-reserved `$d00000` token; it does not initialize Exec
-task/list/device structures or claim Kickstart memory. The pointer is
-generation-bound and is read by the authenticated prefix before the native
-OpenLibrary compatibility call. The returned graphics-library token is also
-explicitly Eon compatibility state, not a captured Amiga address.
-
-The verified boot block loads its complete first track from ADF `$2c00` to
-runtime `$12800`: length `$1600`, entry `$12a4e`. The exact loaded span has
-SHA-256
-`c3f7061b5bd1a9a762b8fff509b8406d51133775d6685c9fe1d66415c4507364`.
-Release-runtime admission now retains every byte of that boot-block-derived
-span at `$12800..$13dff`, including the source zero longword at `$12ff4` and
-the profile table. A direct real-media regression compares the complete owned
-range with the exact ADF span and checks the whole-range hash and `$12ff4`
-zero before handoff.
-
-At opening handoff, the active runtime verifies the complete 108-byte
-bootstrap module at `$13000` by hash, executes its source instructions through
-the `$1300c` OpenLibrary call with the virtual ExecBase pointer, validates the
-exact `graphics.library` request, and accepts only the explicitly labelled
-Eon compatibility result. It then executes the local return prefix through
-`$13028`: `$12fec` receives the Eon library token and `$12ff4` changes from
-the admitted zero to the source-derived `$ab00`. The runtime publishes an
-external AvailMem boundary at `$13028`/LVO `-$d8`, return `$1302c`. It does
-not create an AvailMem result, load the title image over `$13000`, or invoke
-the title display allocator before that boundary resumes.
-
-The separate `$1306c..$1330c` helper models the later paired view and
-viewport layouts. Its allocator and service results are not reached by the
-active handoff route while AvailMem remains unresolved.
+The caller-connected `$12a76 -> $13000` path now executes native prefixes
+through `$1306c`. This admission requires that local call and its `$12a7a`
+return, not a bare program entry at `$13000`; the loaded title has a different
+image at that same address and is deliberately not admitted as this routine.
 
 The `$1300c/-$228` return is stored at `$12fec`. Native code sets the default
 buffer base `$12ff4` to `$ab00`, D0 to `$ab00` and D1 to 4 before the
-`$13028/-$d8` query. Its following BNE has **no intervening TST instruction**.
-The active runtime accepts a typed return carrying both raw D0 and SR, verifies
-the exact call/return/vector, generation-owned ExecBase/library pointers and
-the still-owned `$ab00` base, then executes the hash-bound branch using the
-observed Z bit. A zero D0 does not manufacture Z. Z set reaches the second
-AvailMem call at `$13034` with D1=2; Z clear reaches the graphics-library call
-at `$13058/-$168`. Both routes stop before the external call and before the
-title display allocator. If Z is set, the next API requires a separately
-supplied second AvailMem result with D1 exactly 2 and its observed D0; it does
-not infer the result or substitute D0 for SR.
+`$13028/-$d8` query. Its following BNE has **no intervening TST instruction**:
+the observation now carries an optional raw result status register, mandatory
+at this site, and the native branch uses its Z bit. A missing status register
+is rejected; a zero/nonzero D0 does not manufacture the condition code.
 
 Z set continues to the second query `$13034/-$d8` with D1 equal to 2. The
-typed return executes the authenticated CMP.L/BLT at `$13038..$1303f` as a
-signed 32-bit comparison against `$80000`. Signed D0 below `$80000` retains
-`$ab00`; every other signed value stores `$8ab00` at `$12ff4`. Both paths
-execute to `$13058/-$168` and stop before that graphics service. Z clear on
-the first query bypasses the second query without this replacement. A
-read-only search of retained captures 07, 08, 25 and 27 found no startup
-records at `$13028`, `$13034` or `$13058`; the later Copper BPL1PT `$ab00`
-observation does not recover either AvailMem return.
-
-The supplied Kickstart 1.3 r34.005 image identifies the Exec `-$d8` vector
-through the relative-offset table at ROM `+$1a7c`; its entry at `+$1ac2`
-resolves to `$fc190c`. The hash-pinned 78-byte routine at `$fc190c..$fc1959`
-(ROM offsets `$190c..$1959`, SHA-256
-`a58fd28b8389e08e69549b42a0f9c8a0f59ec61bcc19d2aa66bdd29ad1dc609a`)
-walks `ExecBase.MemList` at `A6+$142`, sums matching free-byte counts from
-MemHeaders at `+$1c`, and returns the sum in D0. With `MEMF_LARGEST` (D1 bit
-17) it instead returns the largest matching free block. The final `MOVE.L D3,D0`
-sets N/Z from that result, and the routine's register restore and RTS preserve
-those flags. The standard Exec memory flags define D1=4 as `MEMF_FAST` and
-D1=2 as `MEMF_CHIP` ([Exec memory allocation documentation](https://wiki.amigaos.net/wiki/Exec_Memory_Allocation)).
-Therefore the first game query reaches `$13034` only when the matching Fast
-memory sum is zero; otherwise it reaches `$13058`. The second query supplies
-the matching Chip memory sum in D0 to the source's signed `$80000` comparison.
-
-The ROM hash is `ee05862d8102a08436ac4056da7d549db31625c7d47b24dfb7b3c9a5c113ca53`
-(Kickstart archive SHA-256
-`c9521c114900633c09317ca6ff979db7b9df34d3cb537de062f5d51811c42c04`). This
-recovers the service algorithm, not its result: original return values depend
-on OS-owned MemHeaders and earlier allocations, which are absent from Eon's
-virtual ExecBase. A future native service may report an explicitly defined Eon
-buffer pool, but that result must remain labelled Eon compatibility and must
-not be described as an observed Kickstart return.
+following CMP.L/BLT is evaluated natively as a signed 32-bit comparison
+against `$80000`. A sufficiently large nonnegative result selects `$8ab00`;
+negative results and values below the threshold retain `$ab00`. Z clear on
+the first query bypasses the second query without this replacement.
 
 Both routes prepare A1 `$12e00` for `$13058/-$168`, using owned `$12fec` as
-the library base. After the separately supplied AvailMem observation has
-selected this route, the active bootstrap can invoke the existing ROM-hash-
-backed InitView primitive as an explicitly labelled Eon native-compatibility
-service. Its receipt records generation, sequence, vector, return address,
-object address, Kickstart image hash and routine hash. The authenticated caller
-bytes are then executed from `$1305c` to the exact `$13068/-$cc` InitVPort
-request at A0 `$12e12`; the same Eon compatibility path applies InitVPort and
-records its receipt. The runtime stops at `$1306c`, the exclusive end of the
-admitted 108-byte bootstrap span. No original Kickstart return is claimed,
-AvailMem is never synthesized, and bytes at `$1309e` (InitBitMap) are outside
-this source admission and are not executed. Later bitmap initialization and
-graphics-generated pointer chains remain work.
+the library base. Its return prepares A0 `$12e12` for `$13068/-$cc`; that
+return reaches the `$1306c` structure-building boundary. These typed returns
+do not invent the libraries' writes to view or viewport structures. The next
+native structure stores and graphics-generated pointer chains remain work.
 
 Source gate: ADF `$3400`, 108 bytes (runtime `$13000..$1306b`), SHA-256
 `ca2490219557649ff335d47ccc9d15fcbaa34da2ab9c723feb6bcea147970c0f`.
@@ -10901,14 +9704,6 @@ The first bitmap's four plane pointers use owned `$12ff4` plus 0, 8000, 16000
 and 24000 bytes. The second uses fixed base `$14000`, also stored at `$12ff0`.
 Pointers are checked for alignment and a bounded 32000-byte plane interval.
 These stores describe buffers; they do not themselves fill or display pixels.
-
-The main-stage code later alternates the two View roots, calls `LoadView`,
-and waits for the custom-chip VERTB request bit. This proves frame
-synchronization, but the recovered `ViewPort.Modes` value `$4000` does not
-identify PAL versus NTSC or a fixed host frame interval. Keep the native
-VERTB entry observation-driven until the selected monitor/video standard and
-interrupt delivery are independently established; do not infer a 50 Hz
-scheduler from this mode word.
 
 The caller pushes its View pointer twice before each viewport-build call.
 The next merge's A1 is the popped View, not the immediately overwritten
@@ -11149,16 +9944,13 @@ SHA-256 `7abcba12c4363f777c1a7c5d2611cb5212491fa2373b32c66a6552242c9f9ae3`)
 tests the signed cell and routes negative, positive, and zero values to those
 three helpers.
 
-Static analysis proves the writer and routing topology. Capture 07 later
-observed `$1f98c=$ff` and `$1f98e=$00` at `$1fbe6` for input ordinals 16 and
-18, and `$00/$00` at ordinal 22. The `$ff` samples therefore establish that
-the negative helper-entry condition occurred in those invocations; they do
-not record the branch destination, the `$1fc24` helper's effects, or its
-conditional service call and return. The zero sample is linked to Space but
-does not show that Space was accepted by the game. This advances the captured
-dispatch boundary without establishing a visible title action or gameplay.
-The source listing and audit remain in the external analysis cache, not in the
-repository.
+This proves a static writer and routing topology only. The signed table entry,
+which helper is taken in a particular run, `$1f98e`, and any resulting title
+action remain unknown. The existing v16 raw-PC stream proves execution reaches
+`$1fbe6` after input, but contains no selector-cell observation; v17/codex08
+and codex09 produced no admissible host-input receipt. Therefore this audit
+does not unlock runtime dispatch or a gameplay claim. The source listing and
+audit remain in the external analysis cache, not in the repository.
 
 The hash-gated title parser now computes and checks the 68000 word-branch
 targets from each signed extension word: `$1fbee + 2 + $00ac = $1fc9c`,
@@ -11445,32 +10237,6 @@ bounded 64-entry offset/data report is external at
 `e60a00ba782d13df6ef666c377df5ec9091c2e964a7f4d9762c95a9b2b588983`, 67
 lines). These are static source and call relationships; no admitted capture
 shows the initializer or this script dispatch executing.
-
-A fresh in-memory read of the same hash-admitted Disk 1 resolves table entry
-1: its signed big-endian offset is `+$0341`, so base `$1c482` selects candidate
-stream `$1c7c3` (ADF `+$777c3`). The 32-byte and 128-byte source windows at
-that target hash to
-`e1eb7c4160f864608619a59bcc6e9f2d835736cb8ce99244f1ae4f927ee7bf2d` and
-`c91426fb374da65e7489b1663c08f1583db99791b0db63767669fdd86bba22c4`.
-Both startup `$404f6` and title-loop `$22486` statically call `$1fb9a` with
-D0=`1`, so their indexed stream candidate is the same. This links the source
-call sites to one hash-addressed original-data window; it does not prove the
-pointer initializer ran, the dynamic `$22292` state, or either runtime return.
-`DeuterosAmigaTitlePostLoadDispatchProfile` now admits and exposes this source
-candidate only when both bounded windows and the decoded signed offset match;
-other data variants keep their prior title-stage admission and expose no
-candidate through this field. When the active observations select that exact
-base and word, the command session compares opcode bytes within the admitted
-32-byte prefix directly to the original ADF before advancing. This check does
-not prove that the corresponding bytes were copied into owned runtime memory or
-that `$1fa0a` executed. The runtime coordinator now compares an observed
-dispatch-base longword, table-entry word, or command opcode against owned
-runtime memory when that address is present. A mismatch is rejected before the
-session advances. An absent byte range remains an external-observation boundary
-and is not treated as proof of a completed copy; the current load-copy
-observation path still needs to establish source-to-owned-byte correspondence
-for this table and command stream. The dispatch word's parser-mode memory write
-is previewed and applied before committing the session observation.
 
 The earlier static label for captured A0 `$1eed5` as disk-prompt text is
 withdrawn. Under the hash-bound main-stage second-read profile, it maps to
@@ -11940,23 +10706,13 @@ EG6TXT counterparts hash to
 represent this static profile separately from the INT-91 EGA640/MCGA drivers.
 The profile admits only the two full-member hashes above. The standalone
 session requires an explicit loaded-member identity and observed INT-93 vector
-matching that handler, then accepts exact table-selected entries. AH0/AH6
-produce no writes; AH3/4/5/7/8/9 return ordered bounded memory-write intents.
-VGATXT AH1 is additionally admitted by the 95-byte span at `$0330` (SHA-256
-`6664f6be4c9809e959615f618e775bca46b0024f133c760b1c307b3ba4a6e891`). It
-maps the input character to the original eight-byte glyph in the verified
-member, advances CS:`$20` by eight, and emits 64 ordered byte-write intents
-for the hard-coded `$a000` aperture with 320-byte row stride and the supplied
-foreground/background state. The model preserves 16-bit address wrap. EG6TXT
-AH1 remains outside the model because its routine changes EGA sequencer state
-and reads selected plane/font pointers. These are standalone candidate handler
-effects, not proof that a title/game path installed the vector or reached a
-call; the VGA write intents are not yet connected to the visible runtime.
-Its real-media test
+matching that handler, then accepts exact table-selected AH0/3/4/5/6/7/8/9
+entries; AH0/AH6 produce no writes and the others return ordered bounded
+memory-write intents. Its real-media test
 reads the existing installed leaves in place. This is a deterministic typed
 model of candidate handler instructions, not evidence that TITLES or 2200AD
 loads the member, installs the vector, invokes these calls, or produces a
-visible frame; it is not connected to game execution. AH2 and the unknown
+visible frame; it is not connected to game execution. AH1/AH2 and the unknown
 start-up route remain outside the session.
 
 An exact direct-media byte scan still finds no immediate
@@ -12257,45 +11013,6 @@ and listings remain outside Git and supplied media. Twenty-four focused tests
 cover DS/CS absolute aliasing, exact wrapper-stack restoration, the BIOS and
 DOS return scenarios, invalidated register facts, and rejected overlaps.
 
-### 2026-10-08 Millennium DOS loader-pointer access cross-check
-
-The bounded context analyzer now reports candidate memory access direction
-and segment for absolute references, and tests both reads and writes. Its
-reachability targets include the candidate loader entries `$104a` and `$1247`.
-The run uses the same direct-media set and `TITLES.EXE` hashes above. Its
-external schema-3 report is
-`~/.cache/project-eon-tools/millennium-title-context-reachability-20261008-v18.tsv`
-(11,380 bytes, SHA-256
-`f998bb0fda0b1a1e37ce412aae3337d82d4e25bb84794898ca970705d3d44852`, mode
-`0600`). Under the explicitly assumed INT 91h, BIOS, wrapper-stack, DS, and DOS
-resize-return scenario, `$104a`, `$1247`, `$0134`, and `$125c` remain
-unreachable; exploration stops at the opaque DOS INT 21h allocation at
-`$1b2d`.
-
-The byte-start xref scan finds candidate reads of absolute `$011c` at runtime
-`$1069` (`CS:[011c]`, file `+$0f69`) and `$1258` (`[011c]`, file `+$1158`),
-with no candidate absolute writes to that address. The overlapping decode at
-`$106a` is retained only as a byte-start candidate. It finds the direct
-candidate jump `$1082 -> $1247` and no direct immediate candidate for `$104a`.
-The scan does not classify code/data, prove instruction starts or runtime
-reachability, or exclude a pointer write through DOS, an indirect address, or
-another unmodeled mechanism. No allocator result, pointer value, handler, or
-playable state is inferred. The report body remains external; only hashes,
-offsets, addresses, and uncertainty are recorded here.
-
-A follow-up schema-4 report adds every byte-start candidate for register/memory
-indirect calls and jumps plus far calls/jumps. The external report is
-`~/.cache/project-eon-tools/millennium-title-context-reachability-20261008-v19.tsv`
-(12,321 bytes, SHA-256
-`f7141ab07041147c982a5f5ee46b7d06d1179521b6c737c7be43c8ca8a443f43`, mode
-`0600`). It contains 18 candidate rows, including `$1068` (`ljmp [0x16c5]`)
-and `$1299` (`ljmp cs:[0x1266]`). `$1068` overlaps the immediate operand of
-the linear candidate `MOV CX,$ffff` at `$1066`; neither candidate is evidence
-of a transfer into the loader. The context-sensitive entry analysis continues
-to leave `$104a` and `$1247` unreachable under its stated assumptions. Dynamic
-register values, stack-based pointer writes, indirect targets, and runtime
-code/data boundaries remain unresolved.
-
 ### 2026-10-08 Millennium DOS INT 93h installer disassembly cross-check
 
 A fresh full linear listing was regenerated from the hash-verified English
@@ -12334,66 +11051,6 @@ assumed `$1b26` resize return. Capturing the allocator's carry/result and
 memory state is required before extending that route; no DOS return or
 allocation result is inferred here.
 
-### 2026-10-08 Millennium DOS opaque AH=48 continuation scenario
-
-The bounded context analyzer now exposes an exact optional scenario for the
-DOS `INT 21h` at `$1b2d`: it resumes at `$1b2f` only when explicitly requested,
-restores the caller control/stack boundary, and clears tracked register facts.
-It does not assert AH=48h success, AX, carry, an allocated segment, or memory
-effects. A focused regression confirms this boundary is site-specific and
-leaves the next INT 91h opaque.
-
-Applied to the exact direct English DOS media set, with the already named
-observed INT 91h scenario and explicit opaque-return assumptions at BIOS
-`$046d` and DOS `$1b26`, this additional return moves the first stop to DOS
-`INT 21h` at `$1b38` (free-block service). Candidate targets `$0134`, `$125c`,
-`$104a`, and `$1247` remain unreachable. The report is external at
-`~/.cache/project-eon-tools/dos-ah48-return-scenario-20261008/ah48-return.tsv`
-(SHA-256
-`79749f89fae398d1757a9855ff75b6e84400f493db69347bfec1bc33cde13317`, mode
-`0600`). This is a named control-flow scenario, not an observed DOS return or
-allocation and not a runtime/playability result. The next required evidence
-is the actual allocation result and the later free/allocation return flags;
-the assumed return alone does not justify entering the candidate loader.
-
-Adding separate opaque-return scenarios at the exact free site `$1b38` and
-the second AH=48 site `$1b3f` advances the candidate path to `$1b44`, where
-the analyzer stops at `MOV word ptr CS:[BX+2],AX` because it cannot prove the
-indexed write is disjoint from the active near-call return word. The linear
-candidate listing shows `$1b41` first sets BX=`$010c`; the memory target is
-therefore statically `$011e`, but the entry stack segment/pointer and the DOS
-allocation return value are still not observed. The conditional allocation
-failure at `$1b48` remains unknown. Candidate loader targets remain
-unreachable. The full multi-return scenario report is external at
-`~/.cache/project-eon-tools/dos-ah48-return-scenario-20261008/ah48-free-second-alloc-return.tsv`
-(SHA-256
-`9b4bfdedf499e98854b50cb890085325a7233862b881ce924a17cc02f8d853f4`, mode
-`0600`). This identifies the next required facts—caller stack mapping and
-the real allocation result—without treating indexed-write safety as proven.
-
-### 2026-10-08 experimental DOS AH=48 return observer
-
-A separate DOSBox-X prototype was built on trv2 from source HEAD
-`234797680781567e18c374c9e62da24de5423db0` plus an external patch whose
-SHA-256 is
-`321bc727d4c0529a6ba960ecc6fcf9199c245feb5d45f72dda10f03c2694d868`. The
-Linux binary is 122,502,752 bytes with SHA-256
-`3c3b6d9312d59cfada0f4b75466f90da5193e61e0450271cbe268fbb2b85c65c`. The
-standalone C++14 harness passed after exercising exact image/site gates,
-register snapshots, path rejection, 0600 output, event/file bounds and
-overflow/footer behavior. No emulator was launched and no original media was
-read for this prototype.
-
-The observer checks the exact `TITLES.EXE` size/hash and four DOS `INT 21h`
-call sites (`$1b26`, `$1b2d`, `$1b38`, `$1b3f`), then records handler-entry
-and handler-exit registers before guest IRET. It does not capture the guest's
-resumed register state, allocation memory, or any gameplay state. The receipt
-contract is available only through the explicitly experimental
-`millennium-dos-ah48-handler-return-v1` runner protocol. Its results remain
-diagnostic and cannot satisfy rank 1 or admit a runtime continuation. The
-binary is external and the raw patch/output remain in trv2's scoped cache;
-the project stores only hashes, addresses, bounds, and uncertainty.
-
 ### 2026-10-08 Millennium DOS parent EXEC candidate
 
 The same exact-media linear analysis includes `MILL.COM` (1,445 bytes,
@@ -12410,18 +11067,13 @@ In the `MILL.COM` candidate, the helper at runtime `$031c..$034b` (file
 `+$021c..+$024b`) sets DS/ES to CS, uses parameter block BX=`$067a`, issues
 DOS EXEC function `$4b00` at `$0336` (file `+$0236`), restores SS:SP, and
 queries the child return code with function `$4d` on the carry-clear branch.
-The caller at runtime `$023d` (file `+$013d`) loads DX=`$068f`; the
-NUL-terminated bytes at file `$058f` name `TITLES.EXE`. It calls the helper
-from `$0240`, tests AL at `$0243`, and skips the following request on a
-nonzero result. The zero-result path loads DX=`$069a` at `$0249`; the
-NUL-terminated bytes at file `$059a` name `2200ad.exe`, and the caller invokes
-the same helper from `$024c` before testing AL at `$024f`. These exact strings
-and conditional call order are static facts from the hash-bound image. They
-do not prove either EXEC ran, succeeded, loaded the named child, or returned
-the observed AL value. The existing experimental LOADNGO records identify
-planned COM image reads but do not yet bind them to these specific caller PCs
-or establish the resulting runtime path. The `$0236` EXEC instruction is
-therefore a concrete next observer location, not a recovered transfer.
+Two linear callers set DS=CS and DX=`$068f` at `$023d` or DX=`$069a` at
+`$0249` before calling the helper. These are candidate filename pointers in
+runtime memory; this listing does not prove their contents, which child each
+call executes, or that either call ran. The existing experimental LOADNGO
+records identify planned COM image reads but do not yet bind them to these
+specific caller PCs or establish the resulting runtime path. This EXEC site
+is therefore a concrete next observer location, not a recovered transfer.
 
 ### 2026-10-08 Deuteros VNC display authorization check
 
@@ -12514,4160 +11166,3 @@ remain at eight pre-input sites; no title-display, selector, or later-input
 transition is established. Software OpenGL setup and a valid receipt improve
 the diagnostic path, but this run supplies no game input, frame change, or
 playability evidence.
-
-### 2026-10-08 Deuteros v23 visible-input startup follow-up, capture 03
-
-A 180-second visible v23 capture used the connected Xvnc `:6` display with
-software OpenGL and manual focus/key/mouse input. Its schema-33 receipt was
-initially rejected because the verifier did not permit an empty
-`raw_pc_pre_input_site_counts` field. That is a valid phase summary when the
-bounded trace contains no samples before the first host input. The verifier
-now permits an empty pre-input summary while continuing to reject blank
-identity fields; its receipt tests cover both cases.
-
-The capture is at
-`/home/trv2/.cache/project-eon-tools/deuteros-amiga-playability-v23-input-20261008-03/`.
-The verified receipt records 10 host-input events, 1,024 raw-PC observations
-across eight existing polling sites, and six late-input observations linked
-through input ordinal 10. It records no title display, selector dispatch,
-zero-route observation, or latch write. The operator-visible guest image
-continued to show the repeating Deuteros intro logo; no language selector or
-disk prompt appeared. Input delivery and this unchanged visible image do not
-establish gameplay or playability. The capture remains outside Git and the
-original media was read in place.
-
-### 2026-10-08 Deuteros v23 selector and zero-route capture
-
-The subsequent visible-input capture is at
-`/home/trv2/.cache/project-eon-tools/deuteros-amiga-playability-v23-input-20261008-06/`.
-Its schema-33 receipt passes the independent verifier. The pinned recorder is
-SHA-256 `e4e46e84cd75eceffb28d26882fef0062582c251b0ef26baa0fccf6aff2e8dd1`
-(62,039,312 bytes); the English Disk 1 and Disk 2 source archives remain the
-same read-only, hash-matched originals recorded in the earlier captures.
-
-This run adds linked evidence after the startup logo. It records 12 host-input
-events; 2,049 display-register writes (SHA-256
-`e9bb2d8e1d0a24d700e6f9d0aeaed02d77d62773bc813cac7df03d08bcfe2a99`,
-267,698 bytes) end at input ordinal 6. At ordinal 3, the recorder observes a
-write at `$21868` setting `$21720` from 0 to 1. At ordinal 12, the captured
-numeric `1` input is linked to the selector read/dispatch at `$1fbe6` and
-`$1fc22`; the zero-route sidecar records one complete 147-sample invocation
-starting at `$1fc22`. The late-PC and dispatch sidecars link that passage to
-the physical input chronology. The raw-PC trace contains 1,441 records and
-the dispatch sidecar contains one record.
-
-The later-display observer contains zero records, and this invocation's
-selector cells `$1f98c` and `$1f98e` are both zero. The capture therefore
-establishes physical-input-linked selector and zero-route reachability, plus
-the latch write, but no later display update or accepted gameplay action. It
-does not establish a playable state or game-control semantics. Raw traces,
-sidecars, configs, and capture outputs remain outside the repository; original
-media was read in place.
-
-Reinspection of the retained zero-route sidecar refines the boundary: its 147
-ordered records include all 32 intended chip-RAM byte writes at `$1fc74`, each
-followed by a matching `$1fc76` readback, and a return at `$1fc9a`. The two
-selector cells stay zero in the route samples. The recorder's v21-derived
-observer reads guest memory but does not alter it. This verifies the route's
-observed memory effects in this invocation; it still does not show a later
-display-register update or a visible changed frame, nor establish a playable
-state.
-
-### 2026-10-08 Deuteros v23 late-selector follow-up, capture 07
-
-Capture 07 is retained outside Git at
-`/home/trv2/.cache/project-eon-tools/deuteros-amiga-playability-v23-input-20261008-07/`.
-Its schema-33 receipt independently verifies 22 physical host-input records,
-1,445 raw-PC records, 29 late-input observations, five late selector
-dispatches, one complete 147-record zero-route invocation, and one latch
-write. The zero-route sidecar is 54,723 bytes with SHA-256
-`9f1ad2ecb39b8f67a2d7fcb27ff7a7b41a33365834e2aff26e30120b1fbac5dc`.
-The late-display sidecar contains 2,048 Copper-origin records from one
-host frame (frame 5717), ending at the recorder's limit; this is not evidence
-of a later changed frame. The sidecars and run-status hash are retained in the
-external capture. No accepted gameplay action is established.
-
-F10 at the visible disk-change prompt was mapped by the reviewed FS-UAE config
-to `action_drive_0_insert_floppy_1`; the physical-input receipt records that
-host action (numeric action 360). The retained `fs-uae.log.txt` contains no
-Disk 2 insertion record, and the subsequent image went black after Return.
-Thus the host-side swapper request is evidenced, but successful drive
-insertion and guest progress past the prompt are not. The original archives
-remained read-only and were not copied or changed.
-
-An offline comparison of capture 07's title-display and late-display receipts
-was performed in place on trv2. The source-pinned FS-UAE `inputevents.def`
-(SHA-256
-`50f4a03b89e70a3a907c67805a5f43d9b2a729913de3ea813192c92cb5b8f327`)
-maps host action 149 to `KEY_SPACE`; the press and release are receipt
-ordinals 21 and 22 at frame 5717. The late-selector sample at ordinal 22 still
-has both selector cells zero. Both display sidecars contain 2,048 records:
-the earlier title stream ends at input ordinal 12/frame 2148, and the later
-stream is linked to ordinal 22/frame 5717. After normalizing away clocks and
-input metadata, 2,031 of 2,048 writes match in positional order; the 17 value
-differences are confined to one initial palette pass. Grouping by raster
-position wrap yields 31 exact pass matches after that first phase-aligned
-pass. Thus the sampled Copper register program returns to the same sequence
-after Space; the records do not show a persistent display-list transition.
-This does not establish whether another game state changed or prove Space was
-accepted as a command. The normalized comparison was not retained as a report;
-the source receipt hashes are
-`d3e42d1dfd7e6d36e6d53c4063bb683c06b6b60915cfc056dfa112b84c317cdd` and
-`ce087efc009fd645ef6e7fdcfe3ef4be9f66531342d82ce52a77395d88c88d5c`.
-
-A second review of the same retained capture joined its late-selector,
-late-input-PC, and physical host-input receipts. At `$1fbe6`, dispatch rows 3
-and 4 (input ordinals 16 and 18, frames 4022 and 4278) contain
-`$1f98c=$ff`, `$1f98e=$00`; rows 1, 2, and 5 contain `$00/$00` at ordinals
-12, 14, and 22. The corresponding input receipt has two press/release pairs
-for action 157 at ordinals 15–18, followed by action 149 at ordinals 21–22.
-The exact v3.2.35 `inputevents.def` (SHA-256
-`50f4a03b89e70a3a907c67805a5f43d9b2a729913de3ea813192c92cb5b8f327`)
-identifies these as Return and Space respectively. The late-PC rows at
-`$1fbe6` agree on ordinals 16/18 and show D0 low bytes `$50` (`P`) and `$61`
-(`a`); ordinal 22 shows `$20` (space). Each sample also has a following
-`$1fc22` site record. Because the recorder does not sample the conditional
-branch destination, this is input-correlated selector state plus static
-branch meaning, not proof that the negative helper or a visible/gameplay
-transition completed. The next useful observation is the branch result after
-`$1fbe6` and, for the `$ff` route, the ordered `$1fc08 → $3fbf8 → $1fc0e`
-call/return boundary. The external sidecar SHA-256 values are
-`43960c2b7dbf4b47ac21fae853bd80c5703204c5949fea18fbe8612bbfe7ad92`
-(`late-selector-dispatch.txt`),
-`7965efbf8f97592d2123753eac0fa9fcea22ab2dc2215266ba24a631419e615f`
-(`host-input-receipt.txt`), and
-`62049fd194c51efc485caa7d97f74b862ee287d303ee1b9cd18b5c446c38150a`
-(`late-input-pc.txt`). Raw rows remain external to Git.
-
-### 2026-10-08 Deuteros v23 Disk 2 input-mapping diagnosis, capture 08
-
-Capture 08 is retained outside Git at
-`/home/trv2/.cache/project-eon-tools/deuteros-amiga-playability-v23-input-20261008-08/`.
-Its schema-33 receipt passes the independent verifier. The run used recorder
-SHA-256 `e4e46e84cd75eceffb28d26882fef0062582c251b0ef26baa0fccf6aff2e8dd1`
-(62,039,312 bytes), and the read-only source archives match the existing
-English release identities: Disk 1 `7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533`,
-Disk 2 `b98ee3c36141773485c5e03dd8bb4aa59784eaf08a1363fa6a2951a5eb5fdc0a`,
-and Kickstart `c9521c114900633c09317ca6ff979db7b9df34d3cb537de062f5d51811c42c04`.
-
-The receipt binds 18 host-input records, 1,288 raw-PC observations, 2,049
-title-display observer records, two late selector dispatches, one complete
-147-record zero-route invocation, and one latch write at `$21868` that sets
-`$21720` from 0 to 1. Both linked selector dispatches at `$1fbe6` observed
-`$1f98c=$00` and `$1f98e=$00`; the late-display observer is absent. The F10
-input at ordinal 18 is recorded as numeric action 205. Inspection of the
-hash-bound 1,441-byte FS-UAE configuration
-(`7eb34be64ba48093b94377c0fa907a43bfe78a6bb6765e13a076ab21e42d3285`)
-shows that it had no `keyboard_key_f10` mapping. The FS-UAE log records only
-the initial Disk 1 insertion and no later Disk 2 insertion. Therefore the
-ordinal-18 event cannot be treated as a Disk 2 swap request, and the run does
-not establish guest acceptance or playability. The run-status SHA-256 is
-`5da6e35f57330fcee56607e624d0e9bc6df43532aaa7b86acdef851e0971b598`; the
-receipt verifier accepted it despite the bounded run ending at its timeout.
-
-The capture runner now maps visible F10 to
-`action_drive_0_insert_floppy_1`. A follow-up visible startup session loaded
-that mapping in FS-UAE, but received no operator input before its capture
-window ended, so the runner rejected it for lacking a physical-input receipt.
-It supplies no new guest-state evidence. Continue only with visible manual
-input at the prompts, then require a recorded Disk 2 insertion and a linked
-changed guest state/frame before claiming playability. All run output remains
-in the external cache; the original archives remain in place and read-only.
-
-Capture 10 repeated this no-input outcome on the visible VNC `:6` session.
-The live v23 process ran for 10 minutes and terminated at the runner's
-configured deadline. Its external directory contains a bounded raw-PC file,
-the generated config with the correct F10 mapping, and FS-UAE logs; there is
-no host-input receipt or `run-status.txt`, because the runner rejected the
-physical-input intent before writing its final status. FS-UAE logs show only
-Disk 1 being inserted in DF0 and no Disk 2 swap. The original Disk 1, Disk 2,
-and Kickstart archives were rehashed afterwards and still match the identities
-listed above. This is a failed attempt to collect operator-driven evidence,
-not capture-backed gameplay or a negative finding about the game's behavior.
-The external config SHA-256 is
-`859839ed367ae324950aeecd7966799bea3d07445341fb770aadf0c55a50b9c6`, the raw-PC
-file SHA-256 is
-`91a05a69ce723695da661f1c9c0c8eb5fd4b71e7e5bffa4ad5e23256ae3904b9`, and the
-FS-UAE log SHA-256 is
-`245a6469f93da213ebc7c2b8b8855a822d3abf7ccd89ad90e5949ce24df04416`.
-
-Capture 11 repeated the no-input timeout after reopening noVNC at port 6082
-against the live X display `:6`; the browser reported an active connection,
-but no keyboard event reached the physical-input receipt. It ended at the
-10-minute deadline and was rejected for the same missing-receipt condition.
-The log again records only Disk 1 in DF0. Its external config SHA-256 is
-`cf8902451e2926fd832a0db81bdade1805202f4a7d1dd1b5223768dfbf92e63d`, raw-PC
-SHA-256 is
-`91a05a69ce723695da661f1c9c0c8eb5fd4b71e7e5bffa4ad5e23256ae3904b9`, and
-FS-UAE log SHA-256 is
-`94e8425257261ba38b6bc4cc5db1d6ad4aaa0e18935c1b059880af5ee8d01485`. The
-three original archive hashes still match those recorded for capture 08.
-Thus the noVNC connection itself is available, but operator input remains
-necessary to advance this evidence path; no guest progress is inferred.
-
-### 2026-10-08 Deuteros v23 manual VNC retry, capture 12
-
-Capture 12 used the pinned v23 recorder and the same recognized, read-only
-English Disk 1, Disk 2, and Kickstart archives. The process ran for the
-configured 600-second window on Xvnc `:5`, but no physical host-input event
-was received. The runner rejected the run before writing `run-status.txt` or
-an admissible receipt. Its bounded 1,024-record raw-PC trace has SHA-256
-`91a05a69ce723695da661f1c9c0c8eb5fd4b71e7e5bffa4ad5e23256ae3904b9`, matching
-the earlier no-input traces; all samples are at the eight pre-input poll
-sites and input ordinal zero. The external FS-UAE log hash is
-`899afe7a6e79362e870357674a426806d1317a9e782ab7224cce864f7ce5133d`; the
-generated configuration hash is
-`a0c383c610a6c693b6faf25db2cb46d1240e4b644f6b079c7372ee5306c883d9`. The
-run directory is
-`/home/trv2/.cache/project-eon-tools/deuteros-amiga-capture-20261008-manual-12/`.
-The read-only mounts were cleaned up after rejection. This repeats the
-no-input boundary and adds no game-state or playability evidence; do not start
-another equivalent capture until physical input is available.
-
-### Deuteros v24 bounded late-display observer, 2026-10-08
-
-FS-UAE v24 is an observer-only successor to the reviewed v23 recorder. The
-x86_64 executable is 62,039,936 bytes with SHA-256
-`ddd6e2df32c9d785e93b96c0a55b6244fab034212b6842e031ef09648d7765ac`. It
-reports FS-UAE 3.2.35; comparison of the 175 `libuae.a` members found only
-`newcpu.o` changed from v23. Its patch SHA-256 is
-`b90c691531e9215f891ff6abcad05d83e7d3f6365cc5a55fafb93daa239b0054`, and
-`eon_observer.hpp` is
-`e3e4b680929e0843f620d961b970574408396b234306dd641e9a999f2ed82aff`.
-Both source and binary remain in the scoped external trv2 cache.
-
-Receipt schema 34 keeps the existing raw-PC, host-input, zero-route, display,
-and latch observers, and adds bounded late-display windows. A window is keyed
-by a distinct input ordinal observed by the display callback; at most four
-such observed ordinals are retained, with 2,048 writes per ordinal, 64 writes
-per register in each ordinal, 8,192 writes total, and a 2 MiB sidecar cap.
-Ordinals may be skipped when no display callback is observed. The observer
-does not synthesize missing windows or infer a physical frame. The specialized
-receipt parser enforces grammar, chronology and caps, and the top-level
-verifier checks the file-size bound before hashing.
-
-An external synthetic observer harness exercised four windows (2,048 writes
-each), the aggregate register cap, a skipped ordinal, and exclusive-output
-failure behavior. It produced 8,192 rows and a 1,021,837-byte receipt. These
-are harness checks, not emulator capture evidence. No original media was
-accessed during this observer-harness review; this tooling change alone
-establishes neither a game action, displayed frame, nor playability.
-
-### 2026-10-08 Deuteros main-stage startup and display-list disassembly
-
-The hash-bound English Disk 1 ADF (`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`)
-was read in place on trv2. A bounded static review records the main-stage map
-from ADF offset `0x5800` to runtime `$20000` and the title-stage map from ADF
-`0x6e000` to runtime `$13000`. The re-decoded main-stage span `$21734..$21870`
-maps to ADF `+0x6f34` (length `0x13c`, SHA-256
-`780f12d07aa940e305726d8881e1d698e5a5d9988f5552ad88a144760b1a113a`). The
-candidate entry prepares runtime state, initializes a display list through
-`$22a5a/$22bea`, writes custom-chip registers, then reaches the loop at
-`$217f6`. Each static loop pass calls `$21276` and `$21380` before the input
-poll at `$2185e..$21870`. Hash-bound supporting spans identify the bounded
-update routine `$21380..$214a9` and the display-list setup/apply routines
-`$22a5a..$22a69`, `$22ab8..$22b89`, and `$22bea..$22c4b`; their hashes and ADF
-offsets are in the external report.
-
-The bytes at ADF `+0x8da24` (44 bytes, SHA-256
-`0b4135906c3f9e4a3ce65fc0ed04367f1ecf877e14fb784d2ab8bcf2607bd911`) fall
-inside a linear candidate instruction beginning at `$32a22`. A cross-check
-with the separately hash-bound main-stage route refines this overlap: startup
-at `$217f2` calls `$21926` before the first `$21276` read. The selector table
-at `$21708` is ADF `+0x6f08` (20 bytes, SHA-256
-`75cfaef61e5c0810744ece5d64ef6e342a399c576ab84d4b1fc3e5318824cdb9`) and
-contains five candidate source offsets, each with a nonzero four-byte length
-prefix in the read-only ADF. For the two admitted resource indices 0 and 1,
-the caller probes four bytes to `$2ad24`, reloads that longword as the length,
-and passes that data-sized count to the chunked transfer into `$32a24`. For
-selector 0, a successful transfer copies ADF `[0x1b800,0x4abf4)` to runtime
-`[$32a24,$61e18)`, overwriting the candidate code bytes before `$21276` reads
-the resulting record base; the word at `$32a28` then comes from ADF `+0x1b804`.
-Selector indices 2 through 4 encode lengths that run beyond the ADF end, so
-the recovery path stays limited to admitted indices 0 and 1. This is a
-conditional static/dataflow path, not proof that any request completed in a
-capture. Capture 12 does not record incoming D0, transfer results, resolved
-records, or a guest-linked frame, so the analysis does not explain its visual
-difference or establish gameplay. Full startup/display report:
-`/home/trv2/.cache/project-eon-tools/deuteros-startup-display-review-20261008/static-review.md`
-(SHA-256
-`f492826493a2549cbed0acc5038d5395250e18302871f046a3544c425c5b6b3a`). It
-contains the main-stage instruction listings and remains outside Git. The
-corrected initializer/reference scan is
-`/home/trv2/.cache/project-eon-tools/deuteros-startup-display-review-20261008/initializer-scan.md`
-(SHA-256
-`5448e20dadee9590f160d83e70f194996d192a54f65a549e37d6aca7d4797a20`); it
-records the probe and data-sized write as separate operations. The next
-evidence-backed step is to observe the selected resource and successful read
-returns, then link resolved `$32a24` records and display-list writes to a
-guest frame and manually delivered input.
-
-### 2026-10-08 Deuteros v24 visible-input retry
-
-The first v24 preflight exposed a transposition in the repository's recorder
-SHA-256 constant: the measured binary was
-`ddd6e2df32c9d785e93b96c0a55b6244fab034212b6842e031ef09648d7765ac`, matching
-the reviewed pin above, while the constant had `a0` where the digest contains
-`c0a`. The pin now matches the measured binary, and a runner regression test
-asserts the exact reviewed digest. The focused capture-runner suite passes 49
-tests.
-
-A fresh 180-second visible-input attempt then ran on trv2 display `:5` using
-that pinned v24 recorder and the exact read-only English disk and Kickstart
-archives. The output directory is
-`/home/trv2/.cache/project-eon-tools/deuteros-amiga-playability-v24-input-20261008-01/`.
-The runner rejected the run because it received no physical host-input event;
-there is no host-input receipt or final `run-status.txt`. The retained raw-PC
-trace is 167,853 bytes with SHA-256
-`91a05a69ce723695da661f1c9c0c8eb5fd4b71e7e5bffa4ad5e23256ae3904b9`, byte-
-identical to an earlier no-input trace. The generated configuration hash is
-`a8699d457d7d398d46b5a8f73d2eb5a4a76a685b692bc5577b2915a3eda1d157`; the
-68-byte bounded recorder console hash is
-`0e9751b805f795d4a05053dca2f28fd4ffdd62478ab31d35854c273211634fe2` and only
-reports GLX/virtio display-driver diagnostics. The original disk and Kickstart
-archive hashes were unchanged after the run. This attempt adds no game input,
-state transition, display checkpoint, or playability evidence; do not repeat
-the same capture until physical operator input is available.
-
-### 2026-10-08 Deuteros profile-two re-entry D0.W derivation
-
-The profile-two path no longer treats the unobserved full D0 register at
-`$21734` as an unknown low word. The exact title tail stores profile `2` at
-`$12ffc`; the hash-bound `$12800` dispatcher copies its low word to `$12a34`.
-The profile-two table entry selects `$12b44`, which branches to the shared
-`$12b1c` loader. Its successful load continuation reaches the 14-byte
-hash-bound ADF span at `+$2f0e`, runtime `$12b0e`, SHA-256
-`858d0a08e8d6fe8200fb71a0866731feabffcadc232bfdeff5be669446bae0fd`:
-`MOVEA.L $12822,A1; MOVE.W $12a34,D0; RTS`. The return enters `$20000`, whose
-hash-bound first instruction jumps to `$21734` without changing D0. Therefore
-D0.W is exactly `2` at the entry and `$21734` stores that word at `$21704`;
-D0[31:16] remains unknown because the preceding service return may set it.
-
-The exact instruction listing was regenerated on trv2 by reading the
-recognised disk-1 ZIP in place. Its external report is
-`/home/trv2/.cache/project-eon-tools/deuteros-profile-d0-check-20261008/profile-tail.md`
-(SHA-256 `a230de46cee773d0e953af80a62d91b1ff28bb1067523f6e84fad43d417d3ac5`,
-15 lines). The ZIP hash remained `7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533`; the contained ADF hash is
-`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`.
-No media was extracted or copied. The runtime now writes the owned `$12a34`
-profile word and, when `$21734` is reached, accepts its observed PC without a
-fabricated full-register receipt. If a full D0 observation is supplied, its
-low word must match `2`. Before committing the prefix, it also requires the
-owned 14-byte source span at `$12b0e` to match the hash above and confirms
-`$12b14` lies within that span. Native tests verify this loaded-byte identity
-alongside the owned profile word and `$21704` result. The next boundary remains
-the typed first service return at `$2174a`; this derivation does not prove a
-frame, game action, or playability.
-
-The native session can now take that exact local transition without requiring
-an emulator register receipt. Its profile-two plan records provenance as
-`hash_bound_profile_two_execution`, checks that `$12b14` is inside the owned
-14-byte source span at `$12b0e`, and writes the already-derived low word `2` to
-`$21704`. An optional runtime observation remains accepted only when its entry
-is `$21734` and any supplied D0 low word is `2`. Both routes commit through the
-same owned-memory transaction and advance to `awaiting_first_exec_return`.
-Driving the real-media session now stops before the external Exec call at
-`$2174a`; its OS return and all later display/input/game-state boundaries
-remain unresolved. The regression rejects wrong PC/D0 receipts and verifies
-that a missing receipt leaves memory unchanged before the hash-bound advance.
-This removes one unnecessary observation dependency, but establishes neither
-an executed OS call nor game playability.
-
-### 2026-10-09 Deuteros title service return boundary
-
-The `$00ff` title-callback arm at `$1f0b8` calls `$20118` after copying caller
-words `$a(a0)` and `$c(a0)` to `$1ee10` and `$1ee12`. Resolve this target
-against the active loaded image at the time of the call: the title handoff
-stage is loaded from disk offset `$6e000` to runtime `$13000`, length `$6ca00`,
-so it overlays runtime `$20000` before its callback code runs. The earlier
-main-stage byte at `$20118` is therefore not the active target in this title
-callback. In the title-stage candidate range `$20118..$201bf` (disk offset
-`$7b118`, 168 bytes, SHA-256
-`9b16e7cdc97495a1b52656d49c7a3612e7e1617ce88996e2c5e7138e3f183ec3`), the
-linear decoding adjusts the stored x and y words at `$1ffc8` and `$1ffce` by
-the copied signed deltas, clamps each result to its stored bounds, derives
-position arguments, and calls graphics vector `-$01aa`, `MoveSprite`.
-`MoveSprite` takes a viewport in A0, a sprite in A1, and coordinates in D0/D1
-([AmigaOS graphics autodoc](https://developer.amigaos3.net/autodocs/graphics.library/MoveSprite.html)).
-The operation is now statically identified, but its runtime preimages,
-coordinate bounds, sprite/viewport contents, call return, and visible display
-effect remain unobserved. This does not justify wiring a host action or
-claiming an accepted input or displayed frame.
-
-The complete linear candidate report remains external at
-`/home/trv2/.cache/project-eon-tools/deuteros-20118-static-20261009/deuteros-amiga-loaded-spans.md`
-(SHA-256 `6c3390c40d8c5127fe5644845d6de2f50245b36c50c4de95abbd5e1f61f3bf9e`).
-It was generated on trv2 from the disk-1 ZIP in place (SHA-256
-`7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533`) and
-its contained ADF (SHA-256
-`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`);
-no media was extracted or copied. The output labels all loaded ranges as
-linear candidates with code/data unclassified. The separate physical-input
-capture completed its 600-second window without a host-input receipt; its
-raw-PC trace matches the earlier no-input trace. It adds no state transition
-and remains distinct from the later visible-input attempt below.
-
-### 2026-10-12 Deuteros callback MoveSprite static call path
-
-The existing byte-two callback profile was checked against fresh, hash-bound
-linear disassembly generated directly from the recognized disk-1 ZIP and its
-ADF member in place. The ZIP hash is
-`7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533`; the
-ADF hash is `6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`.
-The callback range is ADF offset `$7a056`, runtime `$1f056`, length `$fa`,
-SHA-256 `ff4b055b2d5128465c891debcad00ff4e53cbf661de47b9ee3d6278f33d5e5f8`.
-It tests byte `$1ee16` at `$1f094` and branches to `$1f148` at `$1f09a` only
-when that byte is nonzero. For the `$00ff` arm, it compares `A0+$6` at
-`$1f0a2`, branches away at `$1f0a6` unless equal, copies `A0+$a` and `A0+$c`
-at `$1f0a8` and `$1f0b0`, and calls `$20118` at `$1f0b8`. The local
-continuation is `$1f0be`, followed by the common return at `$1f0ee`.
-
-The target range is ADF offset `$7b118`, runtime `$20118`, length `$a8`,
-SHA-256 `9b16e7cdc97495a1b52656d49c7a3612e7e1617ce88996e2c5e7138e3f183ec3`.
-It adjusts and clamps the stored x/y words, supplies viewport `$12e12`, sprite
-`$1ffda`, and derived coordinates, then calls graphics vector `-$01aa` at
-`$201b6`. The call returns locally at `$201ba`; the routine restores its
-saved registers and returns at `$201be`. These exact byte ranges and branch
-targets support bounded observation sites. They do not prove that either
-branch or call ran in a guest session, identify an input meaning, or establish
-a visible or gameplay effect. The static candidate listings are retained only
-under `/Users/bosse/.cache/project-eon-analysis/deuteros-callback-20261012/`
-outside the repository and original media; the source ZIP and ADF were not
-extracted, copied, or changed.
-
-### 2026-10-09 Deuteros v30 visible-input capture
-
-The exact v30 recorder at
-`/home/trv2/.cache/project-eon-tools/v25-negative-selector-20261009/source-tree-v30-service-return/fs-uae`
-matched SHA-256
-`45b0fde4ffd354793c16cf72fa19891e08b9aee3f2d21b837ac40b46c3323877`
-(62,087,912 bytes). A fresh 180-second capture used a visible noVNC session on
-Xvnc `:6` and ordinary Space/Return input. Its schema-39 receipt is verified
-and remains external at
-`/home/trv2/.cache/project-eon-tools/deuteros-amiga-playability-v30-20261009-01/`.
-The verified status records the established disk-1 SHA-256
-`7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533`, disk-2
-SHA-256 `b98ee3c36141773485c5e03dd8bb4aa59784eaf08a1363fa6a2951a5eb5fdc0a`,
-and Kickstart archive SHA-256
-`c9521c114900633c09317ca6ff979db7b9df34d3cb537de062f5d51811c42c04`.
-Configuration SHA-256 is
-`1cc18fb452e0917ea063903d62b8c88ebe8d3ecc33e030bde0ef1967e5c4ab55`;
-host-input receipt SHA-256 is
-`7dbc888651a238eeb41b384701ec76146c3bb3faee04f94e17ee3727503a24ff` (10
-records); raw-PC SHA-256 is
-`8ebace897f4d410fe3b3dbf5d6b158288dc4ee51e3fcca5000bf79fe04294926` (1,024
-records); late-input-PC SHA-256 is
-`5d91612dda98a5c1b0dfa9680606de7595ce2a942136f19247db8155e11821f3` (6
-records, linked through input ordinal 10). The runner rehashed both original
-disk archives and Kickstart after capture and found the same identities.
-
-The raw-PC trace links 768 observations through input ordinal 4; the separate
-late-input trace links six bounded site samples through ordinal 10. A second
-fresh 600-second capture used software rendering and the same visible noVNC
-session. Its schema-39 receipt at
-`/home/trv2/.cache/project-eon-tools/deuteros-amiga-playability-v30-20261009-02/`
-also passed `verify_capture_receipt.py`. The animated title remained visible
-throughout; Space and Return produced no visible transition, and no language
-or disk prompt appeared. No title-display, late-display, callback-memory,
-service-boundary, or `$4077e..$407e4` response-loop sidecar was emitted in
-either run. These receipts prove delivered host events and bounded early
-startup only. They do not establish guest key acceptance, callback
-reachability, a visible response, or gameplay.
-
-### 2026-10-08 Deuteros main-stage Exec vector semantics
-
-The exact 0x70-byte main-stage range at ADF offset `$6f34`, runtime `$21734`,
-has SHA-256 `b81795229e9343856db5568cb291358526d38b555011af172836838e1d3dad9d`.
-It calls Exec vector `-$96` at `$2174a`, then immediately overwrites D0 with
-`$0007fff0` at `$2174e` before calling `-$9c` at `$21758`. The Amiga Developer
-CD autodocs identify these vectors as `SuperState()` and `UserState(sysStack)`:
-`SuperState` enters supervisor mode on the user stack and returns the old
-system stack in D0; `UserState` takes that stack in D0 and returns to user
-mode. The original code therefore discards the first returned stack value and
-passes the literal `$7fff0` to `UserState`. On return, the next local routine
-`$20068` sets D0 to zero before its own Exec call, so neither Exec D0 result
-feeds the recovered software-memory path.
-
-This narrows the required register evidence for these two typed call returns:
-their ordered call/return sites remain required, while their returned D0 values
-do not supply a later software value. It does not make the calls side-effect
-free. The native runtime admits their caller-connected trace boundaries but
-does not emulate the 68000 supervisor bit, stack banks, or Exec implementation;
-an actual guest execution remains the evidence for those effects. The autodoc
-also notes a `UserState` defect in Kickstart V33/34, fixed by V1.31 SetPatch;
-whether the game disk loads that patch has not been established. The currently
-running FS-UAE A500 configuration names the supplied Kickstart 1.3 r34.005 ROM
-(SHA-256 `ee05862d8102a08436ac4056da7d549db31625c7d47b24dfb7b3c9a5c113ca53`)
-and clean Disk 1 (SHA-256 `6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`).
-Its external configuration
-`/home/trv2/.cache/project-eon-tools/vnc-troubleshoot-20261008-02/session.fs-uae`
-has SHA-256 `8b5ce00d979f245d7361812dfc9e0ff2f149932ab80dbd82ac074ab758137022`
-and does not name SetPatch; this alone does not show whether guest startup code
-loads it.
-
-The source is the Amiga Developer CD 2.1 Exec autodoc for
-[`SuperState` and `UserState`](https://amigadev.elowar.com/read/ADCD_2.1/Includes_and_Autodocs_2._guide/node059D.html).
-The external hash-locked report is
-`/home/trv2/.cache/project-eon-tools/deuteros-exec-callsite-20261008-a/calls.md`
-(SHA-256 `40f5fea4b42694bfe70fc9ea2f751370176c51e156d912c09da458eceb514ec7`,
-31 lines). The first attempted range digest was rejected; the accepted range
-digest above was computed from the pinned ADF member before the report was
-written. No source media was extracted or copied.
-
-### 2026-10-08 Millennium DOS capture 07 stack sidecar boundary
-
-The experimental capture-07 `driver-load-return.raw` sidecar on trv2 is
-2,176 bytes, SHA-256
-`77e301c8fe0d2678c8a9754ea3d157f069352bad3146c8f34a9f13b66668f180`, and
-contains 12 complete records (`overflow=0`). Its exact image label is
-`mill.com`; PCs cover only `$02d4`, `$02ed`, `$02fc`, `$030b`, `$0315`, and
-`$031b`. The SS:SP observations are `0812:00fa` (2), `0812:00fc` (2), and
-`0812:00fe` (8). This is genuine recorder-observed stack metadata for the
-driver-load returns, but it does not observe `TITLES.EXE` at `$1b44`; it cannot
-establish that child image's SS:CS relationship, entry stack, or whether
-`CS:[BX+2]` aliases the active call frame. This recorder-evidence boundary
-remains unresolved; a separate DOSBox-X loader-model scenario later proves
-the write disjoint only under its explicit assumptions. The raw sidecar remains
-in the external cache and is not copied into the repository.
-
-### 2026-10-08 Millennium DOSBox-X COM stack interval scenario
-
-The pinned DOSBox-X COM loader source provides a narrower static scenario for
-the `$1b44` alias boundary. For the hash-verified English `TITLES.EXE` (7,022
-bytes; SHA-256
-`3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6`), the
-loader's minimum paragraph count is `((7022 + 0x10) >> 4) + 0x20 = 0x1d7`.
-Its successful COM path loads CS, SS, and DS from the PSP segment and sets
-`SP=min(0xfffe, memsize*16-2)`, so the complete modeled initial SP interval is
-`$1d6e..$fffe`. This is derived
-from pinned DOSBox-X commit
-`234797680781567e18c374c9e62da24de5423db0`, not an observed game stack or a
-general DOS guarantee. The lower bound applies only if this COM loader
-successfully loaded the exact image.
-
-The analyzer carries that full interval and tracks a known immediate
-`MOV BX,imm16` through bounded paths, invalidating it on other BX uses. At
-`$1b44`, the exact instruction is `2e894702` (`MOV word ptr CS:[BX+2],AX`)
-and its immediately preceding instruction is `bb0c01` (`MOV BX,$010c`), giving
-the candidate write offset `$011e`. With the active near-call return at SP
-delta `-4`, every possible return word starts at or above `$1d6a`, so `$011e`
-is disjoint throughout the modeled interval. The analysis therefore passes
-`$1b44` under this named loader scenario; it does not prove the DOS allocation
-succeeded or that the runtime followed this path.
-
-The combined analysis starts at the actual COM entry `$0100` and follows the
-direct jump at `$0104` to `$1b80`, using the already documented captured INT
-91h return values and explicit assumption-only returns at BIOS `$046d` and DOS
-`$1b26`, `$1b2d`, `$1b38`, and `$1b3f`. Its modeled route passes `$1b44`; its
-first stop is the third DOS `INT 21h/AH=48h` at `$1b4f`, where the allocation
-result and effects remain unknown. Candidate targets `$0134`, `$125c`, `$104a`,
-and `$1247` are still unreached. This is an assumption-driven static route,
-not a runtime claim. The 390-line report is external at
-`~/.cache/project-eon-tools/dos-context-com-stack-com-entry-20261008-final2.tsv`
-(SHA-256
-`1f799e052e868f7151263372e00939a67b60b29101e49d23e8daa87c431738f5`, mode
-`0600`). The recorder sidecar remains limited to `MILL.COM`; this static
-scenario does not turn it into a `TITLES.EXE` runtime observation.
-
-### 2026-10-08 experimental DOS AH=48 site `$1b4f` observer
-
-The site after the assumption-driven COM-entry scenario has a separate
-experimental observer. The prototype is based on DOSBox-X commit
-`234797680781567e18c374c9e62da24de5423db0`, the v1 AH48 patch SHA-256
-`321bc727d4c0529a6ba960ecc6fcf9199c245feb5d45f72dda10f03c2694d868`, and a
-site-only delta patch SHA-256
-`b6bfa41579e7fe4e914f446632dc8442c5de179154642782041c00fe9a7fe1dd`. Its
-state machine accepts only the exact `TITLES.EXE` site `$1b4f`, AH=`$48`,
-return IP `$1b51`; the v1 sites `$1b26/$1b2d/$1b38/$1b3f` are rejected by this
-binary. The sidecar grammar is separately tagged
-`project-eon.dos-ah48-observer/v3`. It records DOS-handler entry and exit
-registers before IRET; it does not record the guest's resumed registers,
-allocated memory, or gameplay state.
-
-The rebuilt trv2 x86_64 executable is 122,505,616 bytes, SHA-256
-`75ddc62f68817bfb37cb59d8a283ea06e89cf8d46104bf3458c0d99fcfa2b6ef`. Its
-external observer harness passed with C++14, `-Wall -Wextra -Werror`; the
-binary reports DOSBox-X 2026.08.02. Source and executable remain in
-`/home/trv2/.cache/project-eon-tools/dos-ah48-observer-20261008/`. The runner
-and receipt verifier bind the executable and grammar to the separate
-experimental protocol `millennium-dos-ah48-site-1b4f-v2`; it remains
-diagnostic-only and cannot admit runtime recovery. No emulator guest capture
-was run and no original media was read for this observer build. Consequently
-the return registers, DOS allocation outcome, helper calls at `$1af9/$1bca`,
-and all later execution remain unknown.
-
-### 2026-10-09 Deuteros negative-selector service gate
-
-The v25 FS-UAE observer is pinned to the 62,053,824-byte trv2 executable
-SHA-256 `89f66139d3dfd47d59addde5901eebcc844825a331e8f0746ca96ae8f09de593`.
-Its 6,551-byte two-file source patch is SHA-256
-`6aa3feec1d1fd68990cdf15cbb36809b49e39bf7cfeef60700138ca24046c4d4`.
-Its only archive-member delta from v24 is `newcpu.o`; the source change is the
-host-side observer hook and adds no guest memory write or synthetic input.
-Receipt schema 35 binds an independent, capped sidecar to the exact binary
-and physical host-input ordinal/frame records.
-
-The site mapping is bounded by the pinned input-definition member hash
-`50f4a03b89e70a3a907c67805a5f43d9b2a729913de3ea813192c92cb5b8f327` and the
-static selector function hash
-`cbddd93eb43c498079e7e2175f8f7d6178c357aa6b5241631e717f9037cff414`. At
-`$1fbe6`, the observer reads selector cell `$1f98c`. The negative route passes
-the BPL.W `$1fbee` with N set. At `$1fbfe`, BEQ.B targets `$1fc12`; the gate
-skips the `$1fc08` call exactly when D0.W equals `$20` and Z is set. Otherwise
-the call uses D0=`$13`, D1=`$0c` and enters `$3fbf8`. The two paths rejoin at
-`$1fc20` and continue at `$1fac6`. This corrects the earlier interpretation
-that the service was suppressed based on D0 at `$1fc08`; the actual decision
-is at the preceding compare/branch.
-
-The parser validates instruction words, targets, flags, route order, and input
-links, but the harness exercised only synthetic records. No v25 guest capture
-has run. The service effect, visible selection, gameplay progress, and
-playability remain unproven. The executable and patch are held under
-`/home/trv2/.cache/project-eon-tools/v25-negative-selector-20261009/`.
-
-The native Deuteros session consumes schema-35 negative-selector rows one at a
-time: dispatch, signed branch, gate, then the observed service call/callee/
-return or skip, followed by epilogue and caller. Each row must retain route,
-cycle order, selector and physical-input links. No subsequent command is
-accepted until the caller boundary at `$1fac6`; earlier rows only stage the
-route. This removes the former aggregate shortcut that could assert several
-unobserved CPU boundaries at once. Native tests exercise both routes, reject
-mismatched/out-of-order boundaries, and verify the next command remains
-blocked until caller. The harness rows are synthetic; no v25 guest capture or
-gameplay evidence is provided by this implementation.
-
-### 2026-10-08 Deuteros v25 visible-input attempt
-
-A fresh 300-second capture used the exact v25 recorder, clean standalone Disk
-1/Disk 2 archives, and the pinned Kickstart 1.3 archive through a visible
-noVNC display. The first screen visibly showed the three-language selector,
-including English; no host-input receipt was produced during the window. The
-runner rejected the physical-input capture, so it wrote neither
-`negative-selector.txt` nor `run-status.txt`. The retained raw-PC file is
-167,853 bytes, SHA-256
-`91a05a69ce723695da661f1c9c0c8eb5fd4b71e7e5bffa4ad5e23256ae3904b9`; the
-generated config is 1,491 bytes, SHA-256
-`575929575073beb210ef11e9055bf40e9a9b893910a1610d2ea840b9bc6a1d02`.
-The original archive hashes still match their reviewed identities. The
-read-only mounts were cleaned up and the pre-existing FS-UAE session was left
-running untouched. This attempt adds no input-linked game action or
-playability evidence. All output remains external at
-`/home/trv2/.cache/project-eon-tools/deuteros-amiga-playability-v25-input-20261008-01/`.
-
-### 2026-10-09 Deuteros v25 correct-display follow-up
-
-A second isolated v25 attempt used the otherwise idle visible VNC display `:6`
-(`trv2:eon-v22`), separate from the normal FS-UAE display `:5`. It ran for
-the full 600-second window with the same pinned recorder and read-only source
-archives, but received no physical host input. The runner rejected the attempt
-without `host-input-receipt.txt`, `negative-selector.txt`, or `run-status.txt`;
-the raw-PC file is again 167,853 bytes with SHA-256
-`91a05a69ce723695da661f1c9c0c8eb5fd4b71e7e5bffa4ad5e23256ae3904b9`.
-The generated config hash is
-`862e49162ec6aaaaaa3abaed1dd961fcb4cfc1d5f82b68cd707728b475ca8fc4`; the
-recorder console contains only host DRI3/virtio GPU notices. All three
-read-only mounts were unmounted by the runner. This correct-display attempt
-still provides no selector-route, accepted-action, or gameplay evidence.
-
-### 2026-10-08 Millennium observed EXEC child admission
-
-The coordinator now keeps the external DOS EXEC route usable after the exact
-`MILL.COM` request at `$0336`: a separately supplied observed child entry must
-identify IP `$0100` and its CS, and the route rejects the Eon compatibility
-service provenance. It admits the exact hash-verified 7,022-byte `TITLES.EXE`
-leaf into owned DOS-segmented runtime memory at observed CS:`$0100`, rejecting
-conflicting initialized bytes. A subsequent typed observation of the local
-`$0100 -> $1b80` entry prefix creates the title initialization session and
-executes only the deterministic `$1b80..$1b95` startup prefix, which stops at
-the first private INT `$91` result boundary. It does not synthesize that
-interrupt result, DOS/BIOS returns, a PSP, or a parent EXEC return.
-
-The native media test drives this new chain with synthetic external
-observations and checks the complete copied image byte-for-byte. It proves the
-coordinator path and exact media mapping only; it is not a capture, does not
-prove the observed CS/IP occurred in DOS, and establishes no title screen,
-accepted game input, or playability.
-
-### 2026-10-08 Millennium DOS fourth allocation-site follow-up
-
-The exact English `TITLES.EXE` on trv2 remains 7,022 bytes with SHA-256
-`3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6` under
-direct-media set
-`d938cd6a611a83897a745b257a371613b73a7dddffb2d336ec2167a192803783`. A
-hash-bound 32-byte span at runtime `$1bc0` (file offset `$1ac0`, SHA-256
-`7684392dedd58514c1807f9abd14115f265af64f733eb8dcd834727606b75058`)
-decodes the conditional path through `MOV BX,$fa00`, `MOV AH,$48`, and DOS
-`INT 21h` at `$1bca`. The fallthrough stores the returned BX at
-`CS:$1aa4`, loads ES from AX, selects AH=`$49`, and reaches a second DOS
-interrupt at `$1bd5`. These bytes identify the next handler sites; they do not
-establish allocation success, register values, carry, memory effects, or the
-meaning of either call.
-
-The bounded analyzer now has a named, exact-site scenario for an assumed
-return from `$1bca`. It resumes at `$1bcc`, preserves only the caller stack and
-active near-return words, and clears tracked register/flag facts; allocation
-and all other memory effects remain opaque. A separate analysis starting at
-`$1bca` then stops at `$1bd5`, as expected from the local instruction span.
-The composed COM-entry analysis, with the earlier assumption-only return
-sites, reports `$1c60` as its first breadth-first blocker on another
-conditional path and retains two opaque software-interrupt stops and two
-opaque stack-pointer-write stops. Report hashes are
-`b7db2e00748fc3abae29394ccc4594bb8f5cd2d0b23ed22d1f4a7be0728f97b3` for the
-composed analysis and
-`7fd4ae4f8f521676a12051a8db84db5602e2e1c84c9a5e893e8dc33449aea04d` for the
-site-entry analysis. The small external listing hash is
-`2fb28e595d6d49436a9f4403d79fa53197f9a161b94b89330a25441b59ab957a`.
-All generated reports/listings stay outside the repository at
-`/home/trv2/.cache/project-eon-tools/dos-context-analysis-20261008-v17/`.
-
-The new scenario is static control-flow exploration only. It does not model
-DOSBox-X allocation/free semantics and is not runtime evidence. The next
-runtime boundary requires a reviewed observation of AH=`$48` at `$1bca`,
-including its resumed caller state, followed by the AH=`$49` handler at
-`$1bd5`; the existing `$1b4f`-only observer does not cover either site.
-
-### 2026-10-08 Experimental DOS allocator/free observer
-
-A new external DOSBox-X observer build is pinned separately as
-`millennium-dos-ah48-sites-1bca-1bd5-v3`, receipt schema 22. Its exact binary
-is `/home/trv2/.cache/project-eon-tools/dos-ah48-observer-20261008/bin/dosbox-x-ah48-sites-1bca-1bd5-v3`, SHA-256
-`c8d0795e32e566a7a998ef9f26542fd85652f27b957144a06858181ae9379d41`, size
-134,030,152 bytes. The external source copy, build tree, and logs are under the
-same scoped cache. The prior `$1b4f` observer binary and source were not
-modified. The new state machine admits only the exact TITLES.EXE INT 21h call
-at `$1bca` with AH=`$48` and `$1bd5` with AH=`$49`; it retains the existing
-real-mode, exact-image, `CD 21`, and balanced handler-enter/exit checks. The
-sidecar header advances to observer schema v4 and carries register snapshots
-only, with no guest-memory dump.
-
-The external observer harness passed, including rejection of wrong AH values
-and unrelated sites. Runner and receipt tests validate exact sidecar order,
-header, register widths, event counts, and binary identity. No guest capture
-has yet been performed with this binary. The protocol remains experimental
-and recovery-inadmissible; it does not establish allocation success, returned
-flags, allocation contents, free semantics, title-screen rendering, or
-playability. A capture still requires visible manual input and a finalized
-recorder sidecar.
-
-### 2026-10-08 Millennium DOS AH=3Dh helper cross-check
-
-The exact local direct-media `TITLES.EXE` matches the recorded 7,022-byte
-SHA-256 identity. A bounded decode around runtime `$0536..$05a2` shows the
-AH=`$3d` helper saves DS and ES, loads DS from CS before the DOS open call at
-`$0549`, then writes AX to `CS:$19c6` at `$054b`, restores DS and ES, and
-returns at `$05a2`. This confirms the exact helper structure but not a DOS
-return or preserved DS value. A site-entry analysis is invalid for proving
-the helper's RET because it omits the caller frame; with an explicitly assumed
-DOS return it reaches `$05a2` and stops at `near-ret-without-call-frame`.
-
-An experimental composed run that also assumed the AH=`$3d` call returned
-and preserved the incoming DS relation still stopped first at `$1c60` on a
-separate path (`stack-pointer-write-opaque`). The `$0549` DS-preservation
-assumption was removed from the analyzer because no runtime observation
-supports it. The composed report SHA-256 was
-`64b0c90fcadb9ee34aa45c041d536c4db1e9133e297ce8f73fde3d35fc0660f3` and
-stayed in the external local cache at
-`~/.cache/project-eon-tools/dos-context-analysis-20261008-v18/`.
-
-### 2026-10-09 Millennium DOS allocator/free host-input observation
-
-The separate Linux v4 observer adds a bounded SDL host-key receipt to the
-existing exact-site AH48/AH49 snapshots. It was built outside the checkout
-from DOSBox-X commit `234797680781567e18c374c9e62da24de5423db0`; the
-canonical worktree source bundle digest (binary tracked diff plus sorted
-untracked files) is
-`61ae9c9d300a47edadb717cb3cf4fb7ae9b0a9ce464b24665bb9d38fe7826a1a`.
-The executable is
-`/home/trv2/.cache/project-eon-tools/dos-ah48-observer-20261008/bin/dosbox-x-ah48-sites-1bca-1bd5-v4-host-input`,
-19,598,136 bytes, SHA-256
-`6e32911220bfa480c4890c59729ebb4ef399e7b8d1da6841d959817f19e312f9`.
-
-A visible noVNC run against the unchanged English DOS archive
-`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`
-was captured at
-`/home/trv2/.cache/millennium-dos-ah48-v4-20261009-01/`. The independent
-receipt verifier accepted it with explicit experimental opt-in. The host
-receipt has 10 SDL key events (SHA-256
-`11c14c3dc73dfedb47ccb7e021e44111de003e5cf5fba390c4b9783f70e776e4`, 655
-bytes); the AH48 sidecar has two snapshots (SHA-256
-`c1c59d7e3d6391637273cdbcd172023def100c3164c51722d78237e7e0226db7`, 1,100
-bytes), one each at `$1bca`/AH=`$48` and `$1bd5`/AH=`$49`. The source remained
-read-only, DOSBox exited normally, and the visible `TITLES` window remained
-black after ordinary key input. The raw sidecars remain only in trv2's
-external cache.
-
-The sidecar's compact register summary is: the `$1bca` caller entered with
-`AX=$48d0`, `BX=$fa00`; the DOS-handler snapshot then had `AX=$0008`,
-`BX=$612d`, still at internal `f000:d0e5`. The later `$1bd5` caller entered
-with `AX=$4908`, `BX=$612d`, `ES=$0008`; its handler snapshot had
-`AX=$0009`, still at `f000:d0e5`. Microsoft's archived DOS 2.0 system-call
-reference describes AH=`$48` failure as AX=error 8 with BX holding the largest
-available block, and AH=`$49` error 9 as an invalid block
-([allocation reference](https://github.com/Microsoft/MS-DOS/blob/main/v2.0/bin/SYSCALL.DOC),
-[error codes](https://github.com/Microsoft/MS-DOS/blob/main/v2.0/source/SYSCALL.txt)).
-Those semantics make the observed tuples consistent with a failed `$fa00`
-allocation followed by a free attempt using ES=`$0008`; this remains an
-inference. The recorder samples before IRET, so its `FLAGS` values are not the
-caller's restored FLAGS and do not prove DOS carry results.
-
-This closes the previously missing host-input receipt boundary for this
-observer build and confirms the two exact handler sites were reached during
-the visible session. It does not admit the capture for recovery, establish
-the allocator/free result at the guest's resumed instruction, explain the
-black display, or establish a playable title/game state. The next useful
-trace must cross the caller's post-IRET state and correlate it with a visible
-display change; keep that as a separately reviewed observer and preserve
-this before-IRET boundary as unresolved.
-
-### 2026-10-09 Millennium DOS post-IRET caller observation
-
-The v5 Linux DOSBox-X observer adds a second bounded sidecar sampled after the
-16-bit real-mode IRET has restored the hash-bound TITLES caller's registers
-and FLAGS. The hook is gated by the existing exact-image identity and one
-pending DOS handler token; it records only returns to `$1bcc` or `$1bd7` and
-does not read or write guest memory. Its external worktree source-bundle
-digest is
-`ca7b95c4c8a488affea6ea9e432fee9b709e1ff86d24ae044842e0bdb9f0a0a5`, based
-on upstream commit `234797680781567e18c374c9e62da24de5423db0`. The executable
-is 22,842,648 bytes, SHA-256
-`0ebf895c90fe0fbaddadf5303e96aaf3cb5bd1dea45b6650a9024add4b23ec2c`.
-
-The visible, independently verified capture is retained outside Git at
-`/home/trv2/.cache/millennium-dos-ah48-v5-20261009-02/`. It contains six SDL
-key events, two handler snapshots, and exactly two caller-after-IRET
-snapshots. At `$1bcc`, TITLES resumed with AX=`$0008`, BX=`$612d`, FLAGS
-`$7247`; at `$1bd7`, it resumed with AX=`$0009`, ES=`$0008`, FLAGS `$7247`.
-Both restored FLAGS have CF set. This confirms that, in this DOSBox-X run,
-the `$fa00`-paragraph AH=`$48` request failed and the following AH=`$49`
-free request for ES=`$0008` also failed. The earlier pre-IRET AX/BX tuples
-were consistent with these results but did not prove carry.
-
-The capture still showed a black `TITLES` surface. It closes the caller-state
-boundary only; the v5 sidecar does not include the subsequent title-library
-open/read calls or a display write. Continue at the next statically mapped
-DOS open at `$0549`, then follow its handle through the bounded `$057c` reads
-and close. Do not claim the black display is explained until the exact
-library result and a linked output checkpoint are observed.
-
-### 2026-10-09 Millennium DOS read-only archive mount and title screen
-
-The v6 external DOSBox-X recorder is built from base source commit
-`234797680781567e18c374c9e62da24de5423db0`. Its executable is
-123,683,760 bytes, SHA-256
-`a67ea94cf02abb786ad070b28a41b168c3217a9a9893059b179f3d528b42eeef`.
-The exact-source observer changes are kept on trv2 under
-`~/.cache/project-eon-tools/dos-ah48-observer-20261008/source-title-library-v6/`;
-no generated reverse-engineering output was added to Git. The build used
-`--enable-sdl2` and scratch space under that cache. The external source-file
-SHA-256 values are `src/cpu/cpu.cpp`:
-`95779c0cc49f0447720481feb48ad051fc3aec5b6209d9d880ee492e474f45a1`,
-`src/dos/eon_dos_ah48_observer.hpp`:
-`4017150162e1193fbbe95acc38a17c4d3a4c3d45cefe5b895f30ff9a790d3eab`,
-`src/dos/eon_dos_ah48_receipt.hpp`:
-`b6558229ed5aba80ca0c801c70bb30f443777d633fe6cc2e1a5910f67df103a5`, and
-`src/gui/sdlmain.cpp`:
-`fe6a4ff1cf5e27ac1a7fb46797913315b2c1e4d4a89d237e52ed92142d10f071`.
-
-The v6 capture at
-`/home/trv2/.cache/millennium-dos-ah48-v6-20261009-05/` independently passes
-schema-22 verification with `--allow-experimental-observer`. It reads the
-English archive in place, mounted by `archivemount` with `ro,nosuid,nodev`,
-and presents the mounted directory to DOS as a CD-ROM using DOSBox-X's normal
-`mount -t cdrom -noioctl` support. That drive's existing `FileOpen` behavior
-downgrades the game's read/write open request to a read-only handle; writes
-remain unsupported, and the original archive was hash-checked before and
-after capture.
-
-The register trace confirms the black-screen cause. TITLES calls INT 21h/AH=`$3d`
-at `$0549` with AL=`$02` for the hash-addressed `TITLE.LIB`. On the earlier
-read-only directory mount it returned DOS error 5 with CF set. In this
-read-only CD-ROM mount it returned handle AX=`$0005`, CF clear at `$054b`.
-The subsequent nine AH=`$3f` reads at `$057c` returned the complete 18,907-byte
-library in the first read (AX=`$49db`); the next eight reads returned zero
-bytes with CF clear. No close event was observed before this short capture
-ended.
-
-During visible manual input the black surface changed to the original
-Millennium title logo, then to the `OUTER SYSTEM` view with its toolbar and
-planetary system. The host-input receipt contains two SDL key events. The
-separate AH48/AH49 scratch calls still return CF set, so those failures are
-not sufficient to explain the black screen. The capture's handler and
-post-IRET sidecars hash to
-`51cfd34ddccbc86c10baf69ed48f9e41867393248c590c77fe60ffade44cac02` and
-`878cda6c1fd53ba8b03596f392cc04c72291f352d8828ae8550ae730ce55aad4`;
-the host-input sidecar hash is
-`18f205099d7bddf46e666d7d6bffa368f0ca34938cfbe29469f8a70eb3afd3dd`.
-
-This resolves the observed black startup surface for the English DOS archive
-under the read-only recorder setup. V6 remains experimental and
-recovery-inadmissible. The short capture does not establish all gameplay
-actions, other DOS releases, or title-library close behavior.
-
-SSH access to trv2 was restored on 2026-10-09 and the external capture roots
-were rechecked before any repeat. No AH48 v3 run directory, receipt, or raw
-sidecar was found under the inspected `project-eon-tools` and
-`project-eon-captures` roots. The nearby `millennium-dos-driver-load-return-
-20261008-07` output is a distinct experimental schema-22 driver-load capture:
-12 `MILL.COM` observations at `$02d4/$02ed/$02fc/$030b/$0315/$031b`, with no
-host-input receipt, DOS result, title-input checkpoint, or gameplay evidence.
-The earlier v3 partial sidecar remains unverified and inadmissible; no v3
-runtime result was recovered.
-
-### 2026-10-08 Millennium DOS SetVect compatibility-loop boundary
-
-The hash-verified direct-directory title-runtime test exposed an automatic
-runner hang at sound-driver state `awaiting_vector_install`. The `$0239`
-SetVect call is an external DOS result boundary. Its `break` exited the local
-`switch` but left the enclosing compatibility `while` running on the same
-state, consuming a CPU core without advancing. The runner now exits that loop,
-commits its staged session/runner/memory state and returns the `$0239` boundary
-for an explicit observed IVT result. The existing real-media regression test
-asserts that first boundary and then supplies the exact IVT observation.
-
-The full app and native test targets rebuilt successfully with the installed
-macOS 26.5 SDK/sysroot. All 22 CTest entries that do not require the missing
-full canonical archive corpus passed, including the formerly hanging
-`millennium-dos-title-runtime-real-media`, Deuteros worker and selector tests,
-`millennium-dos-title-exec-entry-real-media`, and direct-directory CLI startup.
-The three omitted corpus-dependent tests require all supported archive
-releases or a Deuteros archive/ADF under the configured archive directory;
-the local Downloads directory has only Millennium DOS archives. No original
-media was copied or modified.
-
-Current CLI diagnostics still show only startup admission: Millennium DOS
-stops at its first private INT `$91` result boundary. Deuteros Amiga admits the
-recovered opening but leaves Exec/graphics/callback returns and title input
-unresolved. These checks prove neither game is yet fully playable. Further
-progress requires admitted runtime results at those boundaries; the reviewed
-manual recorder path remains available on trv2 only when SSH access and a
-visible human-operated capture are available.
-
-### 2026-10-09 Millennium DOS allocation-chain reachability
-
-On trv2, the current context-sensitive reachability analyzer reread the
-hash-verified English DOS direct-media set in place
-(`d938cd6a611a83897a745b257a371613b73a7dddffb2d336ec2167a192803783`). The
-schema-v4 report is retained outside the repository at
-`/home/trv2/.cache/project-eon-tools/dos-context-analysis-20261009/int10-alloc5-return.tsv`;
-SHA-256 `33873e660962cc8295fc27d788d0634a11bd818c7727cdadb0d6389a5a6c8d3f`,
-410 lines. It assumes the observed-order INT `$91` AX values, an IRET and DS
-preservation at BIOS INT `$10` `$046d`, and stack-preserving returns with
-otherwise unknown effects at DOS INT `$21` sites `$1b26`, `$1b2d`, `$1b38`,
-`$1b3f`, and `$1b4f`. Under those assumptions the first remaining opaque
-boundary is INT `$21`/AH=`$48` at `$1bca`, after BX is set to `$fa00`. This is a
-static scenario only; it does not prove the game takes that route. The prior
-v5 runtime capture already records `$1bca` returning AX=`$0008`, BX=`$612d`,
-CF set, and `$1bd5` returning AX=`$0009`, ES=`$0008`, CF set in its
-post-IRET samples. The scenario report therefore adds no new runtime result;
-it connects the startup helper's assumed call sequence to an allocation call
-whose failure is already observed. V6 advances beyond title-library loading
-to `OUTER SYSTEM`, but no gameplay action is established.
-
-### 2026-10-09 Deuteros response-queue recorder candidate
-
-The v31 FS-UAE candidate is pinned at SHA-256
-`3081ff4b8d12aa550ae065fc83df9f88ff3bfce5ba9ff6af6141bcdce70b74b0`, size
-62,093,928 bytes. It was built on trv2 from v30; only `newcpu.o` changed. Its
-external source tree is
-`/home/trv2/.cache/project-eon-tools/deuteros-response-queue-v31-20261009/`.
-The read-only observer samples the caller `$4077e` and the ordered helper
-path `$407b4` → `$1f230` → `$1f23e` → `$1f258` → `$407ba` → `$407e4`. The
-128-KiB sidecar cap and 24-row per-site cap bound capture overhead and output.
-Schema 40 validates the stage order, host-input links, stack return, and
-instruction-consistent queue/pending changes. A fresh 600-second visible
-noVNC capture completed on 2026-10-12 at
-`/home/trv2/.cache/project-eon-captures/deuteros-amiga-v31-response-queue-20261012-02/`.
-The current verifier accepts the schema-40 receipt. `run-status.txt` is 7,599
-bytes, 148 lines, SHA-256
-`e3a0b3ee20407ddbd3bfc2140c128545abeb863c2b8f950d34c50008fb93b4f7`.
-The capture uses the pinned 62,093,928-byte recorder above; the disk-1 archive
-hash is `7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533`,
-disk 2 is `b98ee3c36141773485c5e03dd8bb4aa59784eaf08a1363fa6a2951a5eb5fdc0a`,
-and Kickstart is `c9521c114900633c09317ca6ff979db7b9df34d3cb537de062f5d51811c42c04`.
-
-The 46-event host-input receipt has SHA-256
-`0bcb611843433bc0c436448290b9ff0a7d1a7a5263f92ab1b773db32bc2f93c5`.
-The 1,326-row raw-PC stream has SHA-256
-`fe2a356d9a09b5b344af3a47ae0421ee534fcc59daf07485b358e1c742c3c4ef` and
-1,070 chronology links through input ordinal 46. The 67-row late-PC stream
-hashes to `898c9962cfa4de50018315437c5a6924df818760883794e188b73b4c97bde75b`;
-four late-selector rows hash to
-`0ff8061884945b444b20d9381524baf2a3f2024a9b3f32376bb74f9d59e8ef4a`.
-The 156-row callback-memory sidecar hashes to
-`184d1c6b1fe81bf4095c073f1a3ca35269de9f3ecc19dd0eecbaecdffd63e850` and has
-six paired entries/exits at `$1f056` / `$1f14e`. The observer reports zero
-samples at `$4077e`, `$4078c`, `$407ba`, and `$407e4`, no complete caller
-sequence, and no response-queue sidecar. VNC visibly showed the language
-selector, Data Disk prompt, and “THE SUN” panel; the two panel clicks produced
-no visible change. This is bounded callback evidence, not a queue-consumer
-execution or playable-state claim. The capture's original archives remained
-read-only and in place.
-
-### 2026-10-12 Millennium DOS disassembly continuation
-
-The hash-verified 54,391-byte English `2200AD.EXE`
-(`427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57`) was
-read in place on trv2 using the declared direct-media-set hash
-`d938cd6a611a83897a745b257a371613b73a7dddffb2d336ec2167a192803783`. The
-complete linear candidate listing is retained only in the external cache at
-`/home/trv2/.cache/project-eon-analysis/millennium-20261012-01/2200AD.EXE.disassembly.md`;
-it is 25,239 lines / 750,838 bytes, SHA-256
-`73bd844b9e9a344211fd8201f97661bf835fc83e3a262c6dd9b5b001e6a67c9e`.
-It retains every byte but classifies none as code or data. Immediately after
-the previously recovered `$7384..$740e` handler, the linear candidate at
-`$7415` is preceded by bytes at `$740f..$7414` that the candidate routine
-rewrites: `$742e` writes `$7412`, `$7434` writes `$740f`, and `$743a` writes
-`$7410..$7411`; a later path reads those locations at `$7455..$7464`. This is
-evidence of self-modifying or data-overlaid code in the static image, not
-proof that `$7415` is reached or that its calls have any particular effect.
-Keep the generated listing outside Git and do not add a native handler without
-a caller-connected route and bounded observations.
-
-A second bounded pass ran the repository's static-control-flow extractor from
-an external, hash-checked tool bundle against the same direct-media set. The
-JSON sidecar remains outside Git at
-`/home/trv2/.cache/project-eon-analysis/millennium-20261012-01/2200AD.control-flow.json`;
-it is 29,959 lines / 1,138,322 bytes, SHA-256
-`f14089ee0943f15fb3c3e9d24e73d332699fa309a98e0e90b6fc8b87fa00a9aa`.
-The extractor emitted 3,394 statically decoded direct-control-flow
-candidates for the full 54,391-byte image. None targets `$7415`, `$7384`, or
-`$7521`. This graph does not resolve indirect transfers, self-modified
-instructions, runtime overlays, code/data boundaries, or actual reachability;
-the zero incoming-edge count is only a negative result within this decoder's
-candidate set. It supplies no basis to implement a new handler or claim
-playability.
-
-### 2026-10-12 Millennium `$740f..$7414` code/data cross-reference
-
-The byte-start scan tool
-`tools/analyze_dos_self_modifying_ranges.py` reads the exact English
-`2200AD.EXE` member from the user-supplied DOS ZIP in place, verifies both
-archive and member SHA-256, and writes only to an external cache. Its report
-is `/Users/bosse/.cache/project-eon-analysis/millennium-20261012-02/2200AD-ambiguous-code-data-740f-final.md`
-(9,395 bytes, SHA-256
-`b1da11025ca50a211d3fd11d70e1e3860c380c93c17e0b284503aa932a9db4ac`). It
-records 81 direct absolute-reference candidates; 80 also begin at the
-complete-image linear decoder's candidate instruction boundaries, and one
-only appears in the every-byte overlap scan. None of these alignments proves
-code or runtime reachability.
-
-The original six bytes at `$740f..$7414` are all zero (range hash
-`b0f66adc83641586656866813fd9dd0b8ebb63796075661ba45d1aa8089e1d44`). The
-linear candidate has three groups that write into this span: `$742e/$7434/$743a`,
-`$92a4/$92aa`, and `$b83c/$b842/$b848`. Reads at `$7455/$745b/$7461`,
-`$92e8/$92ee`, and `$b894/$b89a/$b8a0` copy bytes or words back to the
-`$75a6/$75a8/$75ac/$75ae` cells. Those four cells are zero in the original
-image, but the image also contains other candidate writers. The transfers
-establish a repeated state-save/restore pattern over the span; they do not
-establish that it is executed as code, what runtime values are saved, or which
-caller reaches each sequence. No patched instruction stream is decoded or
-used by the native runtime.
-
-A separate bounded worklist pass from image entry `$0100` produced 4,507
-candidate instruction starts, 4,945 candidate edges and 172 stop records. It
-found no route, even with conditional and direct call/interrupt-return
-assumptions, to `$7415`, the three writer blocks, or their corresponding
-restore reads. Its metadata-only summary is
-`~/.cache/project-eon-analysis/millennium-20261012-02/2200AD-ambiguous-span-reachability.md`
-(1,357 bytes, SHA-256
-`48786432e61e09e51dcb2377bcd31ca7915821ab369c0c841325efd16e7014cb`). This
-negative result is limited to the graph's decoded starts; the recovered
-function-table dispatch is indirect, and runtime overlays and register state
-are not modeled. The candidate handler is already known as table index 5,
-but a static graph does not prove the active DOS runtime reached it.
-
-### 2026-10-12 Millennium ambiguous-span context disassembly
-
-The reproducible scan now emits bounded candidate instruction windows around
-the `$7415` handler and the three blocks that reference `$740f..$7414`. The
-external report is
-`/Users/bosse/.cache/project-eon-analysis/millennium-20261012-04/2200AD-ambiguous-code-data-740f-context.md`
-(14,200 bytes, SHA-256
-`a953d56d5af5466d78ce08af5b57bb80158e32233f8c7dc5c9198f60ee6978fc`,
-mode `0600`). It shows the first group copying bytes/words from
-`$75a8/$75ae/$75ac` into the ambiguous span and a later candidate sequence
-copying them back. The other candidate windows expose different nearby state
-writes and transfers. These linear decodes do not establish instruction
-alignment, code identity, runtime reachability, or a handler effect; the
-`$d40a -> $76f1` index and handler observation remains the next evidence gate.
-
-### 2026-10-12 Deuteros title-input repeat
-
-A further 300-second visible capture used the same hash-pinned v31 recorder
-and read-only media archives, at
-`/home/trv2/.cache/project-eon-captures/deuteros-amiga-v31-response-queue-20261012-04/`.
-The current schema-40 verifier accepts its receipt. The 14-record host-input
-receipt SHA-256 is
-`26254ac726bd6cccdc9e6a06a09510efbeb9a5985998455f2ed9f7fb52c86c55`;
-the 1,792-row raw-PC stream SHA-256 is
-`16ccc192f29311aff86c81ae2bf24ff6abc125fe0e61d5f76bd9cdfe405a23b1`, and
-the 18-row late-input PC stream SHA-256 is
-`1f9f5618d9ac8149917e8ca341427b4c017f708cb359b88f6008faad72fcca0d`.
-The input-linked records cover only ordinals 1–2 in the raw-PC stream and
-1–14 in the late stream. The visible display remained on the animated title
-logo; no language selector, disk prompt, display sidecar, or callback/queue
-observation was recorded. The input receipt records repeated key-down/up
-pairs (action 149); this run therefore documents repeated title-screen input
-and a stalled visible route, not successful progression or playability.
-Original media remained read-only and in place.
-
-### 2026-10-12 Deuteros visible input and language route
-
-A fresh 120-second v31/schema-40 capture used the same read-only disk archives
-and pinned recorder at
-`/home/trv2/.cache/project-eon-captures/deuteros-amiga-v31-response-queue-20261012-06/`.
-`verify_capture_receipt.py` accepts its receipt. The 14-record host-input
-receipt SHA-256 is
-`8e24534d6827fc1d5f989246c590d4b4dec4e82fe55a87a7bc23612e1e3b6102`; the
-2,049-record title-display trace SHA-256 is
-`765393111f39417213afdc3cab80703e5610539d8af1fc738b491d629ee28461`; the
-1,353-record raw-PC stream SHA-256 is
-`00532d807508f0e21d9b16ecf2229e1ee2dce089240728a347af76138f68ebe0`; and the
-21-record late-PC stream SHA-256 is
-`4bb6af1cc632ea6b4aad482fbe3fcba3bd9ce3b79fc49fb9215e20af31d01a2e`.
-Input chronology links the raw and late records through ordinal 14. A held
-left mouse press spans frames 3171–3322; the linked `$21866` sample has
-`SR=$0004`, and the recorder observed the `$21868` latch write at ordinal 9
-followed by `$218cc`. This contrasts with the prior short same-frame clicks,
-whose linked poll had `SR=$0000` and missed that store. This establishes the
-input poll outcome and route only; it does not assign gameplay meaning to the
-click.
-
-In the visible VNC session, the route then displayed the language selector,
-the “PLEASE INSERT DEUTEROS DATA DISK INTO DRIVE DF0” prompt, and
-“PRESS ANY KEY WHEN READY.” Selecting English and pressing F10 at the visible
-disk prompt advanced to the latter message. The bounded capture ended there;
-its input receipt has no later Return event. No post-prompt game state is
-claimed from this run. The title-display trace is linked through input ordinal
-10; late selector dispatch contains two rows and callback-memory contains
-three entry/exit pairs at `$1f056`/`$1f14e`, but no `$4077e` caller sample or
-response-queue sidecar exists. Original archives remained read-only and in
-place.
-
-### 2026-10-12 Deuteros first game view
-
-A fresh 300-second v31/schema-40 capture at
-`/home/trv2/.cache/project-eon-captures/deuteros-amiga-v31-response-queue-20261012-07/`
-passes `verify_capture_receipt.py`. Its 32-record host-input receipt SHA-256
-is `d9115c61fb73a8291b32dd1c7f13af9a6ffbd79270f6bbc1190c752daca45fc5`;
-the 1,307-record raw-PC stream SHA-256 is
-`f9761b104ef8c7fd16377e3a8e3a7c48c7ad536f4dd2dd82e942ed6f4e70f065`; the
-22-record late-PC stream SHA-256 is
-`3f33fc23775a198dfacf3c790db77e0c750266bdb18a90f392685a5c89635ecd`; and the
-31-record callback-memory sidecar SHA-256 is
-`a94b28b85971b0096a40feb04d3454cbb45d5c2801331136f2477c01e0b1c621`.
-The callback sidecar contains 16 entries and 15 matched exits at
-`$1f056`/`$1f14e`, all linked to visible input; it contains no `$4077e`
-caller samples and no response-queue sidecar.
-
-Visible input advanced through the English selector, Disk 2 prompt and
-“PRESS ANY KEY WHEN READY.” F10 at the disk prompt and a subsequent Return
-were both recorded. FS-UAE then visibly rendered the “THE SUN” game view with
-its left control panel and orbital-factory illustration. Several visible
-mouse clicks on the view are linked to callback entry/return observations,
-but produced no verified response-queue consumption or documented screen
-transition. This establishes startup into a real game view and input-linked
-callback reachability, not an actionable game control, continued progression,
-or full playability. Original archives remained read-only and in place.
-
-### 2026-10-12 Deuteros v30 service-return follow-up
-
-A fresh 600-second visible v30/schema-39 capture at
-`/home/trv2/.cache/project-eon-captures/deuteros-amiga-v30-title-callback-20261012-02/`
-passes the independent capture-receipt verifier. Its `run-status.txt` SHA-256
-is `edf0d7c73ac779f96b13777ac46e010c06b286ced2bbd0e5858f0517e34da003`.
-The pinned v30 recorder hash is
-`45b0fde4ffd354793c16cf72fa19891e08b9aee3f2d21b837ac40b46c3323877`;
-the read-only source ZIPs and Kickstart match the identities recorded in the
-receipt. The run ended at its configured duration (`exit_status=124`) with 38
-visible host-input records. Raw-PC chronology links 1,051 samples through input
-ordinal 18; the late-input PC sidecar links 22 samples through ordinal 38.
-Callback-memory contains ten `$1f056`/`$1f14e` pairs and one unmatched entry
-at ordinal 36, but no caller sequence. The v30 display probe targets input
-ordinal 76, which this run did not reach; `service-boundary.txt` was absent.
-
-The visible route again reached the “THE SUN” instrument panel. Clicks on the
-identified label, globe icon, and other visible panel areas produced callback
-observations but no verified display or game-state transition. This capture
-does not advance the response-queue boundary or establish an actionable
-control. Original archives remained mounted read-only and in place; all raw
-capture output remains in the external cache.
-
-### 2026-10-12 Deuteros time-control input follow-up
-
-A fresh 600-second v31/schema-40 capture at
-`/home/trv2/.cache/project-eon-captures/deuteros-amiga-v31-time-advance-20261012-01/`
-passes the independent receipt verifier. Its `run-status.txt` SHA-256 is
-`39be3362849f37f314271ece6a9863d85a8cb4be71302a0137de70bd3830aa7e`;
-the 44-record host-input receipt SHA-256 is
-`f335c0d8da828b82d9ef6ebab6d9ec646d6619c660f4ea13482689a4727cea77`;
-the 29-record callback-memory sidecar SHA-256 is
-`e84a2253f71dfe281d077c8e63ac1d734d22b0fc36922dc0b872613326733feb`;
-and the 28-record late-input PC sidecar SHA-256 is
-`3ff7eef75cdbecacec497fd49b73c26b7dddc2ad1147b7408a85c9f86ce33d3f`.
-The pinned v31 recorder SHA-256 remains
-`3081ff4b8d12aa550ae065fc83df9f88ff3bfce5ba9ff6af6141bcdce70b74b0`.
-The capture ended at its configured duration (`exit_status=124`).
-
-Admission note: the input was sent through agent-operated noVNC clicks because
-the user could not provide physical input. This is not the required manual
-operator input under `CAPTURE_RECORDER_RESTORATION.md`; the receipt verifier
-checks the recorded format and hashes, not the provenance of the operator.
-Treat the input-linked observations below as exploratory only. They do not
-admit a new runtime behavior or preservation conclusion.
-
-Visible noVNC mouse input at host-input ordinals 41–44 reached the recurring
-selector path: the late-PC samples include `$1fbe6` (`D0=$30`), `$1fc22`, and
-the `$1fe88/$1fe96` route. Callback memory at ordinals 38 and 44 shows the
-21-byte `$1eec0` queue range, `$1eed6`, and `$407e6` unchanged at zero. The
-sidecar contains 14 `$1f056/$1f14e` callback pairs, one unmatched callback
-entry, no `$4077e` caller samples, no complete caller sequence, and zero
-response-queue records. This click therefore did not enqueue an observed
-response; the path does not identify a control or prove a gameplay state
-change.
-
-The broad title-display sidecar reached its 2,048-write cap while linked only
-to input ordinal 4. The targeted late-display probe was armed for ordinal 76,
-which was not reached, so there is no post-click display checkpoint. This
-run adds no input-to-state-to-frame evidence. The disk archives remained
-read-only in place; raw capture files remain in the external cache.
-
-### 2026-10-12 Deuteros FS-UAE v33 service-boundary observer
-
-The trv2 v33 executable was built from the pinned v31 response-queue
-candidate with a 3,969-byte two-file source patch, SHA-256
-`658cd6a2eac52fb7cbd7ea794f09e09e7e4dc47dd3e4f54a03e74a5ca8930b92`.
-The binary is 62,094,200 bytes, SHA-256
-`f3701b29d1f3b507f7ca759838b04ff4a3fb2927167fedf1e12cabcf8a7f5ceb`.
-It reports FS-UAE 3.2.35. The incremental build compiled only `newcpu.cpp`,
-replaced only `newcpu.o` in `libuae.a`, and relinked using the existing object
-files. Independent review found exactly the intended two source-file changes
-and one archive-member change; ELF metadata and size differences match the
-incremental build. Source, patch and executable remain outside Git and user
-media under
-`/home/trv2/.cache/project-eon-tools/deuteros-service-boundary-v33-20261012/`.
-
-Schema 42 observes `$20118`, `$201b6`, `$201ba`, `$201be`, and the validated
-caller return for up to 32 host-input ordinals in 1–256. A new higher-ordinal
-entry abandons a stale incomplete active sequence but leaves its prior rows
-intact. At `$201b6`, A0/A1 memory windows are exactly 32 bytes from their
-pointer addresses. The runner enforces ordered samples, chronology links,
-per-site caps, and a 512-KiB sidecar cap. The schema-42 receipt now also retains
-the observed D0/D1/A0/A1/A6 values at `$201b6`, the six exact coordinate and
-bound words plus the two caller deltas at `$20118`, and the raw
-validity/bytes of the A0/A1 object windows. The receipt also recomputes the
-recovered local coordinate arithmetic and reports whether its D0/D1 result
-and fixed A0/A1 arguments agree with the `$201b6` sample. A match verifies
-only the local call arguments; it does not verify the `MoveSprite` result,
-object mutations, a displayed frame, or gameplay.
-
-A diagnostic v33 capture was run on 2026-10-12 at
-`/home/trv2/.cache/project-eon-captures/deuteros-amiga-v33-selfsolve-20261012-02/`.
-Its receipt passes the independent verifier after correcting two schema-42
-parser defects: the fixed-width `service-fixed` row parser now matches the
-literal `width=2` field, and the receipt parser splits each field only at its
-first `=` because structured summary values contain further `=` characters.
-The `run-status.txt` SHA-256 is
-`b16de0ffbc5b527d0e4161f6f8f83f15e9b5033ecbee1c1875f26be4a4b9b98c`;
-the 24-record host-input receipt SHA-256 is
-`fe74d8dbce78a2aa89357b87415693539bc863be33641485c25544f1da492ce1`;
-and the 10-record service-boundary sidecar SHA-256 is
-`b82f022a9d14e56a6eec686865fe5668f092ad6d19f44529ef6983d23552f3e2`.
-The bounded raw-PC sidecar contains 1,866 records linked through input ordinal
-24. Service-boundary rows contain two complete sequences at input ordinals 16
-and 22, with call arguments matching the recovered local arithmetic:
-`D0=$0097,D1=$0065,A0=$12e12,A1=$1ffda` and
-`D0=$00d4,D1=$00c0,A0=$12e12,A1=$1ffda`. The visible session reached the
-English selector and a “PLEASE INSERT DEUTEROS DATA DISK” wait prompt; it did
-not establish a later gameplay action or frame.
-
-Admission note: the emulator input was sent through agent-operated noVNC
-because the user could not provide physical input. Although the live screen
-and recorder observed the events and the receipt verifies, this is not the
-manual operator input required by `CAPTURE_RECORDER_RESTORATION.md`. Treat the
-run as diagnostic only; it does not admit runtime behavior, prove a game
-control, or establish playability. Sidecars remain in the external cache and
-must not be copied into the repository.
-
-A follow-up diagnostic run used the same pinned recorder at
-`/home/trv2/.cache/project-eon-captures/deuteros-amiga-v33-selfsolve-20261012-03/`.
-Its receipt passes independent verification. `run-status.txt` hashes to
-`1d1203c442efdd30cca9efcc7525f0c86eefb53d2389cb34ef3c5008d8a35de3`, the
-16-record host-input receipt to
-`9e8d547955573dffc055a44d61d67508d323aafc0aeef7c3400d1477cb7b75bf`, and the
-10-record service-boundary sidecar to
-`260734c6ec4f79b6bb591ff816321fec98010590a198963360e34b4ab6bd3acf`.
-Visible English selection led to the data-disk prompt; the recorded F10
-(`action=360`) requested the DF0 swap, and a later Return
-(`action=157`) continued at “PRESS ANY KEY WHEN READY.” The live display
-subsequently showed “THE SUN” with the game interface. One visible panel click
-left that screen unchanged. The sidecar contains complete MoveSprite service
-sequences linked to input ordinals 6 and 16; both agree with the recovered
-local coordinate calculation. It contains no response-queue consumer pass, so
-the click has no established game action or changed-state result. This run is
-also agent-operated and unadmitted; its route and hashes are diagnostic only.
-
-A third v33/schema-42 diagnostic capture ran at
-`/home/trv2/.cache/project-eon-captures/deuteros-amiga-v33-selfsolve-20261012-04/`.
-The independent verifier accepted its receipt. `run-status.txt` SHA-256 is
-`ab48c6f465251f4ad23751b3accf7d608de4d2309c43433d03bb4de9c97c5b48`; the
-46-record host-input receipt SHA-256 is
-`a1e7f7a4e608d39491cf00d2d62e0959d3897c2a130af0927f37ac4eef97fd68`; and the
-35-record service-boundary sidecar SHA-256 is
-`337638dc87f120aca9a719cd860e38c54f50f3674dc317f84748889e40d70cbf`.
-Seven complete `$20118`/`$201b6`/`$201ba`/`$201be` sequences match the local
-coordinate arithmetic. The 20-record callback-memory sidecar
-(`6ac61a86b18d2c6c980683f1bfccbcd340543d1e1d043f43ad00f7eaeae59c86`) contains
-ten `$1f056`/`$1f14e` callback pairs, zero `$4077e` samples, and no complete
-caller sequence. The response-queue sidecar is absent. The targeted display
-probe was not armed, and the broad display trace contains startup-linked
-records only. The capture ended at its configured duration (`exit_status=124`).
-
-All input was agent-operated through noVNC, so this capture fails the manual
-operator-input requirement in `CAPTURE_RECORDER_RESTORATION.md` despite the
-receipt's structural verification. It is diagnostic only and establishes no
-game action, state change, frame, or playability. Sidecars remain in the
-external cache; do not copy them into the repository.
-
-### 2026-10-12 Deuteros time-advance control diagnostic
-
-In the separate uninstrumented FS-UAE session at
-`/home/trv2/.cache/project-eon-captures/projecteon-live-ro-20261012-01/`, a
-left-button hold at noVNC viewport coordinates `(391,202)`, over the blue
-time-advance icon, was followed by a visible counter change from
-`3100 000.02` to `.03` (1,000-ms hold). The page canvas measures 1280×800 and
-is displayed at 1152×720 with its left edge at x=64, mapping the click to
-approximately guest framebuffer `(363,224)`. After reopening the noVNC page
-visibly, a 2,200-ms hold at the same viewport coordinates was followed by a
-change from `.03` to `.04`. A 10-second idle interval left `.04` unchanged; a
-further 2,200-ms hold also left `.04`. The two changes suggest a working
-control, but effects were not consistent across attempts and no input receipt
-confirms delivery. The intervening hidden-page attempt adds no evidence. The
-session config SHA-256 is
-`2034f132e3a4854e0f025f9578f3dfc80eb956ee56602ee088800667d2e7fdb7`.
-The English Disk 1 and Disk 2 ADF SHA-256 values are
-`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38` and
-`99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a`;
-the Kickstart 1.3 ROM SHA-256 is
-`ee05862d8102a08436ac4056da7d549db31625c7d47b24dfb7b3c9a5c113ca53`.
-`findmnt` reported `archivemount` FUSE with `ro,nosuid,nodev` for the media
-mounts. No save control was used.
-
-Admission limit: this was agent-operated noVNC input, outside the manual
-operator-input requirement. No capture recorder was active, so there is no
-linked input/response-queue/display receipt. The [edited Deuteros guide](https://www.lemonamiga.com/doc/deuteros-the-next-millennium/469)
-also describes time advancement while the icon is held. This diagnostic does
-not establish the input-to-counter link conclusively, identify an internal
-event byte, establish a canonical campaign-state transition, or prove Project
-Eon playability. All source media remained read-only in place; no media or
-save bytes were copied or modified.
-
-### 2026-10-12 Millennium DOS compatibility SetVect service
-
-The native selected-driver runner now executes the hash-bound `MILL.COM`
-request at `$0239` as an Eon DOS compatibility operation: `INT 21h/AH=25h`,
-`AL=$95`, and `DS:DX=<admitted driver segment>:0`. It writes the little-endian
-INT `$95` tuple at process-local DOS memory `$0000:$0254..$0257` and labels the
-checkpoint provenance `eon_dos_compatibility_service`. This is deterministic
-compatibility behavior, not an original-process observation; the separate
-observation API remains available for externally observed tuples.
-
-After this local service, execution advances to the parent stack store at
-`$032f` / `DS:$05f7`. Its value is now established from the source-bound
-startup/call path below, under separate Eon compatibility provenance.
-
-### 2026-10-12 Millennium DOS parent stack compatibility service
-
-A fresh direct-media analysis read the hash-verified `MILL.COM` in place from
-the recognised DOS directory set
-`d938cd6a611a83897a745b257a371613b73a7dddffb2d336ec2167a192803783`. The
-source is 1,445 bytes with SHA-256
-`4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e`. Its
-complete linear candidate listing remains outside the repository at
-`/Users/bosse/.cache/project-eon-captures/millennium-mill-com-linear-20261012.md`:
-688 lines, SHA-256
-`c1404e93d57967bd805632692e38371f4565aa087bc71a3e6b7eea8e2be0b97a`. The
-listing labels code/data and reachability as unclassified.
-
-The hash-bound route establishes the local stack value without a captured
-register: file offset `$0000` / COM runtime `$0100` executes `MOV SP,$0100`;
-runtime `$023b..$023c` pushes CS and pops it to DS; the near CALL at `$0240`
-pushes return `$0243` before entering the helper at `$031c`; no helper stack
-operation precedes `$032f` (`MOV [$05f7],SP`). Therefore the local write at
-`DS:$05f7` is `$00fe` when this exact selected-driver path reaches the helper.
-The compatibility runtime now records that little-endian word under the
-Eon-owned code segment and labels it
-`eon_dos_compatibility_service`. It also writes the three hash-bound CS fields
-at `$067e/$0682/$0686`, then advances to the existing bounded `TITLES.EXE`
-child-entry and startup model. The external observation path remains distinct.
-
-The same authenticated `MILL.COM` reads the pre-existing INT `$92` vector with
-DOS `INT $21/AH=$35` at COM runtime `$0174`, saving BX:ES at `$05eb/$05ed`.
-Its cleanup at `$0273..$027b` restores that saved pointer with DOS
-`INT $21/AH=$25`, `AL=$92`. Thus this source does not establish an INT `$92`
-handler supplied by `MILL.COM`; the handler was environment-provided before
-that program's cleanup path. On the exact MCGA driver (whole-file SHA-256
-`bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228`),
-`$0219..$0222` requests INT `$92` with AX=`$0001`, BX=`$fa00`; the following
-instructions save returned AX:DX as a far pointer. The matching `$0261..$026a`
-call supplies AX=`$0002` and that saved pointer. The same ten-byte allocation
-and release callsite spans recur at `$02a2..$02ab` and `$02fd..$0306`; their
-respective SHA-256 values are `89d14c3ceb9b07964cb3e2c849af97ad6fa8cc36ac5c867bf25bec84b18c1694`
-and `7f4158bf6fe1ab28e4faffbd94fa9fc9429df1d3dc81c564abf0506f95db87de`.
-This caller use is consistent with an allocate/release service, but does not
-prove the handler's ABI, storage effects, or returned pointer semantics. A
-A bounded source scan of the supplied English game directory found these
-MCGA callsites and the `MILL.COM` save/restore path, but did not identify a
-handler body or a real INT `$92` result; it does not prove that no handler code
-exists elsewhere in the supplied files. The next authentic evidence needed is
-that environment handler or an ordered observation of its calls and returns;
-the synthetic MCGA probe must not fill in those values.
-
-The source derivation is narrower than a general DOS execution claim: it does
-not prove an original emulator followed the route, a DOS EXEC return, a PSP or
-environment block, private `INT $91` results, BIOS effects, rendered frames,
-or gameplay. Native integration tests confirm Eon's compatibility path reaches
-the title initialization's private `INT $91` result boundary with source
-provenance and a populated hash-matched child image. Original media remains
-read-only in place; no captured input or gameplay evidence was added.
-### 2026-10-12 Millennium first game-process private-function audit
-
-The first `2200AD.EXE` startup call is statically connected at runtime
-`$d2c5` to wrapper `$0124`, which executes private `INT $91` with
-`AX=$001f`, `ES=CS`, and `BX=$d19e`; the interrupt instruction is `$0127`
-and its local return site is `$0129`. The hash-verified English driver
-profiles route function `$1f` to `EGA640.BIN+$0235` or `MCGA.BIN+$024c`.
-The six-byte function spans are separately hash-checked by
-`MillenniumDosVideoFunction31Session`. Their local effects read DS offset
-`$008a` (EGA) or `$00ac` (MCGA), set AH to `$04` or `$01`, and stop at RET.
-Both matching supplied driver files contain zero at the corresponding file
-offsets; their whole-file hashes are recorded above.
-
-The driver entry dispatch prefix at file `$0000..$0012` is independently
-hash-bound for both variants (EGA SHA-256
-`a7d507882cf6bfe5b51db64b2dfb3ea8dd66f9d032b52622af2edac0a5ba81aa`; MCGA
-SHA-256 `2892839bc9f8ed84ce14e315addef727247431c808236b413356094d2392f35c`).
-It executes `PUSH CS; POP DS` before indexing the function table and issuing
-the near call. Thus, conditional on the INT `$91` vector reaching this exact
-entry, both functions `$00` and `$1f` address the loaded driver's data segment
-through DS. The remaining uncertainty is whether the active original vector
-and call path reach this handler, not what DS the verified handler prologue
-sets.
-
-The matching driver-file initial byte is not admitted as the live DS-local
-value. A bounded reachable-control-flow audit of hash-verified English
-`TITLES.EXE` (7,022 bytes, SHA-256
-`3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6`)
-finds the startup call at runtime `$1b95` to wrapper `$0122` with `AX=$0000`.
-That dispatch selects driver function `$00`. The already hash-bound
-`MillenniumDosVideoFunctionZeroSession` models how this routine writes the
-same DS-local byte later read by function `$1f`: EGA stores the mode-plane
-count to DS:`$008a`, and MCGA stores its derived count to DS:`$00ac`.
-Function `$00` reaches those stores only after externally supplied INT `$10h`
-results; the MCGA multi-count path also requires an explicit INT `$92h`
-result. EGA's multi-count path includes bounded VGA writes and a caller-stack
-return observation.
-
-This proves a source-level producer-to-consumer relation, not original
-runtime values or a handler return. The active coordinator now validates the
-first function-zero dispatch against the observed INT `$91` vector and the
-complete owned EGA/MCGA image. It accepts ordered, callsite-matched explicit
-INT `$10h` results and commits the function-zero cache write to the loaded
-driver segment. Do not infer those BIOS results from a driver file's initial
-byte. Runtime context, downstream graphics effects, and gameplay remain
-unresolved. Original media was read in place.
-
-The bounded MCGA single-count continuation is now hash-checked separately at
-driver file offset `$023d`, 15 bytes, SHA-256
-`ae64033de75339c4fba83f0663e0b84776ed8c1dfc54b190c772cfb9982ce23d`.
-When explicit INT `$10h` results lead to the mode-match path with `CX=1`, the
-verified instructions derive `AL=(DI-$0080)/4` with `DI=$0084`, store `1` to
-DS:`$00ac` at `$0246`, set `AH=$01`, and stop at RET `$024b` with `AX=$0101`.
-The persistent dispatch session accepts only matching ordered results and
-retains the enclosing title sequence. For MCGA `CX=1`, the active coordinator
-advances the deterministic postlude to RET `$024b`, verifies that DS:`$00ac`
-still matches the exact owned image before writing its derived value `1`, and
-commits memory and session together. This does not synthesize RET or provide
-the raw `INT $91` result to the title caller. The MCGA multi-count path still
-stops at its explicit INT `$92h` request; EGA caller-stack/VGA paths are also
-not wired to the active coordinator. Native tests cover ordered BIOS inputs,
-transactional rejection, the MCGA local store, and both driver variants. No
-handler return, rendering, or gameplay is established. Original media was read
-in place.
-
-### 2026-10-12 MCGA function-zero RET stack boundary
-
-The single-count MCGA path reaches the instruction immediately before the
-driver's RET at file/runtime offset `$024b`; its local write at `$0246` is
-committed only after validating the loaded image. The hash-verified MCGA
-dispatcher calls the selected handler at `$000e`; that CALL's return IP is
-`$0012`. For TITLES' exact `SP=$da00`, wrapper's five register pushes, and
-CPU's three-word INT frame, the function's near-return word is at `SS:$d9ec`.
-The Eon child allocation alone does not establish stack contents. The exact
-TITLES startup prefix proves `DS=ES=SS=CS`, `SP=$da00`; the wrapper's five
-pushes, CPU INT frame, and MCGA dispatcher's near CALL establish the known
-words `$1b98`, CS, `$0129`, CS, and `$0012` at their respective stack slots.
-Runtime now writes only those known words, leaving FLAGS and saved SI/DI/BP
-uninitialized. For the MCGA single-count path, it verifies RET to `$0012`, the
-handler's zero compare byte, the IRET at `$0020`, the saved DS/ES values, and
-wrapper RET to `$1b98`. It applies the handler's `$01e4=0` store and passes
-AX `$0101` into title initialization with FLAGS marked unknown. The selected
-The authenticated function `$04` body at `$0815..$081f` reads the TITLES byte
-at CS:`$1ac5`, masks it to two bits, exchanges AL with driver state `$00af`,
-and returns the prior state in AX. That byte is static title configuration,
-not a live keyboard or mouse event. A hash-bounded compatibility routine is
-is serviced only after the native function-zero return chain has completed
-and the loaded MCGA and owned runtime-memory preimages match. The active CLI
-then advances through the title's function `$04` source-defined state exchange
-and stops at selected-callee INT `$91` function `$19` (record CS:`$e2c5`,
-offset `$0fe9` for startup input 0). Function `$04`'s byte at CS:`$1ac5` is
-static title configuration rather than a live SDL key or mouse event; this
-route does not claim a player input observation. The original MCGA image hash is
-`bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228`.
-
-### 2026-10-12 Millennium first function-zero INT 91h dispatch
-
-The active title coordinator now begins a typed dispatch only when
-the title session is at its first `$1b95` private function `$00` boundary, the
-video-driver loader has an observed INT `$91` vector at offset zero pointing
-to its exact loaded segment, and every byte of that owned segment matches the
-hash-admitted EGA640 or MCGA image. The dispatcher independently verifies the
-title call/wrapper/interrupt/record addresses, sequence origin, dispatch
-table, and driver profile before exposing the first `INT $10h` request.
-
-The initial cached-mode value comes from the loaded segment's owned bytes, not
-from the supplied file as a substitute for runtime memory. Altered image
-bytes, a different IVT segment, a wrong function, or a detached sequence are
-rejected. The persistent session accepts exact ordered INT `$10h` result
-observations, commits the hash-bound cache write transactionally, and exposes
-the resulting next BIOS boundary. For MCGA `CX=1`, its bounded success
-postlude reaches RET `$024b`, writes the derived byte to owned DS:`$00ac`, and
-reports AX `$0101`. The runtime then validates the known stack words, follows
-the hash-bound MCGA handler store and IRET, consumes wrapper POP/RET slots,
-and records the title return with FLAGS unknown. It advances the title's
-selected mode-one prefix to the next private function `$04` boundary. Regression
-tests exercise both driver variants, rejected sequences/sites, owned cache and
-stack effects, and the complete MCGA function-zero return path. MCGA
-multi-count `INT $92h`, the function `$04` result, and EGA stack/VGA paths
-remain explicit stops. The mode-one `$046d` call now models the hash-bound
-`INT $10`, AX=`$1010` service for BX=`0..15`, validates its RGB6 input and
-source address, and records 16 ordered DAC writes. The following `$0fd8`
-AX=`$1012` block call is modeled only after the exact 765-byte RGB6 palette
-has been verified in owned title memory; it records another 255 writes.
-AX/FLAGS remain unknown for both BIOS calls. The input contracts are
-documented in IBM's *PC/PS/2 BIOS Interface Technical Reference*, pages 2-20
-to 2-21, “Set individual color register” and “Set block of color registers”:
-https://bitsavers.trailing-edge.com/pdf/ibm/pc/ps2/PS2_and_PC_BIOS_Interface_Technical_Reference_Apr87.pdf
-The regression path starts from the owned MCGA function-zero/function-four
-return chain, verifies all 271 DAC writes against their exact TITLES/TITLE.LIB
-source bytes and the unknown-result markers, then confirms the coordinator
-services the hash-bound vector setup through the prior INT `$1c` read and
-installation at `$115d`. It stops at the prior INT `$09` read at `$12ad`.
-These modeled services are not an emulator capture, rendered-screen proof,
-original DOS allocation result, or gameplay evidence. No playability is
-established by this path.
-
-The following title setup uses DOS `INT 21h/AH=35h` to read vectors 0 and 4
-at `$10f4` and `$110b`, then `AH=25h` at `$1106` and `$111d` to install the
-handler at CS:`$1124`. The process-local compatibility runner owns a
-generation-scoped virtual IVT. Its AH=`$35` results point to allocated,
-opaque Eon handler slots and are marked as Eon virtual-IVT policy; they are not
-historical DOS vectors. No invocation resolver exists, so any attempt to call
-the opaque prior handler remains an explicit boundary. After each GET return,
-the native driver executes the next hash-bound SET call as an Eon DOS
-compatibility service. AH=`$25` takes AL as the vector number and DS:DX as the
-handler, returns no defined register result, and writes that far pointer into
-both the virtual IVT and segmented runtime memory at offsets `$0000` and
-`$0010`, respectively. The previous values copied into the title's save cells
-are the Eon virtual-IVT results, not actual AH=`$35` observations.
-Microsoft's archived [MS-DOS 2.0 system-call reference](https://github.com/Microsoft/MS-DOS/blob/main/v2.0/bin/SYSCALL.DOC)
-defines the call contract, and the corresponding
-[`GETSET.ASM` implementation](https://github.com/microsoft/MS-DOS/blob/main/v2.0/source/GETSET.ASM)
-writes `DX` and `DS` to the selected IVT entry. This is an Eon compatibility
-service, not an observation of DOS interrupt chaining or prior handlers. The
-hash-bound BIOS setup calls at `$1ab9` and `$1ac1` use the existing tagged Eon
-compatibility policy. The two-word `$115d` read of vector `$1c` uses another
-Eon-allocated opaque virtual target. The game preserves that pointer, installs
-its hash-bound handler at `$11d8`, and advances to `$12ad`, where it reads
-vector `$09`. That initial vector state remains unresolved; execution stops
-there rather than guessing a value or invoking a saved opaque handler.
-Regression coverage checks the virtual GetVect provenance, both SET calls,
-their IVT effects, sequencing, generation ownership, and the unresolved opaque
-handler boundary. No game action or playability is inferred from installing
-these vectors.
-
-For Deuteros keyboard input, the native boundary helper now converts USB HID
-physical usages to Amiga raw key codes using the official Keyboard Device
-table, including punctuation and keypad physical positions needed by the
-hash-locked title table. It preserves the Amiga key-up convention by setting
-bit `$80`; it does not translate characters, assume a locale, or set
-qualifier bits. On the canonical English Deuteros ADF, USB usage `$36` maps to
-raw key `$38` and original callback-table response `$2c`; usage `$37` maps to
-raw key `$39` and response `$2e`. The exact local feedback tail at `$407ba`
-then stores `$ff` or `$01`, respectively, in the low byte of `$407e6` from a
-zero starting word before its Escape return. This is a static source-to-state
-mapping; it does not show that SDL delivered the event, that the title
-callback was registered, or what visible action the control word represents.
-The later Eon-owned `input.device` compatibility session and SDL route are
-documented below. See the
-[AmigaOS Keyboard Device documentation](https://wiki.amigaos.net/wiki/Keyboard_Device)
-for physical raw codes and key-up encoding, and the
-[AmigaOS Keymap Library documentation](https://wiki.amigaos.net/wiki/Keymap_Library)
-for the distinction between physical codes and locale-specific characters.
-
-### 2026-10-12 Deuteros raw-key callback producer execution
-
-The hash-locked callback's instruction at `$1f13a` is `MOVE.B
-d8(A0,D0.W),d8(A1,D1.W)` (`13b0 0000 1000`, callback-relative offset
-`$e4`). Its two brief index extensions select D0.W for the source-table index
-and D1.W for the pending queue index. The bounded M68k executor now evaluates
-both effective addresses with signed word indices and signed byte displacements;
-nonzero 68020 full/scale extension bits stop at a memory-fault boundary because
-the admitted callback is 68000 code.
-
-The direct-media callback test uses the exact 250-byte callback at
-`$1f056..$1f14f` (SHA-256
-`ff4b055b2d5128465c891debcad00ff4e53cbf661de47b9ee3d6278f33d5e5f8`),
-the original loaded stage bytes, a synthetic `InputEvent` with class 1, code 1
-and qualifier `$8000`, and an explicit return frame at `$1f150`. The source
-stage begins with a zero prior-key latch and empty queue; table byte
-`$1ee21` is `$31`. Execution returns to `$1f150`, writes `$31` to queue byte
-`$1eec0`, increments the pending count at `$1eed6`, mirrors class 1 at
-`$1ef2e`, stores `$8000` at `$1ee0e`, and records key 1 in `$1ee0c`. This
-matches the captured callback return at input ordinal 54 in the verified
-`deuteros-amiga-playability-v28-callback-snapshot-20261008-01` diagnostic.
-This remains an offline interpreter-based source regression; it does not model
-`OpenDevice`, `IND_ADDHANDLER`, Exec scheduling, or SDL delivery. The live SDL
-route now uses the native C++ callback port documented below.
-
-The focused `deuteros-amiga-response-queue-boundary-real-media` test now also
-joins one physical HID key through source-backed stages without supplying any
-service return: USB usage `$36` -> Amiga `IECLASS_RAWKEY` code `$38` -> the
-hash-locked callback table byte `$2c` -> one pass through the separately
-hash-locked response queue at `$1f230`, which returns `$2c` and decrements the
-pending count from one to zero. The key-up form `$b8` is rejected by the
-callback producer's original `< $50` bound. This advances a deterministic
-HID-to-response-byte regression path; it does not invoke the registered
-callback, emulate `input.device`, or identify the response byte's game action.
-The same test passes that dequeued `$2c` into the hash-locked local
-post-transition feedback tail, with an explicit `$1b` helper response to end
-the loop. The original tail decrements its local control word at `$407e6` to
-`$00ff` and returns at `$407e4`. This is a composed source-level regression,
-not evidence that the unresolved `$1f238` helper returned either byte during
-runtime, nor evidence of a rendered or playable response.
-
-### 2026-10-12 SDL raw-key compatibility dispatch
-
-The SDL launching screen now converts physical USB HID scancodes to the
-already bounded Amiga matrix codes, preserves modifier qualifiers using the
-NDK `devices/inputevent.h` values, and sends only typed raw-key observations
-through the active Deuteros title-stage input contract. The source for these
-public event values is the [NDK InputEvent header](https://d0.se/include/devices/inputevent.h).
-Other lifecycle states, modal UI, repeats, and unsupported scancodes do not
-reach the callback path.
-
-`DeuterosAmigaInputDeviceCompatibilitySession` is an Eon-owned local service.
-It admits only the exact hash-checked registration profile, including the
-`input.device` name and callback descriptor. It does not call the original
-`OpenDevice`/`SendIO` vectors, claim that Exec installed a handler, or borrow
-the emulator's transient input buffers. For each accepted event, the runtime
-constructs an ephemeral 14-byte event prefix and captured-context register
-frame, applies a bounded native C++ port of the hash-locked callback's local
-semantics, then atomically commits only the changed title-stage bytes. SDL
-input does not execute the original M68k callback. The response queue remains
-pending for the original caller path; the session input contract reports this
-narrow raw-key capability and does not grant general gameplay.
-
-The real-media runtime integration test sends synthetic raw keys through the
-same callback and memory-commit path: key 1 queues `$31`, and comma queues
-`$2c`; both leave the response count pending and `$407e6` unchanged. A separate
-source-execution regression composes the callback and response-loop helper,
-but that composition is not used by the SDL adapter. These tests establish the
-implemented host-to-owned-queue path, not a physical-input capture, visible
-screen response, interpretation of `$00ff`, or playability. Mouse dispatch
-still stops at the unresolved `MoveSprite` library call, and title
-graphics/device effects remain separate boundaries.
-
-### 2026-10-12 Deuteros SDL raw-mouse button callback
-
-The SDL launching path now forwards left/right button transitions only while
-the hash-verified Deuteros title stage is active. It emits raw-mouse class 2
-events with the original button codes `$68`/`$69`, key-up prefix `$80`, and
-current button qualifiers. Those ABI values are defined by the [NDK
-InputEvent header](https://d0.se/include/devices/inputevent.h). Motion events
-remain outside this route because the callback's motion arm calls the
-unresolved `MoveSprite` graphics vector.
-
-The native C++ port masks the up prefix, extracts left/right qualifier bits
-and stores their two-bit state at `$1ffd4`; these events do not enter the
-raw-key response queue. Native tests verify both button codes, left/right
-state encodings, release, and the end-to-end SDL-observation-to-owned-memory
-commit against the recognized disk-1 ADF. This makes button state reach the
-original owned title-stage word, but does not yet prove a visible click
-response, which game action consumes the word, or a playable session. The
-original `OpenDevice`/`IND_ADDHANDLER` lifecycle and visible manual-capture
-boundary remain unchanged.
-
-### 2026-10-12 Millennium DOS setup INT 15h compatibility no-op
-
-The active English TITLES path now services the two hash-bound setup calls at
-`$1ab9` and `$1ac1` as an Eon compatibility no-op. Their exact source bytes are
-TITLES.EXE file offsets `$19b3..$19c3` (17 bytes, SHA-256
-`53452425d5cebeaeb44f629eb284f14e0196ac84075d384ff94cedf2c6fb91b7`),
-mapped to runtime `$1ab3..$1ac3`; the complete executable remains checked
-against SHA-256
-`3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6`.
-The bytes load AH/AL/BL, issue INT `$15`, repeat with new AL/BL, issue the
-second INT `$15`, then RET. The caller at runtime `$1bf2` is an exact near
-CALL `$11a7` (file offset `$1af2`, three bytes, SHA-256
-`8e9933fc8751a312d2c247e94987439ae91db1d7e288c14190035b2d6c3da1c8`), so it
-does not inspect AX, BX, or FLAGS between the return and the next local call.
-That local prefix is itself hash-bound and overwrites its live inputs before
-using them.
-
-After the first observed return, the caller's literal writes make AH=`$01`,
-AL=`$1c`, and BL=`$46` known for the second request. BH is retained as unknown,
-so the second request exposes only BX mask `$00ff`. IBM's [*PC/PS/2 BIOS
-Interface Technical Reference*](https://bitsavers.trailing-edge.com/pdf/ibm/pc/ps2/PS2_and_PC_BIOS_Interface_Technical_Reference_Apr87.pdf),
-page 2-75, documents INT `$15` AH=`$01` as “Turn Cassette Motor Off” and
-lists no BX input. The same reference gives different outputs for PC/PCjr and
-other IBM models; those results are intentionally not copied into Eon state.
-Because Eon has no cassette device, its service records an explicit
-`eon_ah01_cassette_off_compatibility_noop` provenance and completes the call
-without modeling cassette hardware or assigning AX, BX, or FLAGS. After both
-calls, the coordinator executes the hash-bound local `$11a7` and `$114e`
-prefixes. The `$115d` read of IVT vector `$1c` now uses a generation-owned Eon
-virtual target and installs the hash-bound `$11d8` handler into the modeled IVT.
-The next `$12ad` read of vector `$09` remains an external observation.
-Regression coverage checks both BIOS provenance records, the Eon virtual-IVT
-provenance, unknown BIOS outputs, and the next boundary. This is an Eon
-compatibility policy, not an observation of original BIOS behavior, cassette
-state, or gameplay.
-
-### 2026-10-12 Deuteros raw-mouse motion through local MoveSprite caller
-
-The SDL title input route now admits raw-mouse motion as class 2, code
-`$00ff`. The existing hash-locked callback source is
-`48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03` for the
-complete loaded title stage and
-`ff4b055b2d5128465c891debcad00ff4e53cbf661de47b9ee3d6278f33d5e5f8` for the
-callback. The native C++ callback port uses the full original stage only as a
-hash-verified source and copies signed event deltas to `$1ee10/$1ee12`. It
-reproduces the local `$20118` clamp routine and stops before the JSR at
-`$201b6` (graphics.library `MoveSprite`, vector `-$1aa`).
-
-The SDL motion adapter now sets the original `IEQUALIFIER_RELATIVEMOUSE`
-qualifier bit `$8000` in addition to any held left/right button bits. Its
-four qualifier combinations are covered by a native unit test. This fixes the
-host-side event ABI only; `MoveSprite` and visible pointer movement remain
-external boundaries.
-
-Only the local writes to owned runtime memory are committed: the two deltas
-and the bounded coordinates at `$1ffc8/$1ffce`. The returned pointer
-coordinates and exact external-service stop address are diagnostic. The
-runtime does not synthesize the `MoveSprite` return, mutate the SimpleSprite,
-edit Copper lists, or claim visible pointer movement. SDL now converts both
-motion endpoints through `SDL_RenderCoordinatesFromWindow`, then scales their
-renderer-space delta through the actual presentation rectangle. X uses 640 raw
-units across the 320-pixel source because the verified caller computes
-`D0=(x-$10)>>1`; Y uses 200 raw units across the 200-line source because it
-computes `D1=y-6`. Fractional movement is carried between events so subpixel
-SDL deltas do not disappear through per-event rounding. A native regression
-checks signed scaling, remainder accumulation, invalid extents, and callback
-clamp behavior. A real-media test checks a `+5,-3` event from known
-coordinates and confirms `(205,97)` at `$201b6`; CTest also passes the title
-callback/runtime test suite. This establishes the local memory and
-coordinate-scaling path, not visible motion or playable gameplay.
-
-### 2026-10-12 Deuteros callback/consumer scheduling separation
-
-The live SDL callback adapter commits only the hash-bound callback's memory
-writes. In particular, it leaves response bytes and the incremented pending
-count in the original title queue. It no longer calls the separate `$407b4`
-response-loop code as a side effect of receiving a host event. Static source
-places `$407b4` inside the `$4077e` loop, but no capture establishes that the
-runtime has reached this loop or links it to a particular host event.
-Automatically consuming a response at the input boundary therefore changed
-state without an established control-flow edge.
-Regression coverage verifies that the `1` and comma keys enqueue `$31` and
-`$2c` while leaving `$407e6` unchanged. A separate source-based test still
-checks the consumer helper's queue shift and local feedback code; it is not
-wired to runtime scheduling. No visible action is inferred.
-
-### 2026-10-12 Deuteros response-loop call path
-
-A fresh complete linear candidate decode of the exact English disk-1 ADF
-(outer ZIP SHA-256
-`7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533`, ADF
-member SHA-256
-`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`)
-confirms the loaded title-stage identity already used above. The stage begins
-at disk offset `$6e000`, loads at `$13000`, and spans `$6ca00` bytes. Thus
-runtime `$407b4` maps to ADF offset `$9b7b4`; it contains `JSR $1f238`, while
-the queue helper starts at `$1f230`. `$407d6` branches back to `$407b4`.
-This makes the consumer part of the `$4077e` response loop, after its calls to
-`$3f7a8`, `$1f9a4`, `$1fe7a`, and `$3fbf8`; it is not a standalone scheduler
-call associated with each host event.
-
-### 2026-10-24 Deuteros response-loop direct-reference scan
-
-`tools/analyze_deuteros_response_entry_references.py` reads the canonical
-Disk 1 ZIP and its ADF member without writing either to disk, then validates
-the ZIP, ADF, and loaded title-stage hashes recorded above. Across the exact
-runtime stage `$13000..$7f9ff`, it checks 68000 branch destinations,
-PC-relative JSR/JMP, absolute JSR/JMP, LEA absolute-long code pointers, and
-unaligned 32-bit literals for `$4077e`. The scan finds zero direct
-references. Its focused synthetic-instruction tests pass.
-
-This rules out those direct encodings inside the loaded stage; it does not
-prove the caller is absent. The entry is therefore likely reached through a
-runtime-computed or indirect control transfer, or from another loaded region.
-The next native step is to identify that transfer from owned PC/register/table
-state before connecting the pending SDL response to the consumer. No response
-is consumed directly by the host event callback.
-
-The follow-up static caller audit rules out sequential fallthrough: the
-hash-addressed predecessor `$40708..$4077e` (ADF offset `$9b708`, 118 bytes,
-SHA-256 `8d0f12daaae7ad14632bd358d5e214a40d15826322cfdb5fac51a8a2a1a851c2`)
-ends in `RTS`; the bytes at `$4077c` are `4e75 33fc`. Three audited spans do
-not contain the literal `$4077e`: 16 words at runtime `$212b0` / ADF offset
-`$7c2b0` (32 bytes, SHA-256
-`1e6458b695bd8f0ed58e33d7d55a1b78133026aaf4eeb9052f8e27fedf472a93`), 24
-words at `$237d8` / ADF `$7e7d8` (48 bytes, SHA-256
-`d7e5dd166e7d322becc40360cd02c8ae4684bfa9e94746247aa2eddc4bd80fb7`), and 20
-words at `$22d36` / ADF `$7dd36` (40 bytes, SHA-256
-`7bf893cfb79d3f09280670b3a8ec41fb6f15113599987008b31c56324451a561`). The
-`$212b0` span is only the first eight longword slots of the dispatch base
-used at `$2237c`; it does not bound that table or rule out `$4077e` in a later
-slot. Other candidates require runtime-owned values: global pointer `$222a2`
-for `$223dc`, and an A1-supplied table at `$226b2`. The admitted static initializer sets
-`$222aa` to `$20d62`, so `$20cfa` does not provide the missing edge. The
-remaining gap is a source-backed runtime PC, stack, or computed target plus
-pointer provenance; no SDL response is consumed until that edge is established.
-
-The follow-up dataflow audit resolves the two remaining candidates without
-establishing the edge. `$226b2` obtains A1 from `$2215a + 12 × (D0 & $ff)` at
-`$22680..$226ae`; the apparent 256-record span overlaps code and globals. The
-populated records point to local routines around `$22760..$22ac8`, with no
-`$4077e` target. The four-byte `$222a2` initializer is zero (ADF offset
-`$7d2a2`, SHA-256
-`df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119`), which
-selects `$36a8c` at `$223dc`. Static assignments to `$222a2` do not set
-`$4077e`; the nine dynamic D0/D1 assignment values were unresolved in the
-prior review. The next useful evidence is the actual owned runtime PC and
-pointer/table contents at dispatch, not another static candidate scan.
-
-The nine runtime-computed `$222a2` store sites from that inventory have now
-been rechecked in short source-ordered spans of the canonical loaded stage.
-Each moves a locally established zero into `$222a2`: `$30478`, `$35eac`,
-`$37e5a`, `$3862c`, `$396a6`, `$397d4`, `$7c006`, and `$7c368` use D0 after
-`MOVEQ #0,D0`; `$30d30` uses D1 after `MOVEQ #0,D1`. The site contexts range
-from 10 to 36 bytes and are individually SHA-256 recorded in the external
-report `~/.cache/project-eon-analysis/deuteros-response-loop-20261024/callback-pointer-store-contexts-20261024.txt`
-(3,617 bytes, SHA-256
-`cf19341dac2e00b5c90e559d73b7ca7fa3411e3d62a6e227412afd0e37921e9b`). The
-archive, ADF, and loaded-stage identities match the hashes above. This closes
-the prior uncertainty about register values at those nine stores: none
-installs `$4077e`. It does not establish that the remaining constant callback
-stores execute, that the full store inventory covers every runtime writer,
-or that `$4077e` has no other caller. The search should now prioritize an
-owned caller/PC path independent of `$222a2`, or prove one of the other
-constant callback routes is the one reached after SDL input.
-
-A follow-up decompilation of the hash-locked loaded-stage listing confirms the
-dispatcher at `$223c4..$223dc`: it loads the dynamic callback pointer at
-`$222a2`, selects `$36a8c` when that pointer is null, and performs `JSR (A0)`
-at `$223dc`. The post-call path reaches `$20aa6`, `$1f3e0`, then `$2022a`.
-Static stores to `$222a2` include `$332de`, `$33c98`, `$33f5a`, `$34f74`,
-`$35740`, and `$38600`; additional dynamic-D0 stores and clear sites prevent
-inferring a unique runtime target. None of these facts establishes `$4077e`
-as the callback target or a response-loop caller. The response consumer stays
-unconnected until runtime-owned pointer provenance identifies its actual
-entry. The candidate listing remains external; only this bounded address map
-and uncertainty are recorded here.
-
-The surrounding control flow is now decompiled one step farther. At
-`$223b2..$223ba`, the routine reads word `$1ffd4`, shifts its low byte right by
-two, and branches to `$223f0` when the resulting carry is clear. Only the set
-bit-two path reaches `$223bc..$223dc`, clears `$3f77c`, resolves `$222a2` (or
-the `$36a8c` fallback), and issues `JSR (A0)`. This gives the computed call a
-source-level gate; it does not show that `$1ffd4` came from an SDL event or
-that `$222a2` ever selects `$4077e`.
-
-The full static `$222a2` store inventory in the external candidate listing is
-bounded as follows. Constant callback values are written at `$33200`→
-`$332d8`, `$32a7a`/`$32cb4`/`$32d98`→`$332de`, `$3386a`/`$34a64`→`$33c98`,
-`$34076`→`$33f5a`, `$34ef6`→`$34f74`, `$350ec`→`$35740`, and `$38488`→
-`$38600`; clear sites are `$21104`, `$222f0`, `$332de`, `$33c98`, `$33f5a`,
-`$34b6a`, `$34f7a`, `$35740`, and `$3591a`. Dynamic D0/D1 stores occur at
-`$30478`, `$30d30`, `$35eac`, `$37e5a`, `$3862c`, `$396a6`, `$397d4`, `$7c006`,
-and `$7c368`. None of the constant stores names `$4077e`; the dynamic values
-and their live caller state are unresolved. In particular, `$30d30` stores a
-zero register value before its local branches, so that site alone cannot be
-treated as callback registration. These are listing-level dataflow facts,
-not runtime observations.
-
-The nine apparent dynamic stores were rechecked against the exact canonical
-Disk 1 ADF in place (outer archive SHA-256
-`7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533`, ADF
-SHA-256 `6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`).
-Each short source window includes the local register initialization and the
-store to `$222a2`; all nine store zero when that decoded sequence is reached:
-
-| Runtime window | ADF offset | Bytes | SHA-256 |
-| --- | ---: | ---: | --- |
-| `$30464..$3047d` | `$8b464` | 26 | `9c75a504d7a5af880a8a42262ac6cd5757b882e4765d006cf2304ed0596cf299` |
-| `$30d22..$30d35` | `$8bd22` | 20 | `4fd18ee4d4528676dfc633938391938556be653729b7a64b02dc40f980a76515` |
-| `$35e8e..$35eb1` | `$90e8e` | 36 | `e39753b28d743df3c37d16daf4087de11e942c9552de2df41c58f0a39bf2746f` |
-| `$37e56..$37e65` | `$92e56` | 16 | `6c153e32fae368c4b69d8ef927c6268cfa4245990474572baabb0276bde15a75` |
-| `$3861e..$38631` | `$9361e` | 20 | `fbc273ca1ed9d28c11f5f0ddce9bc149881c9357a82d30e8cd3ac0af086205b0` |
-| `$3969c..$396ab` | `$9469c` | 16 | `7586c71f705253e2accbb38294454a57bdd26a6c4fb2bf5ea0e3f18d56a97230` |
-| `$397d2..$397e1` | `$947d2` | 16 | `4ad6de5a7d968be88d3fe0926176512dd0c2471710a67d7074b9ded48ba10846` |
-| `$7bfd6..$7c00b` | `$d6fd6` | 54 | `a133ac9faf43c0c93a6e4e67f7cd2f0590628d131694beb0c989b6afaa52db7c` |
-| `$7c344..$7c36d` | `$d7344` | 42 | `64ed6f79ebb1fa0aa4f76bb7890599d67a8c06c6ead9453c71843d1479d921e8` |
-
-This rules out those nine local sequences as nonzero dynamic sources for a
-`$4077e` callback target. It does not prove each conditional block executes,
-exclude another unclassified or self-modifying path, or supply the live
-`$223dc` caller state. The runtime computed-dispatch observation therefore
-remains unconnected and must not consume SDL input.
-
-The null fallback at `$36a8c` has now been decoded from its exact even-aligned
-entry, rather than from the surrounding linear-sweep text. The 148-byte source
-span `$36a8c..$36b1f` maps to ADF offset `$91a8c` and has SHA-256
-`f69ef4846ded733ea5205230e5ff14592c5737d96d7463efe376670f5cfa7aff`. Its
-first instructions call `$201cc`, load A0 from `$1301a`, test bit 1 of the
-word at that pointer, and return at `$36aa0` when clear. When set, it writes
-`$05` to `$1be86`, calls `$210ac`, sets `$222b2=$21550` and `$22d34=$000f`,
-then begins deriving table addresses from `$13006`. This proves that the
-dispatcher’s zero-pointer route is a state-gated local callback, not an alias
-for the `$4077e` response loop. It does not prove the live `$1301a` contents,
-the result of `$201cc`, or that the native input path reaches `$223dc`.
-
-`DeuterosAmigaTitleComputedDispatchSession` now admits the original
-`$223c4..$223de` 26-byte source span by SHA-256
-`62d436102c1adab08f4598c6f9a213d1c50ed81d1be135238208c54eb6a9845d`, in
-addition to the full loaded-stage hash. At an observed call PC `$223dc`, it
-requires return PC `$223de`, matching D0/A0, a fully owned big-endian long at
-`$222a2`, and source-matching owned bytes at the selected in-stage target. For
-`$4077e` it also verifies the complete `$4077e..$407b4` source span (54 bytes,
-SHA-256 `90648a2b59070bdb564c87d2471b6f3d42f73b957d0cd3c24ab3503c97a551ad`).
-A zero pointer selects `$36a8c` and records the preceding `$20a13 := 0` effect;
-a nonzero `$4077e` value is reported as a response-loop target candidate. The
-session does not execute the target or consume an input response. Its
-real-media regression seeds only the original pointer/target bytes in native
-memory and separately overlays `$4077e` as an explicit runtime-state fixture;
-that fixture verifies target selection mechanics, not that the original game
-ever stores or dispatches that value. The session is now exposed through the
-runtime coordinator, native session controller, and runtime host, and is
-rejected until the owned title-stage session is active. These APIs accept an
-explicit observation; no native scheduler currently emits the `$223dc` PC and
-register sample. Therefore this integration still does not establish a live
-runtime caller edge or consume queued input.
-
-The candidate report is external at
-`~/.cache/project-eon-analysis/deuteros-response-caller-linear-20261012.md`
-(SHA-256
-`6c3390c40d8c5127fe5644845d6de2f50245b36c50c4de95abbd5e1f61f3bf9e`,
-162,970 lines). It decodes complete loaded ranges linearly and does not
-classify code versus data. The exact response tail remains hash-bound separately
-above. No live scheduler trace links `$4077e` to an SDL event, so runtime keeps
-the callback-produced byte pending until an owned path proves it has reached
-the original loop. The composed source test is not that runtime evidence.
-
-### 2026-10-24 Deuteros native response-loop pass
-
-The native bounded model now represents one pass through the loaded-stage
-consumer at runtime `$407b4`. Its six-byte call site maps to ADF offset
-`$9b7b4` (SHA-256
-`88e2b3531aa5cb582d1ed1a672f9a524c89cbdf572c7a7d77c8cc7f4e6db695d`).
-The local queue helper at `$1f238..$1f257` is 32 bytes (ADF offset
-`$7a238`, SHA-256
-`6e6de830717a9396a0be3b17eb2f8cc50fe669491339b1600a5b64052e129387`);
-the feedback tail at `$407ba..$407e5` is 44 bytes (ADF offset `$9b7ba`,
-SHA-256 `b4212844a9f0fb4008caad00950e613b70581a5552cacabc253ea0966ed16df3`).
-The model additionally checks the exact stage identity and caller return address
-in the supplied stack bytes before committing its staged memory writes.
-
-For a nonempty bounded response queue it shifts one byte and decrements the
-pending count. Responses `$2e` and `$2c` adjust the low byte of the local
-control word; `$1b` returns to the validated caller and pops its return
-address; other responses continue the loop. Focused tests seed queue and stack
-state over the actual hash-matched ADF stage bytes and check writes, branch
-targets, stack movement, and rejection of a detached return address. This is
-source-level translation coverage, not captured gameplay evidence. The pass is
-not connected to SDL scheduling, and the link from host input through this
-loop to a rendered game action remains unproven.
-
-### 2026-10-12 Millennium DOS first game-process function `$1f`
-
-The exact English `2200AD.EXE` startup prefix at runtime `$d2b4..$d2c8` (file
-offset `$d1b4`, 20 bytes, SHA-256
-`590c9aa8f4131fe8938befa0c563b3924fa93d5559e7f2449c8ad706fbdc0b84`) sets
-`SS=CS`, `SP=$da00`, `AX=$001f`, `ES=CS`, and `BX=$d19e`, then calls the
-existing wrapper at `$0124`. After an admitted child-process entry, the
-runtime can now execute that first private function only when the observed
-`INT $91` vector points to the exact loaded English EGA640/MCGA image. The
-image is compared byte for byte with its original hash-identified file except
-the four bounded data cells that the source-bound function-zero, function-four
-and handler paths can write; the handler's `$0000..$0012` DS/dispatch prefix
-is independently checked (EGA SHA-256
-`a7d507882cf6bfe5b51db64b2dfb3ea8dd66f9d032b52622af2edac0a5ba81aa`, MCGA
-`2892839bc9f8ed84ce14e315addef727247431c808236b413356094d2392f35c`).
-
-Function `$1f` itself is six bytes at EGA `$0235` or MCGA `$024c`; its exact
-leaf hashes and effects are recorded above. Runtime reads its state byte from
-the owned loaded driver segment (`DS:$008a` for EGA, `DS:$00ac` for MCGA),
-then computes `AX` from that current byte and the leaf's literal `AH`. It does
-not use the original driver's initial data byte as a runtime substitute or
-write back to the driver. The deterministic private return advances the game
-startup session to its second private-function call at `$0129`. A missing or
-mismatched vector/image leaves the first private return external.
-
-This source-executed startup path stops at the DOS allocation request and is
-not a playable-state claim. BIOS/device services, rendered gameplay, and the
-first user-action effect remain unrecovered. Original media was read in place.
-
-The English MCGA equal-return branch is now continued from the exact function
-`$04` boundary `$0455` through its local RET at `$044e`, the `$d1af` RET, the
-`$d2e0` jump, and the hash-locked `$d2e5..$d201` allocation-request prefix.
-At `$d201`, the bounded state records `INT $21`, `AH=$4a`, `BX=$1000`, and
-`DS=CS`; it does not enter the interrupt, construct an interrupt frame, or
-assign any DOS result. Runtime forgets the stale `$d9fe` return word before
-recording unknown saved DX there. Stack arithmetic is retained explicitly:
-the earlier RET slots are consumed, `$d9fe` is overwritten by unknown DX, the
-call return `$d2eb` is at `$d9fc`, and the balanced `PUSH CS`/`POP ES` leaves
-the stale CS word at `$d9fa`. SP is `$d9fc`; DX, carry, AX, and all DOS effects
-remain unknown. The EGA/other branch and subsequent startup remain outside
-this continuation. Original media was read in place.
-
-### 2026-10-24 Millennium DOS private-INT wrapper and function `$04` callers
-
-The hash-admitted English `2200AD.EXE` is 54,391 bytes with SHA-256
-`427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57`.
-At COM runtime addresses `$0124..$012f`, its 12-byte private-INT wrapper
-(`PUSH DS/SI/DI/BP/ES`, `INT $91`, `POP ES/BP/DI/SI/DS`, `RET`) hashes to
-`fbab4cdf18042f95511e0ee33ad0635a9ad0b1a836259cbf19efe84e7aaef60f`.
-The call-free instruction shape establishes which registers are preserved;
-it does not establish the runtime values saved on the child stack or the
-interrupt's return values.
-
-Startup at `$d2b0` selects `SS=CS` and `SP=$da00`, requests private function
-`$1f` with `ES=CS` and `BX=$d19e`, and calls the wrapper at `$d2c5`. On return,
-the caller branches on `AL` to `$d1a1` or `$d1b5`. Both branch entries request
-function `$04` with `AX=4`, `ES=CS`, and `BX=$d19f`. The `$d1b5..$d1bf` caller
-bytes hash to
-`d49b932ac42ace5bf08c3052ac48aeb89083f3303865f434713647ebd1d2abbc`; this
-path calls the wrapper at `$d1bd`, then local routine `$10466`, and tests
-`$da05`. The alternate `$d1a1` path calls the same wrapper at `$d1a9`, then
-`$1044e`, sets `$da05` to one, and returns. The on-disk byte at `CS:$d19f` is
-zero, but that static fact does not prove its live value after startup writes.
-The bounded startup path below joins this caller to the exact loaded-driver
-leaf and INT `$91` handler, and commits only the resulting driver and stack
-effects. It uses the source byte at `CS:$d19f` only after checking the exact
-startup/caller bytes that leave it untouched; unknown saved-register and
-FLAGS values remain absent. This resolves this specific private-return
-boundary, but not the BIOS continuation or playable-state evidence.
-
-### 2026-10-24 Millennium DOS game function `$04` bounded execution
-
-The active startup continuation now source-executes the second private call
-when the authenticated child image, observed INT `$91` vector, and owned EGA640
-or MCGA driver image all match. It selects the `$d1a1` or `$d1b5` caller from
-the exact function-`$1f` return, dispatches table slot four, and executes only
-the corresponding hash-locked driver leaf. The runtime applies the leaf's
-state-byte write and, for MCGA, the handler's `$01e4=0` write. It also records
-the bounded child stack through the following local helper boundary: unknown
-SI/DI/BP/FLAGS bytes are forgotten instead of filled with defaults. The MCGA
-route continues from `$0455` through the hash-locked caller and allocator
-prefix, stopping at DOS `INT $21/AH=$4a` boundary `$d201`; EGA reaches the first
-palette `INT $10` boundary `$0476` (`$0473` loads AX and `$0476` is the
-interrupt).
-
-This continuation uses the exact COM source byte at `CS:$d19f` only along the
-hash-verified startup path, which does not write that byte before the function
-`$04` call. The source byte currently equals zero. MCGA handler paths whose
-comparison byte is nonzero, detached vectors, altered driver bytes, and other
-game images remain rejected. Reaching `$d201` or `$0476` advances startup
-only; it does not establish rendered gameplay or a playable state.
-
-The MCGA allocation INT `$21/AH=$4a` now has a typed return boundary in the
-native-process admission. A return is accepted only after the observed child
-entry and exact `$d201` request, with increasing sequence, matching child CS,
-interrupt number, AH service and return IP `$d203`. The admitted checkpoint
-retains AX/BX/CX/DX/FLAGS as raw observed values and does not infer carry,
-allocation success, segment ownership, or DOS memory-manager effects. Wrong
-service, PC, CS, sequence, or replay leaves the startup boundary unchanged.
-
-The typed `$d201` DOS result is retained raw. The allocator's next verified
-instructions at `$d203` load literal BX `$fa00` and AH `$48`, then reach its
-next `INT $21` at `$d208`. The native checkpoint stops at that AH `$48` request.
-The allocator helper has further DOS boundaries before its caller resumes at
-`$d2eb`; therefore the first `$d201` result cannot establish the later `$d2ee`
-DX test or either branch. No DOS effect or return is inferred at `$d208`.
-
-The coordinator now accepts a second, separately typed DOS return only at
-`$d208`/AH `$48`, with the exact child CS, return IP `$d20a`, and increasing
-sequence. The hash-locked `$d20a..$d214` continuation stores the observed BX
-at `CS:$d12e`, copies observed AX into ES, and loads AH `$49`; the process then
-stops at `INT $21` `$d213`. The checkpoint retains the raw return, the literal
-stored BX, and the ES segment value; the same BX word is written to owned DOS
-child memory in little-endian order. A typed `$d213`/AH `$49` return then
-advances only through `$d215` (`BX=$00a6`) and `$d218` (`AH=$48`) to the next
-DOS boundary `$d21a`. That return remains raw and does not claim a DOS free
-effect. Eon does not assert that DOS allocated the `$d208` block or apply
-memory-manager effects.
-
-A typed `$d21a`/AH `$48` return is now accepted only at the observed child CS,
-return IP `$d21c`, and increasing sequence. Hash-locked bytes prove the AX
-store to `CS:$d114` and the following `JAE` split. Eon records AX and applies
-that one word to owned child memory. Observed carry set stops at local `$d2ac`;
-carry clear verifies the helper prefix and exposes the exact file-open request
-at `$d1d4` (`INT $21`, AX `$3d00`, DS=CS, DX `$100d`) as structured metadata.
-No DOS open result or file access is synthesized. This native startup path
-remains incomplete and is not evidence of a playable game.
-
-The admitted `$d1d4` request can now advance only through matching DOS return
-observations. The helper span `$d1d1..$d1f0` is bound by SHA-256
-`53e07981c3bc29e486661becbefa47ac6e9b3d84c6744f6f779a2156c2c27ba6`; its
-open (`AH=$3d`), seek-to-EOF (`AH=$42`, `AX=$4202`, `CX=DX=0`) and close
-(`AH=$3e`) boundaries require exact return IPs `$d1d6`, `$d1e6`, and `$d1ef`.
-Carry on open or seek stops at the helper's near-jump destination `$05a7`.
-Successful seek retains the observed AX low word as file size; after close the
-local `ADD AX,$0f; SHR AX,4` yields the paragraph count for the caller's
-`AH=$48` request at `$d232`. Its return stores AX at `CS:$0116`, then exposes
-the `$d23e` request. The next helper call uses the source literal `DX=$11c2`
-and reaches its next allocation request at `$d251`. These transitions do not
-perform host file I/O or synthesize DOS results; they record a bounded native
-continuation driven by explicit observations. The second file pass returns to
-`$d251`; that result stores at `CS:$0118` and reaches `$d25d`. The `$d25d` and
-`$d26d` allocator results store at `CS:$010c` and `CS:$0110`, with carry
-branches to `$d2ac`; clear carry exposes the next request at `$d27d`. Their
-`MOV AH,$48` setup preserves AL from each observed preceding result. The
-`ADD AX,$0f` file-size rounding is performed as a 16-bit operation before the
-four-bit shift, retaining wraparound. A carry-clear `$d27d` result stores AX
-at `CS:$1044` and `CS:$1048` and reaches `$d294`; its carry-set branch is
-`$d2ac`. A carry-clear `$d294` return stores AX at `CS:$105a` and reaches
-`$d2a4`; carry again branches to `$d2ac`. The `$d2a4` continuation has no
-carry test: it stores returned AX at `DS:$d12a`, zeroes DX, and returns. The
-caller then stores AX at `DS:$d128`, tests DX, and reaches its `$11161` call at
-`$d2f5`. The eleventh DOS return is recorded raw; no allocation effect is
-applied. This remains startup plumbing and establishes no gameplay.
-
-The EGA function-four continuation now has a bounded native BIOS palette
-adapter session. It starts only from the accepted EGA function-four result at
-`$0476`, checks the English `$0466..$047c` palette loop and `$0456` table via
-the existing full executable and span hashes, and exposes one exact
-INT `$10`/AX `$1000`/BX request at a time. An accepted adapter write updates
-only that known register in a 16-slot optional palette state; unknown initial
-register values stay unknown. The 16th write ends at the loop RET `$047c`.
-Order, request address, interrupt, AX, register byte, value byte, and sequence
-are checked. This translates the recorded BIOS calls into native adapter
-effects; it does not decode pixels or prove any later startup handoff.
-
-### 2026-10-24 Deuteros Kickstart `MoveSprite` vector mapping
-
-The supplied Kickstart 1.3 r34.005 archive was read directly through its ZIP
-member in memory on trv2; no ROM member was written to disk. The outer archive SHA-256 is
-`c9521c114900633c09317ca6ff979db7b9df34d3cb537de062f5d51811c42c04`. Its
-ROM member is 262,144 bytes, SHA-256
-`ee05862d8102a08436ac4056da7d549db31625c7d47b24dfb7b3c9a5c113ca53`, mapped
-at `$fc0000`. The resident tag at ROM offset `$53e4` (runtime `$fc53e4`, span
-`$1e`, SHA-256
-`5c5bc91c7bf8aaac90d827adc49da2271202d7b363f4038edeb7c08bb9e838be`) names
-`graphics.library`, identifies version `34.1`, and points to init code at
-`$fcaba2`. That initializer passes the 109-entry function-pointer table at
-ROM offset `$b05a` (`$fcb05a`) to the Exec `MakeLibrary` wrapper at `$fd3b88`.
-The initializer span `$fcaba2..$fcabee` is 76 bytes and hashes to
-`89e4d463e8f021e863bb723ac57b04c19dee35df5caedaf4782443e8c1252dee`.
-The table is `$1b8` bytes including its `-1` terminator and hashes to
-`7c59022968ba59eb31278cf3092d24f28124e548decc98a3032efcead55a32e1`.
-The wrapper saves registers, loads the five stack arguments into A0–A2/D0–D1,
-and invokes Exec vector `-$54`; the exact 32-byte wrapper span hashes to
-`ddff5f1854aa121e5f87f33974c15c922a8a0876a22b44fe4c5c5128a6fefacb`.
-The table/vector interpretation follows the official [MakeLibrary autodoc](https://developer.amigaos3.net/autodocs/exec.library/MakeLibrary.html).
-
-The first function pointer in a library vector table maps to LVO `-$6`.
-Pointer index 70 therefore maps to `-$6 - 70*6 = -$1aa`, the vector used by
-the hash-locked game call at `$201b6`. In this ROM, the pointer is `$fc9b24`.
-Its 20-byte stub (SHA-256
-`4ac2d0f1e6f3be24bd9494cff32698e85d532243dbf76723c899869a08f921cd`)
-pushes D1, D0, A1, and A0, calls `$fced90`, restores the stack, and returns.
-The 336-byte body `$fced90..$fceee0` (end exclusive; final RTS at `$fceede`, SHA-256
-`1bc86b399a3835867696e20518c5eed99a0e89042e3b19c453361618768bcbf2`)
-recursively checks linked sprite state, writes the supplied X/Y words into
-the SimpleSprite fields at A1+`$6`/A1+`$8`, conditionally writes a packed
-position longword through the pointer at A1, and calls the ROM helper at
-`$fcecaa`.
-
-The reproducible bounded disassembly in
-`tools/analyze_deuteros_movesprite_rom.py` also identifies the nested helper
-spans. `$fcecaa` (ROM offset `$ecaa`, 180 bytes, SHA-256
-`23d83329e70773c53f91d682dfec5ef56ac3bac223e62ed311e0285138493039`) checks
-ViewPort fields at A1+`$20`/A1+`$1a` and SimpleSprite fields at
-A2+`$4`/A2+`$8`/A2+`$a`. It calls `$fcebfa` (offset `$ebfa`, 64 bytes,
-SHA-256 `2c89dd3cb2429c1c6f8eae9ed109f1be96d0ffec009d7c4cf3ddb206d9d47a02`)
-to write address halves into an indexed slot rooted at `*(A6+$26)`, and
-`$fceb3c` (offset `$eb3c`, 68 bytes, SHA-256
-`48fcfc3050ac3989e5c12c0a3f6f1a0ef86b53b079010451b829d88babab3f61`) to
-inspect the sprite flag and an indexed entry rooted at `A6+$d0`. Depending on
-that result, it also calls `$fcec3a` (offset `$ec3a`, 56 bytes, SHA-256
-`9e3285fef0ac4134fbb35989eebec9b12b3729c48237c734a4af51461691d00b`) to
-update the selected slot's position halves. These spans show library-owned
-pointer and slot state in addition to the ViewPort and SimpleSprite inputs;
-they do not establish the live contents or addresses of those structures.
-
-The external report is
-`/home/trv2/.cache/project-eon-analysis/deuteros-movesprite-rom-helpers-20261024.lst`
-(11,208 bytes, SHA-256
-`ab061b195764c92cbcd448da7cfd68d5af25b1642c002b95660d1ce4774e912a`, mode
-`0600`). The ROM stayed inside the supplied archive while analyzed. The
-runtime session still does not prove that its A6 vector resolves to this ROM
-entry or own all ViewPort, SimpleSprite, library-table, and hardware memory
-touched by the routine. Keep the live boundary at `$201b6` until the required
-preimages and effects are represented in owned runtime memory. This is
-metadata only; raw listings remain outside the repository.
-
-### 2026-10-24 Deuteros Kickstart `LoadRGB4` vector and body
-
-The supplied Kickstart 1.3 r34.005 ROM was read in place through its ZIP
-member; no ROM member or raw listing was written to the repository. Its
-identity is the previously hash-identified 262,144-byte image (SHA-256
-`ee05862d8102a08436ac4056da7d549db31625c7d47b24dfb7b3c9a5c113ca53`),
-mapped at `$fc0000`. The hash-identified `graphics.library` table at ROM
-`$b05a` maps vector index 31 to LVO `-$c0`; its pointer at `$b0d6` is
-`$fc5b4c`. The 18-byte entry stub at `$fc5b4c..$fc5b5d` hashes to
-`28146678d462050c47d99dde633fe337322b98a8b1a280c5a713a8f29593eedc` and
-calls the body at `$fcd3cc`.
-
-The bounded body `$fcd3cc..$fcd4c9` (254 bytes; SHA-256
-`9ab3b5c2df0e140ac7dfd02404b7cf25b3cf30c1f1c5fe3c153ae52b64a355b5`)
-clamps D0's requested color count to 32. With a null A0 it writes table words
-to custom color registers beginning at `$dff180`. With a nonnull ViewPort it
-follows the ViewPort's ColorMap pointer, clamps to the ColorMap capacity,
-copies words into that map, and calls ROM helpers at `$fcfeee` or `$fcff78`
-before the common `$fcd4cc` update routine. The exact helper spans are
-`$fcfeee..$fcff43` (86 bytes, SHA-256
-`575fc293101a626e7ea1ad256cff996aea996f1b17b54a8581d21fa05036bad7`),
-`$fcff78..$fd001b` (164 bytes, SHA-256
-`6560851786674b14d9a58aced05ebbfd3f4e4d502d114bfef1f2f170857b4a80`), and
-`$fcd4cc..$fcd563` (152 bytes, SHA-256
-`f956f4f35f03006ccb08187a6d7f5b2cfbefa5d8a5db71bceff6ebe406abbf12`).
-The main body calls `$fcfeee` twice only when ViewPort flag `$20` lacks bit
-`$2000`, calls `$fcff78` once per clamped color, then always calls `$fcd4cc`.
-Those helpers traverse and update Copper/custom-register state; they leave
-D0 dependent on linked runtime state. The body saves/restores D2-D4 and A2-A4;
-the entry stub discards its saved A0/A1/D0 argument copies on return.
-
-The live native caller now crosses both ordered `$21310/$2132a` boundaries
-through a bounded `LoadRGB4` compatibility service. It validates each owned
-A0/A1/D0/A6 call contract, reads the exact 16 RGB4 source words, checks the
-owned ViewPort and ColorMap pointers/count, and copies the words into owned
-ColorMap memory. The second call's palette is applied to the SDL presentation
-state. The native service does not reproduce the ROM's internal CopperList
-writes, so future guest reads of those OS structures remain an explicit
-boundary. The caller only consumes D0's low word for the second `LoadRGB4` call,
-whose count is explicitly 16, and then sets D0 to 5 before its next local
-call. The native route therefore carries no made-up `LoadRGB4` D0 return.
-This advances the main stage to the owned ExecBase read at `$208b0`; it does
-not model every ROM helper/CopperList side effect or establish a playable
-action. The 576-byte bounded linear candidate remains in the scoped external
-analysis cache.
-
-### 2026-10-24 Deuteros native SDL callback port
-
-The live SDL input route now applies a bounded C++ port of the hash-locked
-title callback at `$1f056..$1f14f` (250 bytes, callback SHA-256
-`ff4b055b2d5128465c891debcad00ff4e53cbf661de47b9ee3d6278f33d5e5f8`). It
-checks the complete loaded stage SHA-256
-`48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03`, the
-callback bytes, and the 160-byte raw-key source table at `$1ee20` (SHA-256
-`2f00ffdf05ab28379e97e91e98fa764e45769d7ea55363846543becf7552e265`). The
-port commits only changed bytes in Eon's owned title memory; this SDL callback
-path no longer executes original M68k instructions.
-
-The native path preserves the observed raw-key latch, qualifier, response
-table, and bounded queue writes; button state at `$1ffd4`; and motion deltas
-and local coordinate clamps. It rejects noncanonical raw-key queue counts and
-out-of-range memory. Motion still stops before the external `MoveSprite` call
-at `$201b6`; its ROM vector and visible sprite effects are not implemented by
-this change. A native one-step port of the hash-bound response queue helper
-at `$1f238..$1f257` shifts the local queue and decrements its count only when
-an event is pending. It is not connected to SDL dispatch: static caller
-evidence places it inside `$4077e`, but no owned runtime path yet proves that
-loop's reachability or its scheduling relative to host input. The byte
-therefore remains pending until the native game loop can safely consume it.
-
-The first callee at `$40786`, `$3f7a8`, has a separately bounded native prefix:
-the 20 bytes at title-stage offset `$2c7a8` (runtime `$3f7a8`, ADF `$9a7a8`)
-have SHA-256 `2ed49faf9d9a87986b075890b247f699e89a8e9e1b2970eca7d9830bd952a9ed`.
-After validating the full title-stage SHA-256 above, the port applies exactly
-`MOVEQ #0,D0`, clears word `$3f77e` and byte `$3f752`, sets `D1=$0f`, and
-stops at the tail branch to `$3fbf8`. Both writes land inside the loaded title
-stage and are returned with the register arguments for a later bounded
-continuation; `$3fbf8` and the `$4077e` scheduler are not executed or wired to
-SDL input. A focused native regression checks both writes, untouched adjacent
-state, register outputs, and the explicit tail-call boundary.
-
-The following inline call at `$40794` now has a separate hash-locked native
-translation. The caller bytes at `$40794` (6 bytes, SHA-256
-`1a076e7dd8072e69efd029cb629730993ed19cb02a1664ecdaf2a69aa7240872`), the
-inline bytes at `$4079a` (8 bytes, SHA-256
-`013fd77090f8c910da3528ee0a3c9d0405317a8a24467134308f578c6c156609`), the
-entry `$1f9a4`, dispatcher `$1fa06`, branch helpers `$1fb00/$1fb3a`, and
-command helpers `$1f9b8/$1f9d2` are checked against both the owned title-stage
-source and runtime memory. For this exact stream, `$16` with argument `$0a`
-updates `$1f974` from owned `$1f168` under the required zero gate at `$1f98e`;
-`$10` with `$0f` and `$11` with `$00` write `$1f964` and `$1f8ec` to
-`$1f96c/$1f970`. The zero terminator returns at `$407a2`. Stack preimages
-require the `$4079a` JSR return and saved `$407e6` caller word; the continuation
-SP advances by four bytes. A focused media-backed CTest verifies those writes,
-return PC/SP, and rejection of a wrong return or nonzero gate. This helper is
-not connected to the scheduler, and no input-to-frame path or gameplay parity
-is established by it.
-
-The new regression exercises raw-key enqueue/consume, both mouse buttons and
-release, ordinary motion, signed-negative coordinate clamping, and rejection
-of a corrupt queue count. On trv2, a clean Ninja rebuild and CTest passed 10/10;
-the local Python preservation suite passed 543 tests (six skipped), the
-repository-artifact verifier passed, gitleaks found no leaks, and
-`git diff --check` passed. These results validate this bounded input slice;
-they do not establish a complete native game loop or playable parity.
-
-### Millennium DOS selector-byte native boundary
-
-After the observed INT `$21/AH=$25` return and the hash-locked selector
-continuation, the native DOS process accepts a runtime-byte observation only
-at instruction `$d2fd` from `CS:$0082`, following the observed child entry and
-with a strictly increasing event sequence. The literal `$d302` store is to
-`DS:$0122`, not `CS:$0122`. On this admitted zero-path success route, selector
-helper `$1161` restores DS from CS at `$1197` and `$119e` before returning, so
-the runtime currently aliases the owned target to the child code segment. It
-then executes the source-locked `$d07a` mode selection and SIBM function-zero
-prefix, publishing the driver's DOS `AH=$35/AL=$08` boundary at `$0233`. That
-accepted boundary automatically starts the separate native service described
-below; the DOS process checkpoint stays there. The SDL-facing path requires the
-observed `CS:$0082` byte to already exist in owned child memory; no value is
-synthesized.
-
-This executes only the deterministic mode selection and function-zero prefix,
-not the private INT `$95` wrapper or DOS vector calls. A hash-locked parser
-checks the SIBM dispatch table, handlers 0, 11 and 12, allocator helper,
-startup wrappers, and the `$d05c` argument table. After timer installation,
-`$d07a` would invoke function `$0c` with `$000f`; its `$cfb9` wrapper dispatches
-function `$0b` fourteen times with source-computed arguments 1 through 14. The
-earlier description that the loop dispatches functions `$01..$0f` was
-incorrect. A real-media test locks the wrapper's literal `$0b` dispatch and
-14-call loop. The native service can translate timer state and load voices, but
-the game remains non-playable without the recovered clock-chain, sample callback,
-and event-to-voice dispatch behavior.
-
-### SIBM INT `$95` function-zero and allocation evidence
-
-The selected English `SIBM.DRV` is 2,871 bytes with SHA-256
-`f3224caa43c1149907f852fa98816ed68c489b70f1ba795592d684d4e51f31b1`.
-Its dispatch table entry for function 0 points to `$04a8`; the 32-byte handler
-span hashes to `fa8089e4e17500d3b1ee5b66b882fcd1437f10772ec80fc992fe59e1f82147bf`.
-On its first call, the handler sets its initialized byte at `$00cd`, calls
-`$01f6` and `$0221`, then returns AX zero. `$01f6` (13 bytes,
-`d21f5933a6d4c78d72fe1218d756c370f1a7b0504fa14759777631c33b527e10`)
-clears speaker-enable bits through port `$61` and zeros the current divisor at
-`$00cf`. `$0221` (42 bytes,
-`4fd2fb8ee42b5990f90a0d449db7486bfdb01270e499d490b2ce9ccd2e3f456d`)
-sets the driver timer-installed flag at `$00b1`, calls DOS `AH=$35/AL=$08`
-to retain the previous timer vector, then requests `AH=$25/AL=$08` for its
-handler at driver offset `$034d`. A native port must replace those DOS-vector
-effects with an owned scheduler callback and keep the speaker/PIT behavior
-separate from any claim of original hardware state.
-
-The current native function-zero session translates the first-call local
-effects: `$cd=1`, software speaker gate disabled, current divisor zero, and
-`$b1|=$10`. It recognizes the ordered raw DOS return from `AH=$35/AL=$08` at
-`$0233`, retains AX/BX/ES without interpreting them, stores BX at `$0180` and
-ES at `$0182`, then exposes the source-bound `AH=$25/AL=$08` request at `$0246`
-with DX=`$034d`. A second ordered raw return can be recorded at `$0246`; the
-function-zero session and native process stop at `$0248`, before the
-hash-bound `POP DS`, `POP ES`, and `RET` epilogue. Returned AX/BX/CX/DX, ES,
-and FLAGS are retained as values only. No IVT write, successful DOS vector
-installation, saved caller ES, guest stack frame, or function-zero return is
-inferred from these register observations. The matching timer handler target
-is `$034d`; the separate Eon-owned timer callback remains distinct from a
-guest INT `$08` vector. No PIT/PIC port is touched.
-
-The session follows the hash-locked mode selection at `$d07a`: the byte at
-`DS:$0122` selects input `$0380` only when it equals 1; zero and all other
-values select `$0220`. The result is exposed in the value-only function-zero
-checkpoint and covered for mode bytes 0, 1, 2, and `$ff` using the supplied
-English media. The active startup coordinator reaches this translated prefix
-from its observed `$d2fd` byte. Its native SIBM service activates a separate
-Eon-owned timer callback and loads the fourteen hash-verified voice payloads.
-The guest DOS process remains at `$0233` until the ordered AH=$35 return is
-provided, then at `$0246` until the ordered AH=$25 return is provided, and
-currently stops at `$0248`. These boundaries do not establish an original DOS
-timer-vector install, the saved stack values needed by the epilogue, a game
-caller return, or audible gameplay.
-
-### SIBM native timer-handler boundary
-
-The exact handler range `SIBM.DRV[$034d,$0424)` is 215 bytes and hashes to
-`3f2ab2b798a0ae1e2923de9d012581cd5a332946bf188f1bbd352107743221b1`. A new
-source-bound timer session accepts only the exact function-zero checkpoint at
-DOS `AH=$35/AL=$08` and applies its proven software writes to an Eon-owned
-state: driver flags, `$d2` countdown, `$c7` accumulator, `$c9` divisor, `$cb`
-sample cursor flag, and the cleared `$cf` software divisor. It must be
-explicitly activated as an Eon callback. The first callback follows the
-handler's inactive-sample path and requests a host clock chain when the
-16-bit `$c7+$c9` calculation reaches `$ffff`; the original far vector is not
-read, guessed, or called. Non-chain completion represents the source's PIC
-EOI path without writing a port. Active sample paths stop before `$031d` or
-the indirect sample callback at `$03f3`. No DOS vector, PIT, PIC, or speaker
-port is installed or touched, and the session is not connected to active
-SDL playback. A real-media CTest checks the first two ticks and rejects altered
-handler bytes and detached function-zero state.
-
-#### SIBM timer stream and game voice dispatch boundary
-
-The hash-verified SIBM dispatch table at `$0020` (34 bytes, SHA-256
-`46598959f558b112e7331f904fa3d289aba73dcb284d8e5e768245c079c3af81`) maps
-driver function `$05` to `$05dc`. Its complete bounded entry
-`$05dc..$066f` is 147 bytes (SHA-256
-`f8fc5f47b2c02adc14f4478bcaa5820946eb005fa224d8bcde8d7f6e4ac577b3`). After
-checking initialization and the selected loaded flag, it indexes the voice
-pointer table at `$00b7` with `[BP+4]`, sets the timer stream offset at `$00bb`
-to the selected buffer offset plus eight, copies that far pointer into
-`$00bf`, and stores its segment at `$00bd/$00c1`. It also takes byte
-`ES:[BX+$28]` into `$00b0`, the function argument byte into `$00ce`, and the
-word at `ES:[BX+$0c]` into the timer-divisor setup. This is the initializer
-for the ISR's `ES:DI` stream pointer (`LES DI,[$00bb]` at `$03da`); it is not
-a recovered game callsite to function `$05`.
-
-At `$03f3`, the handler selects one of eight callbacks using the current stream
-byte's high nibble. The 16-byte table at `$00a0` hashes to
-`b1a30632bef54b82207ada492579999e2a45b3d9c168b30270de6e6c9ea5c955` and
-contains `$02d1,$02f7,$02bf,$02c5,$02cb,$02b9,$02bf,$0268`. The `$02d1` and
-`$02f7` callbacks compare the stream byte's low nibble with `$00b0`, fetch a
-word through the table at `$00d8`, and call `$01e9` or `$01a5`; these routines
-control the driver's original PC-speaker/PIT path. The remaining handlers
-advance by two or three bytes or process the `$f` terminator. The code shape is
-known, but the live bytes at `$00bb`, callback sequence, and resulting sound
-are not established.
-
-The game image has a separate sound dispatcher at `$d0c9` (59 bytes; file
-offset `$cfc9`; SHA-256
-`a224289d59fa43556581ff79941ab31935c66719d2bdb44f88d2d2d33932e565`). It
-has 24 direct callers in the hash-identified English `2200AD.EXE` candidate:
-`$0794,$6cf0,$6d38,$6f9c,$7122,$7343,$738e,$741f,$7f67,$7f82,$7fca,$8225,
-$842e,$8509,$8625,$a361,$a3db,$a578,$b8e7,$bec4,$ce71,$ce7d,$d10d,$d123`.
-When its `$0121` gate permits, it invokes the game's private INT `$91` function
-`$13` wrapper at `$0124`, then selects SIBM function `$0e` via wrapper `$cfc7`
-when the caller's low AX byte is nonzero, or SIBM function `$10` via `$cfd4`
-when it is zero. Before this dispatch it moves caller AH to BL and caller BH
-to AH, then `$d0ef` clears BX, copies caller AH into BL, and clears AH. The
-`$cfc7` wrapper pushes BX, AX, and function `$0e` in that order. `$cf8f` sets
-BP to its return-address word before INT `$95`, making the SIBM handler's
-`[BP+4]` index the AX argument with AH cleared. Thus the SIBM voice index is
-zero-extended caller AL; caller AH is passed separately in BX, and caller BH
-is discarded. The video function `$13` leaf's preserved BX is overwritten
-before the SIBM dispatch. A live caller AL is still needed to establish a
-valid 1–14 voice index and loaded voice.
-
-The complete 59-byte `$d0c9` source span is file `+$cfc9` and hashes to
-`a224289d59fa43556581ff79941ab31935c66719d2bdb44f88d2d2d33932e565`. The
-13-byte `$cfc7` SIBM `$0e` wrapper at file `+$cec7` hashes to
-`ecdd74bba58df274c2a9e8638dcc0143803e53209cca68ca7968b2db99a6411e`; the
-9-byte `$cfd4` SIBM `$10` wrapper at file `+$ced4` hashes to
-`39706f64c8976677198b154f30cf43d5e35ef1974211ce3676f4909d4d716885`; the
-16-byte `$cf8f` INT `$95` wrapper at file `+$ce8f` hashes to
-`e5c033ac945f574e791bfff61eae9ea686bc81c99ab7842374290759a02b7f2c`. The
-native `evaluate_millennium_dos_game_sound_dispatch` helper revalidates the
-whole English executable and these three spans, then derives only the exact
-pending function route from explicit `$d0c9` register, `$0121`, and function
-`$13` return observations. Direct-media tests cover voice indices 3 and 14,
-zero-AL function `$10`, the selector gate, the pending video return, and
-source mutation rejection. `MillenniumDosSibmAudioPlayer::start_voice_from_dispatch`
-accepts only the resulting function-`$0e` route and selects the matching
-original-loaded voice. Its direct-media regression starts voice 3 and checks
-its first native PCM sample; a function-`$10` result is refused without
-replacing the active voice. These explicit fixture observations do not invoke
-INT `$95`, prove a live game caller, or provide an SDL caller.
-
-SIBM function `$0e` at `$0acf..$0b04` (53 bytes; SHA-256
-`8c6ee76c30563e564fbe0aea485f1af5bafc7ee1345a34adf3c6b97cd3e38c76`) checks
-the per-voice loaded flag, raises its in-service flag, and calls `$0973` with
-the request word. That helper (`$0973..$09ae`, 59 bytes; SHA-256
-`6031173a3297112f6defa3645906ef449b0d98f6fb236b33a0dce4e86cf8ec70`) looks
-up that index in the loaded header/data tables at `$007e/$0076` and calls the
-driver playback routine at `$06fb`. This is a source-backed game-to-loaded-
-voice route through function `$0e`, distinct from the function-`$05`
-timer-stream initializer. It does not yet establish that the SDL PCM player
-has identical playback semantics. The static `2200AD.EXE` caller inventory
-has wrapper values 0, `$0c`, `$0b`, `$0e`, `$10`, with no direct function-`$05`
-wrapper caller. The game's own function `$05` number is a separate dispatch
-namespace.
-
-The next native boundary is an admitted live `$d0c9` call with its function
-`$13` result from `$0124`, together with owned `$00b7/$00bb/$00bf`,
-`$0076/$007e`, and per-voice loaded bytes. That would establish the exact
-voice index and payload before connecting function `$0e` to native PCM. Until
-then neither function `$05` stream initialization nor the function `$0e`
-lookup is synthesized from an SDL input event.
-
-Function `$0c`'s dispatch table entry points to `$0a27`. Its handler allocates
-four DOS blocks through `$0184`, using the caller's requested size for the
-first block and 16-bit `size * 4` for the other three. `$0184` rounds each
-request with `(size >> 4) + 1` paragraphs and performs `INT $21/AH=$48`.
-The handler stores returned offsets and segments at `$72..$80`, zeros only the
-first allocation, sets `$71=1`, and returns AX zero. A failed allocation returns
-AX three without rolling back earlier allocations. In the startup call at
-`$d07a`, wrapper `$cfad` invokes function `$0c` with requested size `$000f`;
-the following loop dispatches function `$0b` fourteen times. Therefore
-supporting only functions 0 and `$0c` cannot reach the game's next `$d30d`
-boundary. A source-bounded native session now translates function `$0c`'s four
-allocations and the fourteen function-`$0b`/`$08b3` VOC loads into Eon's owned
-segmented memory. When the `RuntimeHost` observation API accepts the owned
-selector byte and publishes SIBM's `$0233` boundary, the active coordinator
-automatically invokes its generation-bound service operation. It activates the Eon-owned
-software timer session and takes the SIBM code segment from the admitted
-`MILL.COM` sound-driver load. That load is bound to the exact SIBM leaf and
-the Eon-owned INT `$95` vector at offset zero. The game child's `CS:$011c` is
-not used for SIBM: the hash-locked `2200AD.EXE` references that far pointer in
-its separate INT `$93` path at `$1069` and `$1258`. The service-owned memory
-snapshot starts with the complete 2,871-byte hash-verified driver image at
-that segment. Before creating the voice tables,
-the coordinator reserves their exact paragraph span from the same Eon DOS
-compatibility arena that allocated the driver; the SIBM tables are suballocated
-within that reserved range, preventing aliasing with the driver or later DOS
-allocations. After source-preimage and empty-range checks, the coordinator
-commits the complete driver, table and voice effects into Eon's native DOS
-memory map. The service checkpoint records native function-zero AX=0, timer
-activation and 14 loaded voices. The guest DOS process is separate: after
-ordered raw AH=$35 and AH=$25 return observations it stops at `$0248`, without
-an installed guest vector or executed stack epilogue. Tests use the supplied
-English media and verify the loaded driver-image endpoints plus the source
-process generation and boundary. This is still a startup service translation,
-not live gameplay or audible playback.
-
-The separate `MillenniumDosSibmFunctionZeroSession` now accepts an ordered raw
-return for DOS `AH=$35/AL=$08` at SIBM `$0233`, requiring return IP `$0235`. It
-preserves returned AX, BX, and ES without interpreting AX/FLAGS, applies the
-source-ordered little-endian stores `BX → $0180` and `ES → $0182`, then
-publishes the next `AH=$25/AL=$08` request at `$0246`; the source-bound profile
-supplies `DX=$034d`. The runtime routes that return only when the process
-boundary, increasing sequence, active handoff, loaded SIBM segment, and
-generation-bound native service agree. It checks the driver-image preimages
-before applying those four bytes to owned SIBM memory, then advances the
-process boundary to `$0246`.
-
-The following AH=$25 return is admitted only at instruction `$0246`, for the
-same loaded driver segment, with return IP `$0248`, and after the prior AH=$35
-return. Its raw AX/BX/CX/DX/ES/FLAGS are retained without asserting DOS success
-or an IVT effect. The hash-bound epilogue begins at `$0248` with `POP DS`,
-`POP ES`, `RET`; its caller then returns through the INT `$95` dispatch and
-`IRET`. The current runtime stops before those stack operations because the
-saved caller ES and outer interrupt frame are not owned. The helper and
-process tests cover exact ordering, registers, and rejection of detached
-returns; this route is not capture-backed and establishes neither a guest INT
-`$08` vector nor playable or audible output.
-
-### SIBM segment source correction from linear disassembly, 2026-10-24
-
-The external full linear decode of the supplied English `SIBM.DRV` was
-generated in place from the installed media and retained only under
-`~/.cache/project-eon-analysis/native-parity-20261024/SIBM-linear.asm` (1,187
-lines; SHA-256
-`84a93fcd162e33e66bbafe22e9c76e00132fcd1724a203281a2b8e162fa56e1f`). It is
-a candidate decode, not code/data classification. The hash-locked bytes at
-`SIBM.DRV:$0221..$024a` show `AH=$35/AL=$08`, save returned ES:BX at driver
-`$0182:$0180`, then set DS=CS and request `AH=$25/AL=$08`, DX=`$034d`. The
-function-zero routine is reached through the loaded driver's INT `$95` vector,
-so its CS segment is the segment allocated by `MILL.COM` for that selected
-driver. The parallel decode of `2200AD.EXE` also shows `$1069` loads DS:DX from
-CS:`$011c` and `$1247..$1265` installs INT `$93` from the same far pointer;
-that child field is a different driver identity and cannot select SIBM.
-
-The SIBM coordinator now requires a completed native `MILL.COM` load of the
-exact English IBM-speaker leaf, with the Eon compatibility INT `$95` tuple
-`0000:load_segment`, and uses that allocated segment for the service snapshot.
-It reserves the exact function-`$0c` and fourteen function-`$0b` paragraph
-total in the same compatibility arena before suballocating voice memory.
-The runtime commit validates every pre-existing driver byte against the
-hash-admitted image and rejects any initialized byte in the reserved span
-before atomically applying all driver, table and voice writes. Tests cover
-rejection before vector installation, exact driver-segment selection, a
-nonoverlapping suballocation span, and the committed function-zero/voice
-memory effects. No DOS INT `$08` return, guest vector, caller continuation, or
-playable state is claimed by this native-memory step.
-
-The exact English DOS SFX family now has a separate native PCM loader. It
-requires the hash-verified `2200AD.EXE` and `SIBM.DRV` spans to be borrowed from
-the same `VerifiedReleaseMedia` instance, and cross-checks all fourteen
-function-`$0b` indices and original filename addresses against the executable
-table and the hash-addressed VOC catalogue. For each leaf it admits only the
-single type-1 block consumed by `$08b3`: the 26-byte header, six-byte block
-header, `length - 2` PCM bytes, and terminating zero must match the exact read
-sequence. The existing Creative Voice decoder's unsigned PCM must byte-match
-that payload. This produces owned in-memory samples without extracting or
-copying source files. It does not yet model DOS allocation results, driver
-events, timer scheduling, speaker output, or audible native playback. The
-native startup session uses Eon-owned paragraph segments, reproduces the
-four-table allocation sequence, zeros the first table and sets the driver's
-`$71` initialized flag, then allocates and writes
-each verified 26-byte header, six-byte block header, and PCM buffer before
-setting that voice's loaded flag. A bounded-arena test confirms function
-`$0c`'s AX=3 failure leaves the first allocation and its pointer intact. DOS
-AH=$35/$25 timer-vector effects remain unresolved. The function-`$0c`/`$0b`
-translation is an isolated lower-level service test; it cannot be entered from
-the active DOS process. The game runtime retains this hash-bound bank; its
-process checkpoint remains at the `$0233` boundary.
-
-The SIBM native service does not authorize returning through the game caller.
-The source path after `$d07a` returns at `$d308`, sets `BX=$fa00` and
-`AH=$48`, then reaches `$d30d` (`2200AD.EXE` file offset `$d20d`, load base
-`$0100`). At `$d30f` it stores returned BX at `CS:$d130`; at `$d314` it copies
-AX to ES, then `$d318` calls DOS `AH=$49` to free that segment. The caller next
-restores DS=CS, discards the opaque saved DX, loads DS:DX from `CS:$1042` at
-`$d31d`, sets `CX=$ffff`, loads DS:SI from `CS:$1042` at `$d326`, and calls
-`$6bf2` at `$d32f` with `AX=$0a00`. These are hash-bound instruction effects,
-not observed DOS results. The AH=$48 carry, AX, ES:BX and AH=$49 result remain
-unresolved; the service's native AX=0 and loaded voices describe only its
-parallel owned session and cannot stand in for the driver's DOS-vector return
-or either allocation result. Keep the process at its established boundary
-until source-ordered caller state and generation-bound DOS results supply those
-effects. The external linear listing is a candidate decode, not a committed
-artifact; its hash and address metadata are recorded above. An independent
-NDISASM 3.01 pass on `trv2` read the same hash-verified media in place and
-stored candidate listings outside the media and repository at
-`/home/trv2/.cache/project-eon-analysis/parity-20261024/`. The `2200AD.EXE`
-listing is 25,215 lines / 1,018,124 bytes, SHA-256
-`f868a0440fbf7475063b38c3f458302e0a35e5e2c59356a2f94b0c5db433e564`; the
-`SIBM.DRV` listing is 1,187 lines / 47,601 bytes, SHA-256
-`053013db17efddadd85878097a3986e7d0879a87b83ed53f0f4c8222bef833f0`. The
-independent pass reproduces the AH=$48/AH=$49 and `$6bf2` instruction tail;
-linear decoding still does not prove runtime reachability or classify data as
-code.
-
-The native SIBM function-`$0e` PCM replacement is isolated from live SDL game
-dispatch. The hash-identified DOS executable's `$d0c9` path selects SIBM
-function `$0e` with zero-extended caller AL as `[BP+4]`; caller AH is a
-separate BX argument, and caller BH is discarded. No admitted runtime
-boundary supplies the live registers and gate byte needed to select a voice.
-SIBM function `$05` is
-the timer-stream interpreter at `$05dc`; its event bytes dispatch PIT/speaker
-callbacks, and no game caller for function `$05` is established. The native
-player consumes the exact decoded VOC PCM bytes but does not reproduce the
-original PIT-driven waveform. Do not synthesize playback from SDL input.
-
-This callsite inventory was independently reproduced locally by reading
-`2200AD.EXE` in place from `Downloads/Millennium-Return-to-Earth_DOS_EN.zip`
-(archive SHA-256
-`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`; member
-SHA-256 `427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57`)
-and piping its 54,391 bytes to NDISASM 3.02 with 16-bit decoding and origin
-`$0100`. The external candidate listing is
-`~/.cache/project-eon-analysis/millennium-callers-20261024/2200AD-linear.asm`
-(25,148 lines, 1,015,297 bytes; SHA-256
-`a3aea3e261afe7af8a0542f4a1b6050a5eb76371209b564b04216cdf76b6ea27`). This
-linear pass finds one `INT $95` instruction at `$cf98` and direct calls to the
-generic wrapper at `$cfa6`, `$cfb2`, `$cfc0`, `$cfcd`, and `$cfd8`; their fixed
-function values are 0, `$0c`, `$0b`, `$0e`, and `$10`. It does not find a
-function-`$05` wrapper in this linear candidate. This is a bounded static
-inventory, not proof that no indirect, self-modifying, overlay, or data-driven
-call can select another function. The original archive member was read in
-place; no executable or listing was added to the repository.
-
-The related original `TITLES.EXE` was checked in the same read-only archive
-pass because it owns a separate copy of the private-driver wrapper. It is
-7,022 bytes, SHA-256
-`3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6`. Its
-external NDISASM 3.02 linear candidate, decoded at origin `$0100`, is
-`~/.cache/project-eon-analysis/millennium-callers-20261024/TITLES-linear.asm`
-(3,434 lines, 135,454 bytes; SHA-256
-`222b2adeeb128f3db4270266e1c70e07ae439bf9f0bb5caf42be2bde20e4afc2`). The
-candidate has `INT $95` at runtime `$1982`, with five direct wrapper callers
-at `$198f/$199b/$19a9/$19b6/$19c1` for functions 0, `$0c`, `$0b`, `$0e`, and
-`$10`. The `MOV AX,5` at `$1968` is a repeat count for a local loop that sets
-AX to `$13` before each INT `$93` call; it is not a SIBM function-`$05`
-request. This adds a second statically decoded caller image to the current
-inventory, but still does not rule out a selector or indirect wrapper path in
-an overlay, so the runtime function-`$05` caller remains unrecovered. The
-hash-identified `2200GX.EXE` and its two banked libraries were checked as
-potential overlays: its selector slot 5 is an internal flag routine, and its
-resource directories contain no executable members. This narrows the known
-caller set but is not proof that no dynamic dispatch exists.
-
-The Deuteros title callback can enqueue physical raw-key bytes in owned title
-memory, and the `$407b4` consumer can dequeue them in a bounded translation.
-Neither the local scheduler nor existing receipts establish a runtime PC path
-from the live stage to `$4077e`. Historical captures reach `$4077e`-related
-selector routes but do not provide the queue's before/after state or a linked
-gameplay state/frame change. The host must retain the byte until a real caller
-path is sourced; source-composed callback/consumer tests do not establish one.
-
-### 2026-10-24 Millennium DOS F7 text-stream decompilation
-
-The English DOS `2200AD.EXE` (SHA-256
-`427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57`)
-linear candidate identifies a source-connected call at runtime `$7537`: it
-loads `AX=$012a` at `$7534` and calls the shared
-handler `$0666`. That handler selects a little-endian word from the 435-entry
-pointer table in the exact `2200AD4.BIN` segment at table byte offset `$0254`
-(`$012a * 2`), then enters the bytecode interpreter at `$05f7`. Reading the
-hash-admitted original `2200AD4.BIN` member in place gives table target `$14c4`.
-The stream reaches its zero terminator at `$14d8` after 21 consumed bytes;
-its consumed-span SHA-256 is
-`5bbe8d334c3bca39885298fb78c3edead3144f88136a30061b8294329c680af8`.
-The full pointer-bounded record extent ends at `$1525` and has SHA-256
-`e2493bfc00889c1238d12cd0934d4ef53ffae1b2c2f040f157417217de45ecb9`.
-The parent later calls `$0666` again and resumes the saved stream through
-`$05ce`; therefore this first terminated stream is one part of a larger
-source-connected UI sequence, not a complete action result.
-
-The caller and the remainder of the same pointer-bounded record `$14c4..$1524`
-show four more zero-terminated stream fragments at `$14d9`, `$14f2`, `$1503`,
-and `$1516`. Their consumed lengths are 25, 17, 19, and 15 bytes; each fragment
-contains one `$16` coordinate operation, two `$10` one-byte controls, and
-respectively 17, 9, 11, and 7 glyph operations. Their consumed-span SHA-256
-values in that order are
-`7637bc5611b9759455903f63f4ae92c98a785be243900c8af2bf77a95458a241`,
-`2cc57b6c20be32a96373636d6688c4a81977ece6dd7f4c19dabf8450f682795e`,
-`1f401c64d45b1e8ddf8f326dc7828b26f37e08995f03882e90e2ca03a9e8afc4`, and
-`796df23d753e98ef64ab99ffefe35b1c9fd8147828d05619bc56627c6fbf9720`.
-At `$7537..$7596`, the parent runs these fragments in source order, interleaves
-four `$05ce` resumes with values formatted from `$da18`, `$da27`, `$da26`, and
-`$da35`, then formats `$da37` and appends its high byte as one decimal glyph
-and a percent glyph. The hash-identified formatter at `$06dc..$073b` divides
-by 10000, 1000, 100, and 10, then emits digits through `$0715/$077e`. Its
-exact 96-byte source span SHA-256 is
-`76e8bce2fe4383fe0cc66d61b54559f70ae7f5fab729930916a999e63dc19903`.
-This recovers the bounded render-command and number-format sequence, not the
-meaning or provenance of the live `$da**` values or the INT `$93` results.
-
-At `$05f7`, the bounded static decode contains one `$11` control with one byte
-operand, two `$10` controls with one byte each, one `$16` word-coordinate
-operation, eleven literal glyph operations, and the zero terminator. This
-matches the interpreter's local instruction shapes: `$10/$11` dispatch
-private INT `$93` functions `$04/$05`, `$16` calls the coordinate/cursor
-helper, and other nonzero bytes go through its glyph handler. This establishes
-the original operation sequence and a specific caller-connected presentation
-record. It does not establish the private INT `$93` results, visible native
-pixels, or the rest of the resumed stream. The raw stream and disassembly stay
-external; only offsets, hashes, counts, and interpretation boundaries are
-recorded here. The external combined linear report is
-`~/.cache/project-eon-analysis/native-parity-20261024/millennium-dos-en.md`
-(SHA-256 `90d3633bf887f23563d444b43fcc9c94155d34a62203ddf29d485032730d0ce5`);
-it is a code/data-unclassified candidate.
-
-`parse_millennium_dos_f7_presentation_program` now reproduces this one bounded
-program from caller-supplied original leaves. It rejects any different DOS
-executable or static-data hash, verifies the `$7534..$7596` caller and
-`$05f7..$0652` interpreter spans, confirms index `$012a` still selects
-`$14c4`, and checks each fragment and the complete pointer-bounded record
-before returning typed function, cursor-word, and glyph-code operations.
-`native-data-detection` covers those operation shapes and rejects a mutated
-record. The function does not call or emulate INT `$93`, read the live `$da**`
-fields, create an SDL text run, or include source glyph bytes in the repository.
-
-### Shared-helper segment read consistency, 2026-10-24
-
-The English DOS `$0666` shared helper reads its data segment from the exact
-hash-identified child word `CS:$0116` at `$0669` (see the helper profile above).
-`observe_millennium_dos_shared_helper_word` now compares an explicit read
-observation with the little-endian word in Eon's owned DOS-segmented memory
-when both bytes are present. A contradictory or partially initialized owned
-word is rejected. When neither byte is owned, the value remains an explicit
-observation boundary; this check does not fabricate a DOS allocation result.
-The regression covers matching, mismatching, partial, and unowned states. The
-subsequent table read, helper call `$05f7`, visible text, and playability remain
-unresolved.
-
-### DOS startup text read into owned memory, 2026-10-24
-
-At the exact hash-locked startup read boundary `$0580` (`INT $21/AH=$3f`), a
-successful return now copies the complete selected original text file into
-Eon's owned segmented DOS buffer. The source must be the active verified
-release leaf for the selector's in-image filename (`VGATXT.BIN`, SHA-256
-`c31cb760d5f62a21b3baf9c09a6be413514780bd88eeac0273620e81b5d69318`, or
-`EG6TXT.BIN`, SHA-256
-`063eefa58c98360d0ca2b4eaf9a77f8f9d13c619aee605dff6b0d0ee8b4a6b20`). The
-request must still be the source-derived full-file read into offset zero, its
-handle and allocated destination segment must match the admitted caller and
-owned `$011c` result, and DOS AX must equal the verified leaf size. The commit
-is transactional and rejects conflicting initialized destination bytes.
-Tests borrow the real VGA leaf from verified media and cover byte identity,
-wrong counts, failed reads, repeat reads, and conflict rollback. No bytes are
-written back to original media or disk. The current admitted English DOS set
-does not provide `EG3TXT.BIN` or `TDYTXT.BIN`; those selections are rejected
-without substituting a different display mode. This only reaches owned startup
-text memory; the following private INT `$93`, pixels, and playability remain
-unproven.
-
-### English DOS static-data loader commit, 2026-10-24
-
-The source-ordered `$d332 -> $101a` loader is now represented by a typed
-runtime observation session separate from the VGA/EG6 startup loader at the
-shared physical DOS read return `$0580`. Its `$1028` setup reads the data
-segment from child `CS:$0116`, requests `CX=$ffff`, `DX=0`, and enters the
-existing DOS read helper `$0574`. A successful full-file return is admitted
-only for the verified English `2200AD4.BIN` (12,494 bytes, SHA-256
-`1919e5776616ca0ec8b70232c82c152451c4c917791cd84a2eade97c8a47e47d`) and
-commits those borrowed bytes transactionally into the already-owned segment
-named by `$0116`. The loader then closes and returns `$1040 -> $d335`.
-
-The F7 path's helper at `$0666` can consequently consume an owned segment at
-`$0669`; the original table word at file offset `$0254` is `$14c4`, matching
-the later `$0678` selection. Tests cover source-order requests, full-read
-commit, table bytes, close/loader return, and short-read rejection. This
-proves an admitted native observation path can carry the table into owned
-memory; no actual runtime trace of the read or `$0678` has been captured. The
-private INT `$93` results, visible rendering, and gameplay remain unresolved.
-
-### English Deuteros main-stage VERTB path, 2026-10-24
-
-Read-only analysis of the clean English Disk 1 ADF
-(`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`) on
-trv2 follows the recurring handler at runtime `$207ec` to ADF offset `+$5fec`
-(256 bytes, SHA-256
-`21356e0e8cfe8b1323a7ffa3a59c8b98720794330251862e9978447c91006d0f`). The
-handler increments `$2079e`, conditionally copies buffers and calls
-`$22bea`, restores registers, then returns zero. It has no INTREQ acknowledgement
-write. The server registration at `$208b4` uses D0=5 and `AddIntServer(-$a8)`
-with node `$2086a` and handler `$207ec`; the registration return and actual
-dispatch are not observed. After `LoadView` at `$216ee`, `$216f2` polls bit 5
-at `$dff01f`; `$224cc..$224e9` is a second bounded test of the same bit.
-Neither sequence proves a pending request or its acknowledgement. A bounded
-scan found no literal absolute-long references to INTREQR, INTREQ, BEAMCON0,
-VPOSR, or VHPOSR in this ADF; indirect and OS-mediated accesses are not ruled
-out. `ViewPort.Modes=$4000` does not establish PAL/NTSC. The hardware reference
-describes VERTB generation at line 0 and explicit INTREQ clearing, but the game
-image alone does not establish its monitor choice or a complete native
-interrupt producer/acknowledgement. Keep this boundary observation-driven;
-do not schedule it at 50/60 Hz or auto-clear it. External report:
-`~/.cache/project-eon-analysis/deuteros-amiga-vertb-timing-20261024.txt`,
-SHA-256 `f6285bb15c461e04cd9c39c6222bdfe81c2e6a350fe9b9f5c4668e05e869301a`.
-
-`evaluate_deuteros_amiga_vertb_wait_scenarios` provides a read-only branch
-diagnostic for the hash-bound post-`LoadView` poll at `$216f2`, runtime bytes
-`08 39 00 05 00 df f0 1f 67 f6 4e 75`, SHA-256
-`3ee8aeaeb214bfb7cf210c7575043595d87340370ea8f85eda94eb51d53961a7`. It
-requires those 12 bytes to match in both the supplied source span and a sparse
-clone of owned runtime memory. It reports two explicitly synthetic
-`$dff01f` inputs: bit 5 clear loops to `$216f2`; bit 5 set proceeds to `$216fc`
-(the RTS). It hashes the supplied owned image and leaves the caller's memory
-unchanged. The report also lists the minimum missing runtime evidence:
-ordered `$208b4` registration return, `$207ec` handler entry with `$2079e`
-counter preimage/result, the `$216ee/-$de->$216f2` `LoadView` call/return with
-owned A1/A6, and each real `$216f2/$dff01f` sample. The diagnostic establishes
-only the branch mapping for the verified source bytes; it does not create an
-interrupt, supply a runtime value, or infer cadence or acknowledgement.
-
-### Kickstart 1.3 Exec interrupt registration source, 2026-10-24
-
-The exact supplied Kickstart archive SHA-256 is
-`c9521c114900633c09317ca6ff979db7b9df34d3cb537de062f5d51811c42c04`; its
-262,144-byte ROM member SHA-256 is
-`ee05862d8102a08436ac4056da7d549db31625c7d47b24dfb7b3c9a5c113ca53` and is
-mapped at `$fc0000`. The 34-word Exec vector table at ROM `+$1a7c` (68 bytes)
-hashes to
-`080258c0f6e2e5d9b8c73c95214ce42fb14bb6aecee99e8fbd97e1f233ca39c4`; entry
-27 maps LVO `-$a8` to `$fc1210`. The exact 64-byte `AddIntServer` body at
-`$fc1210..$fc124f` hashes to
-`7690322fd581dfbee86bc9ea64b5f36a3e6caf9c68c5163e131d8d4d27c4f757`. It
-briefly masks master interrupts, inserts the supplied node by priority through
-the helper at `$fc1670`, enables the selected interrupt source in INTENA, and
-restores the master gate when the Exec nesting counter permits. It returns no
-registration status. For the observed game operands D0=5 and A1=`$2086a`, the
-ROM selects the chain-head cell at ExecBase+`$90` (`$54 + 5*$0c`). The helper
-walks the existing links, compares each node's signed priority byte at +`$09`,
-then updates the successor/predecessor longwords at +`$00` and +`$04` around
-the inserted node. The routine writes `$4000` to `$dff09a` while updating the
-chain, then `$8020` to enable VERTB and conditionally restores the master gate
-with `$c000` according to the Exec nesting byte at A6+`$126`. A native
-compatibility step therefore needs the actual ExecBase+`$90` head, every
-source-ordered link and priority the walk examines, the complete node preimage,
-and the nesting byte; game bytes alone do not provide those OS-owned values.
-Exec initialization at `$fc1298..$fc1319` (130 bytes,
-SHA-256
-`d938ff5161bb0c0c45cd5b5e8a799672b7646c0b3d31dbbf226f8d004e49c8e5`) creates
-five server-chain headers including VERTB bit 5. A timer.device ROM call site
-at `$fe8ec0` also registers bit 5, conditional on that device path running.
-
-This resolves the Kickstart implementation and its registration semantics,
-not the game session's runtime values: Eon still lacks the live ExecBase,
-server-chain preimage, completed game `AddIntServer` call, and delivered VERTB
-edge. The ROM scan found no PAL/NTSC selection or BEAMCON0 reference; graphics
-code reads VPOSR for beam-position work and tests INTREQR bit 5 at `$fc6efe`,
-which does not establish the game's monitor standard or interrupt cadence.
-Keep the runtime VERTB boundary observation-driven; do not infer 50/60 Hz or
-map SDL VSync to the original request. Read-only reports remain outside the
-repository under trv2's analysis cache: `deuteros-amiga-vertb-rom-20261024-01/`
-`exec-vertb-rom-analysis.txt` (SHA-256
-`26b06906d986e914df130a871a98c924fdfa0518409a694de756f5b00b6963bb`) and
-`exec-vertb-rom-followup.txt` (SHA-256
-`67dbce5d879b516f4eb3ef7d9bbb820b566610723147a3ac78e09eb71e250aab`).
-
-### English Millennium INT `$10/AH=$0f` consumers, 2026-10-24
-
-The first function-zero mode query is at EGA640 `$1d6` or MCGA `$1f4`. The
-hash-bound driver caller establishes `AH=$0f` but leaves input `AL` unknown.
-Its only proven consumer is returned `AL`, stored in the driver's cached mode
-byte before the caller requests EGA mode `$0e` or MCGA mode `$13`. The later
-verification queries at `$1e2` and `$0200` consume returned `AL` in the
-mode-match branch and `CX` in the EGA plane-count or MCGA count path. The IBM
-*PC/PS/2 BIOS Interface Technical Reference* documents returned `AL` (mode),
-`AH` (columns), and `BH` (active page) for this function, but does not define
-portable `CX`, `DX`, or FLAGS results. These facts do not supply the game's
-missing verification `CX` or raw register state. An Eon-owned SDL canvas may
-select its own display mode, but that host state cannot satisfy or advance the
-original BIOS-observation boundary. Preserve the distinction until an exact
-ordered BIOS observation is admitted. Source paths:
-`src/engine/millennium_dos_video_int91_dispatch_session.cpp:12-66`,
-`src/data/millennium_dos_video_driver.cpp:66-119`, and
-`src/engine/millennium_dos_video_function_zero_session.cpp:12-225`. Reference:
-[IBM PC/PS/2 BIOS Interface Technical Reference, April 1987, INT 10h/AH=0Fh](https://bitsavers.org/pdf/ibm/pc/ps2/PS2_and_PC_BIOS_Interface_Technical_Reference_Apr87.pdf).
-
-### Deuteros Disk 2 response-loop reference scan, 2026-10-24
-
-On trv2, a read-only scan of the canonical Deuteros English Disk 2 archive
-(`Deuteros - The Next Millennium (1991)(Activision)(M3)(Disk 2 of 2).zip`,
-SHA-256 `b98ee3c36141773485c5e03dd8bb4aa59784eaf08a1363fa6a2951a5eb5fdc0a`)
-verified its sole ADF member in memory (901,120 bytes, SHA-256
-`99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a`).
-At every even byte offset it checked absolute-long JSR, JMP, and LEA encodings
-for target `$4077e`; it also searched all byte offsets for the four-byte
-pointer literal. No candidates were found. The same byte-pattern scan of the
-complete Disk 1 ADF (901,120 bytes, SHA-256
-`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`) also
-found no candidates outside or inside the loaded title-stage span. This
-narrows the direct-reference search across both disk images. It does not rule
-out runtime-built pointers, another system/library region, or code loaded
-from a different release, and it does not establish whether Disk 2 code
-participates in the title scheduler. The live response-loop caller and
-public-input effect remain unresolved.
-
-### Deuteros native MoveSprite postimage validation, 2026-10-24
-
-The native raw-mouse callback writes the bounded, clamped coordinates to
-`$1ffc8/$1ffce` before stopping at graphics.library `MoveSprite` vector
-`$201b6`. The typed MoveSprite observation still carries the eight original
-coordinate/delta/bounds words read by `$20118`. Runtime validation now matches
-the six unchanged delta/bounds inputs against owned memory, recomputes the
-expected clamped coordinates from the hash-bound routine, and checks those
-against the callback's owned postimage. This avoids rejecting a valid move by
-comparing post-callback memory to pre-callback coordinates and avoids applying
-the deltas twice. It also requires observed A6 to match the owned graphics
-library base loaded at `$12fec`, tying the sample to the caller's actual
-vector base. These checks validate call provenance and arguments only;
-MoveSprite's graphics and Copper effects, callback-to-service scheduling,
-and a visible cursor move remain unimplemented. The direct native-data
-detection test passes after this change.
-
-### Deuteros `$222a2` callback target prefixes, 2026-10-24
-
-The canonical Disk 1 ADF was read from its supplied ZIP in memory and its
-archive, ADF, and loaded-stage SHA-256 values matched the admitted identities
-above. An even-offset byte scan found 29 occurrences of the absolute address
-encoding for `$222a2`; decoding each aligned candidate as M68000 code separates
-the actual absolute-long loads/stores from embedded address bytes. The
-computed dispatcher at `$223c4` loads this cell and defaults to `$36a8c` when
-it is zero. Seven statically installed callback targets were identified:
-`$332d8`, `$332de`, `$33c98`, `$33f5a`, `$34f74`, `$35740`, and `$38600`.
-
-Hash-bound prefixes from those targets show that `$332de`, `$33c98`,
-`$33f5a`, `$34f74`, and `$35740` clear `$222a2` before calling local routine
-`$201cc`; they then jump or call other in-stage state routines (`$326b2`,
-`$302b8`, `$30060`, or `$30ef8`). `$332d8` first calls `$2da4c`, then follows
-the same clear/`$201cc`/`$326b2` route. `$38600` performs local setup, calls
-`$201cc`, clears `$222a2`, then checks a loaded-stage word and selects a
-separate local continuation. The exact first-transfer prefixes are:
-
-| Runtime span | ADF offset | Bytes | SHA-256 |
-| --- | ---: | ---: | --- |
-| `$332d8..$332f2` | `$8e2d8` | 26 | `ecfbb5a97759e4de093c1d298303d6c3e8ca56a16cd617048f66b8d228861406` |
-| `$33c98..$33cb0` | `$8ec98` | 24 | `1e5e5519bee981203842abc24ad8fbbad180654f71968bdaa963868060636845` |
-| `$33f5a..$33f6e` | `$8ef5a` | 20 | `5c6d43585359f69cb63166e4aca9b6d8b77aa2b891e98ac5bdd10be6f19bdb49` |
-| `$34f74..$34f94` | `$8ff74` | 32 | `88c4b5889d3b1ada965640e5c82b19be8e9257cf31376617eb5041a80e4b205c` |
-| `$35740..$3577a` | `$90740` | 58 | `e993d867e9d299008d15936a680f54910ee25741d9fd8a5d1518b0b21c16f4b7` |
-| `$38600..$38652` | `$93600` | 82 | `62c09f53f619f4f84c7c191d435a720d11de4e24f00a4afdc5c9236e7a60866f` |
-
-These prefixes narrow the missing response-consumer route: the known
-`$222a2` callback targets do not directly select `$4077e`, and their initial
-local code resets the callback cell before later state transitions. This is
-not a complete control-flow proof for the routines reached after those
-transfers, nor a claim that the seven targets were observed at runtime. The
-`$223dc` call remains unscheduled from owned native execution; do not connect
-SDL queue consumption based on these static callbacks alone. Original bytes
-were decoded in memory and no disassembly or game data was written to disk.
-### 2026-10-24 Deuteros Amiga title hit-test scheduler
-
-The canonical English Deuteros Disk 1 ADF was read from the recognized ZIP in
-place; no media bytes were written. The hash-identified title-stage image at
-ADF `+$6e000` is loaded at runtime `$13000`. Its linear candidate scheduler
-span `$225ce..$22760` (ADF `+$7d5ce`, 402 bytes) has SHA-256
-`0716801a63e40ea713132e900b647d17e2b62a9210012a8f397bc6a57251ba73`.
-The listing is external at
-`~/.cache/project-eon-analysis/deuteros-next-playability-20261024/deuteros-amiga-clean-loaded-spans.md`;
-it covers the full loaded ranges but does not classify all code and data.
-
-The preceding outer-loop prefix `$223b2..$22400` (ADF `+$7d3b2`, 78 bytes)
-has SHA-256
-`9fb5bd4e5ca8f4baecd6a85938d31a2f5af34807113a7871dd6e4992824c1f18`.
-When the `$1ffd4` bit-2 test selects the coordinate path, `$223f0` loads D3
-and D4 from owned cursor words `$1ffc8/$1ffce`; `$22400` selects `$22584`
-when X is at least `$61`. The local `$20118..$201be` mouse-movement routine
-updates these cursor words from callback deltas but stops at graphics vector
-`MoveSprite` (`$201b6`). This gives the scheduler inputs a source-based origin,
-but does not prove that the runtime reaches the outer loop after SDL input or
-that the graphics service has updated the visible pointer.
-
-Runtime address `$223b2` is stage-dependent and must not be used as a global
-PC identity. In the title-stage image loaded at `$13000`, the 32 bytes at ADF
-`+$7d3b2` (SHA-256
-`602645d74f234418afb7348b9a0efeccc2cfe5e10ca7ace6f0effb76859dd641`)
-begin `MOVE.W $1ffd4,D0; LSR.B #2,D0; BCC $223f0`; this is the title
-hit-test scheduler prefix described above. The later main-stage image is
-loaded at `$20000` from ADF `+$5800`, length `$4200`, so it overlays runtime
-`$223b2` before the main-stage loop runs. In that image, the 32 bytes at ADF
-`+$7bb2` (SHA-256
-`1ab10633e4e5e941aa6d44db5752201c1f5026692a98dc6d62848c4d2c8ed942`)
-instead begin `CLR.W $22a02; CLR.W $22a04; CLR.W $22a06; CLR.W $22a08`.
-Thus the title hit-test cannot be scheduled from the main-stage `$21822`
-input loop by address alone. Its missing runtime path is specifically the
-title-stage caller/transition before the `$20000..$24200` overlay, with the
-title-stage memory image and callback state still owned. Both byte spans were
-read in place from the canonical Disk 1 ADF; no media was written.
-
-At `$225ce`, the routine reads the active hitbox table pointer `$222b2` and
-input coordinates D3/D4. Ordinary table records are 12 bytes: the routine
-checks half-open x/y bounds, stores the selected row index at `$222a0`, reads
-the row ID and action word, and updates `$2229e/$22292` before branching to
-`$22484` when the selected value changes. ID `$fffe` switches to the fallback
-table at `$222b6` and retries. ID `$ffff` takes a distinct path: it indexes
-the transform records at `$2215a`, derives an action value, then performs an
-indirect `JSR (A1)` at `$226b2`. Tables with header bit 7 use the alternate
-selection path `$226ca..$2275c`, including `$222a6/$222a8` state.
-
-This proves the scheduler's local table semantics from the original bytes; it
-does not prove which runtime coordinates, table variant, or table contents are
-active after a real SDL event, nor does it prove the indirect handler result or
-visible effect. Current native driving does not step `$225ce`. The next
-playability step is to derive its register and owned-memory preimages from an
-actual title runtime transition, then execute only the hash-bound local path
-and stop at the indirect handler when its target behavior is not established.
-
-A read-only pass over the canonical Disk 1 source identifies one concrete
-candidate table selected by the null-callback fallback when its bit-1 gate is
-set: `$21550` (ADF offset
-`$7c550`). Its 38-byte header-plus-record span hashes to
-`350dd810db87fe939e8df679cf92b813949a8b367ed7bb7c91cc1f9e5e7dc479` and
-contains three 12-byte rows. Their half-open rectangles are x `[128,255)`,
-`[320,447)`, and `[512,639)`, all y `[24,180)`; each carries ID `$ffff` and
-transform selector `$10`, `$11`, or `$12`. Those selectors address the
-hash-identified 36-byte transform span at `$2221a` (ADF `$7d21a`), SHA-256
-`0d4182f315b370bff257a83cc8505044b09629aa9c983c8ad9f82306d39d2b0e`.
-The three records end in indirect handler addresses `$228f8`, `$2294e`, and
-`$229da`. These are source candidates for three title hit regions; no runtime
-evidence yet shows that `$21550` is active, that SDL reaches the scheduler, or
-that any of the handler calls occurs. The next capture should preserve the
-owned `$222b2` pointer, cursor words `$1ffc8/$1ffce`, D3/D4, and the selected
-`$226b2` target at the same ordered call boundary.
-
-The clean title-stage candidate table at `$21f28` (ADF `$7cf28`) has a
-`$0049` header: nine 12-byte records, header-bit 6 set and alternate-table bit
-7 clear. Its complete 110-byte hash is
-`e4307d4b58048802d206e3b460ae26decf0099bd3da21d191f64dfa91542fdd3`. The
-hash-locked title-stage parser exposes these source facts only. At ADF
-`$7c0fa`, the canonical English image contains
-`23fc00021f28000222b2` (`MOVE.L #$21f28,$222b2`), SHA-256
-`c96d8c22592d3ed8f572f68c2c94e446eb54a19d65d7e7cfed7f724ed157d1a5`.
-An earlier hash value recorded for this instruction was wrong; it came from
-neither the canonical instruction nor its exact ten-byte span. The source
-pointer write connects the initializer to the table, but does not prove the
-initializer ran in the native session or that this table was active for an
-input event. The next runtime step is still to establish the owned
-`$222b2==$21f28` at the reached `$225ce` loop before admitting a row selection.
-
-The parser now exposes all nine exact 12-byte rows as typed source metadata.
-Their half-open bounds and IDs are `(x=[198,248), y=[48,64), $a0)`,
-`([216,248), [98,112), $a1)`, `([248,276), [106,120), $a2)`,
-`([312,352), [108,126), $a3)`, `([348,384), [55,72), $a4)`,
-`([366,398), [81,98), $a5)`, `([404,448), [88,105), $a6)`,
-`([444,490), [50,74), $a7)`, and `([498,540), [106,126), $a8)`; every
-row's action word is `$54`. At `$2264c`, the original routine copies the
-action word to `$2229e`; because header bit 6 is set, it sets bit 31 on the
-row ID before comparing/storing `$22292` and branching to `$22484`. The exact
-half-open bounds and command words are covered by a real-media native test.
-This models table data and the local selection contract only; it does not run
-the scheduler from an SDL event, establish the runtime pointer, or claim that
-`$22484` or the later display path produces a visible action.
-
-### 2026-10-25 Deuteros indirect entry literal search
-
-The reusable read-only address scanner checked all 11 local Deuteros ADF
-members in place for the 24-bit address `$210d4`. The clean English Disk 1
-ADF (SHA-256
-`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`) has one
-absolute-long byte hit at ADF offset `$7c2d0`; the reported 24-bit hit at
-`$7c2d1` overlaps those same four bytes and is not a second reference. The
-canonical `[cr SKR]` and `[a]` copies have the same hit and disk bytes at that
-offset. The `[a2]` Disk 1 variant has its corresponding literal at `$7c2de`;
-the other scanned ADFs have no hit. Two callers use a longword dispatch base at runtime `$212b0`:
-`$2237c` indexes it with `$2229e * 4`, loads a longword, and calls a nonzero
-target; `$30df4` indexes it with `D3 * 4` and calls the loaded target. The
-table's complete extent is not established; the earlier 16-word scan at this
-base covers only its first eight longword slots. The `$210d4` literal at ADF
-`$7c2d0` is at dispatch index 8, but this does not show that the native
-session selects it. The cell is runtime `$212d0` (ADF `$7c2d0`),
-bytes `000210d4`, SHA-256
-`a6357bd6c3bf95e49132a6f178217996bcaa27b4a09c8ccbc57b48b99f70141d`.
-
-The title hit-test branches write `$2229e` at `$2264c`, `$226a8`, and `$22744`.
-For the ordinary nine-row table, the action value is `$54`; dispatch index
-`$54` addresses runtime cell `$21400` (ADF `$7c400`), whose four bytes are
-`00020e08` (SHA-256
-`ca06852095f9be5582dcf3897adc54592ce59daa270df4ab1ed8ddcf0e63c7e7`). That
-cell points to `$20e08`, whose hash-identified ten-byte prefix at ADF `$7be08`
-(SHA-256 `6a62e9892a64e6631c2aa338cc6fb715c3849858f8a564a377103cbc007e0ec2`)
-loads the selected row index from `$222a0`, calls `$20e18`, and jumps to
-`$36a8c`. The title-stage parser now exposes this action/cell/handler mapping
-as a typed source profile with its dispatch-cell hash and a hash over the full
-98-byte local prefix `$20e08..$20e6a`. That local prefix sets the selected
-system fields and stops at the first service call, `JSR $1fb9a` at `$20e6a`,
-with `D0=$f9`; the service return is not modeled. A real-media native test
-checks the source profile. This links a hit-test result to a precise local
-execution boundary, but does not prove that the native SDL path reaches the
-scheduler, that `$222b2` is initialized at runtime, or that later graphics
-service returns and gameplay state are owned.
-
-The earlier capture's PC `$210d4` / opcode `$51c8` matches the main-stage
-load, before the later title-stage overlay. The main stage loads ADF `$5800`
-to `$20000`; runtime `$210d4` therefore maps to ADF `$68d4`, whose four bytes
-are `51c8fff8` (SHA-256
-`71b5246839f2d5a281a97e9f3be4dc328b35a1cc3cbcd6335feb02d103b630b7`),
-`DBRA D0` back to `$210ce`. The subsequent title stage loads ADF `$6e000` to
-`$13000`, covering `$210d4` with ADF `$7c0d4` bytes `4eb900036a8c` (SHA-256
-`d741bdffb9fad022f74fd1783b0f15120d267828ab9541e9e76dd9ce288d7169`),
-`JSR $36a8c`. Thus the historical loop opcode and the
-dispatch target's title-stage code are explained by ordered stage loads, not
-an unresolved same-stage overlay. After that JSR, the title-stage prefix calls
-`$41a10`, `$33d2e`, `$41170`, and `$41bb4` before the `$210fa` store. No
-current native session owns that ordered continuation and its returns. Do not
-set `$222b2` from the static literal alone.
-
-The three handler targets in that candidate transform table resolve to
-separate hash-identified local routines. `$228f8..$2294d` (ADF `$7d8f8`, 86
-bytes, SHA-256
-`627df5f90d00f6d59d28c38c1b2e8c1f8f1ba5f3354bac1e7f1edced7d0c0a78`)
-tests a mask through `$13036`; when selected, it derives a record from
-`$13006` and the row index, reads a byte at record offset `$ef`, sets bit 31,
-and returns. `$2294e..$229d9` (ADF `$7d94e`, 140 bytes, SHA-256
-`a7c0c08a9ad3e86af2187aa56c0d57fabff6e10558c0f3c65975b58955ec4d98`)
-tests `$1304c`, indexes 28-byte records from `$1aca6`, stores a derived value
-at `$22296`, and returns a bit-30-tagged pointer derived from `$13128` and a
-10-byte stride. `$229da..$22a5f` (ADF `$7d9da`, 134 bytes, SHA-256
-`c176402f82d5a5eac7d829e3dc7c1006ca546274607731065ce18965fc844928`)
-tests `$13050`, indexes 34-byte records from `$1bc66`, stores a derived value
-at `$22296`, and returns a bit-30-tagged pointer derived from `$136c8` and a
-12-byte stride. The complete linear candidate listings are retained only in
-the external cache at
-`~/.cache/project-eon-analysis/deuteros-title-handlers-20261024/`.
-
-These effects refine what must be observed at the selected indirect call:
-the relevant mask, current index, record bytes, `$22296` preimage/postimage,
-and returned D0. They do not establish that the candidate handlers are
-executed, what their returned pointers mean to later code, or that they
-produce a visible title or gameplay action.
-
-The same Disk 1 overlay contains source-backed writers for all three tested
-availability masks. `$2fd44..$2fd73` (ADF `$8ad44`, 48 bytes, SHA-256
-`f1a05a90065572f91cb231cc26fb208762e1cd04b940b5006a86619a83e7552c`)
-returns from local helper `$2fd74`, then sets bit D2 in the word addressed by
-`$13036` and sets bit 2 in the word addressed by `$1301a`. The existing
-`$20e18` setup derives `$13036` from the current `$13006` mode and `$13024`
-mask base. `$2fbb0..$2fc57` (ADF `$8abb0`, 168 bytes, SHA-256
-`852060b5f66df6f440f62cf26749e0b1b61bc1c482c819db4fc00c524ea751a4`)
-sets bit D0 in the word addressed by `$1304c`, initializes a 28-byte record
-in `$1aca6`, and writes its 10-byte display entry under `$13128`. `$20e18`
-derives `$1304c` from `$1303a` and the current mode. `$2fc58..$2fd1b` (ADF
-`$8ac58`, 196 bytes, SHA-256
-`4901afce8d4ef4609a0a7394c2ad24c3e1c0b3d7aa73c049e73c992817605581`)
-sets bit D0 in the word addressed by `$13052`, initializes a 34-byte record
-in `$1bc66`, copies a 12-byte entry under `$136c8`, and updates `$137b6`.
-Here `$20e18` sets `$13052` to `$13050`.
-
-These writes explain how later game operations can make the three hitbox
-handlers eligible. Disk bytes at these addresses alone are not the live mask
-values: the next runtime capture must order the relevant writer, mode, bit
-index, record bytes, then the hit-test and command-dispatch boundaries. This
-narrows the state search without claiming that a given writer ran or that a
-click was accepted.
-
-The hash-bound title hit-test continuation `$22668..$226c9` (ADF `$7d668`,
-98 bytes, SHA-256
-`678c6b9dac93389081ab375254923bfad8854db0e6da911da71919f9f4f0888a`)
-normalizes D3/D4 through the selected transform row, calls its A1 target at
-`$226b2`, compares returned D0 with `$22292`, and on change stores D0 and
-branches to `$22484`. The exact `$22484..$224f1` tag dispatcher (ADF `$7d484`,
-110 bytes, SHA-256
-`d583023de20a75c716b22061c6af6144030601ca1850fc67741622855d6377ea`)
-calls `$1fb9a` with D0=1, then dispatches the selected `$22292` value. Bit 31
-uses `$1ff08`; bit 30 clears that tag, passes the pointer through `$1fa00`,
-swaps `$22296` into D0 for `$1fb9a`, then continues to `$1ff08`; bit 29 uses
-`$1fb9a` and `$1fe56`. Thus the three table candidates reach already
-hash-identified command and display paths, but their runtime inputs are not
-yet supplied by the owned native loop.
-
-The next runtime evidence must pair the ordered `$226b2` return and `$22292`
-change with the `$22486` `$1fb9a` call, its current `$1f97c` table base and
-selected word, then each resulting command byte or opaque call return. Existing
-command-session coverage begins at the startup dispatch `$404f8`; it does not
-by itself prove or admit this repeated title-loop invocation.
-
-### Deuteros `$4077e` direct-reference search across supplied ADFs (2026-10-25)
-
-The canonical English Disk 1 ZIP (`7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533`)
-was read in place. Its ADF hash is
-`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`; the
-loaded title-stage hash is
-`48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03`.
-The bounded M68000 branch, PC-relative JSR/JMP, absolute JSR/JMP, LEA, and
-pointer-literal scan of that title-stage span finds zero direct references to
-runtime `$4077e`. A second read-only search checked every byte offset in all
-11 ADF members under `~/.projecteon/Deuteros*.zip` for the absolute-long byte
-sequence `00 04 07 7e`; none contains it. The canonical Disk 2 ADF
-(`99909db1e190be02e049084743af44f00e331be6bf2d97b4831ada5fe4c30b4a`) also
-has no such sequence. A separate bytewise pass also found no 24-bit sequence
-`04 07 7e` in any of the 11 ADF members. These searches rule out only literal
-absolute-long or contiguous 24-bit target encodings in the inspected bytes.
-They do not rule out computed,
-relocated, or system-installed calls, nor establish where the response loop
-is reached. `tools/scan_deuteros_address_literals.py` reproduces the archive
-scan and reports only archive/member hashes and offsets. Its synthetic marker
-test checks both encodings at unaligned offsets; synthetic bytes are used only
-to validate the locator, not as game state or evidence. No media was written
-or copied. Continue from the owned native PC and computed-dispatch pointer
-provenance.
-# Synthetic MCGA startup probe boundary
-
-The isolated `--native-video-probe` diagnostic is a source-navigation aid, not
-runtime evidence. It rehashes the selected English Millennium DOS release and
-the MCGA driver (`bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228`)
-in place. The bounded driver path asks BIOS INT `$10`, AH=`$0f` at driver
-instruction `$01f4`; it consumes AL, stores that value at driver offset
-`$00ae` from `$01f6`, and next requests INT `$10`, AX=`$0013` at `$01fc`.
-
-For discovery only, the probe supplies synthetic AL=`$13`, reports the
-hypothetical store and source-predicted next request, and exits. It neither
-advances the live native session nor writes `NativeRuntimeMemory`. The
-synthetic value is Eon's explicit probe policy; no original BIOS response,
-runtime reachability, gameplay effect, or parity claim follows from it. The
-probe only identifies the next real boundary to investigate.
-
-## Deuteros Amiga title initialization trampoline
-
-The canonical English Disk 1 ADF has SHA-256
-`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`. At
-runtime `$33d2e` (ADF offset `+$8ed2e`), the complete 12-byte instruction span
-`4df900033d264ef9000201d2` hashes to
-`a594d712557e7b8ed8d42c1fb70de7717f3230b0a66076901f7f22a4e131aa38` and
-decodes as `LEA.L $33d26,A6; JMP $201d2`. Earlier linear decoding began at
-`$33d26`, inside the inline stream, and therefore did not classify this entry
-correctly. The A6 target is a local dispatcher; this corrects the static
-decode but does not prove the title initializer reached it at runtime.
-
-The exact 96-byte caller prefix at runtime `$210d4` (ADF offset `+$7c0d4`)
-hashes to `664bd394bf8618da304f54ed056b575cf6af9f3aedcc3fbb8606f398995b7b25`.
-It calls `$36a8c`, `$41a10`, `$33d2e`, then sets D0=2 and calls `$41170`, calls
-`$41bb4`, stores `$21f28` at `$222b2`, clears `$222a2`, and continues at
-`$20cba`. This is a source-ordered caller path only; its entry state and
-external graphics/service returns are not observed.
-
-The `$41170..$411b5` wrapper (ADF offset `+$9c170`, 70 bytes) hashes to
-`e80ab60d5c0f7022c6f63b16a13b7bd6cf034e9401544d0ceb4038ca0c7c3056`. It
-copies one six-byte record selected from `$410dc + D0*6` to `$1ed2e`, then
-calls graphics.library `LoadRGB4` (LVO `-$c0`) with A0=`$12e12`, A1=`$1ed24`,
-D0=8, restores A0 and returns. The caller replaces D0 immediately, so the
-return value is not consumed by this path. The runtime ViewPort at `$12e12`,
-graphics base, and `LoadRGB4` effects remain unowned; no graphics result or
-palette side effect is inferred. The source listing is retained only in the
-scoped external analysis cache at
-`~/.cache/project-eon-analysis/deuteros-title-init-prefix-20261025.md`.
-
-### 2026-10-25 DOS selector-media locator result
-
-A read-only, in-memory ZIP-member scan of the local supplied archives confirmed
-that the English DOS source archive and installed English set contain only
-`VGATXT.BIN` and `EG6TXT.BIN` for the startup selector. The Spanish
-pre-installed archive `Downloads/Millennium-Return-to-Earth_DOS_ES_Pre-Installed.zip`
-(SHA-256 `08327b4bae7ddd082e0d12b0e297210d7cc753d3be23ab1744f17287215ebea8`)
-contains `EG3TXT.BIN` (1,219 bytes, SHA-256
-`be6a60a863f4630a3b3df5decbdcab4e5001ce57bf9d526a47093725966a07a4`) and
-`TDYTXT.BIN` (1,210 bytes, SHA-256
-`bfd63526c3255fd973e4e522b8f39789488292df37fed74091e35dca7b910b16`). The
-English source archive is `Downloads/Millennium-Return-to-Earth_DOS_EN.zip`
-(SHA-256 `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`).
-The Spanish hits are locator evidence for that distinct edition only; they
-were not copied, extracted, or supplied to the English runtime. No matching
-English files were found in the scanned local archives. Spanish Millennium
-remains preservation-only, and neither hit fills the English selector gap.
-
-### 2026-10-25 Deuteros title trackdisk runtime service
-
-The deterministic title coordinator installs a generation-scoped Eon
-trackdisk compatibility service after the admitted native input-handler
-handoff. It checks the source-ordered `$206de`, `$2070c`, `$20732`, `$2077a`,
-and `$207a0` calls, and explicitly routes system Disk 1 to Eon's unit-0
-service. For each pending `$20934` ETD_READ, it validates the owned
-`$206a0` request pointer, `$206a4` staging pointer, command, flags, length,
-offset and `iotd_Count`; then it transfers the hash-locked source chunk,
-commits `io_Actual`/`io_Error`, and copies staging bytes to
-`$26cc0 + ordinal*$1600`. The path is separate from captured Exec returns and
-does not alter ADF bytes. The runtime also installs an Eon-owned guest-visible
-Exec compatibility graph for the verified title setup: ExecBase `$d00000`,
-current Task `$d00200`, trackdisk node `$d00300`, and unit records `$d00400` and
-`$d00600`. It initializes `ThisTask`, `DeviceList`, and `PortList`, adds the
-two title MsgPorts using the ROM-derived list rules, then resolves the source
-`OpenDevice` calls and writes their IORequest/device/unit fields. These
-addresses and successful service results are explicitly Eon policy; they are
-not captured Kickstart object addresses or ROM return observations. Native
-tests check list links, node fields, call ordering, IORequest preimages, unit
-counts, and rejection atomicity. The main-stage `$2099e/$209ca/$209f0` calls
-also use this graph in a separate ordered path; their successful results are
-tagged Eon compatibility policy, and the path stops at the subsequent CIA
-hardware boundary until an explicit typed result is available. Writes and
-updates remain unsupported until an Eon-owned save overlay is implemented.
-
-### 2026-10-25 Kickstart Exec-object requirements at `$206d4`
-
-The supplied Kickstart 1.3 ROM (SHA-256
-`ee05862d8102a08436ac4056da7d549db31625c7d47b24dfb7b3c9a5c113ca53`, mapped
-at `$fc0000`) resolves the title's setup calls. `FindTask` at
-`$fc1db0..$fc1e02` (ROM offset `$1db0`, 83 bytes, SHA-256
-`f78cb38a8b80a19811f71d85f89a1fd002baedf0c6267488172632f76bb859e3`) returns
-`ExecBase+$114` (`ThisTask`) in D0 when A1 is zero. This is a guest Task
-pointer, not an opaque host token.
-
-`AddPort` at `$fc1b54..$fc1b6b` (ROM offset `$1b54`, 24 bytes, SHA-256
-`de1da91c2c8dbe35f05ab52af731339967da9b32ea289f1e9daa9872e19e5dd4`)
-initializes `mp_MsgList` and enqueues each guest MsgPort through
-`ExecBase+$188` (`PortList`). The two source ports at `$2061c` and `$20676`
-receive the saved `FindTask` D0 at `+$10` as `mp_SigTask`; local code supplies
-node type 4, priority `$7f`, name `$206ac`, and signal bit 1.
-
-The `OpenDevice` wrapper at `$fc06a2..$fc06ef` (ROM offset `$6a2`, 78 bytes,
-SHA-256 `13d3a842b35a5066e34cc19b39fad8fe4b6b8853d4dcf87f676aba0336792f20`)
-clears `io_Error`, searches `ExecBase.DeviceList`, stores `io_Device` at `+$14`
-and invokes the device open vector. The trackdisk open path validates the unit,
-resolves or initializes unit state and writes `io_Unit` at `+$18`. The title
-requests units 0 and 1 using IORequests `$205e4` and `$2063e`. The bounded native
-service now supplies the minimum coherent guest-visible ExecBase, current Task,
-public port/device lists and IORequest state needed by these exact calls, using
-a reserved Eon compatibility range. It does not reconstruct the original Exec
-scheduler, prove equivalence to a captured object graph, or run the Kickstart
-routines as guest code. This remains a typed compatibility service derived
-from the ROM ABI, not an observed original return.
-
-References: [FindTask autodoc](https://developer.amigaos3.net/autodocs/exec.library/FindTask.html),
-[AddPort autodoc](https://developer.amigaos3.net/autodocs/exec.library/AddPort.html),
-[OpenDevice autodoc](https://developer.amigaos3.net/autodocs/exec.library/OpenDevice.html),
-[ExecBase NDK definition](https://github.com/kusma/amiga-dev/blob/master/targets/m68k-amigaos/ndk/include_h/exec/execbase.h),
-[Exec Tasks](https://wiki.amigaos.net/wiki/Exec_Tasks), and
-[Exec Messages and Ports](https://wiki.amigaos.net/wiki/Exec_Messages_and_Ports).
-
-The active title path now defers construction of this Eon compatibility graph
-until the native service step reaches the `$206d4` call boundary, after the
-earlier input-handler registration. This fixes the prior ordering in which
-those objects were created during registration. The native service receipt
-now carries the bounded zero-success path through local request writes and the
-RTS to `$404bc`. Its virtual stack record accounts for the caller return at
-`$40b5e`, saved FindTask D0 at `$40b5a`, service-call low-water `$40b56`, and
-final user A7 `$40b62`; it does not write those stack words into guest memory.
-The title passes literal `$7fff0` to Exec `UserState` at `$40468` as its
-supervisor-stack argument. The ROM first saves active A7 to USP, loads D0 into
-supervisor A7, then switches SR; the model therefore restores user A7 from the
-previously saved `$40b62`. This is an Eon-native stack-bank translation, not
-an observed guest return. The Kickstart V34.005 `UserState` defect and whether
-the title applies SetPatch remain unresolved. The next source call is
-`$206be`, whose zero-return branch is not yet modeled.
-
-### 2026-10-25 Millennium Defjam Amiga OpenDevice prefix
-
-For the recognized English Defjam direct container
-`ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd`, a
-source-hash-bound parser describes the native setup beginning at `$41d4a`.
-It prepares IORequest `$41cd0` for `input.device`, reaches Exec `OpenDevice`
-vector `-$1bc` at `$41d78` with unit 0 and flags 0, tests D0 at `$41d7c`, and
-branches to `$41d88` on success or `$4268c` on nonzero D0. (The previous
-metadata incorrectly labelled `$41d8a` as the success target; instruction
-decoding of the admitted stage confirms `$41d88`.) The success path issues
-`DoIO` vector `-$1c8` at `$41d98` with command 1, initializes the original
-Interrupt structure at `$41d1e` (`is_Data=$41d16`, priority `$7f`,
-`is_Code=$41e22`), then issues command 9 (`IND_ADDHANDLER`) at `$41de2` with
-`io_Data=$41d1e`. The exact setup span `$41d4a..$41df1` hashes to
-`b6ff3a2b570fccfe76a7df34bc6549f5d1745b5bf71ae16a6004e0fba455b15c`; the
-handler `$41e22..$41ec7`, key translation table `$41b50..$41bef`, and queue
-consumer `$41b0a..$41b35` are independently hash-addressed in the release
-session metadata. These operation names follow the AmigaOS input-device
-command table ([Input Device documentation](https://wiki.amigaos.net/wiki/Input_Device)); the exact request fields and call sites come from
-the admitted stage bytes. Tests assert the branch target, service tuples,
-handler/table spans, and rejection of mutated setup bytes. This remains
-static source evidence: there is no OpenDevice/DoIO return in this adapter,
-no active SDL callback, and no rendered first-stage screen.
-
-The handler's source-defined C ABI is `D0=InputEvent*`, `A0=InputEvent*`,
-`A1=is_Data`; this follows the input.device `IND_ADDHANDLER` autodoc calling
-convention. A native compatibility session now models only the hash-checked
-English Defjam callback's bounded data effects after a separately tagged Eon
-compatibility registration token: class 6 returns the original event-list
-pointer; classes `$0f` and `$10` write `$41e20` to one and zero respectively;
-other events are consumed. For RAWKEY class 1 it stores qualifier at `$41b46`
-and code at `$41b44`, suppresses the same consecutive code, accepts codes
-below `$50`, refuses enqueue when count `$41c06` has reached `$14`, and
-selects the uppercase half of the source table when any qualifier low-three
-bit is set. The consumer returns the first queue byte, shifts the following
-20 bytes down, and decrements the count. A focused native test uses the
-original key table to verify `a`/`A`, duplicate suppression, release then
-re-press, timer forwarding, event-flag writes, generation isolation, and
-queue pop. The compatibility token is explicitly Eon-generated: no Exec
-return, input.device execution, SDL key mapping, title-visible effect, or
-gameplay action is established. The implementation uses the original ADF
-in place and borrows the 160-byte key-table span for the session; no table
-bytes or disassembly listing are stored in the repository.
-
-### 2026-10-25 Millennium Atari native TOS startup services
-
-The hash-identified English Atari archive
-`0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69`
-contains the one-disk Equinox `.st` image (SHA-256
-`3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7`). The
-native active-session driver now advances only the existing Eon TOS
-compatibility services for the SR read at `$2aa88`, XBIOS `Physbase` selector 2
-at `$2a520`, `Logbase` selector 3 at `$2a52e`, and `Getrez` selector 4 at
-`$2a53c`. The three framebuffer/mode return stores are applied through owned
-runtime memory. At `$2a546`, the driver initializes an Eon-owned 4 KiB Line-A
-workspace at `$38000..$38fff`: the standard table has `VPLANES=4`,
-`VWRAP=160`, and bounded `CONTRL`, `INTIN`, `PTSIN`, `INTOUT`, and `PTSOUT`
-areas. Its `INTIN`/`PTSIN` pointers at table offsets `+8/+12` are passed
-through the hash-locked local continuation into the guest fields at `$2a514`
-and `$2a518`. These are explicitly Eon compatibility addresses, not captured
-TOS addresses. The real-media CLI follows the JSR `$2b55a`, BSR `$2b598`, and
-`CLR.B` at `$2b59e`; `MOVEQ #0,D0` makes the indexed byte sources deterministic.
-It reads those sources and the finite loop's indexed words from native memory,
-applies the proved stores, preserves MOVEM-restored register values as opaque,
-and reaches XBIOS `$26` at `$2aa72`. It does not model returned Line-A
-font/routine vectors, Line-A drawing operations, the XBIOS `$26` result,
-gameplay, or parity. The supplied original archive
-remains unchanged.
-
-The exact next call is XBIOS `$15` (`Cursconf(function, operand)`) with both
-words zero. The native TOS compatibility path now applies the documented
-`function=0` effect (hide the VT52 text cursor), performs the six-byte guest
-stack cleanup, and advances to selector `$06` at `$2aabe`. The TOS interface
-does not define a D0 result for this operation; Eon marks that result
-undefined and does not use a synthetic value to choose control flow. The
-continuation is anchored to the exact original bytes, whose next operation is
-the selector-6 palette call. See the [XBIOS Cursconf reference](https://freemint.github.io/tos.hyp/en/Screen_functions.html).
-
-XBIOS selector `$06` is serviced as TOS `Setpalette`. The native Atari driver
-reads exactly 32 bytes from the source-proven pointer `$2a612` and decodes
-sixteen big-endian words into the generation-owned checkpoint. The real-media
-driver services the read-only `MILL22C.INF` Fopen/Fread/Fclose path and feeds
-its hash-checked bytes through the bounded native token decoder. With the
-4096-transition diagnostic budget, the current run reaches the game-init
-zero-copy boundary at `$2b2ea` (consumer sequence 2528, local instruction count
-37725). Earlier CLI output incorrectly showed `$2b5a6` because it reused a
-stale boundary address and omitted the actual consumer state. The corrected
-diagnostics report the current hash-bound boundary and distinguish this
-zero-copy init step from game-init completion. The admitted `MILL22C.INF`
-hash remains `a28a49eea33a14210193bbe6e36abf95700ac6789681bf1a9eac5d09a0999055`.
-No palette words are compiled into Eon, and no D0 value is inferred for the
-void XBIOS operation. The real-media CLI test checks source immutability.
-Palette presentation, a completed decoded frame, input, and gameplay remain
-unverified.
-
-The table layout and Line-A `$A000` return contract are cross-checked against
-[EmuTOS `linea.S`](https://github.com/emutos/emutos/blob/master/bios/linea.S),
-[EmuTOS `lineavars.S`](https://github.com/emutos/emutos/blob/master/bios/lineavars.S),
-and the [Atari Line-A structure reference](https://www.atari-wiki.com/index.php?title=Line_A).
-
-### 2026-10-25 Deuteros native post-Exec pointer seed
-
-The launch-linked native continuation now crosses the exact local helper at
-`$206be` and the literal seed call at `$404c2` after the Eon-owned five-call
-Exec/trackdisk setup. The helper source is hash-locked to
-`cdcda125af5c05d4d88e7d486f15f50bd87c4641a38e9c8a4e29a9394152317a`; it copies
-the owned pointer `$205e4` from `$20698` to `$206a0`. The call site and callee
-at `$404c2`/`$403e6` are independently hash-locked by
-`a617235dd94a6c0b3f5fb9f9e078652ed8f1e45213e85c80b10ec165a6b7216f` and
-`1e1ccdae97d5849873d3d2e785f5a8be585ffa0e104b5c550ecade6bc37a33a2`; the
-callee stores literal `$1c482` at `$1f97c`. The coordinator checks the source
-pointer in owned runtime memory and commits both longword writes atomically.
-The native-service sequence is tagged Eon compatibility provenance, not a
-captured Exec result. A real-media CLI diagnostic now reports nine bounded
-steps and stops at `$404ce` before the next service batch at `$403f4`. That
-batch's four indirect targets and their effects remain unresolved. No display
-frame, game action, or playable state is established by this continuation.
-
-### 2026-10-25 Deuteros Kickstart 1.3 graphics initialization primitives
-
-The supplied Kickstart 1.3 r34.005 ROM (SHA-256
-`ee05862d8102a08436ac4056da7d549db31625c7d47b24dfb7b3c9a5c113ca53`, base
-`$fc0000`) was read directly from its supplied ZIP. Its graphics.library
-negative-vector table is at ROM offset `$b056`. Three bootstrap calls now have
-source-hash-bound native compatibility primitives:
-
-- `InitView`, vector `-$168`, ROM `$fc6364..$fc637a`, 22 bytes, SHA-256
-  `f60b92b04fc8989cf2ffdc7057a60bbd38ba1dcc8735095a818daa1263638a45`.
-  The routine clears the first 18 bytes of the View, then stores words `$002c`
-  and `$0081` at offsets `$0c/$0e`.
-- `InitVPort`, vector `-$cc`, ROM `$fc637c..$fc638c`, 16 bytes, SHA-256
-  `d8d73d35a78e46f0ac7e977642afd6f4259f9d92a36fe78f298879a111f88d4c`.
-  It clears 40 bytes and stores byte `$24` at offset `$22`.
-- `InitBitMap`, vector `-$186`, ROM `$fc6484..$fc649a`, 22 bytes, SHA-256
-  `16a1a45ddbedc1012a6e126024cbb624fcda26fb6249b1179272f85aba716f0b`.
-  For the recovered 320x200, four-plane calls it stores Rows 200, Depth 4,
-  and BytesPerRow 40, leaving Flags and plane pointers untouched.
-
-The native services admit only the exact bootstrap call/return/vector/object
-tuples and apply these instruction-defined writes to owned runtime memory.
-Regression coverage checks the resulting View, ViewPort and BitMap bytes,
-rejection of a wrong boundary, and preservation of uninitialized plane
-pointers. This is a verified primitive implementation, not yet a connection
-to the active profile-one title route. `MakeVPort`, `MrgCop`, and `LoadView`
-remain unresolved; therefore this work does not cross the `$404ce` boundary,
-publish a title image, or establish Deuteros playability.
-
-### 2026-10-25 Millennium Atari game-init native caller continuation
-
-The exact `$2b4c6 -> $2ab04` game-init return is now admitted as a distinct
-Eon-native compatibility transition after the seven hash-bound palette passes
-and the terminal Setpalette service. It preserves the absolute stack address
-as unknown; only the caller's hash-verified return target and subsequent local
-register setup are consumed. This does not claim an observed RTS stack frame.
-
-The recovered caller sets D7 to `$2a634`; the owned bytes there match the
-uppercase `MILL22D.INF` name recorded by the preservation profile. The native
-TOS-compatible Fopen path binds that exact name and request to the separately
-hash-verified 18,428-byte `MILL22D.INF` source
-(`de0a95d3e4659a305b3e55b3417a7648127b41866de0a0ca344a81c66979dbc0`). It
-uses Eon virtual handle `$7ffe`, services the caller's `$7d42`-byte Fread from
-the authentic source into its owned `$2c24a` buffer, returns the actual file
-length, and closes only that same handle. The native continuation then reaches
-XBIOS selector `$26` at `$2ab24` with callback entry `$2ab2a`; its first
-instruction branches to `$2ab9c`. The 10-byte source span
-`MILL22A.INF+0x61c..0x625` (SHA-256
-`cbbed60639bf375af516e0e9d7252db6a738c20aea6d8b887e17e8f01b1b2617`)
-decodes to `PEA.L $62a(PC)` at `+0x61c`; the following two-byte `BRA.B` at `+0x62a`
-targets `+0x69c`. Under the established `$2a500` map those addresses are
-`$2ab2a` and `$2ab9c`. The `$361436a7` write to `$2ab2c` is two bytes after
-the callback entry and lies after its short branch. The branch target saves
-registers, changes exception-vector state and executes `ILLEGAL`; callback
-entry registers, stack, SR, and TOS vector values remain unresolved. The
-direct-media Atari CLI regression now
-expects this boundary and verifies that source archives remain unchanged.
-This is startup progress, not a rendered gameplay frame or playability claim.
-
-The callback preimage has now been checked against the exact source bytes.
-`MILL22A.INF+0x610..0x624` (runtime `$2ab10..$2ab24`) sets only A3=`$2a64c`
-and A4=`$2a66c`, then pushes callback `$2ab2a` and selector `$26` before
-`TRAP #14`; its 20-byte span hashes to
-`f37bc8980fda6f8bdf7249ef12310b22982d959188f76897f6f21be18c0013fb`.
-The callback branch at `$2ab2a` reaches `$2ab9c`. Its authenticated
-`MILL22A.INF+0x69c..0x6e4` body (72 bytes; SHA-256
-`d8df5addcb56eeba4b8647a1aa801c23e59ffdfd0ad2b7677ff2ba4e957ca9873`)
-first pushes entry A6 through entry A7, replaces A6 with its save-buffer
-pointer, then saves D0-D7 and A0-A7 before changing the exception-vector table.
-It stores the original A6 separately. Consequently D0-D7, A0-A5, A6, and the
-supervisor stack pointer/storage are all consumed before the callback can
-establish later values. In the MOVEM save, A6 is already the save-buffer
-pointer and A7 is already advanced by the first push; the original A6 is saved
-separately, while the original A7 is consumed as the supervisor stack base.
-A3/A4 are the only input data registers initialized by the visible caller.
-The callback also reads the preexisting illegal-instruction vector at address
-`$10`, then reads eight longwords beginning at `$8` and changes vector state
-before executing `ILLEGAL`.
-
-The installed vector-4 handler at file offset `+0x758` is separately decoded
-through its `RTE` at `+0x7bc` (102 bytes, SHA-256
-`ee387cc700dcb99f2c29e079666642afb70e02f1710127382926ef62750244dd`). Its
-second ILLEGAL exception frame has the supervisor bit set by the documented
-Supexec contract. The handler changes that bit with `BCHG`; the resulting
-`Z=0` makes its `BEQ +0x7a4` false. The selected `$78a/$78c` path reads a
-longword at `MILL22A.INF+0xe1a` (runtime `$2b31a`, eight-byte source span
-SHA-256 `7c1de5f41fb0f7939681dff5ac21b37d78e76204ac839a98df317bec1cef054d`)
-and writes the following longword to the loaded address. The untouched file
-preimage decodes to destination `$2a4e5302` and value `$66ca60ba`; on a 24-bit
-68000 address bus the destination is `$4e5302`. No admitted RAM profile covers
-that address, and the callback has not established the runtime value at
-`$2b31a` or the preexisting bus-error vector. Preserve this as a runtime
-memory/vector boundary; neither the Supexec result nor the write is safe to
-inject from the file preimage alone. The alternate-entry handler listings are
-external-cache only; the vector-4 report is 2,530 lines/81,641 bytes, SHA-256
-`d556da549cf3f53515039b4275e2c6fef3e327c697586db81c7eb593361a7847`, and the
-vector-8 report is 2,520 lines/81,308 bytes, SHA-256
-`ab1ad618f2e0b69c59ed56367b427c0386375b56c688c9ac9eef36eb55e9035b`.
-The vector-4 handler also installs vector-8 code at file offset `+0xce2`;
-its first 32 bytes hash to
-`63ab09f4808e2d27dba8cc72cffd63b0cd10d448e0aede0e6fb1d52059f359ab`.
-
-The Atari XBIOS reference documents Supexec as running the supplied function
-in supervisor mode and returning its D0 result, but does not specify the
-callback's entry register contents, supervisor-stack address/layout, SR, or
-exception-vector preimage. Those are not recoverable from this call site.
-Therefore the XBIOS selector `$26` result at `$2ab24` remains an external
-preimage boundary; do not enter the callback using zeroed or synthetic
-registers/vectors. This ABI statement is also present in Atari Corp's
-[Hitchhiker's Guide to the BIOS, XBIOS Supexec entry](https://info-coach.fr/atari/documents/_mydoc/Hitchhikers-Guide-V1.1.pdf).
-The reproducible alternate-entry listing is kept outside the repository at
-`~/.cache/project-eon-analysis/atari-supexec-startup-20261025/`. The generated
-listing contains 2,520 lines (81,350 bytes), SHA-256
-`c28ac26b52d2eee269c5ca9a10203fbeaef8747ca61b15bb738e5fcd22b17b68`; its
-alternate entry decodes exactly the 72-byte callback span above. The supplied
-archive, disk, and `MILL22A.INF` hashes were checked before analysis; the
-original archive was read in place and not extracted or changed.
-
-### 2026-10-25 Millennium DOS MCGA startup display policy
-
-The exact English MCGA driver (`VGA.BIN`, SHA-256
-`bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228`) reaches
-its first function-zero BIOS query at driver offset `$01f4` (`INT 10h`,
-`AH=$0f`). Eon's DOS adapter has selected this hash-identified MCGA driver as
-its native logical display policy, whose source profile requests mode `$13`.
-The exact English `TITLES.EXE` (`3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6`)
-sets `ES=CS`, `BX=$1ac4` at `$1b90/$1b92`; the owned process byte at runtime
-`$1ac4` equals file offset `$19c4`, value `$01`. Hash-bound `MCGA.BIN` reads
-`ES:[BX]` to `CL`, clears `CH`, and reaches `$01f4`, so `CX=$0001` is source
-derived before the first query. Eon's tagged INT `$10` policy preserves this
-known input `CX` across the current-mode query at `$01f4`, mode-set request at
-`$01fc`, and verification query at `$0200`; this preservation is Eon's policy,
-not an original BIOS observation. It returns the selected mode byte at each
-consumed query and leaves unrelated registers unknown.
-
-With that count, the DOS native-session regression uses explicit test-only
-interrupt results to pass the MCGA startup queries and vector installs. It
-reaches a second MCGA function-four INT `$91` result boundary at
-`TITLES.EXE:$0127`, whose input is record byte CS:`$1ac5`. Those supplied results
-are not admitted observations and do not establish the end-to-end CLI path.
-On the currently available direct-media CLI path, startup stops after eight
-steps at its first private INT `$91` boundary (runtime continuation `$0129`); no
-result is available. The source-authenticated title sequence sets `SS=CS`,
-`SP=$da00`, calls `$1ac6` from `$1bad` (placing return IP `$1bb0` at CS:`$d9fe`), then
-calls `$0122` at `$1ace` (placing return IP `$1ad1` at CS:`$d9fc`). This derives the
-two caller return words from the original `TITLES.EXE` (SHA-256
-`3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6`, file
-offsets `$1aad` and `$1a2e`). The MCGA function-four body at offset `$0815` in
-`MCGA.BIN` (SHA-256
-`bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228`) reads
-`ES:[BX]`, masks it with 3, exchanges it with driver state `$00af`, and executes
-near RET. These facts do not establish the INT `$91` handler's active stack
-frame or result. The old continuation's requirement that `$d9fc` equal child CS
-and its writes to other stack words were unsupported and have been removed.
-No title/gameplay frame or playable state is established. Original media was
-read in place. Synthetic data may guide searches for real evidence, but is not
-substituted for game behavior.
-
-### 2026-10-25 Deuteros raw-key queue to visible-state boundary
-
-The canonical Disk 1 ADF was scanned read-only from the supplied ZIP collection
-for literal references to the response-loop control word `$407e6`. Its archive
-and ADF hashes match the admitted English release above. Across 11 local ADF
-members, only the canonical English Disk 1, its `[cr SKR]` duplicate, and its
-`[a]` duplicate contain the address; the latter two have the same code at the
-same offsets. The English ADF has four absolute-long hits at disk offsets
-`$9b782`, `$9b78e`, `$9b7c2`, and `$9b7de`; the corresponding 24-bit hits overlap
-those bytes. With the title-stage load mapping, these are runtime addresses
-`$40782`, `$4078e`, `$407c2`, and `$407de`, all inside the `$4077e..$407e5`
-response loop.
-
-The source-bounded queue path still establishes only local effects. The helper
-dequeues a response from `$1eec0` and reduces `$1eed6`; the loop tail returns
-on `$1b`, loops without a local write for `$20` and unmatched bytes, and adjusts
-the low byte of `$407e6` for `$2e` or `$2c`. The address scan found no literal
-reference to `$407e6` elsewhere in these ADFs. This does not exclude computed
-or overlay-derived references, nor does it establish a live caller to
-`$407b4`, a visible-state reader, or a rendered effect. Existing composed tests
-verify only the source-local queue/control-word arithmetic; SDL input remains
-queued until an authentic runtime path links the consumer to a source-derived
-visible change. No expected callback response or gameplay action was added.
-
-### 2026-10-25 Millennium DOS MCGA function-$19 destination boundary
-
-The exact English `TITLES.EXE` (`3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6`)
-reaches its private `INT $91`, AX=`$0019` call at runtime `$1000` through
-`$1c11 -> $0ff3`. The caller sets ES=CS, BX=`$0fe9`, and stores CS into the
-record's far-pointer segment at `$0ffa`. The record points to CS:`$014c`, with
-count `$00ff`, so the exact `MCGA.BIN` function-$19 body (driver SHA-256
-`bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228`, routine
-`$09ee..$0b5b`) skips its VGA-status/palette read branch and performs the
-source-bounded palette conversion.
-
-The conversion's destination is nevertheless an independent driver-state
-input: it consumes the far pointer in MCGA code-segment words `$09be/$09c0`.
-The only identified source writer is MCGA selector `$08`, routine beginning
-at `$09c8`, which reads the pointer from its descriptor and stores offset and
-segment into those words. Static driver bytes at `$09be/$09c0` are zero and do
-not establish runtime state. A scan of the authenticated direct English TITLES
-wrapper call sites found no INT `$91` selector `$08` before function `$19`; the
-apparent raw `$B8 $08 $00` at TITLES file offset `$0942` is an INT `$33` mouse
-call. Other DOS executable bytes do not prove a caller on this title path. The
-exact output destination and its provenance therefore remain unknown for the
-nonzero-`$09c7` branch. Eon never dereferences that pointer; the admitted
-zero-flag branch avoids it. This is startup display work, not gameplay input
-or a playable-state observation. Original bytes were read in place only.
-
-For the exact admitted TITLES startup path, the unknown destination is not
-read unless MCGA byte `$09c7` is nonzero at entry to `$09ee`. The authenticated
-initial MCGA image (`bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228`)
-has `$09c7=0`; a bounded 16-bit disassembly scan of the complete image found
-one write to that byte, `MOV [CS:$09c7],BL` at `$09e0` in the selector-$08
-routine `$09c8..$09ed` (SHA-256
-`1a2a9ac2209cd4eb5ae43b6065b7683baed1cdf2e67261e6e982abdfc0c89fe0`). The
-exact TITLES caller passes selector `$19`, and the admitted earlier MCGA
-selectors `$00` and `$04` have source-bound writes only to their documented
-state cells; neither invokes selector `$08` or writes `$09c7`. Therefore the
-current native path can treat the `$0ad1` branch to `$0b0d` as untaken only
-after checking the live owned driver byte is still zero. This narrows the
-function-$19 work to its source palette conversion and VGA DAC path; it does
-not by itself complete a title render. Any nonzero or unavailable `$09c7`
-remains an explicit boundary, and the unknown `$09be/$09c0` pointer must
-never be read on the zero-flag path.
-
-The exact preceding TITLES path bounds the handler's transient stack use. Its
-allocated child segment is `$0da0` paragraphs (`$da00` bytes), and `SS=CS`,
-`SP=$da00` before the call at `$1c11`. The call to `$0ff3` stores `$1c14` at
-`$d9fe`; its call to wrapper `$0122` stores `$1003` at `$d9fc`. The wrapper
-pushes DS/SI/DI/BP/ES, the CPU interrupt frame holds return `$0129`, and the
-MCGA dispatcher call stores `$0012` at `$d9ea`. Function-$19 entry SP is
-therefore `$d9ea`. It subtracts `$02fe` twice, so its two 766-byte scratch
-buffers occupy `$d3ee..$d9e9`; its deepest transient push reaches `$d3e6`.
-These offsets fit the Eon child allocation. The routine writes each scratch
-area before reading it, saves entry SP to CS:`$09bc` before reloading it, and
-the dispatcher clears CS:`$01e4` before returning. IRET restores the original,
-still-unknown FLAGS. The wrapper restores its saved DS/SI/DI/BP/ES values;
-SI/DI/BP and FLAGS remain symbolically unknown, while the exact caller clears
-AX at `$1c14` before using it. No unknown caller stack preimage is needed to
-derive this local path.
-
-With live CS:`$09c7=0` and CS:`$01e5=0`, the exact MCGA routine sets DAC index
-0 and writes 255 RGB triples of zero, clearing indices 0 through 254 while
-leaving 255 unchanged. It waits for VGA retrace twice, but those port reads
-only gate when the same ordered zero writes occur; they do not change the
-derived values or branches. The native coordinator now validates the live
-flags, exact ten-byte TITLES record, loaded handler/table, and all 766
-initialized bytes at CS:`$014c` against the active title session's owned
-memory effects. Those bytes are no longer the original TITLES palette: the
-hash-bound earlier mode-one setup copies 768 bytes from the English
-`TITLE.LIB` range `[$25f9,$28f9)` into CS:`$014c..$044b` (the byte at relative
-offset `$05` is `$2a`, where original TITLES has `$12`). The MCGA DAC path
-does not depend on those source values. Eon applies the 255 black entries
-synchronously and labels its abstraction of the two retrace durations as an
-Eon adapter policy; this does not claim measured VGA timing. FLAGS and saved
-SI/DI/BP remain unknown, and the unresolved pointer stays untouched. The
-coordinator then returns to TITLES `$1c17 -> $1725`. The first descriptor is
-loaded at original base `$4fa1:$0000`; its normalized real-mode directory
-alias is `$5422:$0003` (`TITLE.LIB+$4813`). NativeRuntimeMemory preserves the
-two textual segment:offset forms, so the coordinator resolves that alias only
-after re-deriving the physical file displacement and matching every read byte
-against the admitted 18,907-byte leaf. It then admits the first descriptor's
-words `$0006/$0000`, `$0140`, `$00c8`, `$0000`, and bytes `$23/$02` at file
-offsets `$4813`, `$001e`, `$001c`, `$001a`, `$0007`, and `$000a` respectively.
-The `$02` bit-test takes the recovered clear branch. With English direct media
-and startup input `0`, the diagnostic now reaches INT `$91`, function `$0006`,
-at `$0127` with record `CS:$1349`. Function-six rendering remains a separate
-native boundary; this continuation does not establish title pixels or a
-playable state.
-
-#### MCGA function-$06 first-title-copy boundary
-
-The first `$0006` request is prepared by `TITLES.EXE` runtime
-`$1725..$1767` (file `+$1625..+$1667`, 67 bytes, SHA-256
-`37ec3f970f81219815bf524c6db54a12a0961d7e7452c3e2527fe422401339d9`). Its
-record at `CS:$1349` has far source pointer `CS:$133d`, width `$0140`, height
-`$00c8`, and zero clip fields. Exact English `MCGA.BIN` function `$06` starts
-at `$0705` (span `$0705..$07b4`, SHA-256
-`7afffae13c38d3d88bad52096d39d6359c07d902fed610cb4c86aeebce05271c`). The
-clip is a no-op; MCGA byte `$00b0=$88` selects the `$078b` MOVSW/MOVSB path
-(18 bytes, SHA-256
-`9f2573a0ea405375df0169035c80a9fca97f27720fb5fb51a8f7cb9f5d45a3bc`). The
-helper's table values `$0080=$0000,$a000` select destination `$a000:$0000`,
-and the recovered loop would write 200 rows of 320 bytes, exactly 64,000
-bytes.
-
-The source pointer is `CS:$1341/$1343`. The exact `$135e..$1387` setup stores
-the selected allocation pointer there before the top-level `$1c11` graphics
-request. For the hash-identified English P00 route, Eon verifies zero source
-offset, the live source segment, and the caller's `$0140` by `$00c8` record
-fields before materializing the independently decoded P00 indices in that
-DOS-compatible allocation. It also mirrors those same bytes to the explicit
-20-bit real-mode bus view required by the recovered MOVSW/MOVSB loop. The
-function-$06 copy then commits exactly 64,000 destination bytes at
-`$a000:$0000` and advances to the next original private request, function
-`$001a`. This establishes the indexed frame transfer only; DAC/palette state,
-timing, final SDL presentation, and gameplay are still separate evidence.
-
-The native recompilation unit binds the preceding original title-code fact.
-With AX=`$0000`,
-the exact caller `$1625..$1640` (file `+$1525`, 28 bytes, SHA-256
-`bc0648c4e1c84b33d8b556c619d8c59edbc576f5a858c45094920cbf59e50482`) invokes
-the codec `$1390..$1488` (file `+$1290`, 249 bytes, SHA-256
-`37d2116638e1ac3aadbe51d28a32032ecf443441869095b1e6c7a93b913f267a`). It
-selects directory record zero, the hash-identified `TITLE.LIB` P00 record, and
-writes its 320×200 indexed output at offset zero of its supplied destination
-segment. Project Eon can therefore materialize exactly those 64,000 decoded
-indices in a caller-selected Eon-owned DOS-compatible segment, with output
-SHA-256 `85ec11c9f943672df2ba2a4e2837ce1f3158d61648ec07bcdc84b381bd24f4ee`.
-The active route derives its destination segment from the original setup
-state; Eon owns the compatible allocation policy but does not claim that its
-numeric segment is an original DOS return value.
-
-The adapter records the exact persistent driver-state changes and known
-wrapper/interrupt return words. Its temporary stack buffers are not carried
-forward as title state; a later continuation may read those offsets only after
-its own source path establishes them. No saved SI/DI/BP or FLAGS values are
-filled in.
-
-#### Supplied English DOS corpus search for the function-$19 destination
-
-A read-only scan rechecked the exact English archive in Downloads (32 ZIP
-entries, 31 files; outer SHA-256
-`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`) and
-the matching direct-media directory. Its members include the hash-identified
-`MILL.COM`, `TITLES.EXE`, `2200AD.EXE`, `2200GX.EXE`, `MCGA.BIN`, `EGA640.BIN`,
-`TITLE.LIB`, and `GX.LIB`; no additional startup executable or alternate
-English MCGA driver is present in that archive. In all 31 members, the raw
-little-endian address byte pairs for driver words `$09be/$09c0` occur in
-`MCGA.BIN` itself, `GX.LIB` (only `$09c0` at member offsets `$1c183` and
-`$4bb43`), and `SSBL.DRV` (only `$09c0` at `$1915`). They do not occur in
-`MILL.COM`, `TITLES.EXE`, `2200AD.EXE`, or `2200GX.EXE`. The library and sound
-driver matches are unclassified data/code candidates, not writes to the MCGA
-driver's loaded segment.
-
-An opcode-pattern locator found `B8 08 00` in `TITLES.EXE` at file offset
-`$0942` and `2200AD.EXE` at `$0a2b` and `$89d9`. The first two are the known
-INT `$33` mouse function-8 calls. The third stores literal eight into a field
-through unresolved `BX`; it has no nearby INT `$91` and no source-proven edge
-to the loaded MCGA driver's `$09be/$09c0`. This byte-pattern scan does not
-exclude alternate instruction encodings, computed dispatch, or runtime
-initialization outside the admitted image set. The candidate disassembly is
-kept only in the external analysis cache at
-`~/.cache/project-eon-analysis/dos-selector8-20261025/2200AD-selector8-candidates.asm`
-(SHA-256 `d9de0d359b3f402d40d0f920fe3a9186a36d0a75210b90f82a4d2701e691e7ea`);
-no listing body or original-derived bytes are stored in Git. No authentic
-destination value or writer provenance was recovered, so the function-$19
-boundary remains in force.
-
-#### EGA function-$19 source return
-
-The separate English EGA driver (SHA-256
-`ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a`, 4,632
-bytes) has its function-$19 table slot at driver offset `$0052`, targeting
-`$0234`; that byte is `RET`. With input AX=`$0019`, the exact common INT `$91`
-dispatcher produces table offset `$0032`, calls `$0234`, and the handler
-returns AX=`$0032`. Eon now admits this one-byte return only when the full EGA
-source hash, loaded dispatcher prefix, loaded table target, active EGA driver
-identity, and matching vector are all verified. It records restored caller
-FLAGS as unknown and performs no palette, memory, or video effect. The caller
-then reaches its already hash-bound `$1c17 -> $1725` continuation.
-
-The current direct-media CLI route still chooses Eon's explicit MCGA default
-policy (driver SHA-256 `bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228`),
-so it does not exercise the EGA return. Its observed stop remains TITLES
-`$e450:$fe9` / INT `$91` function `$19` at `$0127`. The MCGA function's
-`$09ee..$0b5b` body includes DAC port reads/writes, conversion loops and a
-copy through its unresolved `$09be/$09c0` destination. The EGA return is not a
-substitute for that MCGA routine, and neither path proves a rendered title or
-playable state. The raw generated listing remains only in the scoped external
-analysis cache.
-
-### 2026-10-25 Downloads media staged in the default data directory
-
-At the user's request, the following intact original archives were copied from
-Downloads into `~/.projecteon`. Source and destination SHA-256 values match;
-the ZIP members were not unpacked, rewritten, or included in Git:
-
-| Archive | SHA-256 |
-| --- | --- |
-| `Millennium 2.2 (Electric Dreams).zip` | `b7a3ed74dcb756d56a6cf9bca040944f1ddad4f9607147f8c44bbe7c1f8b6baf` |
-| `Millennium-Return-to-Earth_DOS_EN.zip` | `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` |
-| `Millennium-Return-to-Earth_DOS_ES_Floppy-Disk-Image-v201.zip` | `b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4` |
-| `Millennium-Return-to-Earth_DOS_ES_Pre-Installed.zip` | `08327b4bae7ddd082e0d12b0e297210d7cc753d3be23ab1744f17287215ebea8` |
-| `millennium_2_2_ed.zip` | `7933ac74a69f14564c318143a22172147286f201f3f3c297045c0d90ac8e4c17` |
-
-The supplied Kickstart 1.2 archive was also copied intact to the same directory
-for Amiga system-ROM analysis (SHA-256
-`50f2a7b7d7f7d44dc00f68028bf3de5e6121aa0e7f0ba1e3ee826ecf9cd76ae5`). The
-Kickstart 1.3 archive used for the bounded `InitRastPort` analysis is already
-there. Both remain ZIP archives; no ROM member was extracted or altered.
-
-The nested `Millennium 2.2.stx` and `Millennium 2.2 (B).stx` members of
-`millennium_2_2_ed.zip` hash-match the already identified English Atari ST
-Disk 1 (`081d8bc102b8c7669c5cb21abace9b08532bc0b34164f11465d0c87b63a422fd`)
-and Disk 2 (`4b55a53285240541c42374dc8275ae7c73d182fc3872514727d9d1795d8ce7f8`).
-The `Electric Dreams` ZIP contains one 39,200,496-byte `.scp` member whose SCP
-header disk-type byte is `$04`; its flux payload was not decoded, so it is not
-admitted as an Atari ST or Amiga image. No matching Millennium Amiga ADF or
-Deuteros archive was found in Downloads; the six English Millennium Amiga ADF
-archives and the Deuteros source archives remain in `~/.projecteon`.
-
-### 2026-10-25 Deuteros Eon-native bootstrap memory route
-
-The English system ADF source continuation at runtime `$1306c..$1330d` is 674
-bytes (ADF offset `+$346c`, SHA-256
-`171b18ac0a6796d1edf2fd693113b706fcf809bccdc29db0aa99f14a5372a9b5`). It
-consumes the source-ordered `AvailMem` calls at `$13028` (`D1=4`, MEMF_FAST)
-and `$13034` (`D1=2`, MEMF_CHIP), selects display base `$ab00`, calls
-`InitBitMap` vector `-$186` at `$1309e`, and initializes its ViewPort ColorMap
-and four plane pointers before reaching `InitRastPort` at `$13154` (LVO
-`-$c6`, A1=`$12e6e`, return `$13158`). The `InitBitMap` instruction-defined
-stores are documented above. After that call, the same hash-bound source
-requests `MakeVPort` at `$13188` (LVO `-$d8`, A0=`$12e00`, A1=`$12e12`),
-`MrgCop` at `$1319a` (LVO `-$d2`, A1=`$12e00`), and `LoadView` at `$131a6`
-(LVO `-$de`, A1=`$12e00`).
-
-The native route now gives those availability checks a generation-bound Eon
-profile backed by an owned 512 KiB chip-like byte arena with no FAST pool. It
-reports zero free bytes for MEMF_FAST and computes MEMF_CHIP free capacity
-from the arena's actual owned ranges. These values are Eon policy outputs, not
-Kickstart results or recovered historical memory configuration. The selected
-four-plane allocation is `$ab00..$127ff` (32,000 bytes), adjacent to the
-admitted boot-block range; runtime checks reject overlap with initialized
-guest memory. The paired-layout caller sets ViewPort `$12e12`'s ColorMap to
-`$12ec4`, initializes 20 zero palette slots at `$12ecc`, and sets the
-source-derived plane pointers `$ab00`, `$ca40`, `$e980`, and `$108c0`.
-
-The active native-session driver now connects this Eon memory profile and
-paired-view path to the real Deuteros opening handoff. It advances from the
-first `$13028` request through both Eon-native availability results, the
-source-derived plane allocation, the complete paired layout, and the bounded
-`InitRastPort` effects below, then stops at `$13188` before `MakeVPort`. It uses
-no fabricated Exec return and does not treat Eon memory values as historical
-Amiga state. Tests verify the typed service receipts, generation and call
-order, source-selected branch, allocator bounds, owned-memory bytes, and the
-active-driver continuation.
-
-`MakeVPort`, subsequent `MrgCop`/`LoadView` effects, actual visible pixels, and
-gameplay input/action remain unresolved.
-This is native runtime compatibility for a documented Eon memory profile,
-not a full Amiga operating-system emulator or a claim of playability.
-
-### 2026-10-25 Kickstart 1.3 `InitRastPort` bounded effects
-
-The supplied Kickstart 1.3 ROM was read from its ZIP member in place and
-matches SHA-256
-`ee05862d8102a08436ac4056da7d549db31625c7d47b24dfb7b3c9a5c113ca53` at base
-`$fc0000`. Its graphics.library vector table at file offset `$b05a` resolves
-LVO `-$c6` to stub `$fc5b40`. The exact Deuteros caller at runtime `$13154`
-passes RastPort `$12e6e` in A1 and returns at `$13158`.
-
-The bounded ROM call chain is now identified: stub `$fc5b40..$fc5b49` (10
-bytes, SHA-256
-`9b4a1c7598c3874da943123e2dd0ae310443c2c1ee553fa8988279e15c07fe16`), helper
-`$fc5b18..$fc5b3f` (40 bytes, SHA-256
-`8fcac7db3b132bbc1611e895cdbadfbc31c329a18c0eb920add621bf064daf10`), clear
-helper `$fc5e34..$fc5e56` (35 bytes, SHA-256
-`094c17cada8feb8d6b2c4d57405279e76c168c92085ce37c0852030b929c9a06`),
-GetStdFont `$fc6bd0..$fc6c05` (54 bytes, SHA-256
-`7e2578ff02746151b9edcf7b9b4dafea991a7c24bb1ad3317cfdecd58b83ea4b`), and
-SetFont `$fc7f66..$fc7f81` (28 bytes, SHA-256
-`a841839e1c8fbde1c5a78d606cae53eefa09eba3599df7da8fad681ef63608d1`). The
-helper clears 78 RastPort bytes, sets Mask/FgPen/AOlPen and LinePtrn to `$ff`,
-sets DrawMode to 1, and calls GetStdFont. That routine writes `$ca` to each
-byte at RastPort offsets `+$28..+$2f`. SetFont then writes the font object
-pointer to `+$34`, clears `+$38`, and copies its words at `+$14`, `+$18`, and
-`+$1a` to RastPort `+$3a`, `+$3c`, and `+$3e`.
-
-The system-font initializer `$fc843c..$fc84d7` (156 bytes, SHA-256
-`6eaab4e5f5b5890f4b7960fb864cefd47bd1fba52bd4985b50e9f4aa404ad576`) allocates
-and initializes an object from the 52-byte `topaz.font` descriptor at
-`$fc84e4..$fc8517` (SHA-256
-`4d40f5902b91ed9857845f7f584c715de0ad5d0f4031b52201bfd7c694c56223`), then
-stores the resulting allocation pointer at graphics base `+$9a`. The three
-words SetFont reads from that object are `$9920`, `$00fc`, and `$8512`. Eon now
-maps those source-identified fields to a generation-bound native object at
-`$d10000` in its Eon-compatible Exec address range. This is Eon's allocation,
-not the original Exec `AllocMem` result. The native service clears the 78-byte
-RastPort, writes the proven pen/mode/pattern fields and eight `$ca` lookup
-bytes, then stores the Eon font address and the three source-derived words.
-Only the three font words proven to be read by this `SetFont` body are
-initialized; other TextFont fields and glyph data remain unavailable.
-
-The active route now stops at `$13188`, the following `MakeVPort` request.
-`MrgCop`, `LoadView`, a visible frame, and gameplay remain unresolved. ROM code
-and descriptor bytes stay outside Git and were not extracted to disk.
-
-### 2026-10-25 Kickstart 1.3 `MakeVPort` direct call chain
-
-The graphics.library vector table at ROM file offset `$b05a` maps LVO `-$d8`
-through slot `$b0e6` to wrapper `$fc63bc`. The 16-byte wrapper
-`$fc63bc..$fc63cb` (ROM file offsets `$63bc..$63cb`, SHA-256
-`279ee4741d512e2a9f776aa427c19d86a8ac40d9fde3c0e24a64649b3fb26713`) saves
-A1/A0, calls `$fcc678`, restores its stack, and returns. The exact
-`MakeVPort` body is `$fcc678..$fccff3` (end-exclusive `$fccff4`, ROM file
-offsets `$c678..$cff3`, 2,428 bytes, SHA-256
-`a4411cc0b426c8f77509751e07f12e77cde2b98844b344ae769a289d749c01ef`).
-
-The body calls `$fcc452` to prepare viewport buffers, `$fca358` repeatedly to
-append intermediate Copper instructions, `$fccff4` to build viewport display
-instructions, and the exact helpers `$fcc5c0` and `$fcc62e`. The stack order
-at `$fcc452` matters: `$fd1470` reads the top argument as D0 (size) and the
-next as D1 (flags), then `$fd3c34` passes those registers to Exec LVO `-$c6`
-(`AllocMem`). Thus its first request is `$22` bytes with flags `$10000`
-(`MEMF_CLEAR`), not a `$10000`-byte allocation with flags `$22`. It next
-requests `6 * count` bytes with flags zero. `$fca358` requests `$22` bytes and
-then `$60` bytes, both with flags `$1` (`MEMF_PUBLIC`), for its Copper node
-and node storage. On allocation failure the wrapper calls `$fd3ba8`, which
-dispatches Exec LVO `-$6c` (`Alert`). These functions and exact ranges are
-hash-pinned by `tools/analyze_deuteros_makevport_rom.py`.
-
-The earlier `$fd1da2`/`$fd175c` chain is a different graphics.library vector
-(`-$6c`), not `MakeVPort`; it is excluded from this boundary. This correction
-is based on the exact vector-table bytes, public wrapper target, and full
-`MakeVPort` body hash in the supplied Kickstart 1.3 ROM.
-
-The active native route now admits a typed return observation for the exact
-`$13188` call, after the five already admitted graphics initialization
-services. It validates the call/vector/return, View and ViewPort arguments,
-runtime generation, sequence, and Eon's graphics-library service token. This
-receipt is explicitly external evidence and records zero modeled memory
-effects; it does not let the route advance to `MrgCop`. A separate source-
-translated prefix now checks the exact ViewPort preimage, allocates its
-`$22`-byte `MEMF_CLEAR` workspace and `$f0`-byte initial Copper buffer in
-Eon-owned memory, emits the initial `$0001,$ffff,$0000` WAIT, and applies the
-first `$fca358` node update. The `$fcc7b0..$fcc934` slice reads BitMap depth
-4, ViewPort mode `$4000`, and the 20-entry ColorMap; it writes 16 low-bank and
-four high-bank color instructions, for a node count of 21 including WAIT. The
-next Copper-list address is `$d200a0`. Its bounded helper also tests the
-`$22`/`$60` `MEMF_PUBLIC` node rollover and COPJMP2 rewrite. The exact
-`$fcd010..$fcd2a4` reachable geometry path now computes through the MakeVPort
-builder's internal RTS. It checks View+$e=`$81`, cleared ViewPort+$6,
-Bitmap.BytesPerRow=40, and the caller's zero RasInfo fields. The graphics
-bounds are source-bound to Kickstart 1.3 initialization stores at
-`$fcaea4..$fcaeb0` (MaxDisplayColumn=`$1d1`, MinDisplayColumn=`$30`; 12-byte
-slice SHA-256
-`d7f03feed5d8382a8bebc1c0543a72d3f8e26d816cb156e5442e62dc70183f3`). For
-this layout, width 320 plus display height 129 is 449, below maximum column
-465; the minimum-column/half-width path yields horizontal delta -32 and skips
-clipping. Scratch remains represented by symbolic A5 offsets; no historical
-absolute stack address or writes at the opaque Eon graphics token are implied.
-The receipt reaches `$fcd2a4`, but the outer MakeVPort caller, remaining Copper
-generation, `MrgCop`, and `LoadView` remain unimplemented; no completed Copper
-output, visible frame, or gameplay is claimed. Full listings remain only in
-`~/.cache/project-eon-analysis/makevport-next-20261025/`; the repository keeps
-reproducible tooling, hashes, ranges, and the remaining boundary.
-
-The bounded `$fcc934` caller/callee analysis rejects a speculative geometry
-translation that had been added to an isolated test fixture. The public stub
-pushes A1 then A0; the MakeVPort body therefore has A3=View and A2=ViewPort.
-At `$fcc934`, the call to `$fccff4` passes the ViewPort, its RasInfo, and a
-caller-owned scratch pointer (`A5-$64`). The callee maps D4=View, A3=ViewPort,
-D3=RasInfo, and A2=scratch. Its `$fcd010`/`$fcd016` word copies write
-ViewPort `+$18`/`+$1c` to scratch `+$c`/`+$e`; they do not write View `+$c`/`+$e`.
-For the active bootstrap layout these source words are 320 and 0: the first
-comes from the caller's width store and the second remains zero from the exact
-InitVPort clear. The 12-byte ROM slice `$fcd010..$fcd01c` hashes to
-`962a50b39177809fa1e7303505aa85e74294618e8ffd7b53e0b76eac88cd224d`.
-The native translator now retains those two results at symbolic A5-relative
-slots `$ffa8/$ffaa` without materializing an unknown absolute stack address.
-The active caller also writes zero to RasInfo `+$8` (`$12e6a`), which selects
-the `$400`-clear branch and bypasses the nested RasInfo dereference. Kickstart
-1.3's hash-pinned graphics initialization writes `$30` to MinDisplayColumn
-and `$1d1` to MaxDisplayColumn at `$fcaea4..$fcaeb0`, before the game reaches
-MakeVPort. The native route binds those fields to this generation's Eon
-graphics-library token without treating the token as an Amiga address. It
-checks the exact View and BitMap fields before evaluating the remaining
-`$fcd0b8..$fcd2a4` arithmetic. The resulting symbolic scratch words are
-vertical position 56, horizontal position 208, width 320, height 0, RasInfo
-offset 0 and row bytes 40. This full geometry interval hashes to
-`1c8e89a6e9edddad0f7ac00468f8dc37bd914da57f1a8ba32cf56341ab870961`.
-A5-relative stack locations remain symbolic.
-The whole earlier reachable source slice `$fcd01c..$fcd0b8` hashes to
-`0df44b362625feae5c6b36d2fa86cd269a62153f9d700b71e1d2cc852c53b614`; the
-full `$fcd010..$fcd0b8` range hash is
-`fbb257909f9200f2b603df5a058d92d26c5d4ccc7160dc6c3bdb87ecb4e3f32c`.
-The native translator now follows the source-bound inner RTS back to `$fcc946`
-and appends its first post-geometry Copper instruction `{0,$f08e,$0500}` at
-`$d200a0`, advancing the node count to 22 and cursor to `$d200a6`. The
-92-byte caller interval `$fcc946..$fcc9a2` hashes to
-`ce1bfc1a50073999d629997883ac22674a869daae77aab0d310c5eab59456087`. Its
-last four deterministic instructions write zero and `View+$100` (`$2f00` for
-the admitted View at `$12e00`) into the first two words at `$d200a6`; the
-third word remains uninitialized. The native route therefore stops at
-`$fcc9a2`, the first instruction that reads GraphicsBase+$a4. Kickstart's
-initializer at `$fcae10..$fcae18` sets that word from helper
-`$fcaf96..$fcb00a` (SHA-256
-`b61ae09d28f0e33cc66573e9ebf6457c83e8e854927c99f7d12517a888cafa87`), which
-first waits on Kickstart's `$fc5ece..$fc5ede` VPOSR reader (SHA-256
-`724d23d001e780598c1277e7372114868a2deb6d4c833672db95fbb4a0c5ec48`), which
-reads `$dff004`, shifts right eight, and masks to nine bits. The helper waits
-through its source-selected vertical-counter range, writes `$102` to
-`$dff100`, delays, then samples `$dff006` twice; it returns either 0 or `$102`
-depending on timing. The active View+$10 input is zero. Project Eon has no
-admitted machine video standard or beam origin/phase for these polls. SDL
-presentation pacing and the Paula audio sample clock do not establish that
-state, so neither timing branch is assumed and the runtime stops at `$fcc9a2`.
-This is a Copper-list prefix, not the outer MakeVPort return, complete Copper
-list, visible frame, or gameplay.
-
-A fresh external Ghidra 12.2 project over only the hash-bound MakeVPort body
-`$fcc678..$fccff4` (2,428 bytes, SHA-256
-`a4411cc0b426c8f77509751e07f12e77cde2b98844b344ae769a289d749c01ef`) produced
-a 308-line, 9,455-byte decompiler view with SHA-256
-`a3de7801f4aa4f260188b21ee2893de8d1bce2c0c807804327a5d133fe030418`.
-The project, bounded source span and decompiler output remain in trv2's
-external analysis area. It confirms that `$fcc9a2` has no control-flow
-decision: its value is ORed into the pending Copper word, whose two source
-possible values are `$0200` and `$0302`, before the local node helper returns.
-`DeuterosAmigaMakeVPortPrefixSession` now records that finite candidate set and
-advances only the source-defined Copper-node count to 23; it deliberately does
-not materialize either word at `$d200aa`. Consequently neither renderer nor
-later native code can mistake a timing candidate for a captured original value.
-The active runtime now advances through `$fcc9a2` to `$fcc9c0`: the exact
-30-byte caller interval `$fcc9a2..$fcc9c0` has SHA-256
-`f2f2fe1db329a1ad48ede990e77f70c0212161d4de54ac6b2ee9843d23cb6fd0`.
-Its call to the exact 150-byte Copper-node helper `$fca358..$fca3ee`
-(SHA-256 `31c75b5db29ae12d9a29b3b816f790fec90b2df2170e1ad38a8ebf6ea01d6a44`)
-takes the below-capacity branch, reading owned node fields and incrementing
-the node count to 23 without reading the pending third Copper word. Its two
-timing candidates remain explicit and the destination Copper word remains
-unmaterialized; this does not admit either candidate, a visible frame, or the
-remaining MakeVPort path.
-
-The next 130 bytes, `$fcc9c0..$fcca42` (SHA-256
-`af563f6c58eae2b4e8b8e31e2fd7474e916a87e7f3e576c1f75fc2f34dc60e03`),
-only carry the unresolved graphics timing value through an A5-relative scratch
-word; it is not read again in this interval. The translator therefore keeps
-that scratch value symbolic while it uses the owned ViewPort `+$22` byte to
-append the next source-defined Copper record at `$d200ac`. The new record's
-first two words are `$0000/$f104` and its third word is read directly from
-the native ViewPort state. The node count advances to 24 and the active
-boundary becomes `$fcca42`. This establishes neither a timing candidate nor a
-visible frame.
-
-At `$fcca42`, the original takes the long branch to `$fccc4a` only when its
-A5-relative `-$2c` value is nonzero. Earlier in the same MakeVPort call,
-`$fcc6b0..$fcc6ce` leaves that value zero unless the View word at `+$20` has
-bit `$0400` set; in that case it loads the longword pointed to by View `+$24`.
-Kickstart 1.3 `InitView` (`$fc6364..$fc637a`, SHA-256
-`f60b92b04fc8989cf2ffdc7057a60bbd38ba1dcc8735095a818daa1263638a45`) clears
-only the first 18 View bytes and does not establish either later field. The
-supplied game media likewise does not prove their live preimage. The branch is
-therefore an explicit dynamic View-state boundary; zeroing it in Eon's private
-memory would fabricate an original branch decision.
-
-### 2026-10-25 Deuteros native MakeVPort prefix wired into active drive
-
-The ordinary `drive_active_native_session` path now runs both translated
-MakeVPort slices automatically at the `$13188` caller boundary. It source-
-translates the `$fcc452` allocations into Eon-owned ranges `$d20000..$d20021`
-and `$d20022..$d20111`, writes ViewPort `+8` to the workspace, emits the
-source-derived first WAIT `$0001,$ffff,$0000`, and writes the 20 palette
-register instructions through `$fcc934`. The CLI continuation reports a
-native translation boundary at `$fcc934`; it does not claim that the original
-graphics.library call returned. The bounded node helper additionally verifies
-the `$22`/`$60` `MEMF_PUBLIC` rollover allocations and COPJMP2 rewrite. These effects remain
-generation-bound and fail if the exact ViewPort preimage or target ranges are
-already initialized.
-
-This advances the active native route through the viewport's initial color
-register writes. Remaining geometry-dependent MakeVPort effects, the rest of
-the Copper list, `MrgCop`, `LoadView`, a visible frame, and gameplay remain
-unresolved.

@@ -20,8 +20,7 @@ MillenniumDosVideoDriverLoadSession::MillenniumDosVideoDriverLoadSession(
       driver_bytes_(selected_driver.begin(), selected_driver.end()) {
     if ((kind != MillenniumDosVideoDriverKind::ega640 && kind != MillenniumDosVideoDriverKind::mcga)
         || (selector_source != MillenniumDosVideoSelectorSource::command_tail
-            && selector_source != MillenniumDosVideoSelectorSource::hardware_detector
-            && selector_source != MillenniumDosVideoSelectorSource::eon_native_default)
+            && selector_source != MillenniumDosVideoSelectorSource::hardware_detector)
         || (selector != 1 && selector != 2)
         || (kind == MillenniumDosVideoDriverKind::ega640) != (selector == 1)
         || (selector_source == MillenniumDosVideoSelectorSource::command_tail
@@ -31,9 +30,7 @@ MillenniumDosVideoDriverLoadSession::MillenniumDosVideoDriverLoadSession(
                 || raw_detector_result != 0))
         || (selector_source == MillenniumDosVideoSelectorSource::hardware_detector
             && (observed_command != 0 || raw_detector_result > 2
-                || ((raw_detector_result == 1) != (selector == 1))))
-        || (selector_source == MillenniumDosVideoSelectorSource::eon_native_default
-            && (selector != 2 || observed_command != 0 || raw_detector_result != 0))) {
+                || ((raw_detector_result == 1) != (selector == 1)))) ) {
         throw std::runtime_error("Millennium DOS video selector and driver identity disagree");
     }
     const auto flow = parse_millennium_dos_title_flow(titles_executable, mill_com);
@@ -190,24 +187,9 @@ void MillenniumDosVideoDriverLoadSession::observe_ivt_vector(
         throw std::runtime_error("Detached Millennium DOS INT 91h IVT observation");
     }
     ivt_observation_ = MillenniumDosVideoDriverIvtVector{interrupt, offset, segment};
-    vector_provenance_ = MillenniumDosVideoDriverVectorProvenance::observed;
     state_ = MillenniumDosVideoDriverLoadState::ivt_observation_recorded;
     // Preserve the observed tuple verbatim. Matching the loaded image address
     // is correlation only; it does not prove installation, dispatch, or use.
-}
-
-void MillenniumDosVideoDriverLoadSession::install_compatibility_set_vector(
-    const std::uint16_t instruction, const std::uint16_t ax,
-    const std::uint16_t dx, const std::uint16_t ds) {
-    if (state_ != MillenniumDosVideoDriverLoadState::set_vector_request_boundary
-        || instruction != 0x020c || ax != 0x2591 || dx != 0) {
-        throw std::runtime_error("Detached Eon DOS compatibility SetVect service");
-    }
-    set_vector_carry_ = false;
-    set_vector_ax_ = 0;
-    ivt_observation_ = MillenniumDosVideoDriverIvtVector{0x91, dx, ds};
-    vector_provenance_ = MillenniumDosVideoDriverVectorProvenance::eon_dos_compatibility_service;
-    state_ = MillenniumDosVideoDriverLoadState::ivt_observation_recorded;
 }
 
 } // namespace eon

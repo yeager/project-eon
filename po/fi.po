@@ -9,21 +9,6 @@ msgstr ""
 "Language: fi\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
-msgid "INTERACTIVE AMIGA FLOW IS NOT YET RECOVERED."
-msgstr "Amigan vuorovaikutteista kulkua ei ole vielä palautettu."
-
-msgid "ORIGINAL ATARI ST TITLE - SOURCE DECODED"
-msgstr "Alkuperäinen Atari ST -otsikko – purettu lähdedatasta"
-
-msgid "320 X 200 / 4 PLANES / SOURCE RGB3 PALETTE"
-msgstr "320 × 200 / 4 tasoa / alkuperäinen RGB3-paletti"
-
-msgid "GAMEPLAY FLOW REMAINS UNRECOVERED."
-msgstr "Pelikulkua ei ole vielä palautettu."
-
-msgid "BOOTSTRAP BOUNDARIES ARE STATIC; TITLE PIXELS ARE SOURCE DECODED."
-msgstr "Käynnistyksen rajat ovat staattisia; otsikon pikselit on purettu lähdedatasta."
-
 msgid "Welcome to Millennium."
 msgstr "Tervetuloa Millenniumiin."
 

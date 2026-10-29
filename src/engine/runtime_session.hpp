@@ -2,8 +2,6 @@
 
 #include "launcher.hpp"
 
-#include <cstdint>
-#include <optional>
 #include <string>
 #include <string_view>
 
@@ -56,10 +54,6 @@ enum class RuntimeSessionKind {
     // owned $13000 JMP stub. No title code runs until the explicit local
     // program-entry advance validates that reconstructed runtime image.
     deuteros_amiga_title_program_entry,
-    // The authentic boot-track graphics prefix completed its typed Eon
-    // OpenLibrary compatibility call and stopped at AvailMem. No title stage
-    // or display allocator may run until that boundary is resolved.
-    deuteros_amiga_bootstrap_graphics_boundary,
     // A v4/v5 trace was revalidated at consumption time. This remains an
     // immutable provenance checkpoint with no renderer, audio or input right.
     deuteros_amiga_title_display_trace_boundary,
@@ -75,97 +69,29 @@ enum class RuntimeSessionBoundary {
     bootstrap_boundary,
 };
 
-// Host input is narrowed to exact per-session observations: two DOS startup
-// values, the Amiga opening's held signal, or a typed keyboard/mouse event
-// admitted only by the hash-verified Deuteros title callback contract.
-enum class RuntimeInputObservationKind {
-    ascii_character, character_available, opening_input_held,
-    millennium_dos_console_character, millennium_dos_function_key,
-    millennium_dos_console_flush,
-    deuteros_amiga_raw_key_event, deuteros_amiga_raw_mouse_button_event,
-    deuteros_amiga_raw_mouse_motion_event
-};
-
-// SDL text is UTF-8, while this English DOS poll consumes one byte in AL.
-// Accept only a single printable ASCII byte, which has the same value in
-// the DOS-compatible ASCII range; do not truncate or guess a code-page map.
-[[nodiscard]] inline std::optional<std::uint8_t>
-millennium_dos_ascii_console_byte(const std::string_view text) noexcept {
-    if (text.size() != 1U) return std::nullopt;
-    const auto byte = static_cast<unsigned char>(text.front());
-    if (byte < 0x20U || byte > 0x7eU) return std::nullopt;
-    return static_cast<std::uint8_t>(byte);
-}
+// Physical-key remapping is intentionally absent. These observations model
+// only two independently evidenced DOS values and are rejected for every
+// other active adapter: an ASCII byte for MILL.COM's literal sound chooser,
+// or the nonzero availability result of TITLES.EXE's DOS console poll.
+enum class RuntimeInputObservationKind { ascii_character, character_available, opening_input_held };
 
 struct RuntimeInputObservation {
     RuntimeInputObservationKind kind = RuntimeInputObservationKind::ascii_character;
     char ascii_character = '\0';
-    std::uint16_t raw_key_code = 0;
-    std::uint16_t qualifier = 0;
-    std::uint8_t raw_mouse_code = 0;
-    std::uint8_t dos_scan_code = 0;
-    std::int16_t raw_mouse_x = 0;
-    std::int16_t raw_mouse_y = 0;
     [[nodiscard]] static RuntimeInputObservation ascii(const char value) {
         return {RuntimeInputObservationKind::ascii_character, value};
     }
     [[nodiscard]] static RuntimeInputObservation available_character() {
         return {RuntimeInputObservationKind::character_available, '\0'};
     }
-    [[nodiscard]] static RuntimeInputObservation millennium_dos_character(
-        const std::uint8_t value) {
-        RuntimeInputObservation observation;
-        observation.kind = RuntimeInputObservationKind::millennium_dos_console_character;
-        observation.ascii_character = static_cast<char>(value);
-        return observation;
-    }
-    [[nodiscard]] static RuntimeInputObservation millennium_dos_function_key(
-        const std::uint8_t scan_code) {
-        RuntimeInputObservation observation;
-        observation.kind = RuntimeInputObservationKind::millennium_dos_function_key;
-        observation.dos_scan_code = scan_code;
-        return observation;
-    }
-    [[nodiscard]] static RuntimeInputObservation millennium_dos_console_flush() {
-        RuntimeInputObservation observation;
-        observation.kind = RuntimeInputObservationKind::millennium_dos_console_flush;
-        return observation;
-    }
     [[nodiscard]] static RuntimeInputObservation opening_input_held(const bool held) {
         return {RuntimeInputObservationKind::opening_input_held, held ? '\1' : '\0'};
-    }
-    [[nodiscard]] static RuntimeInputObservation deuteros_amiga_raw_key(
-        const std::uint16_t code, const std::uint16_t qualifier = 0) {
-        RuntimeInputObservation observation;
-        observation.kind = RuntimeInputObservationKind::deuteros_amiga_raw_key_event;
-        observation.raw_key_code = code;
-        observation.qualifier = qualifier;
-        return observation;
-    }
-    [[nodiscard]] static RuntimeInputObservation deuteros_amiga_raw_mouse_button(
-        const std::uint8_t code, const std::uint16_t qualifier = 0) {
-        RuntimeInputObservation observation;
-        observation.kind = RuntimeInputObservationKind::deuteros_amiga_raw_mouse_button_event;
-        observation.raw_mouse_code = code;
-        observation.qualifier = qualifier;
-        return observation;
-    }
-    [[nodiscard]] static RuntimeInputObservation deuteros_amiga_raw_mouse_motion(
-        const std::int16_t x, const std::int16_t y,
-        const std::uint16_t qualifier = 0) {
-        RuntimeInputObservation observation;
-        observation.kind = RuntimeInputObservationKind::deuteros_amiga_raw_mouse_motion_event;
-        observation.qualifier = qualifier;
-        observation.raw_mouse_code = 0xff;
-        observation.raw_mouse_x = x;
-        observation.raw_mouse_y = y;
-        return observation;
     }
 };
 
 enum class RuntimeInputDisposition { rejected, ignored, observed, boundary_reached };
 
-    // This is a declarative statement of the *currently recovered* host-input
+// This is a declarative statement of the *currently recovered* host-input
 // envelope. It is deliberately narrower than a controller map or a gameplay
 // action list, so it cannot infer unknown title or gameplay controls.
 enum class RuntimeInputContract {
@@ -173,15 +99,9 @@ enum class RuntimeInputContract {
     // MILL.COM/TITLES.EXE accept only their separately recovered source
     // observations: a literal chooser byte or a nonzero console-poll result.
     millennium_dos_startup_observation,
-    // Physical console bytes enter only the authenticated post-overlay
-    // AH=06h poll; extended scan codes use DOS's two-read prefix sequence.
-    millennium_dos_post_overlay_console_queue,
     // The Amiga opening consumes one physical held signal; its meaning beyond
     // the recovered finite opening is intentionally unspecified.
     deuteros_amiga_opening_held_signal,
-    // The hash-bound English Amiga title callback consumes raw InputEvent
-    // keyboard, button, and motion events through Eon's input.device compatibility service.
-    deuteros_amiga_title_raw_key,
 };
 
 [[nodiscard]] std::string_view runtime_session_kind_label(RuntimeSessionKind kind);
@@ -197,9 +117,9 @@ enum class RuntimeInputContract {
     RuntimeInputObservationKind observation);
 
 struct RuntimeSessionCapabilities {
-    // Presentation/audio flags describe decoded in-memory observations.
-    // admitted_input means a typed per-session input contract exists; it does
-    // not imply a broad controller map, generic simulation, or save writes.
+    // These flags describe only an already decoded in-memory presentation or
+    // audio observation. They do not permit a new media read, texture cache,
+    // host audio device, input mapping, simulation transition or save write.
     bool decoded_presentation = false;
     bool audio_observations = false;
     // This must exactly match whether the immutable input_contract admits at

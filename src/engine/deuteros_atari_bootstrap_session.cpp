@@ -2,9 +2,6 @@
 
 #include "data/sha256.hpp"
 
-#include <algorithm>
-#include <array>
-#include <span>
 #include <stdexcept>
 
 namespace eon {
@@ -40,21 +37,9 @@ DeuterosAtariBootstrapCheckpoint DeuterosAtariBootstrapSession::checkpoint() con
 
 DeuterosAtariBootstrapSession::DeuterosAtariBootstrapSession(
     std::vector<std::uint8_t> disk_image) {
-    constexpr std::array<std::string_view, 3> supported_disk_sha256{
-        "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee",
-        "a49f509b33ac3d5e59ce496999f28883014c0242c66cfc5e817dd07eb5e65fc8",
-        "5def9740c010decd32ac263cf933698a8371c2f542fbceab73abfad44576714f",
-    };
-    constexpr std::array<std::string_view, 2> supported_boot_sha256{
-        "b06c758661816625a2d10d789e82222a4534b9d36a083f0a73fd25f5bcb6f510",
-        "f3676d19229becae92df2a7a3cf60fdb9cdd22352f3f1785f31b415906409002",
-    };
-    const auto disk_sha256 = to_hex(sha256(disk_image));
-    const auto boot_sha256 = disk_image.size() >= 512U
-        ? to_hex(sha256(std::span<const std::uint8_t>(disk_image).first(512U)))
-        : std::string{};
-    if (std::ranges::find(supported_disk_sha256, disk_sha256) == supported_disk_sha256.end()
-        || std::ranges::find(supported_boot_sha256, boot_sha256) == supported_boot_sha256.end()) {
+    constexpr std::string_view expected_disk_sha256 =
+        "aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee";
+    if (to_hex(sha256(disk_image)) != expected_disk_sha256) {
         throw std::runtime_error("Unsupported Deuteros Atari ST boot media");
     }
     DeuterosAtariDisk disk(std::move(disk_image));

@@ -9,21 +9,6 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "INTERACTIVE AMIGA FLOW IS NOT YET RECOVERED."
-msgstr "De interactieve Amiga-route is nog niet hersteld."
-
-msgid "ORIGINAL ATARI ST TITLE - SOURCE DECODED"
-msgstr "Originele Atari ST-titel - gedecodeerd uit de brongegevens"
-
-msgid "320 X 200 / 4 PLANES / SOURCE RGB3 PALETTE"
-msgstr "320 × 200 / 4 vlakken / oorspronkelijke RGB3-palet"
-
-msgid "GAMEPLAY FLOW REMAINS UNRECOVERED."
-msgstr "De spelverlooproute is nog niet hersteld."
-
-msgid "BOOTSTRAP BOUNDARIES ARE STATIC; TITLE PIXELS ARE SOURCE DECODED."
-msgstr "De opstartgrenzen zijn statisch; titelpixels zijn gedecodeerd uit de brongegevens."
-
 msgid "Welcome to Millennium."
 msgstr "Welkom bij Millennium."
 

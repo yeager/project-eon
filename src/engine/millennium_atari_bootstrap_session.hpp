@@ -4,10 +4,8 @@
 #include "data/fat12.hpp"
 #include "engine/atari_st_prg_load_session.hpp"
 #include "engine/millennium_atari_read_only_gemdos_session.hpp"
-#include "engine/millennium_atari_title_frame.hpp"
 
 #include <optional>
-#include <memory>
 #include <span>
 #include <string>
 #include <vector>
@@ -40,9 +38,6 @@ public:
     }
     [[nodiscard]] std::span<const std::uint8_t> post_config_payload() const {
         return post_config_payload_;
-    }
-    [[nodiscard]] std::shared_ptr<const MillenniumAtariTitleFrameSnapshot> title_frame() const {
-        return title_frame_;
     }
     [[nodiscard]] const MillenniumAtariTrapEntry& fopen_boundary() const { return trap_; }
     [[nodiscard]] const MillenniumAtariFopenResultGateExecution& fopen_result_gate() const {
@@ -77,14 +72,6 @@ public:
     }
     [[nodiscard]] NativeRuntimeEffectBatch make_post_config_fread_effect_batch(
         std::int32_t returned_bytes, std::string id) const;
-    [[nodiscard]] NativeRuntimeEffectBatch make_game_init_second_config_fread_effect_batch(
-        std::int32_t returned_bytes, std::string id) const;
-    [[nodiscard]] NativeRuntimeEffectBatch make_game_init_decoder_fread_effect_batch(
-        std::int32_t returned_bytes, std::string id) const;
-    [[nodiscard]] NativeRuntimeEffectBatch make_game_init_second_config_fread_service_effect_batch(
-        std::string id) const;
-    [[nodiscard]] NativeRuntimeEffectBatch make_native_screen_buffer_effect_batch(
-        std::string id) const;
 
 private:
     MillenniumAtariPrgLoadSession prg_load_;
@@ -107,10 +94,6 @@ private:
     MillenniumAtariFreadMappedConfigPrelude fread_mapped_config_prelude_;
     std::optional<MillenniumAtariReadOnlyGemdosSession> read_only_gemdos_;
     std::vector<std::uint8_t> post_config_payload_;
-    std::vector<std::uint8_t> config_payload_;
-    std::vector<std::uint8_t> game_init_payload_;
-    std::vector<std::uint8_t> game_init_decoder_payload_;
-    std::shared_ptr<const MillenniumAtariTitleFrameSnapshot> title_frame_;
 };
 
 } // namespace eon

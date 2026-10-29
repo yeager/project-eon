@@ -171,27 +171,13 @@ int main(const int argc, char** argv) {
 
     eon::NativeRuntimeMemory unwrapped_memory;
     seed(unwrapped_memory, "unwrapped-top-word", 0x10ffef, {0xa5,0x5a});
-    const auto unwrapped_before = unwrapped_memory.diagnostics();
     const auto unwrapped_result = eon::execute_millennium_dos_video_function_six_mcga_copy_loop(
         driver, Kind::word_aligned,
         Registers{2,0,0,0,0xffff,0x0000,1,0xffff,0x1000,false},
         Mapping::unwrapped_21_bit, unwrapped_memory, "unwrapped-top-word-run");
-    const auto unwrapped_after = unwrapped_memory.diagnostics();
-    assert(!unwrapped_result.accepted && !unwrapped_result.memory_applied
-        && unwrapped_after.initialized_byte_count == unwrapped_before.initialized_byte_count
-        && unwrapped_after.applied_batch_count == unwrapped_before.applied_batch_count
-        && unwrapped_after.checksum == unwrapped_before.checksum);
-
-    eon::NativeRuntimeMemory unwrapped_last_byte_memory;
-    seed(unwrapped_last_byte_memory, "unwrapped-last-byte", 0x10ffef, {0xa5});
-    const auto unwrapped_last_byte_result = execute_millennium_dos_video_function_six_mcga_copy_loop(
-        driver, Kind::byte_aligned,
-        Registers{1,0,0,0,0xffff,0x0000,1,0xffff,0x1000,false},
-        Mapping::unwrapped_21_bit, unwrapped_last_byte_memory, "unwrapped-last-byte-run");
-    assert(unwrapped_last_byte_result.accepted && unwrapped_last_byte_result.memory_applied
-        && unwrapped_last_byte_result.byte_write_count == 1
-        && unwrapped_last_byte_memory.read_byte(
-            {eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x10000}) == 0xa5);
+    assert(unwrapped_result.accepted && unwrapped_result.byte_write_count == 2);
+    assert(unwrapped_memory.read_linear_range(physical(0x1000,0x0000),2)
+        == std::optional<std::vector<std::uint8_t>>({0xa5,0x5a}));
 
     eon::NativeRuntimeMemory incomplete_memory;
     const auto incomplete_before = incomplete_memory.diagnostics();

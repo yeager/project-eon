@@ -90,17 +90,6 @@ std::optional<std::uint32_t> parse_native_opening_ticks(const std::string_view v
     return parsed == 0 ? std::nullopt : std::optional<std::uint32_t>(parsed);
 }
 
-std::optional<std::uint32_t> parse_native_step_limit(const std::string_view value) {
-    if (value.empty()) return std::nullopt;
-    std::uint32_t parsed = 0;
-    for (const auto character : value) {
-        if (character < '0' || character > '9' || parsed > 26214U) return std::nullopt;
-        parsed = parsed * 10U + static_cast<std::uint32_t>(character - '0');
-        if (parsed > 262144U) return std::nullopt;
-    }
-    return parsed == 0 ? std::nullopt : std::optional<std::uint32_t>(parsed);
-}
-
 std::filesystem::path default_data_directory(const char* executable_path) {
 #ifdef _WIN32
     std::error_code error;
@@ -210,8 +199,6 @@ std::string usage() {
         "               [--launch-check-json]\n\n"
         "               [--runtime-diagnostics-json]\n\n"
         "               [--native-step-diagnostics-json --native-startup-input 0|1|2]\n"
-        "               [--native-step-diagnostics-json --native-step-limit 1..262144]\n"
-        "               [--native-step-diagnostics-json --native-video-probe --native-startup-input 0|1|2]\n"
         "               [--native-step-diagnostics-json --opening-ticks 1..1024]\n"
         "               [--opening-input-held 0|1 --opening-continue]\n\n"
         "               [--resolution 1280x720|1600x900|1920x1080]\n"
@@ -283,10 +270,6 @@ ParseResult parse_command_line(int argc, char** argv) {
             request.native_step_diagnostics_json = true;
             continue;
         }
-        if (argument == "--native-video-probe") {
-            request.native_video_probe = true;
-            continue;
-        }
         if (argument == "--opening-continue") {
             request.native_opening_continue = true;
             continue;
@@ -323,11 +306,6 @@ ParseResult parse_command_line(int argc, char** argv) {
                 return {{}, "--native-startup-input accepts exactly 0, 1, or 2", false};
             }
             request.native_startup_input = value[0];
-        } else if (argument == "--native-step-limit") {
-            request.native_step_limit = parse_native_step_limit(value);
-            if (!request.native_step_limit) {
-                return {{}, "--native-step-limit accepts an integer from 1 through 262144", false};
-            }
         } else if (argument == "--opening-ticks") {
             request.native_opening_ticks = parse_native_opening_ticks(value);
             if (!request.native_opening_ticks) {
@@ -419,16 +397,6 @@ ParseResult parse_command_line(int argc, char** argv) {
     }
     if (request.native_startup_input && !request.native_step_diagnostics_json) {
         return {{}, "--native-startup-input requires --native-step-diagnostics-json", false};
-    }
-    if (request.native_step_limit && !request.native_step_diagnostics_json) {
-        return {{}, "--native-step-limit requires --native-step-diagnostics-json", false};
-    }
-    if (request.native_step_limit && (request.native_opening_ticks || request.native_video_probe)) {
-        return {{}, "--native-step-limit applies only to the general native-step diagnostic", false};
-    }
-    if (request.native_video_probe
-        && (!request.native_step_diagnostics_json || !request.native_startup_input)) {
-        return {{}, "--native-video-probe requires --native-step-diagnostics-json and --native-startup-input", false};
     }
     if ((request.native_opening_ticks || request.native_opening_input_held)
         && !request.native_step_diagnostics_json) {

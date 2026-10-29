@@ -41,7 +41,6 @@ std::optional<RuntimePresentationKind> presentation_kind_for(const RuntimeSessio
         return RuntimePresentationKind::deuteros_amiga_opening;
     case RuntimeSessionKind::deuteros_amiga_title_stage:
     case RuntimeSessionKind::deuteros_amiga_title_program_entry:
-    case RuntimeSessionKind::deuteros_amiga_bootstrap_graphics_boundary:
         return RuntimePresentationKind::deuteros_amiga_title_stage_boundary;
     case RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary:
         return RuntimePresentationKind::deuteros_amiga_title_display_trace_boundary;

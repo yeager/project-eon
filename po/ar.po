@@ -9,21 +9,6 @@ msgstr ""
 "Language: ar\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
-msgid "INTERACTIVE AMIGA FLOW IS NOT YET RECOVERED."
-msgstr "لم يُستعد مسار Amiga التفاعلي بعد."
-
-msgid "ORIGINAL ATARI ST TITLE - SOURCE DECODED"
-msgstr "عنوان Atari ST الأصلي - مفكك من المصدر"
-
-msgid "320 X 200 / 4 PLANES / SOURCE RGB3 PALETTE"
-msgstr "320 × 200 / 4 مستويات / لوحة RGB3 من المصدر"
-
-msgid "GAMEPLAY FLOW REMAINS UNRECOVERED."
-msgstr "لم يُستعد مسار اللعب بعد."
-
-msgid "BOOTSTRAP BOUNDARIES ARE STATIC; TITLE PIXELS ARE SOURCE DECODED."
-msgstr "حدود التمهيد ثابتة؛ بكسلات العنوان مفككة من المصدر."
-
 msgid "Welcome to Millennium."
 msgstr "مرحبًا بك في Millennium."
 

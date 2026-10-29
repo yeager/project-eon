@@ -82,98 +82,6 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
         }
         return disk.bytes(bootstrap.disk_offset + address - bootstrap.destination, length);
     };
-    // Bind the profile-one literal pointer store and its target table to the
-    // clean whole-stage identity. This source path does not prove that startup
-    // ran in the native session or that the table was active for an input.
-    constexpr std::uint32_t hit_test_pointer_store = 0x210fa;
-    constexpr std::uint32_t hit_test_pointer_cell = 0x222b2;
-    constexpr std::uint32_t hit_test_table = 0x21f28;
-    constexpr std::size_t hit_test_header_bytes = 2;
-    constexpr std::size_t hit_test_record_bytes = 12;
-    constexpr std::size_t hit_test_record_count = 9;
-    constexpr std::size_t hit_test_table_bytes = hit_test_header_bytes
-        + hit_test_record_bytes * hit_test_record_count;
-    constexpr ExecutableByteAnchor<10> hit_test_pointer_store_bytes{
-        "c96d8c22592d3ed8f572f68c2c94e446eb54a19d65d7e7cfed7f724ed157d1a5"};
-    const auto pointer_store = stage_code(hit_test_pointer_store,
-        hit_test_pointer_store_bytes.size());
-    const auto hit_test_table_bytes_source = stage_code(hit_test_table,
-        hit_test_table_bytes);
-    const auto hit_test_header = big16(hit_test_table_bytes_source, 0);
-    if (!hit_test_pointer_store_bytes.matches(pointer_store)
-        || to_hex(sha256(pointer_store))
-            != "c96d8c22592d3ed8f572f68c2c94e446eb54a19d65d7e7cfed7f724ed157d1a5"
-        || hit_test_header != 0x0049U
-        || (hit_test_header & 0x3fU) != hit_test_record_count
-        || (hit_test_header & 0x80U) != 0
-        || to_hex(sha256(hit_test_table_bytes_source))
-            != "e4307d4b58048802d206e3b460ae26decf0099bd3da21d191f64dfa91542fdd3") {
-        throw std::runtime_error("Unsupported Deuteros active title hit-test table");
-    }
-    std::array<DeuterosAmigaTitleHitTestRow, hit_test_record_count> hit_test_rows{};
-    for (std::size_t index = 0; index < hit_test_rows.size(); ++index) {
-        const auto row_offset = hit_test_header_bytes + index * hit_test_record_bytes;
-        hit_test_rows[index] = {
-            big16(hit_test_table_bytes_source, row_offset),
-            big16(hit_test_table_bytes_source, row_offset + 2U),
-            big16(hit_test_table_bytes_source, row_offset + 4U),
-            big16(hit_test_table_bytes_source, row_offset + 6U),
-            big16(hit_test_table_bytes_source, row_offset + 8U),
-            big16(hit_test_table_bytes_source, row_offset + 10U)};
-    }
-
-    // Resolve the ordinary row action through the original longword dispatch
-    // base. This is a source profile only: the table extent and runtime call
-    // order are not inferred from this one indexed cell.
-    constexpr std::uint32_t title_dispatch_base = 0x212b0;
-    constexpr std::uint16_t ordinary_hit_action = 0x0054;
-    constexpr std::uint32_t ordinary_hit_handler = 0x20e08;
-    constexpr std::uint32_t ordinary_hit_handler_prefix_length = 10;
-    constexpr std::uint32_t ordinary_hit_setup_call = 0x20e0e;
-    constexpr std::uint32_t ordinary_hit_next_target = 0x36a8c;
-    constexpr std::uint32_t ordinary_hit_local_setup_prefix_length = 0x62;
-    constexpr std::uint32_t ordinary_hit_first_external_call = 0x20e6a;
-    constexpr std::uint32_t ordinary_hit_first_external_target = 0x1fb9a;
-    constexpr std::uint16_t ordinary_hit_first_external_d0 = 0x00f9;
-    constexpr std::uint32_t ordinary_hit_dispatch_cell = title_dispatch_base
-        + static_cast<std::uint32_t>(ordinary_hit_action) * 4U;
-    constexpr ExecutableByteAnchor<4> ordinary_hit_dispatch_cell_bytes{
-        "ca06852095f9be5582dcf3897adc54592ce59daa270df4ab1ed8ddcf0e63c7e7"};
-    constexpr ExecutableByteAnchor<ordinary_hit_handler_prefix_length>
-        ordinary_hit_handler_bytes{
-            "6a62e9892a64e6631c2aa338cc6fb715c3849858f8a564a377103cbc007e0ec2"};
-    const auto ordinary_hit_dispatch_bytes = stage_code(ordinary_hit_dispatch_cell, 4);
-    const auto ordinary_hit_handler_source = stage_code(
-        ordinary_hit_handler, ordinary_hit_handler_prefix_length);
-    constexpr ExecutableByteAnchor<ordinary_hit_local_setup_prefix_length>
-        ordinary_hit_local_setup_prefix_bytes{
-            "79fef5ae5f9a2cf16368b9f67af101ca297844e6d2ea3f37da870f5abf4a4479"};
-    const auto ordinary_hit_local_setup_prefix = stage_code(
-        ordinary_hit_handler, ordinary_hit_local_setup_prefix_length);
-    const auto ordinary_hit_first_external_call_source = stage_code(
-        ordinary_hit_first_external_call, 6);
-    const auto ordinary_hit_d0_source = stage_code(0x20e66, 4);
-    constexpr std::array<std::uint8_t, ordinary_hit_handler_prefix_length>
-        ordinary_hit_handler_expected{0x30, 0x39, 0x00, 0x02, 0x22,
-            0xa0, 0x61, 0x00, 0x00, 0x08};
-    constexpr std::array<std::uint8_t, 6> ordinary_hit_first_call_expected{
-        0x4e, 0xb9, 0x00, 0x01, 0xfb, 0x9a};
-    constexpr std::array<std::uint8_t, 4> ordinary_hit_d0_expected{
-        0x30, 0x3c, 0x00, 0xf9};
-    if (!ordinary_hit_dispatch_cell_bytes.matches(ordinary_hit_dispatch_bytes)
-        || big32(ordinary_hit_dispatch_bytes, 0) != ordinary_hit_handler
-        || !ordinary_hit_handler_bytes.matches(ordinary_hit_handler_source)
-        || !std::equal(ordinary_hit_handler_source.begin(),
-            ordinary_hit_handler_source.end(), ordinary_hit_handler_expected.begin())
-        || !ordinary_hit_local_setup_prefix_bytes.matches(ordinary_hit_local_setup_prefix)
-        || !std::equal(ordinary_hit_first_external_call_source.begin(),
-            ordinary_hit_first_external_call_source.end(), ordinary_hit_first_call_expected.begin())
-        || big32(ordinary_hit_first_external_call_source, 2)
-            != ordinary_hit_first_external_target
-        || !std::equal(ordinary_hit_d0_source.begin(), ordinary_hit_d0_source.end(),
-            ordinary_hit_d0_expected.begin())) {
-        throw std::runtime_error("Unsupported Deuteros ordinary title action dispatch");
-    }
     // This includes the loop's timer branch at $405b6, but deliberately does
     // not turn the remaining 68000 program into guessed gameplay semantics.
     // Covers the main-loop branch and the complete known timer-dispatch
@@ -738,7 +646,7 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     result.initialization_stack_address = 0x40b62;
     result.initialization_exec_base_address = 4;
     result.initialization_exec_vectors = {static_cast<std::int16_t>(-0x96), static_cast<std::int16_t>(-0x9c)};
-    result.initialization_user_state_stack_argument = 0x7fff0;
+    result.initialization_exec_allocation_size = 0x7fff0;
     result.initialization_internal_calls = {0x1ed80, 0x1f172, 0x1f182, 0x1ef74,
         0x206d4, 0x206be, 0x403e6, 0x403f4, 0x204c8, 0x389e2, 0x37180};
     result.initialization_copy_source_address = 0x1f168;
@@ -765,23 +673,6 @@ DeuterosAmigaTitleStageProfile parse_deuteros_amiga_title_stage(
     result.bootstrap_profile_five_second_read_destination = 0x1e000;
     result.bootstrap_profile_five_second_read_disk_offset = 0x79000;
     result.bootstrap_profile_five_common_tail_address = 0x12ada;
-    result.title_hit_test_pointer_store_address = hit_test_pointer_store;
-    result.title_hit_test_pointer_cell_address = hit_test_pointer_cell;
-    result.title_hit_test_table_address = hit_test_table;
-    result.title_hit_test_table_header = hit_test_header;
-    result.title_hit_test_table_record_count = hit_test_record_count;
-    result.title_hit_test_table_rows = hit_test_rows;
-    result.title_hit_test_table_sha256 =
-        "e4307d4b58048802d206e3b460ae26decf0099bd3da21d191f64dfa91542fdd3";
-    result.title_action_dispatch = {
-        title_dispatch_base, ordinary_hit_action, ordinary_hit_dispatch_cell,
-        ordinary_hit_handler, ordinary_hit_handler_prefix_length,
-        ordinary_hit_setup_call, ordinary_hit_next_target,
-        ordinary_hit_first_external_call, ordinary_hit_first_external_target,
-        ordinary_hit_first_external_d0, ordinary_hit_local_setup_prefix_length,
-        "ca06852095f9be5582dcf3897adc54592ce59daa270df4ab1ed8ddcf0e63c7e7",
-        "6a62e9892a64e6631c2aa338cc6fb715c3849858f8a564a377103cbc007e0ec2",
-        "79fef5ae5f9a2cf16368b9f67af101ca297844e6d2ea3f37da870f5abf4a4479"};
     return result;
 }
 
@@ -1180,35 +1071,12 @@ parse_deuteros_amiga_title_callback_registration_profile(
     const auto registration = stage_code(registration_entry, registration_length);
     const auto callback = stage_code(callback_address, callback_length);
     const auto source_table = stage_code(source_table_address, source_table_length);
-    constexpr std::array<std::uint8_t,13> input_device_name{
-        'i','n','p','u','t','.','d','e','v','i','c','e',0};
-    const auto device_name = stage_code(0x1edfc,input_device_name.size());
     if (to_hex(sha256(stage_bytes)) != stage_hash
         || to_hex(sha256(registration)) != registration_hash
         || to_hex(sha256(callback)) != callback_hash
-        || to_hex(sha256(source_table)) != source_table_hash
-        || !std::equal(input_device_name.begin(),input_device_name.end(),device_name.begin())) {
+        || to_hex(sha256(source_table)) != source_table_hash) {
         throw std::runtime_error("Unsupported Deuteros title callback registration");
     }
-
-    // Bind the earlier IORequest preparation and OpenDevice call. The exact
-    // return remains a device boundary; these checks establish operands only.
-    require_word(registration, 0x20, 0x43f9); // lea $1eefa,a1
-    require_long(registration, 0x22, request_address);
-    require_word(registration, 0x26, 0x237c); // move.l #$1eed8,$e(a1)
-    require_long(registration, 0x28, 0x0001eed8);
-    if (big16(registration, 0x2c) != 0x000e)
-        throw std::runtime_error("Unexpected Deuteros OpenDevice request field");
-    require_word(registration, 0x2e, 0x207c); // lea $1edfc,a0
-    require_long(registration, 0x30, 0x0001edfc);
-    require_word(registration, 0x34, 0x4280); // clr.l d0: unit zero
-    require_word(registration, 0x36, 0x4281); // clr.l d1: flags zero
-    require_word(registration, 0x38, 0x2c78); // movea.l $4.w,a6
-    if (big16(registration, 0x3a) != 4)
-        throw std::runtime_error("Unexpected Deuteros OpenDevice Exec base");
-    require_word(registration, 0x3c, 0x4eae); // jsr -$1bc(a6), OpenDevice
-    if (big16(registration, 0x3e) != 0xfe44)
-        throw std::runtime_error("Unexpected Deuteros OpenDevice vector");
 
     // lea $1ef48,a0; descriptor+$0e=$1ef40; descriptor+$12=$1f056;
     // request+$1c=9; request+$28=$1ef48; jsr -$1ce(a6).
@@ -1318,8 +1186,7 @@ parse_deuteros_amiga_title_callback_registration_profile(
         {0x1ee10, 0x1ee12}, 0x20118, 0x007f, {0x68, 0x69}, 8, 0x1ffd4,
         1, 6, 8, 7, 0x50, 0x14, 0x1eed6, source_table_address,
         source_table_length, std::string(source_table_hash), 0x1eec0,
-        std::string(registration_hash), std::string(callback_hash),
-        request_address, 0x1edfc, 0x1efb0, -0x1bc, 0, 0};
+        std::string(registration_hash), std::string(callback_hash)};
 }
 
 DeuterosAmigaTitleCallbackProducerResult
@@ -1346,7 +1213,6 @@ evaluate_deuteros_amiga_title_callback_producer(
     return {profile.callback_event_mirror_address, profile.callback_producer_value,
         0x1ee0e, input.caller_word_at_8, profile.callback_source_table_address,
         index, table[index], profile.callback_destination_address, input.pending_count,
-        profile.callback_pending_word_address,
         static_cast<std::uint16_t>(input.pending_count + 1U)};
 }
 
@@ -1385,120 +1251,6 @@ evaluate_deuteros_amiga_title_callback_second_event(
     result.stop = DeuterosAmigaTitleCallbackSecondEventStop::ordinary_return;
     result.next_address = profile.callback_address + 0xfaU;
     return result;
-}
-
-DeuterosAmigaTitleMoveSpriteResult evaluate_deuteros_amiga_title_move_sprite(
-    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
-    const DeuterosAmigaTitleMoveSpriteInput input) {
-    constexpr std::uint32_t routine_address = 0x20118;
-    constexpr std::size_t routine_length = 0xa8;
-    constexpr std::uint32_t call_address = 0x201b6;
-    constexpr std::uint32_t viewport_source_address = 0x12e12;
-    constexpr std::uint32_t sprite_source_address = 0x1ffda;
-    constexpr std::int16_t move_sprite_vector = -0x01aa;
-    constexpr std::string_view title_stage_hash =
-        "48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03";
-    constexpr std::string_view routine_hash =
-        "9b16e7cdc97495a1b52656d49c7a3612e7e1617ce88996e2c5e7138e3f183ec3";
-    const auto& stage = plan.title_stage;
-    if (stage.destination > 0x20118 || stage.length < 0x20118 - stage.destination
-        || routine_length > stage.length - (0x20118 - stage.destination)) {
-        throw std::runtime_error("Deuteros title MoveSprite routine is outside loaded title stage");
-    }
-    const auto stage_bytes = disk.bytes(stage.disk_offset, stage.length);
-    const auto routine = disk.bytes(stage.disk_offset + routine_address - stage.destination,
-        routine_length);
-    if (to_hex(sha256(stage_bytes)) != title_stage_hash
-        || to_hex(sha256(routine)) != routine_hash) {
-        throw std::runtime_error("Unsupported Deuteros title MoveSprite routine");
-    }
-    const auto require_bytes = [&](const std::size_t offset,
-        const std::initializer_list<std::uint8_t> expected) {
-        if (offset > routine.size() || expected.size() > routine.size() - offset) {
-            throw std::runtime_error("Deuteros title MoveSprite opcode check is outside routine");
-        }
-        if (!std::equal(expected.begin(), expected.end(), routine.begin()
-                + static_cast<std::ptrdiff_t>(offset))) {
-            throw std::runtime_error("Unexpected Deuteros title MoveSprite opcode");
-        }
-    };
-    // Verify the two global bases, routine frame size, arithmetic/clamp
-    // pattern, sprite/viewport operands, derived positions and graphics LVO.
-    require_bytes(0x00, {0x30, 0x39, 0x00, 0x01, 0xff, 0xc8});
-    require_bytes(0x06, {0x48, 0xe7, 0x7f, 0xfe}); // save D1-D7/A0-A6
-    require_bytes(0x0a, {0x32, 0x39, 0x00, 0x01, 0xee, 0x10});
-    require_bytes(0x10, {0xd0, 0x41}); // ADD.W D1,D0
-    require_bytes(0x12, {0x4a, 0x41}); // TST.W D1 selects bound
-    require_bytes(0x14, {0x6a, 0x14}); // BPL positive delta path
-    require_bytes(0x16, {0x4a, 0x40}); // wrapped value sign check
-    require_bytes(0x18, {0x6b, 0x08}); // BMI lower-bound path
-    require_bytes(0x1a, {0xb0, 0xf9, 0x00, 0x01, 0xff, 0xca}); // CMP.W $1ffca,D0
-    require_bytes(0x20, {0x64, 0x16}); // BCC common path when D0 >= lower bound
-    require_bytes(0x22, {0x30, 0x39, 0x00, 0x01, 0xff, 0xca});
-    require_bytes(0x28, {0x60, 0x0e}); // BRA common path
-    require_bytes(0x2a, {0xb0, 0xf9, 0x00, 0x01, 0xff, 0xcc}); // CMP.W $1ffcc,D0
-    require_bytes(0x30, {0x65, 0x06}); // BCS common path when D0 < upper bound
-    require_bytes(0x32, {0x30, 0x39, 0x00, 0x01, 0xff, 0xcc});
-    require_bytes(0x38, {0x33, 0xc0, 0x00, 0x01, 0xff, 0xc8});
-    require_bytes(0x3e, {0x30, 0x39, 0x00, 0x01, 0xff, 0xce});
-    require_bytes(0x44, {0x32, 0x39, 0x00, 0x01, 0xee, 0x12});
-    require_bytes(0x4a, {0xd2, 0x41});
-    require_bytes(0x4c, {0x4a, 0x41});
-    require_bytes(0x4e, {0x6a, 0x14});
-    require_bytes(0x50, {0x4a, 0x40});
-    require_bytes(0x52, {0x6b, 0x08});
-    require_bytes(0x54, {0xb0, 0xf9, 0x00, 0x01, 0xff, 0xd0}); // CMP.W $1ffd0,D0
-    require_bytes(0x5a, {0x64, 0x16}); // BCC common path when D0 >= lower bound
-    require_bytes(0x5c, {0x30, 0x39, 0x00, 0x01, 0xff, 0xd0});
-    require_bytes(0x62, {0x60, 0x0e}); // BRA common path
-    require_bytes(0x64, {0xb0, 0xf9, 0x00, 0x01, 0xff, 0xd2}); // CMP.W $1ffd2,D0
-    require_bytes(0x6a, {0x65, 0x06}); // BCS common path when D0 < upper bound
-    require_bytes(0x6c, {0x30, 0x39, 0x00, 0x01, 0xff, 0xd2});
-    require_bytes(0x72, {0x33, 0xc0, 0x00, 0x01, 0xff, 0xce});
-    require_bytes(0x78, {0x41, 0xf9, 0x00, 0x01, 0x2e, 0x12});
-    require_bytes(0x7e, {0x43, 0xf9, 0x00, 0x01, 0xff, 0xda});
-    require_bytes(0x84, {0x30, 0x39, 0x00, 0x01, 0xff, 0xc8});
-    require_bytes(0x8a, {0x04, 0x40, 0x00, 0x10}); // SUBI.W #$10,D0
-    require_bytes(0x8e, {0x32, 0x39, 0x00, 0x01, 0xff, 0xce});
-    require_bytes(0x94, {0x5c, 0x41}); // SUBQ.W #6,D1
-    require_bytes(0x96, {0xe2, 0x48}); // LSR.W #1,D0
-    require_bytes(0x98, {0x2c, 0x79, 0x00, 0x01, 0x2f, 0xec}); // MOVEA.L $12fec,A6
-    require_bytes(0x9e, {0x4e, 0xae, 0xfe, 0x56}); // JSR -$1aa(A6)
-    require_bytes(0xa2, {0x4c, 0xdf, 0x7f, 0xfe}); // restore saved regs
-    require_bytes(0xa6, {0x4e, 0x75});
-    if (call_address != routine_address + 0x9e
-        || viewport_source_address != 0x12e12 || sprite_source_address != 0x1ffda) {
-        throw std::runtime_error("Invalid Deuteros MoveSprite provenance constants");
-    }
-
-    const auto signed_word = [](const std::uint16_t value) {
-        return value < 0x8000U ? static_cast<std::int32_t>(value)
-            : static_cast<std::int32_t>(value) - 0x10000;
-    };
-    const auto add_word = [&](const std::uint16_t lhs, const std::uint16_t rhs) {
-        return static_cast<std::uint16_t>(static_cast<std::uint32_t>(lhs) + rhs);
-    };
-    const auto adjust_and_clamp = [&](const std::uint16_t original,
-        const std::uint16_t delta, const std::uint16_t minimum,
-        const std::uint16_t maximum) {
-        const auto value = add_word(original, delta);
-        if (signed_word(delta) < 0) {
-            if (signed_word(value) < 0 || value < minimum) return minimum;
-        } else if (value > maximum) {
-            return maximum;
-        }
-        return value;
-    };
-    const auto x_after_delta = add_word(input.x, input.x_delta);
-    const auto x = adjust_and_clamp(input.x, input.x_delta, input.x_min, input.x_max);
-    const auto y_after_delta = add_word(input.y, input.y_delta);
-    const auto y = adjust_and_clamp(input.y, input.y_delta, input.y_min, input.y_max);
-    const auto x_offset = static_cast<std::uint16_t>(x - 0x10U);
-    const auto y_offset = static_cast<std::uint16_t>(y - 0x06U);
-    return {x_after_delta, x, y_after_delta, y,
-        static_cast<std::uint16_t>(x_offset >> 1U), y_offset,
-        viewport_source_address, sprite_source_address, call_address,
-        call_address + 4U, move_sprite_vector};
 }
 
 DeuterosAmigaTitleTransitionPrefix execute_deuteros_amiga_title_transition_prefix(
@@ -2411,8 +2163,7 @@ parse_deuteros_amiga_title_post_exec_load_service_profile(
     };
     if (!in_stage(caller_address, caller.size()) || !in_stage(entry_address, routine_length)
         || !in_stage(read_loop_address, read_loop_length)
-        || !in_stage(read_vector_helper_address, read_vector_helper_length)
-        || !in_stage(0x206a4, 4)) {
+        || !in_stage(read_vector_helper_address, read_vector_helper_length)) {
         throw std::runtime_error("Deuteros post-Exec load service lies outside original stage");
     }
     const auto bytes = disk.bytes(stage.disk_offset, stage.length);
@@ -2439,12 +2190,6 @@ parse_deuteros_amiga_title_post_exec_load_service_profile(
     profile.read_exec_base_source_address = 0x0004;
     profile.read_request_pointer_cell_address = 0x206a0;
     profile.read_buffer_address = 0x26cc0;
-    const auto staging_pointer = bytes.subspan(0x206a4 - stage.destination, 4);
-    profile.read_staging_pointer_initial_value =
-        (static_cast<std::uint32_t>(staging_pointer[0]) << 24U)
-        | (static_cast<std::uint32_t>(staging_pointer[1]) << 16U)
-        | (static_cast<std::uint32_t>(staging_pointer[2]) << 8U)
-        | static_cast<std::uint32_t>(staging_pointer[3]);
     profile.read_status_offset = 0x001f;
     profile.read_status_instruction_address = 0x2093e;
     profile.read_command = 0x8002;
@@ -2513,17 +2258,6 @@ parse_deuteros_amiga_title_post_load_dispatch_profile(
         "173ecec3e880b6b6d9022567622548e25629dd23d671f6f8f9e46fe700edcbbb";
     constexpr std::string_view parser_hash =
         "2605ca4af737e72accc1c6dc91bf640aac370f6037da3ec284ba440377a6b4cf";
-    constexpr std::uint32_t source_table_base = 0x1c482;
-    constexpr std::uint32_t source_table_disk_offset = 0x77482;
-    constexpr std::uint32_t source_table_size = 128;
-    constexpr std::string_view source_table_hash =
-        "9b5d34ec75f135daf221d8b82f44772b2756b55ffc5c02b2498b147feb66a2c4";
-    constexpr std::int16_t index_one_offset = 0x0341;
-    constexpr std::uint32_t index_one_stream = 0x1c7c3;
-    constexpr std::uint32_t index_one_stream_disk_offset = 0x777c3;
-    constexpr std::uint32_t index_one_stream_prefix_size = 32;
-    constexpr std::string_view index_one_stream_prefix_hash =
-        "e1eb7c4160f864608619a59bcc6e9f2d835736cb8ce99244f1ae4f927ee7bf2d";
     const auto& stage = plan.title_stage;
     const auto bytes = disk.bytes(stage.disk_offset, stage.length);
     const auto span_at = [&](const std::uint32_t address, const std::size_t size) {
@@ -2545,38 +2279,9 @@ parse_deuteros_amiga_title_post_load_dispatch_profile(
         || to_hex(sha256(parser_bytes)) != parser_hash) {
         throw std::runtime_error("Unsupported Deuteros post-load dispatch profile");
     }
-    if (source_table_disk_offset > AmigaAdf::standard_size
-        || source_table_size > AmigaAdf::standard_size - source_table_disk_offset
-        || index_one_stream_disk_offset > AmigaAdf::standard_size
-        || index_one_stream_prefix_size
-            > AmigaAdf::standard_size - index_one_stream_disk_offset) {
-        throw std::runtime_error("Deuteros command-stream source window is outside Disk 1");
-    }
-    const auto source_table = disk.bytes(source_table_disk_offset, source_table_size);
-    const auto index_one_stream_prefix = disk.bytes(
-        index_one_stream_disk_offset, index_one_stream_prefix_size);
-    const auto observed_index_one_offset = static_cast<std::int16_t>(
-        (static_cast<std::uint16_t>(source_table[2]) << 8U) | source_table[3]);
-    const bool index_one_source_candidate_admitted =
-        to_hex(sha256(source_table)) == source_table_hash
-        && observed_index_one_offset == index_one_offset
-        && source_table_base + static_cast<std::uint32_t>(index_one_offset)
-            == index_one_stream
-        && source_table_disk_offset + static_cast<std::uint32_t>(index_one_offset)
-            == index_one_stream_disk_offset
-        && to_hex(sha256(index_one_stream_prefix)) == index_one_stream_prefix_hash;
     return {caller_address, entry_address, 1, 0x1f97c, 0x1fba4,
         0x1fbaa, parser_address, 0x1f98c, 0, 0x1fa0a,
-        std::string(caller_hash), std::string(routine_hash), std::string(parser_hash),
-        source_table_base, source_table_disk_offset, source_table_size,
-        index_one_source_candidate_admitted ? std::string(source_table_hash) : std::string{},
-        index_one_source_candidate_admitted,
-        index_one_source_candidate_admitted ? index_one_offset : std::int16_t{0},
-        index_one_source_candidate_admitted ? index_one_stream : 0,
-        index_one_source_candidate_admitted ? index_one_stream_disk_offset : 0,
-        index_one_source_candidate_admitted ? index_one_stream_prefix_size : 0,
-        index_one_source_candidate_admitted
-            ? std::string(index_one_stream_prefix_hash) : std::string{}};
+        std::string(caller_hash), std::string(routine_hash), std::string(parser_hash)};
 }
 
 DeuterosAmigaTitleCommandInterpreterProfile

@@ -3,19 +3,12 @@
 #include "launcher.hpp"
 #include "game_text_localization.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
-#include "engine/deuteros_amiga_eon_memory_arena.hpp"
 #include "engine/deuteros_amiga_title_program_entry_session.hpp"
-#include "engine/deuteros_amiga_title_computed_dispatch.hpp"
 #include "engine/deuteros_amiga_bootstrap_frame.hpp"
 #include "engine/deuteros_amiga_main_stage_frame.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
 #include "engine/deuteros_amiga_title_display_trace_session.hpp"
 #include "engine/deuteros_amiga_title_planar_patch.hpp"
-#include "engine/deuteros_amiga_input_device_compatibility.hpp"
-#include "engine/deuteros_amiga_trackdisk_compatibility.hpp"
-#include "engine/deuteros_amiga_exec_compatibility.hpp"
-#include "engine/deuteros_amiga_graphics_library_compatibility.hpp"
-#include "engine/deuteros_amiga_native_display_surface.hpp"
 #include "engine/runtime_session.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
 #include "engine/millennium_amiga_bootstrap_session.hpp"
@@ -27,7 +20,6 @@
 #include "engine/millennium_dos_sound_selection_session.hpp"
 #include "engine/millennium_dos_sound_driver_load_session.hpp"
 #include "engine/millennium_dos_video_driver_load_session.hpp"
-#include "engine/millennium_dos_video_int91_dispatch_session.hpp"
 #include "engine/millennium_dos_compatibility_runner.hpp"
 #include "engine/millennium_dos_title_exec_entry_session.hpp"
 #include "engine/millennium_dos_title_child_compatibility_service.hpp"
@@ -35,8 +27,6 @@
 #include "engine/millennium_dos_gx_startup_trace_admission.hpp"
 #include "engine/millennium_dos_title_handoff_trace_admission.hpp"
 #include "engine/millennium_dos_native_process_admission.hpp"
-#include "engine/millennium_dos_static_data_load_session.hpp"
-#include "engine/millennium_dos_sibm_native_service_session.hpp"
 #include "engine/millennium_dos_owned_function_diagnostics.hpp"
 #include "engine/millennium_dos_external_transfer_admission.hpp"
 #include "engine/millennium_dos_title_session.hpp"
@@ -50,7 +40,6 @@
 #include "data/millennium_dos_voice_bank.hpp"
 
 #include <cstdint>
-#include <array>
 #include <memory>
 #include <optional>
 #include <span>
@@ -98,7 +87,6 @@ struct MillenniumDosPreviewAnimation {
 // exists only while the recovered opening session remains active.
 struct DeuterosAmigaOpeningPresentationSnapshot {
     DeuterosAmigaOpeningCheckpoint checkpoint;
-    bool host_input_held = false;
     std::uint16_t palette_index = 0;
     std::size_t active_channel_count = 0;
     bool frame_composed_on_last_tick = false;
@@ -120,15 +108,6 @@ struct DeuterosAmigaTitleStageBoundarySnapshot {
     std::vector<AdmittedGameText> admitted_game_text;
 };
 
-// Native trackdisk service output is kept distinct from captured Exec/DoIO
-// observations. The service result is present only after the owned-memory
-// request and original Disk 1 payload pass the source-bounded ETD_READ checks.
-struct DeuterosAmigaNativeTrackdiskCoordinatorResult {
-    bool accepted = false;
-    std::string error;
-    std::optional<DeuterosAmigaNativeTrackdiskReadResult> read;
-};
-
 // Copy-only diagnostics for the currently owned title dependency chain. It
 // reports only boundaries already reached by the title-stage session.
 struct DeuterosAmigaTitleDependencyChainCheckpoint {
@@ -139,10 +118,7 @@ struct DeuterosAmigaTitleDependencyChainCheckpoint {
     std::size_t observed_custom_chip_write_count = 0;
     bool custom_chip_complete = false;
     bool callback_exec_return_observed = false;
-    bool native_input_handler_registered = false;
     bool service_setup_boundary_armed = false;
-    std::optional<DeuterosAmigaTitleNativeServiceSetupReceipt> native_service_setup_plan;
-    std::optional<DeuterosAmigaTitleControllerPointerSeedPlan> controller_pointer_seed_plan;
     std::optional<DeuterosAmigaTitleServiceSetupLocalPlan> service_setup_local_plan;
     std::optional<DeuterosAmigaTitleSecondServiceLocalPlan> second_service_local_plan;
     std::optional<DeuterosAmigaTitleThirdServiceLocalPlan> third_service_local_plan;
@@ -152,30 +128,15 @@ struct DeuterosAmigaTitleDependencyChainCheckpoint {
     std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> main_stage_loop_graphics;
     DeuterosAmigaMainStageState main_stage_state =
         DeuterosAmigaMainStageState::awaiting_profile_two_bootstrap;
-    std::uint64_t main_stage_last_command_sequence = 0;
     std::uint32_t stop_before_address = 0;
 };
 struct DeuterosAmigaTitleDependencyObservationResult {
     bool accepted=false;
     std::string error;
     std::optional<DeuterosAmigaTitleSelectorDispatchPlan> selector_dispatch;
-    std::optional<DeuterosAmigaTitleResponseQueueRuntimePlan> response_queue;
-    std::optional<DeuterosAmigaTitleMoveSpriteRuntimePlan> move_sprite;
     DeuterosAmigaTitleDependencyObservationResult() = default;
     DeuterosAmigaTitleDependencyObservationResult(bool accepted_value, std::string error_value)
         : accepted(accepted_value), error(std::move(error_value)) {}
-};
-struct DeuterosAmigaTitleHostInputResult {
-    bool accepted = false;
-    std::string error;
-    std::uint8_t event_class = 0;
-    std::uint16_t event_code = 0;
-    std::uint16_t raw_key_code = 0;
-    std::uint16_t pending_count_before = 0;
-    std::uint16_t pending_count_after = 0;
-    std::uint32_t stop_address = 0;
-    std::optional<std::array<std::uint16_t, 2>> pointer_position;
-    std::optional<std::uint8_t> enqueued_byte;
 };
 struct DeuterosAmigaMainStageDriveResult {
     bool accepted = false;
@@ -224,22 +185,8 @@ struct DeuterosAmigaInterruptWorkerObservationResult {
     // They are not a device effect, playback receipt, or interrupt cadence.
     std::vector<DeuterosAmigaInterruptRegisterWrite> register_writes;
 };
-struct DeuterosAmigaVertbEntryObservation {
-    std::uint64_t generation = 0;
-    std::uint64_t trace_sequence = 0;
-    std::uint32_t instruction_address = 0;
-};
-struct DeuterosAmigaVertbObservationResult {
-    bool accepted = false;
-    std::string error;
-    std::uint64_t generation = 0;
-    std::uint64_t trace_sequence = 0;
-    std::size_t memory_byte_writes = 0;
-    std::vector<DeuterosAmigaInterruptRegisterWrite> register_writes;
-};
 enum class DeuterosAmigaSessionStopReason {
     external_observation,
-    native_translation_boundary,
     step_limit,
     failed,
     inactive,
@@ -250,87 +197,6 @@ struct DeuterosAmigaSessionDriveResult {
     DeuterosAmigaSessionStopReason stop_reason = DeuterosAmigaSessionStopReason::inactive;
     std::uint32_t stop_before_address = 0;
     std::string error;
-    std::optional<DeuterosAmigaTitleNativeServiceSetupReceipt> native_service_setup_plan;
-    std::optional<DeuterosAmigaTitleControllerPointerSeedPlan> controller_pointer_seed_plan;
-    bool observed_service_setup_plan_present = false;
-    std::optional<std::string> external_requirement;
-};
-
-struct DeuterosAmigaBootstrapGraphicsBoundarySnapshot {
-    std::uint64_t runtime_generation = 0;
-    std::uint32_t source_address = 0x13000;
-    std::uint32_t source_length = 108;
-    std::string source_sha256;
-    std::uint32_t exec_base_pointer_cell = 4;
-    std::uint32_t eon_virtual_exec_base = 0;
-    std::uint32_t open_library_call = 0x1300c;
-    std::uint32_t open_library_return = 0x13010;
-    std::uint32_t eon_graphics_library_token = 0;
-    std::uint32_t stop_before_address = 0x13028;
-    std::int16_t stop_vector = -0xd8;
-    std::uint32_t stop_return_address = 0x1302c;
-    std::uint32_t stop_d1_value = 4;
-    std::uint32_t source_instruction_count = 8;
-    std::uint64_t last_observation_sequence = 0;
-    std::optional<std::uint32_t> availmem_d0_result;
-    std::optional<std::uint16_t> availmem_status_register;
-    std::optional<std::uint32_t> second_availmem_d0_result;
-    std::optional<std::uint32_t> display_base_after_second_availmem;
-    std::optional<DeuterosAmigaNativeGraphicsInitReceipt> bootstrap_init_view_receipt;
-    std::optional<DeuterosAmigaNativeGraphicsInitReceipt> bootstrap_init_viewport_receipt;
-    std::optional<DeuterosAmigaNativeGraphicsInitReceipt> bootstrap_init_rastport_receipt;
-    std::optional<DeuterosAmigaMakeVPortReturnReceipt> bootstrap_makevport_return_receipt;
-    std::optional<DeuterosAmigaMakeVPortPrefixReceipt> bootstrap_makevport_prefix_receipt;
-    std::optional<DeuterosAmigaMakeVPortColorRangeReceipt> bootstrap_makevport_color_range_receipt;
-    std::optional<DeuterosAmigaMakeVPortGeometryPrefixReceipt>
-        bootstrap_makevport_geometry_prefix_receipt;
-    std::optional<DeuterosAmigaMakeVPortCallerPrefixReceipt>
-        bootstrap_makevport_caller_prefix_receipt;
-    // The source can reach this instruction without selecting either timing
-    // result.  Keep its two possibilities explicit and leave the Copper slot
-    // unmaterialized.
-    std::optional<DeuterosAmigaMakeVPortSymbolicCopperWordReceipt>
-        bootstrap_makevport_symbolic_timing_word_receipt;
-    std::optional<DeuterosAmigaMakeVPortSymbolicModePrefixReceipt>
-        bootstrap_makevport_symbolic_mode_prefix_receipt;
-    std::uint32_t bootstrap_makevport_resume_address = 0;
-    DeuterosAmigaServiceOrigin bootstrap_graphics_init_origin =
-        DeuterosAmigaServiceOrigin::native_compatibility;
-    std::uint32_t bootstrap_graphics_init_source_stop = 0;
-    std::uint32_t initial_display_base = 0;
-    std::uint32_t display_base_after_open_library = 0;
-    DeuterosAmigaServiceOrigin open_library_origin =
-        DeuterosAmigaServiceOrigin::native_compatibility;
-    std::optional<DeuterosAmigaEonAvailMemReceipt> eon_first_availmem;
-    std::optional<DeuterosAmigaEonAvailMemReceipt> eon_second_availmem;
-    std::uint32_t paired_layout_source_address = 0;
-    std::uint32_t paired_layout_source_length = 0;
-    std::string paired_layout_source_sha256;
-    std::uint32_t paired_layout_stop_address = 0;
-    std::uint32_t paired_layout_plane_base = 0;
-    std::uint32_t paired_layout_plane_bytes = 0;
-    DeuterosAmigaServiceOrigin paired_layout_origin =
-        DeuterosAmigaServiceOrigin::native_compatibility;
-};
-
-struct DeuterosAmigaBootstrapAvailMemReturnObservation {
-    std::uint64_t trace_sequence = 0;
-    std::uint32_t call_address = 0x13028;
-    std::uint32_t return_address = 0x1302c;
-    std::uint32_t exec_base = 0;
-    std::int16_t vector = -0xd8;
-    std::uint32_t result_d0 = 0;
-    std::uint16_t result_status_register = 0;
-};
-
-struct DeuterosAmigaBootstrapSecondAvailMemReturnObservation {
-    std::uint64_t trace_sequence = 0;
-    std::uint32_t call_address = 0x13034;
-    std::uint32_t return_address = 0x13038;
-    std::uint32_t exec_base = 0;
-    std::int16_t vector = -0xd8;
-    std::uint32_t d1_value = 0;
-    std::uint32_t result_d0 = 0;
 };
 
 // Native Millennium DOS scheduler result.  It deliberately reports a typed
@@ -344,13 +210,10 @@ enum class MillenniumDosSessionStopReason {
 };
 enum class MillenniumDosTitleExternalObservationKind {
     dos_vector_result,
-    title_private_interrupt_result,
-    video_function_zero_bios_result,
     setup_bios_result,
     far_words,
     far_word,
     far_byte,
-    process_prefix_byte,
     palette_bios_result,
 };
 // Value-only description of the next admitted title fact.  It intentionally
@@ -363,8 +226,6 @@ struct MillenniumDosTitleExternalObservationRequirement {
     std::uint16_t source_segment = 0;
     std::uint16_t source_offset = 0;
     std::uint16_t element_width = 0;
-    std::uint16_t service_number = 0;
-    std::uint16_t service_function = 0;
 };
 struct MillenniumDosSessionDriveResult {
     bool accepted = false;
@@ -387,42 +248,16 @@ enum class ActiveNativeSessionDriver {
     unavailable,
     millennium_dos,
     deuteros_amiga,
-    millennium_atari,
-};
-struct MillenniumAtariSessionDriveResult {
-    bool accepted = false;
-    std::uint32_t steps = 0;
-    std::uint64_t last_sequence = 0;
-    std::size_t local_instruction_count = 0;
-    std::uint32_t loop_iteration = 0;
-    std::uint16_t loop_d7_value = 0;
-    std::uint32_t palette_helper_entry_count = 0;
-    std::uint8_t state_id = 0;
-    MillenniumAtariConfigConsumerState state = MillenniumAtariConfigConsumerState::revoked;
-    std::uint32_t stop_before_address = 0;
-    bool requires_external_observation = false;
-    bool step_limit_reached = false;
-    MillenniumAtariServiceOrigin status_register_origin = MillenniumAtariServiceOrigin::none;
-    MillenniumAtariServiceOrigin line_a_origin = MillenniumAtariServiceOrigin::none;
-    MillenniumAtariServiceOrigin selector_21_origin = MillenniumAtariServiceOrigin::none;
-    MillenniumAtariServiceOrigin selector_6_origin = MillenniumAtariServiceOrigin::none;
-    MillenniumAtariServiceOrigin selector_38_origin = MillenniumAtariServiceOrigin::none;
-    bool selector_6_palette_loaded = false;
-    bool movem_registers_preserved_opaque = false;
-    std::uint32_t abstract_movem_rts_stack_delta = 0;
-    std::string error;
 };
 struct ActiveNativeSessionDriveResult {
     ActiveNativeSessionDriver driver = ActiveNativeSessionDriver::unavailable;
     std::optional<MillenniumDosSessionDriveResult> millennium_dos;
     std::optional<DeuterosAmigaSessionDriveResult> deuteros_amiga;
-    std::optional<MillenniumAtariSessionDriveResult> millennium_atari;
     std::string error;
 
     [[nodiscard]] bool accepted() const {
         return millennium_dos ? millennium_dos->accepted
-             : deuteros_amiga ? deuteros_amiga->accepted
-             : millennium_atari ? millennium_atari->accepted : false;
+             : deuteros_amiga ? deuteros_amiga->accepted : false;
     }
 };
 
@@ -444,7 +279,6 @@ struct MillenniumAmigaBootstrapPresentationSnapshot {
     MillenniumAmigaLoadPlan plan;
     MillenniumAmigaBootstrapOpaqueInvocationBoundary opaque_invocation_boundary;
     MillenniumAmigaFirstStageEntryBoundary first_stage_entry_boundary;
-    MillenniumAmigaInputDeviceOpenBoundary input_device_open_boundary;
 };
 struct MillenniumAmigaBootstrapRelocatorObservation { std::uint64_t sequence=0; std::uint32_t instruction_address=0; std::uint32_t source_or_target_address=0; std::uint8_t value=0; };
 struct MillenniumAmigaBootstrapRelocatorObservationResult { bool accepted=false; std::string error; };
@@ -508,7 +342,6 @@ struct MillenniumAmigaBootstrapRelocatorCheckpoint {
 // configuration-transfer boundary.
 struct MillenniumAtariBootstrapPresentationSnapshot {
     AtariStPrgLoadDiagnostics native_prg_image;
-    std::shared_ptr<const MillenniumAtariTitleFrameSnapshot> title_frame;
     MillenniumAtariReadOnlyGemdosCheckpoint read_only_gemdos;
     MillenniumAtariConfigConsumerCheckpoint config_consumer;
     MillenniumAtariBootstrap bootstrap;
@@ -553,10 +386,6 @@ struct MillenniumDosRuntimeAssets {
     // Exact original VOC catalogue metadata. Its presence does not permit
     // playback: event mapping, driver ABI and timing remain unrecovered.
     std::optional<MillenniumDosVoiceBankEvidence> voice_bank;
-    // Native, hash-verified unsigned PCM and the source `$08b3` input blocks.
-    // This is consumed only by the native DOS service path; it is not itself
-    // an audio mixer or evidence of a played effect.
-    std::optional<MillenniumDosSibmNativeVoiceBank> sibm_native_voice_bank;
     std::optional<MillenniumDosTitleFlow> title_flow;
     std::optional<MillenniumDosSoundSelectionEvidence> sound_selection;
     std::optional<std::string> sound_selection_prompt;
@@ -605,14 +434,7 @@ struct MillenniumDosSoundDriverSeekObservation { std::uint64_t sequence=0; std::
 struct MillenniumDosSoundDriverAllocationObservation { std::uint64_t sequence=0; std::uint16_t instruction=0; bool carry=false; std::uint16_t ax=0; };
 struct MillenniumDosSoundDriverReadObservation { std::uint64_t sequence=0; std::uint16_t instruction=0; bool carry=false; std::uint16_t bx=0,ax=0; };
 struct MillenniumDosSoundDriverCloseObservation { std::uint64_t sequence=0; std::uint16_t instruction=0; bool carry=false; std::uint16_t bx=0; };
-// Post-INT 21h observation for the preceding SetVect request. The IVT tuple
-// is sampled from guest memory; request registers are not mistaken for a DOS
-// result. FLAGS are retained as an observation, but AH=25 does not define CF
-// as a status result.
-struct MillenniumDosSoundDriverVectorObservation {
-    std::uint64_t sequence=0;
-    std::uint16_t post_instruction=0,flags=0,ivt_offset=0,ivt_segment=0;
-};
+struct MillenniumDosSoundDriverVectorObservation { std::uint64_t sequence=0; std::uint16_t instruction=0,ax=0,dx=0; };
 struct MillenniumDosSoundDriverStackObservation { std::uint64_t sequence=0; std::uint16_t instruction=0,address=0,value=0; };
 struct MillenniumDosSoundDriverTitleExecObservation { std::uint64_t sequence=0; std::uint16_t instruction=0,ax=0,dx=0,parameter_block=0; };
 using MillenniumDosSoundDriverLoadObservation = std::variant<MillenniumDosSoundDriverLoadEntryObservation,MillenniumDosSoundDriverOpenObservation,MillenniumDosSoundDriverSeekObservation,MillenniumDosSoundDriverAllocationObservation,MillenniumDosSoundDriverReadObservation,MillenniumDosSoundDriverCloseObservation,MillenniumDosSoundDriverVectorObservation,MillenniumDosSoundDriverStackObservation,MillenniumDosSoundDriverTitleExecObservation>;
@@ -628,11 +450,6 @@ struct MillenniumDosSoundDriverLoadCheckpoint {
         MillenniumDosSoundDriverCodeSegmentProvenance::external_observation;
     std::vector<MillenniumDosSoundDriverRuntimeWordEffect> runtime_word_effects;
     std::vector<MillenniumDosSoundDriverRuntimeByteEffect> runtime_byte_effects;
-    std::optional<MillenniumDosSoundDriverIvtVector> installed_int95_vector;
-    MillenniumDosSoundDriverVectorInstallProvenance vector_install_provenance =
-        MillenniumDosSoundDriverVectorInstallProvenance::none;
-    MillenniumDosSoundDriverParentStackProvenance parent_stack_provenance =
-        MillenniumDosSoundDriverParentStackProvenance::none;
 };
 
 struct MillenniumDosVideoDriverDosObservation {
@@ -675,44 +492,8 @@ struct MillenniumDosVideoDriverLoadCheckpoint {
     std::uint16_t file_handle = 0, load_segment = 0;
     bool set_vector_carry = false, set_vector_result_observed = false;
     std::uint16_t set_vector_ax = 0;
-    MillenniumDosVideoDriverVectorProvenance vector_provenance =
-        MillenniumDosVideoDriverVectorProvenance::none;
     std::optional<MillenniumDosVideoDriverIvtObservation> ivt_observation;
     bool ivt_observation_matches_loaded_driver = false;
-};
-
-struct MillenniumDosVideoFunctionZeroCheckpoint {
-    std::uint64_t generation = 0;
-    MillenniumDosVideoInt91FunctionZeroDispatch dispatch;
-    MillenniumDosVideoFunctionZeroState state =
-        MillenniumDosVideoFunctionZeroState::awaiting_cached_mode_query_result;
-    std::optional<MillenniumDosVideoFunctionZeroBoundary> boundary;
-    std::optional<MillenniumDosVideoFunctionZeroLocalWrite> cache_write;
-    std::optional<MillenniumDosVideoFunctionZeroOutcome> outcome;
-    std::optional<MillenniumDosVideoFunctionZeroPostludeOutcome> postlude;
-    struct StackStopBoundary {
-        std::uint16_t instruction_address = 0x024b;
-        std::uint16_t ss = 0;
-        std::uint16_t sp_before_near_ret = 0xd9ec;
-        std::uint16_t required_paragraphs = 0x0da0;
-        std::uint16_t admitted_paragraphs = 0;
-        std::uint16_t near_return_ip = 0;
-        bool caller_return_word_backed = false;
-        bool caller_return_word_value_known = false;
-        bool flags_value_available = false;
-        std::uint16_t handler_iret_address = 0x0020;
-        std::uint16_t wrapper_return_ip = 0x1b98;
-        std::uint16_t wrapper_saved_ds = 0;
-        std::uint16_t wrapper_saved_es = 0;
-        bool wrapper_known_saved_segments_match = false;
-        std::uint16_t wrapper_unknown_register_count = 3;
-        bool mcga_return_chain_completed = false;
-    };
-    std::optional<StackStopBoundary> stack_stop;
-};
-struct MillenniumDosVideoFunctionZeroObservationResult {
-    bool accepted = false;
-    std::string error;
 };
 
 struct MillenniumDosTitleExecPrefixObservation {
@@ -737,7 +518,6 @@ struct MillenniumDosTitleInitializationObservationResult {
 using MillenniumDosTitleContinuationObservation = std::variant<
     MillenniumDosTitleDosVectorResultObservation,
     MillenniumDosTitleSetupBiosResultObservation,
-    MillenniumDosTitleSetupBiosReturnObservation,
     MillenniumDosTitleFarWordsObservation,
     MillenniumDosTitleFarWordObservation,
     MillenniumDosTitleFarByteObservation,
@@ -769,36 +549,6 @@ struct MillenniumDosTitleToGameInterruptObservation {
 };
 struct MillenniumDosTitleToGameObservationResult { bool accepted=false; std::string error; };
 struct MillenniumDosNativeProcessObservationResult { bool accepted=false; std::string error; };
-struct MillenniumDosStaticDataLoaderEntryObservation {
-    std::uint64_t sequence = 0;
-    std::uint16_t call_instruction = 0;
-    std::uint16_t target_address = 0;
-    std::uint16_t return_address = 0;
-    std::uint16_t code_segment = 0;
-};
-struct MillenniumDosStaticDataLoaderCallReturnObservation {
-    std::uint64_t sequence = 0;
-    std::uint16_t instruction_address = 0;
-    std::uint16_t returned_to = 0;
-    std::uint16_t code_segment = 0;
-};
-struct MillenniumDosOwnedRuntimeByteRequest {
-    bool accepted = false;
-    std::string error;
-    std::optional<MillenniumDosNativeRuntimeByteObservation> observation;
-};
-// Derives the request only from a checkpointed exact DOS read boundary and
-// the supplied owned-memory object. The live coordinator passes its private
-// memory instance; this value helper never creates or fills memory.
-[[nodiscard]] MillenniumDosOwnedRuntimeByteRequest
-derive_millennium_dos_owned_runtime_byte_request(
-    const MillenniumDosNativeProcessCheckpoint& process,
-    const NativeRuntimeMemory& owned_memory, std::uint64_t sequence_floor);
-struct MillenniumDosSibmNativeServiceResult {
-    bool accepted = false;
-    std::string error;
-    std::optional<MillenniumDosSibmNativeServiceCheckpoint> checkpoint;
-};
 struct MillenniumDosTitleToGameCheckpoint {
     std::uint64_t generation = 0;
     std::uint64_t last_sequence = 0;
@@ -1163,23 +913,6 @@ public:
     [[nodiscard]] std::optional<MillenniumDosSoundDriverLoadCheckpoint> millennium_dos_sound_driver_load_checkpoint() const;
     [[nodiscard]] MillenniumDosVideoDriverLoadObservationResult observe_millennium_dos_video_driver_load(MillenniumDosVideoDriverLoadObservation);
     [[nodiscard]] std::optional<MillenniumDosVideoDriverLoadCheckpoint> millennium_dos_video_driver_load_checkpoint() const;
-    [[nodiscard]] std::optional<MillenniumDosVideoInt91FunctionZeroDispatch>
-    millennium_dos_video_int91_function_zero_dispatch() const;
-    [[nodiscard]] MillenniumDosVideoFunctionZeroObservationResult
-    begin_millennium_dos_video_int91_function_zero_dispatch();
-    [[nodiscard]] MillenniumDosVideoFunctionZeroObservationResult
-    observe_millennium_dos_video_function_zero_bios_result(
-        MillenniumDosVideoFunctionZeroBiosResult);
-    [[nodiscard]] MillenniumDosVideoFunctionZeroObservationResult
-    service_millennium_dos_mcga_function_zero_boundary();
-    [[nodiscard]] MillenniumDosVideoFunctionZeroObservationResult
-    advance_millennium_dos_video_function_zero_success_postlude();
-    [[nodiscard]] MillenniumDosVideoFunctionZeroObservationResult
-    advance_millennium_dos_video_function_zero_mcga_single_count_store();
-    [[nodiscard]] MillenniumDosVideoFunctionZeroObservationResult
-    advance_millennium_dos_video_function_zero_mcga_return_chain();
-    [[nodiscard]] std::optional<MillenniumDosVideoFunctionZeroCheckpoint>
-    millennium_dos_video_function_zero_checkpoint() const;
     [[nodiscard]] std::optional<MillenniumDosCompatibilityRunnerCheckpoint> tick_millennium_dos_compatibility_runner();
     [[nodiscard]] MillenniumDosSessionDriveResult
     drive_millennium_dos_session(std::uint32_t step_limit = 64);
@@ -1206,9 +939,6 @@ public:
         MillenniumDosTitleDosFileResultObservation);
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_dos_vector_result(MillenniumDosTitleDosVectorResultObservation);
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_setup_bios_result(MillenniumDosTitleSetupBiosResultObservation);
-    [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_setup_bios_return(MillenniumDosTitleSetupBiosReturnObservation);
-    [[nodiscard]] MillenniumDosTitleInitializationObservationResult service_millennium_dos_title_setup_bios_compatibility_noop();
-    [[nodiscard]] MillenniumDosTitleInitializationObservationResult service_millennium_dos_title_set_vector_compatibility();
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_far_words(MillenniumDosTitleFarWordsObservation);
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_far_word(MillenniumDosTitleFarWordObservation);
     [[nodiscard]] MillenniumDosTitleInitializationObservationResult observe_millennium_dos_title_far_byte(MillenniumDosTitleFarByteObservation);
@@ -1242,25 +972,6 @@ public:
     [[nodiscard]] MillenniumDosNativeProcessObservationResult
     observe_millennium_dos_native_bios_interrupt_return(
         MillenniumDosNativeBiosInterruptReturnObservation observation);
-    [[nodiscard]] MillenniumDosNativeProcessObservationResult
-    observe_millennium_dos_native_dos_interrupt_return(
-        MillenniumDosNativeDosInterruptReturnObservation observation);
-    [[nodiscard]] MillenniumDosNativeProcessObservationResult
-    observe_millennium_dos_static_data_loader_entry(
-        MillenniumDosStaticDataLoaderEntryObservation observation);
-    [[nodiscard]] MillenniumDosNativeProcessObservationResult
-    observe_millennium_dos_static_data_load_dos_interrupt_return(
-        MillenniumDosNativeDosInterruptReturnObservation observation);
-    [[nodiscard]] MillenniumDosNativeProcessObservationResult
-    observe_millennium_dos_static_data_loader_return(
-        MillenniumDosStaticDataLoaderCallReturnObservation observation);
-    [[nodiscard]] std::optional<MillenniumDosStaticDataLoadCheckpoint>
-    millennium_dos_static_data_load_checkpoint() const;
-    [[nodiscard]] MillenniumDosNativeProcessObservationResult
-    observe_millennium_dos_native_runtime_byte(
-        MillenniumDosNativeRuntimeByteObservation observation);
-    [[nodiscard]] MillenniumDosNativeProcessObservationResult
-    execute_millennium_dos_native_runtime_byte_from_owned_memory();
     [[nodiscard]] std::optional<MillenniumDosTitleToGameCheckpoint>
     millennium_dos_title_to_game_checkpoint() const;
     // A value-only diagnostics view. It is available only for the live,
@@ -1272,12 +983,6 @@ public:
     // entry and subsequent native observations have connected to it.
     [[nodiscard]] std::optional<MillenniumDosNativeProcessCheckpoint>
     millennium_dos_native_process_checkpoint() const;
-    // Starts Eon's bounded SIBM timer/audio-data startup service while leaving
-    // the observed DOS process checkpoint at its AH=$35 boundary.
-    [[nodiscard]] MillenniumDosSibmNativeServiceResult
-    activate_millennium_dos_sibm_native_service(std::uint64_t expected_generation);
-    [[nodiscard]] std::optional<MillenniumDosSibmNativeServiceCheckpoint>
-    millennium_dos_sibm_native_service_checkpoint() const;
     [[nodiscard]] RuntimeInputDisposition observe_input(const RuntimeInputObservation& observation);
     // Advances exactly one recovered Deuteros Amiga opening tick using the
     // coordinator-owned held observation. All non-opening sessions return no
@@ -1300,12 +1005,8 @@ public:
     [[nodiscard]] DeuterosAmigaInterruptWorkerObservationResult
     observe_deuteros_amiga_interrupt_worker(
         DeuterosAmigaInterruptWorkerEntryObservation observation);
-    [[nodiscard]] DeuterosAmigaVertbObservationResult observe_deuteros_amiga_vertb_entry(
-        DeuterosAmigaVertbEntryObservation observation);
     [[nodiscard]] ActiveNativeSessionDriveResult
-    drive_active_native_session(std::uint32_t step_limit = 4096);
-    [[nodiscard]] MillenniumAtariSessionDriveResult
-    drive_millennium_atari_session(std::uint32_t step_limit = 64);
+    drive_active_native_session(std::uint32_t step_limit = 64);
     // Audio is mixed within the same owner as the recovered VM and is
     // therefore revoked at title handoff/reset. SDL receives only a transient
     // float buffer; it never borrows the opening sound bank or its PCM bytes.
@@ -1334,56 +1035,16 @@ public:
         deuteros_amiga_main_stage_frame() const;
     [[nodiscard]] std::optional<DeuterosAmigaTitleProgramEntrySnapshot>
     deuteros_amiga_title_program_entry() const;
-    [[nodiscard]] std::optional<DeuterosAmigaBootstrapGraphicsBoundarySnapshot>
-    deuteros_amiga_bootstrap_graphics_boundary() const;
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
-    observe_deuteros_amiga_bootstrap_availmem_return(
-        DeuterosAmigaBootstrapAvailMemReturnObservation observation);
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
-    observe_deuteros_amiga_bootstrap_second_availmem_return(
-        DeuterosAmigaBootstrapSecondAvailMemReturnObservation observation);
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
-    advance_deuteros_amiga_bootstrap_graphics_compatibility();
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
-    advance_deuteros_amiga_bootstrap_eon_memory_services();
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
-    advance_deuteros_amiga_bootstrap_view_pair_native();
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
-    observe_deuteros_amiga_bootstrap_makevport_return(
-        DeuterosAmigaObservedMakeVPortReturn);
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
-    advance_deuteros_amiga_bootstrap_makevport_prefix();
-    [[nodiscard]] DeuterosAmigaComputedDispatchResult
-    observe_deuteros_amiga_title_computed_dispatch(
-        DeuterosAmigaComputedDispatchObservation);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
     advance_deuteros_amiga_title_program_entry();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_local_prefix();
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_native_privilege_transition();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_exec_return(DeuterosAmigaObservedExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_open_library_return(DeuterosAmigaObservedOpenLibraryReturn);
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult provide_deuteros_amiga_title_native_graphics_library();
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult provide_deuteros_amiga_title_native_display_surface();
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult initialize_deuteros_amiga_title_native_display();
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult register_deuteros_amiga_title_native_input_handler();
-    [[nodiscard]] DeuterosAmigaNativeTrackdiskCoordinatorResult
-    service_deuteros_amiga_title_trackdisk_read();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_open_library_local_path();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_display_base(DeuterosAmigaObservedDisplayBaseRead);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_custom_chip_write(DeuterosAmigaObservedCustomChipWrite);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_callback_exec_return(DeuterosAmigaObservedCallbackExecReturn);
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
-    observe_deuteros_amiga_title_callback_producer(
-        DeuterosAmigaObservedTitleCallbackProducer);
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
-    observe_deuteros_amiga_title_move_sprite(
-        DeuterosAmigaObservedTitleMoveSpriteCall);
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
-    observe_deuteros_amiga_title_response_queue(
-        DeuterosAmigaObservedTitleResponseQueue);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_service_setup_exec_return(DeuterosAmigaObservedServiceSetupExecReturn);
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
-    advance_deuteros_amiga_title_native_service_setup();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_second_service_exec_return(DeuterosAmigaObservedServiceSetupExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_third_service_exec_return(DeuterosAmigaObservedServiceSetupExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_fourth_service_exec_return(DeuterosAmigaObservedServiceSetupExecReturn);
@@ -1419,7 +1080,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_call_return(DeuterosAmigaObservedTitleCommandCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_planar_write(DeuterosAmigaObservedTitleCommandPlanarWrite);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_planar_variant_write(DeuterosAmigaObservedTitleCommandPlanarVariantWrite);
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_negative_phase(DeuterosAmigaObservedTitleCommandNegativePhase);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_negative_service(DeuterosAmigaObservedTitleCommandNegativeService);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_pointer_route(DeuterosAmigaObservedTitlePostCommandPointerRoute);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_graphics_return(DeuterosAmigaObservedGraphicsVectorReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_first_dispatch();
@@ -1621,10 +1282,7 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_palette_recurrence(MillenniumAtariGameInitPaletteRecurrenceObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_palette_rts(MillenniumAtariGameInitPaletteRtsObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_fopen(MillenniumAtariGemdosSelector61Observation);
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_millennium_atari_game_init_second_config_fopen();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_fread(MillenniumAtariGemdosSelector63Observation);
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_millennium_atari_game_init_second_config_fread();
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_millennium_atari_game_init_second_config_fclose();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_fclose(MillenniumAtariGemdosSelector62Observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_rts(MillenniumAtariGameInitSecondConfigRtsObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_xbios_38(MillenniumAtariXbiosSelector38Observation);
@@ -1787,23 +1445,12 @@ public:
     millennium_dos_owned_function_diagnostics() const;
 
 private:
-    [[nodiscard]] DeuterosAmigaTitleHostInputResult
-    dispatch_deuteros_amiga_title_raw_key(DeuterosAmigaTitleInputEventPrefix event);
     [[nodiscard]] MillenniumDosSoundDriverLoadObservationResult
     begin_millennium_dos_sound_driver_load(std::uint64_t sequence,
         std::uint16_t code_segment,
         MillenniumDosSoundDriverCodeSegmentProvenance provenance);
     [[nodiscard]] bool advance_millennium_dos_title_local_continuation(
         std::string& error);
-    [[nodiscard]] MillenniumDosTitleInitializationObservationResult
-    service_millennium_dos_mcga_title_function_four();
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
-    advance_deuteros_amiga_main_stage_reentry_d0();
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
-    execute_deuteros_amiga_main_stage_loop_graphics_native_service();
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
-    apply_deuteros_amiga_main_stage_reentry_d0(
-        std::optional<DeuterosAmigaObservedMainStageReentryD0> observation);
     // Central exact-media gate for the recovered title successor. Future
     // sound-driver ownership may call this only after it has advanced the
     // same owned title session to handed_off; it is intentionally not a
@@ -1828,10 +1475,6 @@ private:
         millennium_dos_sound_driver_code_segment_provenance_=
             MillenniumDosSoundDriverCodeSegmentProvenance::external_observation;
     std::optional<MillenniumDosVideoDriverLoadSession> millennium_dos_video_driver_load_;
-    std::optional<MillenniumDosVideoInt91DispatchSession>
-        millennium_dos_video_int91_dispatch_;
-    bool millennium_dos_video_function_zero_return_chain_completed_ = false;
-    std::uint64_t millennium_dos_video_int91_dispatch_generation_ = 0;
     std::uint64_t millennium_dos_video_driver_load_generation_ = 0;
     std::uint64_t millennium_dos_video_driver_load_last_sequence_ = 0;
     std::optional<MillenniumDosCompatibilityRunner> millennium_dos_compatibility_runner_;
@@ -1845,8 +1488,6 @@ private:
     std::uint64_t millennium_dos_title_to_game_last_sequence_ = 0;
     std::optional<MillenniumDosGxStartupTraceAdmission> millennium_dos_gx_startup_;
     std::optional<MillenniumDosNativeProcessAdmission> millennium_dos_native_process_;
-    std::optional<MillenniumDosStaticDataLoadSession> millennium_dos_static_data_load_;
-    std::optional<MillenniumDosSibmNativeServiceSession> millennium_dos_sibm_native_service_;
     // This span-based session is destroyed before its preceding admission,
     // whose exact verified game buffer is its sole backing owner.
     std::optional<MillenniumDosPostOverlayLoopSession> millennium_dos_post_overlay_loop_;
@@ -1913,45 +1554,6 @@ private:
     DeuterosAmigaMainStageFrame deuteros_amiga_main_stage_frame_;
     std::uint64_t deuteros_amiga_main_stage_frame_generation_ = 0;
     std::optional<DeuterosAmigaTitleProgramEntrySnapshot> deuteros_amiga_title_program_entry_;
-    std::optional<DeuterosAmigaBootstrapGraphicsBoundarySnapshot>
-        deuteros_amiga_bootstrap_graphics_boundary_;
-    std::optional<DeuterosAmigaTitleComputedDispatchSession> deuteros_amiga_title_computed_dispatch_;
-    DeuterosAmigaInputDeviceCompatibilitySession deuteros_amiga_input_device_compatibility_;
-    std::optional<DeuterosAmigaTrackdiskCompatibilitySession>
-        deuteros_amiga_trackdisk_compatibility_;
-    std::optional<DeuterosAmigaExecCompatibilitySession>
-        deuteros_amiga_exec_compatibility_;
-    std::optional<DeuterosAmigaExecCompatibilityGraph>
-        deuteros_amiga_exec_compatibility_graph_;
-    std::optional<DeuterosAmigaExecCompatibilityTaskResult>
-        deuteros_amiga_exec_task_;
-    std::optional<DeuterosAmigaExecCompatibilityPortResult>
-        deuteros_amiga_exec_first_port_;
-    std::optional<DeuterosAmigaExecCompatibilityPortResult>
-        deuteros_amiga_exec_second_port_;
-    std::optional<DeuterosAmigaExecCompatibilityOpenResult>
-        deuteros_amiga_exec_unit0_open_;
-    std::optional<DeuterosAmigaExecCompatibilityOpenResult>
-        deuteros_amiga_exec_unit1_open_;
-    std::optional<DeuterosAmigaNativeTaskHandle> deuteros_amiga_trackdisk_task_;
-    std::optional<DeuterosAmigaNativeTrackdiskServiceBinding>
-        deuteros_amiga_trackdisk_unit0_binding_;
-    std::optional<DeuterosAmigaNativeTrackdiskServiceBinding>
-        deuteros_amiga_trackdisk_unit1_binding_;
-    std::optional<DeuterosAmigaGraphicsLibraryCompatibilitySession>
-        deuteros_amiga_graphics_library_compatibility_;
-    std::optional<DeuterosAmigaMakeVPortPrefixSession>
-        deuteros_amiga_makevport_prefix_;
-    std::optional<DeuterosAmigaEonMemoryArena> deuteros_amiga_eon_memory_arena_;
-    std::optional<DeuterosAmigaNativeDisplaySurfaceSession>
-        deuteros_amiga_native_display_surface_;
-    std::optional<DeuterosAmigaNativeDisplayInitialization>
-        deuteros_amiga_native_display_initialization_;
-    std::optional<DeuterosAmigaNativeInputHandlerRegistration>
-        deuteros_amiga_native_input_handler_registration_;
-    std::optional<DeuterosAmigaTitleNativeServiceSetupReceipt>
-        deuteros_amiga_title_native_service_setup_plan_;
-    std::uint64_t deuteros_amiga_title_host_input_sequence_ = 0;
     std::optional<DeuterosAmigaOwnedDiskTransitionPlan> deuteros_amiga_disk_transition_;
     std::optional<DeuterosAmigaTitleServiceSetupLocalPlan> deuteros_amiga_title_service_setup_plan_;
     std::optional<DeuterosAmigaTitleSecondServiceLocalPlan> deuteros_amiga_title_second_service_plan_;
@@ -1969,7 +1571,6 @@ private:
     std::unique_ptr<DeuterosAmigaNativeAudioMixer> deuteros_amiga_native_audio_mixer_;
     std::uint64_t deuteros_amiga_native_audio_generation_=0;
     std::uint64_t deuteros_amiga_interrupt_worker_last_sequence_ = 0;
-    std::optional<DeuterosAmigaVertbSession> deuteros_amiga_vertb_session_;
     std::optional<DeuterosAmigaTitleDisplayTraceSession>
         deuteros_amiga_title_display_trace_;
     bool deuteros_amiga_opening_input_held_ = false;

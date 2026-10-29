@@ -36,8 +36,6 @@ std::string_view runtime_session_kind_label(const RuntimeSessionKind kind) {
     case RuntimeSessionKind::deuteros_amiga_title_stage: return "DEUTEROS AMIGA TITLE STAGE";
     case RuntimeSessionKind::deuteros_amiga_title_program_entry:
         return "DEUTEROS AMIGA TITLE PROGRAM ENTRY";
-    case RuntimeSessionKind::deuteros_amiga_bootstrap_graphics_boundary:
-        return "DEUTEROS AMIGA BOOTSTRAP AVAILMEM BOUNDARY";
     case RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary:
         return "DEUTEROS AMIGA TITLE DISPLAY TRACE BOUNDARY";
     case RuntimeSessionKind::deuteros_atari_bootstrap: return "DEUTEROS ATARI ST BOOTSTRAP";
@@ -58,15 +56,12 @@ RuntimeInputContract runtime_input_contract_for_session(const RuntimeSessionKind
     switch (kind) {
     case RuntimeSessionKind::millennium_dos_title:
         return RuntimeInputContract::millennium_dos_startup_observation;
-    case RuntimeSessionKind::millennium_dos_post_overlay_loop:
-        return RuntimeInputContract::millennium_dos_post_overlay_console_queue;
     case RuntimeSessionKind::deuteros_amiga_opening:
         return RuntimeInputContract::deuteros_amiga_opening_held_signal;
-    case RuntimeSessionKind::deuteros_amiga_title_stage:
-        return RuntimeInputContract::deuteros_amiga_title_raw_key;
     case RuntimeSessionKind::millennium_dos_sound_driver_boundary:
     case RuntimeSessionKind::millennium_dos_title_handoff_boundary:
     case RuntimeSessionKind::millennium_dos_gx_startup_boundary:
+    case RuntimeSessionKind::millennium_dos_post_overlay_loop:
     case RuntimeSessionKind::millennium_dos_seventh_function:
     case RuntimeSessionKind::millennium_dos_sixth_function:
     case RuntimeSessionKind::millennium_dos_eighth_function:
@@ -81,8 +76,8 @@ RuntimeInputContract runtime_input_contract_for_session(const RuntimeSessionKind
     case RuntimeSessionKind::millennium_dos_tenth_function:
     case RuntimeSessionKind::millennium_amiga_bootstrap:
     case RuntimeSessionKind::millennium_atari_bootstrap:
+    case RuntimeSessionKind::deuteros_amiga_title_stage:
     case RuntimeSessionKind::deuteros_amiga_title_program_entry:
-    case RuntimeSessionKind::deuteros_amiga_bootstrap_graphics_boundary:
     case RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary:
     case RuntimeSessionKind::deuteros_atari_bootstrap:
         return RuntimeInputContract::none;
@@ -95,12 +90,8 @@ std::string_view runtime_input_contract_identifier(const RuntimeInputContract co
     case RuntimeInputContract::none: return "none";
     case RuntimeInputContract::millennium_dos_startup_observation:
         return "millennium-dos-startup-observation";
-    case RuntimeInputContract::millennium_dos_post_overlay_console_queue:
-        return "millennium-dos-post-overlay-console-queue";
     case RuntimeInputContract::deuteros_amiga_opening_held_signal:
         return "deuteros-amiga-opening-held-signal";
-    case RuntimeInputContract::deuteros_amiga_title_raw_key:
-        return "deuteros-amiga-title-input";
     }
     return "none";
 }
@@ -115,16 +106,8 @@ bool runtime_input_contract_accepts_observation(const RuntimeInputContract contr
     case RuntimeInputContract::millennium_dos_startup_observation:
         return observation == RuntimeInputObservationKind::ascii_character
             || observation == RuntimeInputObservationKind::character_available;
-    case RuntimeInputContract::millennium_dos_post_overlay_console_queue:
-        return observation == RuntimeInputObservationKind::millennium_dos_console_character
-            || observation == RuntimeInputObservationKind::millennium_dos_function_key
-            || observation == RuntimeInputObservationKind::millennium_dos_console_flush;
     case RuntimeInputContract::deuteros_amiga_opening_held_signal:
         return observation == RuntimeInputObservationKind::opening_input_held;
-    case RuntimeInputContract::deuteros_amiga_title_raw_key:
-        return observation == RuntimeInputObservationKind::deuteros_amiga_raw_key_event
-            || observation == RuntimeInputObservationKind::deuteros_amiga_raw_mouse_button_event
-            || observation == RuntimeInputObservationKind::deuteros_amiga_raw_mouse_motion_event;
     case RuntimeInputContract::none:
         return false;
     }
@@ -144,13 +127,10 @@ bool runtime_session_declaration_is_valid(const RuntimeSessionKind kind,
         expected_boundary = RuntimeSessionBoundary::recovered_presentation_boundary;
         expected_capabilities = {true, true, true};
         break;
-    case RuntimeSessionKind::deuteros_amiga_title_stage:
-        expected_boundary = RuntimeSessionBoundary::bootstrap_boundary;
-        expected_capabilities = {false, false, true};
-        break;
     case RuntimeSessionKind::millennium_dos_sound_driver_boundary:
     case RuntimeSessionKind::millennium_dos_title_handoff_boundary:
     case RuntimeSessionKind::millennium_dos_gx_startup_boundary:
+    case RuntimeSessionKind::millennium_dos_post_overlay_loop:
     case RuntimeSessionKind::millennium_dos_seventh_function:
     case RuntimeSessionKind::millennium_dos_sixth_function:
     case RuntimeSessionKind::millennium_dos_eighth_function:
@@ -164,18 +144,11 @@ bool runtime_session_declaration_is_valid(const RuntimeSessionKind kind,
     case RuntimeSessionKind::millennium_dos_second_function_callback:
     case RuntimeSessionKind::millennium_dos_tenth_function:
     case RuntimeSessionKind::millennium_amiga_bootstrap:
+    case RuntimeSessionKind::millennium_atari_bootstrap:
+    case RuntimeSessionKind::deuteros_amiga_title_stage:
     case RuntimeSessionKind::deuteros_amiga_title_program_entry:
-    case RuntimeSessionKind::deuteros_amiga_bootstrap_graphics_boundary:
     case RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary:
     case RuntimeSessionKind::deuteros_atari_bootstrap:
-        break;
-    case RuntimeSessionKind::millennium_atari_bootstrap:
-        // This session exposes the hash-locked native title frame, while its
-        // loader/gameplay path still stops at the bootstrap boundary.
-        expected_capabilities = {true, false, false};
-        break;
-    case RuntimeSessionKind::millennium_dos_post_overlay_loop:
-        expected_capabilities = {false, false, true};
         break;
     }
     return boundary == expected_boundary && capabilities == expected_capabilities
@@ -203,6 +176,7 @@ RuntimeSessionSnapshot make_runtime_session_snapshot(const ResolvedLaunchRequest
     case RuntimeSessionKind::millennium_dos_sound_driver_boundary:
     case RuntimeSessionKind::millennium_dos_title_handoff_boundary:
     case RuntimeSessionKind::millennium_dos_gx_startup_boundary:
+    case RuntimeSessionKind::millennium_dos_post_overlay_loop:
     case RuntimeSessionKind::millennium_dos_seventh_function:
     case RuntimeSessionKind::millennium_dos_sixth_function:
     case RuntimeSessionKind::millennium_dos_eighth_function:
@@ -220,34 +194,24 @@ RuntimeSessionSnapshot make_runtime_session_snapshot(const ResolvedLaunchRequest
         // input byte, rendering a successor screen, or changing game state.
         snapshot.boundary = RuntimeSessionBoundary::bootstrap_boundary;
         break;
-    case RuntimeSessionKind::millennium_dos_post_overlay_loop:
-        snapshot.boundary = RuntimeSessionBoundary::bootstrap_boundary;
-        snapshot.capabilities.admitted_input = true;
-        break;
     case RuntimeSessionKind::deuteros_amiga_opening:
         snapshot.boundary = RuntimeSessionBoundary::recovered_presentation_boundary;
         snapshot.capabilities.decoded_presentation = true;
         snapshot.capabilities.audio_observations = true;
         snapshot.capabilities.admitted_input = true;
         break;
-    case RuntimeSessionKind::deuteros_amiga_title_program_entry:
-    case RuntimeSessionKind::deuteros_amiga_bootstrap_graphics_boundary:
-    case RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary:
-        // These boundaries have no admitted input route. The separately
-        // hash-gated title-stage callback does not generalize to them.
-        snapshot.boundary = RuntimeSessionBoundary::bootstrap_boundary;
-        break;
     case RuntimeSessionKind::deuteros_amiga_title_stage:
+    case RuntimeSessionKind::deuteros_amiga_title_program_entry:
+    case RuntimeSessionKind::deuteros_amiga_title_display_trace_boundary:
+        // The title handoff proves only the loaded original interval and its
+        // local pre-Exec writes. Do not retain opening presentation/audio or
+        // route another host input signal into the unresolved title ABI.
         snapshot.boundary = RuntimeSessionBoundary::bootstrap_boundary;
-        snapshot.capabilities.admitted_input = true;
         break;
     case RuntimeSessionKind::millennium_amiga_bootstrap:
+    case RuntimeSessionKind::millennium_atari_bootstrap:
     case RuntimeSessionKind::deuteros_atari_bootstrap:
         snapshot.boundary = RuntimeSessionBoundary::bootstrap_boundary;
-        break;
-    case RuntimeSessionKind::millennium_atari_bootstrap:
-        snapshot.boundary = RuntimeSessionBoundary::bootstrap_boundary;
-        snapshot.capabilities.decoded_presentation = true;
         break;
     }
     return snapshot;

@@ -9,21 +9,6 @@ msgstr ""
 "Language: es\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
-msgid "INTERACTIVE AMIGA FLOW IS NOT YET RECOVERED."
-msgstr "El flujo interactivo de Amiga aún no se ha recuperado."
-
-msgid "ORIGINAL ATARI ST TITLE - SOURCE DECODED"
-msgstr "Título original de Atari ST - decodificado del código fuente"
-
-msgid "320 X 200 / 4 PLANES / SOURCE RGB3 PALETTE"
-msgstr "320 × 200 / 4 planos / paleta RGB3 de origen"
-
-msgid "GAMEPLAY FLOW REMAINS UNRECOVERED."
-msgstr "El flujo de juego aún no se ha recuperado."
-
-msgid "BOOTSTRAP BOUNDARIES ARE STATIC; TITLE PIXELS ARE SOURCE DECODED."
-msgstr "Los límites de arranque son estáticos; los píxeles del título se decodifican del código fuente."
-
 msgid "Welcome to Millennium."
 msgstr "Bienvenido a Millennium."
 

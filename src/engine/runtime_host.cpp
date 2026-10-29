@@ -62,13 +62,6 @@ MillenniumDosSoundDriverLoadObservationResult RuntimeHost::observe_millennium_do
 std::optional<MillenniumDosSoundDriverLoadCheckpoint> RuntimeHost::millennium_dos_sound_driver_load_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_sound_driver_load_checkpoint();}
 MillenniumDosVideoDriverLoadObservationResult RuntimeHost::observe_millennium_dos_video_driver_load(MillenniumDosVideoDriverLoadObservation o){if(revoking())return {false,"Video-driver load rejected during revocation"};return NativeSessionController::observe_millennium_dos_video_driver_load(std::move(o));}
 std::optional<MillenniumDosVideoDriverLoadCheckpoint> RuntimeHost::millennium_dos_video_driver_load_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_video_driver_load_checkpoint();}
-std::optional<MillenniumDosVideoInt91FunctionZeroDispatch> RuntimeHost::millennium_dos_video_int91_function_zero_dispatch()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_video_int91_function_zero_dispatch();}
-MillenniumDosVideoFunctionZeroObservationResult RuntimeHost::begin_millennium_dos_video_int91_function_zero_dispatch(){if(revoking())return {false,"Function-zero dispatch rejected during revocation"};return NativeSessionController::begin_millennium_dos_video_int91_function_zero_dispatch();}
-MillenniumDosVideoFunctionZeroObservationResult RuntimeHost::observe_millennium_dos_video_function_zero_bios_result(MillenniumDosVideoFunctionZeroBiosResult o){if(revoking())return {false,"Function-zero BIOS result rejected during revocation"};return NativeSessionController::observe_millennium_dos_video_function_zero_bios_result(o);}
-MillenniumDosVideoFunctionZeroObservationResult RuntimeHost::advance_millennium_dos_video_function_zero_success_postlude(){if(revoking())return {false,"Function-zero postlude rejected during revocation"};return NativeSessionController::advance_millennium_dos_video_function_zero_success_postlude();}
-MillenniumDosVideoFunctionZeroObservationResult RuntimeHost::advance_millennium_dos_video_function_zero_mcga_single_count_store(){if(revoking())return {false,"Function-zero MCGA store rejected during revocation"};return NativeSessionController::advance_millennium_dos_video_function_zero_mcga_single_count_store();}
-MillenniumDosVideoFunctionZeroObservationResult RuntimeHost::advance_millennium_dos_video_function_zero_mcga_return_chain(){if(revoking())return {false,"Function-zero MCGA return rejected during revocation"};return NativeSessionController::advance_millennium_dos_video_function_zero_mcga_return_chain();}
-std::optional<MillenniumDosVideoFunctionZeroCheckpoint> RuntimeHost::millennium_dos_video_function_zero_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_video_function_zero_checkpoint();}
 std::optional<MillenniumDosCompatibilityRunnerCheckpoint> RuntimeHost::tick_millennium_dos_compatibility_runner(){if(revoking())return std::nullopt;return NativeSessionController::tick_millennium_dos_compatibility_runner();}
 MillenniumDosSessionDriveResult RuntimeHost::drive_millennium_dos_session(const std::uint32_t step_limit){if(revoking())return {false,0,MillenniumDosSessionStopReason::inactive,{},{},0,"Millennium deterministic session drive rejected during revocation"};return NativeSessionController::drive_millennium_dos_session(step_limit);}
 MillenniumDosTitleExecEntryObservationResult RuntimeHost::observe_millennium_dos_title_child_process_entry(MillenniumDosTitleExecProcessEntry o){if(revoking())return {false,"Title child entry rejected during revocation"};return NativeSessionController::observe_millennium_dos_title_child_process_entry(o);}
@@ -110,54 +103,6 @@ RuntimeHost::observe_millennium_dos_native_bios_interrupt_return(
     }
     return NativeSessionController::observe_millennium_dos_native_bios_interrupt_return(
         observation);
-}
-MillenniumDosNativeProcessObservationResult
-RuntimeHost::observe_millennium_dos_native_dos_interrupt_return(
-    const MillenniumDosNativeDosInterruptReturnObservation observation) {
-    if (revoking()) {
-        return {false, "Native DOS return rejected during source revocation"};
-    }
-    return NativeSessionController::observe_millennium_dos_native_dos_interrupt_return(
-        observation);
-}
-MillenniumDosNativeProcessObservationResult
-RuntimeHost::observe_millennium_dos_static_data_loader_entry(
-    const MillenniumDosStaticDataLoaderEntryObservation observation) {
-    if (revoking()) return {false, "Static-data loader entry rejected during source revocation"};
-    return NativeSessionController::observe_millennium_dos_static_data_loader_entry(observation);
-}
-MillenniumDosNativeProcessObservationResult
-RuntimeHost::observe_millennium_dos_static_data_load_dos_interrupt_return(
-    const MillenniumDosNativeDosInterruptReturnObservation observation) {
-    if (revoking()) return {false, "Static-data DOS return rejected during source revocation"};
-    return NativeSessionController::observe_millennium_dos_static_data_load_dos_interrupt_return(
-        observation);
-}
-MillenniumDosNativeProcessObservationResult
-RuntimeHost::observe_millennium_dos_static_data_loader_return(
-    const MillenniumDosStaticDataLoaderCallReturnObservation observation) {
-    if (revoking()) return {false, "Static-data loader return rejected during source revocation"};
-    return NativeSessionController::observe_millennium_dos_static_data_loader_return(observation);
-}
-std::optional<MillenniumDosStaticDataLoadCheckpoint>
-RuntimeHost::millennium_dos_static_data_load_checkpoint() const {
-    if (revoking()) return std::nullopt;
-    return NativeSessionController::millennium_dos_static_data_load_checkpoint();
-}
-MillenniumDosNativeProcessObservationResult
-RuntimeHost::observe_millennium_dos_native_runtime_byte(
-    const MillenniumDosNativeRuntimeByteObservation observation) {
-    if (revoking()) {
-        return {false, "Native DOS byte rejected during source revocation"};
-    }
-    return NativeSessionController::observe_millennium_dos_native_runtime_byte(observation);
-}
-MillenniumDosNativeProcessObservationResult
-RuntimeHost::execute_millennium_dos_native_runtime_byte_from_owned_memory() {
-    if (revoking()) {
-        return {false, "Owned DOS byte rejected during source revocation"};
-    }
-    return NativeSessionController::execute_millennium_dos_native_runtime_byte_from_owned_memory();
 }
 std::optional<MillenniumDosTitleToGameCheckpoint> RuntimeHost::millennium_dos_title_to_game_checkpoint()const{if(revoking())return std::nullopt;return NativeSessionController::millennium_dos_title_to_game_checkpoint();}
 
@@ -405,27 +350,8 @@ RuntimeHost::drive_deuteros_amiga_main_stage(const std::uint32_t step_limit) {
 DeuterosAmigaSessionDriveResult
 RuntimeHost::drive_deuteros_amiga_session(const std::uint32_t step_limit) {
     if(revoking())return {false,0,DeuterosAmigaSessionStopReason::inactive,0,
-        "Runtime source is being revoked",std::nullopt,std::nullopt,false,std::nullopt};
+        "Runtime source is being revoked"};
     return NativeSessionController::drive_deuteros_amiga_session(step_limit);
-}
-DeuterosAmigaTitleDependencyObservationResult
-RuntimeHost::observe_deuteros_amiga_bootstrap_availmem_return(
-    const DeuterosAmigaBootstrapAvailMemReturnObservation observation) {
-    if (revoking()) return {false, "Runtime source is being revoked"};
-    return NativeSessionController::observe_deuteros_amiga_bootstrap_availmem_return(
-        observation);
-}
-DeuterosAmigaTitleDependencyObservationResult
-RuntimeHost::observe_deuteros_amiga_bootstrap_second_availmem_return(
-    const DeuterosAmigaBootstrapSecondAvailMemReturnObservation observation) {
-    if (revoking()) return {false, "Runtime source is being revoked"};
-    return NativeSessionController::observe_deuteros_amiga_bootstrap_second_availmem_return(
-        observation);
-}
-DeuterosAmigaTitleDependencyObservationResult
-RuntimeHost::advance_deuteros_amiga_bootstrap_graphics_compatibility() {
-    if (revoking()) return {false, "Runtime source is being revoked"};
-    return NativeSessionController::advance_deuteros_amiga_bootstrap_graphics_compatibility();
 }
 DeuterosAmigaInterruptWorkerObservationResult
 RuntimeHost::observe_deuteros_amiga_interrupt_worker(
@@ -436,16 +362,6 @@ RuntimeHost::observe_deuteros_amiga_interrupt_worker(
         return result;
     }
     return NativeSessionController::observe_deuteros_amiga_interrupt_worker(observation);
-}
-DeuterosAmigaVertbObservationResult
-RuntimeHost::observe_deuteros_amiga_vertb_entry(
-    DeuterosAmigaVertbEntryObservation observation) {
-    if (revoking()) {
-        DeuterosAmigaVertbObservationResult result;
-        result.error = "Deuteros VERTB entry rejected during revocation";
-        return result;
-    }
-    return NativeSessionController::observe_deuteros_amiga_vertb_entry(observation);
 }
 ActiveNativeSessionDriveResult
 RuntimeHost::drive_active_native_session(const std::uint32_t step_limit) {
@@ -504,15 +420,6 @@ RuntimeHost::advance_deuteros_amiga_title_program_entry(){
     if(revoking())return {false,"Deuteros title program entry rejected during source revocation"};
     return NativeSessionController::advance_deuteros_amiga_title_program_entry();
 }
-DeuterosAmigaComputedDispatchResult
-RuntimeHost::observe_deuteros_amiga_title_computed_dispatch(
-    const DeuterosAmigaComputedDispatchObservation observation) {
-    if (revoking()) {
-        return {false, "Deuteros computed dispatch rejected during source revocation", {}};
-    }
-    return NativeSessionController::observe_deuteros_amiga_title_computed_dispatch(
-        observation);
-}
 #define EON_HOST_DEUTEROS_TITLE(name,signature,arg) DeuterosAmigaTitleDependencyObservationResult RuntimeHost::name signature { if(revoking()) return {false,"Deuteros title observation rejected during source revocation"}; return NativeSessionController::name arg; }
 EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_local_prefix,(),())
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_exec_return,(const DeuterosAmigaObservedExecReturn o),(o))
@@ -521,9 +428,6 @@ EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_open_library_local_pat
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_display_base,(const DeuterosAmigaObservedDisplayBaseRead o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_custom_chip_write,(const DeuterosAmigaObservedCustomChipWrite o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_callback_exec_return,(const DeuterosAmigaObservedCallbackExecReturn o),(o))
-EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_callback_producer,(const DeuterosAmigaObservedTitleCallbackProducer o),(o))
-EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_move_sprite,(const DeuterosAmigaObservedTitleMoveSpriteCall o),(o))
-EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_response_queue,(const DeuterosAmigaObservedTitleResponseQueue o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_service_setup_exec_return,(const DeuterosAmigaObservedServiceSetupExecReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_second_service_exec_return,(const DeuterosAmigaObservedServiceSetupExecReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_third_service_exec_return,(const DeuterosAmigaObservedServiceSetupExecReturn o),(o))
@@ -560,7 +464,7 @@ EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_eight_scale,(const 
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_call_return,(const DeuterosAmigaObservedTitleCommandCallReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_planar_write,(const DeuterosAmigaObservedTitleCommandPlanarWrite o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_planar_variant_write,(const DeuterosAmigaObservedTitleCommandPlanarVariantWrite o),(o))
-EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_negative_phase,(const DeuterosAmigaObservedTitleCommandNegativePhase o),(o))
+EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_command_negative_service,(const DeuterosAmigaObservedTitleCommandNegativeService o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_pointer_route,(const DeuterosAmigaObservedTitlePostCommandPointerRoute o),(o))
 EON_HOST_DEUTEROS_TITLE(observe_deuteros_amiga_title_post_command_graphics_return,(const DeuterosAmigaObservedGraphicsVectorReturn o),(o))
 EON_HOST_DEUTEROS_TITLE(advance_deuteros_amiga_title_post_command_first_dispatch,(),())
@@ -802,10 +706,7 @@ MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_i
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_palette_recurrence(const MillenniumAtariGameInitPaletteRecurrenceObservation o){if(revoking())return{false,"Recurrent palette pass rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_palette_recurrence(o);}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_palette_rts(const MillenniumAtariGameInitPaletteRtsObservation o){if(revoking())return{false,"Palette RTS rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_palette_rts(o);}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_second_config_fopen(const MillenniumAtariGemdosSelector61Observation o){if(revoking())return{false,"Second config Fopen rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_second_config_fopen(o);}
-MillenniumAtariConfigConsumerResult RuntimeHost::service_millennium_atari_game_init_second_config_fopen(){if(revoking())return{false,"Second config Fopen service rejected during revocation"};return NativeSessionController::service_millennium_atari_game_init_second_config_fopen();}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_second_config_fread(const MillenniumAtariGemdosSelector63Observation o){if(revoking())return{false,"Second config Fread rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_second_config_fread(o);}
-MillenniumAtariConfigConsumerResult RuntimeHost::service_millennium_atari_game_init_second_config_fread(){if(revoking())return{false,"Second config Fread service rejected during revocation"};return NativeSessionController::service_millennium_atari_game_init_second_config_fread();}
-MillenniumAtariConfigConsumerResult RuntimeHost::service_millennium_atari_game_init_second_config_fclose(){if(revoking())return{false,"Second config Fclose service rejected during revocation"};return NativeSessionController::service_millennium_atari_game_init_second_config_fclose();}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_second_config_fclose(const MillenniumAtariGemdosSelector62Observation o){if(revoking())return{false,"Second config Fclose rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_second_config_fclose(o);}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_second_config_rts(const MillenniumAtariGameInitSecondConfigRtsObservation o){if(revoking())return{false,"Second config RTS rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_second_config_rts(o);}
 MillenniumAtariConfigConsumerResult RuntimeHost::observe_millennium_atari_game_init_second_config_xbios_38(const MillenniumAtariXbiosSelector38Observation o){if(revoking())return{false,"Second config XBIOS selector-38 rejected during revocation"};return NativeSessionController::observe_millennium_atari_game_init_second_config_xbios_38(o);}

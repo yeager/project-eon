@@ -64,9 +64,6 @@ enum class MillenniumAtariConfigConsumerState : std::uint8_t {
 };
 
 enum class MillenniumAtariObservedPrivilege : std::uint8_t { user, supervisor };
-// Distinguishes externally captured Atari results from values supplied by Eon's
-// own native TOS compatibility environment.
-enum class MillenniumAtariServiceOrigin : std::uint8_t { none, eon_tos_compatibility };
 
 struct MillenniumAtariStatusRegisterObservation {
     std::uint64_t generation = 0;
@@ -203,8 +200,6 @@ struct MillenniumAtariD0IndexedByteObservation {
     std::uint32_t d0 = 0;
     std::uint32_t source_address = 0;
     std::uint8_t source_byte = 0;
-    std::uint32_t second_source_address = 0;
-    std::uint8_t second_source_byte = 0;
 };
 struct MillenniumAtariD0IndexedWordObservation {
     std::uint64_t generation = 0;
@@ -242,7 +237,6 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::size_t local_control_transfers_executed = 0;
     bool return_address_materialized = false;
     bool status_register_read = false;
-    MillenniumAtariServiceOrigin status_register_origin = MillenniumAtariServiceOrigin::none;
     bool hardware_write_executed = false;
     std::uint64_t last_sequence = 0;
     std::uint16_t observed_status_register = 0;
@@ -259,19 +253,16 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::size_t local_instruction_count = 0;
     std::vector<MillenniumAtariConfigHardwareWrite> hardware_writes;
     bool selector_two_result_observed = false;
-    MillenniumAtariServiceOrigin selector_two_result_origin = MillenniumAtariServiceOrigin::none;
     std::uint32_t selector_two_result_d0 = 0;
     std::uint32_t selector_two_store_address = 0;
     std::uint32_t selector_two_stack_cleanup_bytes = 0;
     std::string selector_two_continuation_sha256;
     bool selector_three_result_observed = false;
-    MillenniumAtariServiceOrigin selector_three_result_origin = MillenniumAtariServiceOrigin::none;
     std::uint32_t selector_three_result_d0 = 0;
     std::uint32_t selector_three_store_address = 0;
     std::uint32_t selector_three_stack_cleanup_bytes = 0;
     std::string selector_three_continuation_sha256;
     bool selector_four_result_observed = false;
-    MillenniumAtariServiceOrigin selector_four_result_origin = MillenniumAtariServiceOrigin::none;
     std::uint16_t selector_four_result_d0_word = 0;
     std::uint32_t selector_four_store_address = 0;
     std::uint32_t selector_four_stack_cleanup_bytes = 0;
@@ -279,7 +270,6 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint16_t line_a_init_opcode = 0;
     std::string selector_four_continuation_sha256;
     bool line_a_result_observed = false;
-    MillenniumAtariServiceOrigin line_a_result_origin = MillenniumAtariServiceOrigin::none;
     std::uint32_t line_a_returned_a0 = 0;
     std::uint32_t line_a_result_a3 = 0;
     std::uint32_t line_a_result_a4 = 0;
@@ -289,15 +279,8 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::string line_a_caller_continuation_sha256;
     bool selector_21_result_observed = false;
     std::uint32_t selector_21_result_d0 = 0;
-    bool selector_21_result_d0_defined = false;
-    bool tos_cursor_hidden = false;
-    MillenniumAtariServiceOrigin selector_21_result_origin = MillenniumAtariServiceOrigin::none;
     std::uint32_t selector_21_stack_cleanup_bytes = 0;
     std::uint32_t selector_6_pointer_argument = 0;
-    bool selector_6_palette_loaded = false;
-    std::array<std::uint16_t, 16> selector_6_palette_words{};
-    bool selector_6_result_d0_defined = false;
-    MillenniumAtariServiceOrigin selector_6_result_origin = MillenniumAtariServiceOrigin::none;
     std::string selector_21_continuation_sha256;
     bool selector_6_result_observed = false;
     std::uint32_t selector_6_result_d0 = 0;
@@ -316,8 +299,6 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint32_t indexed_source_base = 0;
     std::uint32_t indexed_source_address = 0;
     std::uint8_t indexed_source_byte = 0;
-    std::uint32_t indexed_second_source_address = 0;
-    std::uint8_t indexed_second_source_byte = 0;
     std::uint32_t indexed_first_destination = 0;
     std::uint32_t indexed_second_destination = 0;
     std::string indexed_write_sha256;
@@ -339,7 +320,6 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint32_t loop_branch_target = 0;
     std::string a0_indexed_tail_sha256;
     std::uint32_t loop_iteration = 0;
-    std::uint32_t palette_helper_entry_count = 0;
     std::uint32_t loop_current_a1 = 0;
     std::string loop_setup_sha256;
     std::string loop_epilogue_sha256;
@@ -347,17 +327,11 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint16_t movem_register_mask = 0;
     bool movem_frame_observed=false; std::uint32_t movem_frame_address=0;
     std::array<std::uint32_t,15> restored_registers{};
-    // The source MOVEM restores values saved by the same caller, but those
-    // values can remain opaque while the following helper does not read them.
-    bool movem_registers_preserved_opaque=false;
-    std::uint16_t restored_registers_defined_mask=0;
-    std::uint32_t abstract_movem_rts_stack_delta=0;
     std::uint32_t restored_stack_address=0; std::uint32_t rts_return_address=0;
     std::string movem_rts_sha256; std::string caller_jsr_2aa68_sha256;
     std::uint32_t selector_38_pointer_argument = 0;
     std::string jsr_2aa68_prefix_sha256;
     bool selector_38_result_observed = false;
-    MillenniumAtariServiceOrigin selector_38_result_origin = MillenniumAtariServiceOrigin::none;
     std::uint32_t selector_38_result_d0 = 0;
     std::uint32_t selector_38_stack_cleanup_bytes = 0;
     std::uint32_t caller_d7 = 0;
@@ -370,7 +344,6 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::string caller_jsr_2a5aa_sha256;
     std::string gemdos_61_prefix_sha256;
     bool gemdos_61_result_observed=false;
-    MillenniumAtariServiceOrigin gemdos_61_result_origin=MillenniumAtariServiceOrigin::none;
     std::int32_t gemdos_61_result_d0=0;
     std::uint32_t gemdos_handle_store_address=0;
     std::uint32_t gemdos_stack_cleanup_bytes=0;
@@ -444,10 +417,6 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint32_t game_init_palette_xbios_pointer=0;
     bool game_init_palette_xbios_result_observed=false;
     std::uint32_t game_init_palette_xbios_result_d0=0;
-    bool game_init_palette_xbios_result_d0_defined=false;
-    bool game_init_palette_xbios_serviced_by_eon=false;
-    MillenniumAtariServiceOrigin game_init_palette_xbios_service_origin=MillenniumAtariServiceOrigin::none;
-    std::array<std::uint16_t,16> game_init_palette_xbios_palette_words{};
     std::uint32_t game_init_palette_xbios_stack_cleanup_bytes=0;
     std::string game_init_palette_post_xbios_sha256;
     std::uint32_t game_init_palette_delay_initial_d0=0;
@@ -462,22 +431,13 @@ struct MillenniumAtariConfigConsumerCheckpoint {
     std::uint32_t game_init_palette_rts_address=0;
     std::uint32_t game_init_palette_rts_stack_address=0;
     std::uint32_t game_init_palette_rts_return_address=0;
-    bool game_init_palette_rts_advanced_natively=false;
     std::string game_init_palette_caller_continuation_sha256;
     bool game_init_second_config_open=false;
-    bool game_init_second_config_fopen_serviced_by_eon=false;
-    std::uint16_t game_init_second_config_handle=0;
     std::uint32_t game_init_second_config_rts_address=0;
     std::uint32_t game_init_second_config_rts_stack_address=0;
     std::uint32_t game_init_second_config_rts_return_address=0;
-    std::uint32_t game_init_second_config_caller_return_address=0;
-    bool game_init_second_config_rts_advanced_natively=false;
     std::string game_init_second_config_caller_sha256;
-    bool game_init_second_config_fread_serviced_by_eon=false;
-    std::uint32_t game_init_second_config_fread_service_bytes=0;
-    bool game_init_second_config_fclose_serviced_by_eon=false;
     std::uint32_t game_init_second_config_xbios_pointer=0;
-    std::uint32_t game_init_second_config_xbios_callback_branch_target=0;
     std::uint32_t game_init_second_config_xbios_result_d0=0;
     std::uint32_t game_init_second_config_xbios_cleanup_bytes=0;
     std::string game_init_second_config_xbios_return_sha256;
@@ -527,46 +487,28 @@ public:
     }
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_status_register(
         const MillenniumAtariStatusRegisterObservation& observation);
-    // Runs the exact TOS-facing services provided by Eon: user-mode execution,
-    // its owned Physbase/Logbase surface, and low-resolution Getrez result.
-    // These are service results, never captured-original observations.
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_native_tos_status_register(
-        std::uint64_t sequence);
     [[nodiscard]] std::vector<NativeRuntimeEffectBatch> make_hardware_effect_batches(
         std::string id_prefix) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_xbios_selector_two(
         const MillenniumAtariXbiosSelectorTwoObservation& observation);
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_native_tos_xbios_selector_two(
-        std::uint64_t sequence);
     [[nodiscard]] NativeRuntimeEffectBatch make_selector_two_result_effect_batch(
         std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_xbios_selector_three(
         const MillenniumAtariXbiosSelectorThreeObservation& observation);
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_native_tos_xbios_selector_three(
-        std::uint64_t sequence);
     [[nodiscard]] NativeRuntimeEffectBatch make_selector_three_result_effect_batch(
         std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_xbios_selector_four(
         const MillenniumAtariXbiosSelectorFourObservation& observation);
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_native_tos_xbios_selector_four(
-        std::uint64_t sequence);
     [[nodiscard]] NativeRuntimeEffectBatch make_selector_four_result_effect_batch(
         std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_line_a(
         const MillenniumAtariLineAObservation& observation);
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_native_tos_line_a(
-        std::uint64_t sequence, std::uint32_t parameter_block,
-        std::uint32_t intin, std::uint32_t ptsin);
     [[nodiscard]] NativeRuntimeEffectBatch make_line_a_result_effect_batch(
         std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_xbios_selector_21(
         const MillenniumAtariXbiosSelector21Observation& observation);
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_native_tos_xbios_selector_21(
-        std::uint64_t sequence);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_xbios_selector_6(
         const MillenniumAtariXbiosSelector6Observation& observation);
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_native_tos_xbios_selector_6(
-        std::uint64_t sequence, const std::array<std::uint16_t, 16>& palette_words);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_bchg_2b55a(
         const MillenniumAtariBchgObservation& observation);
     [[nodiscard]] NativeRuntimeEffectBatch make_bchg_effect_batch(std::string id) const;
@@ -588,22 +530,13 @@ public:
     [[nodiscard]] NativeRuntimeEffectBatch make_loop_iteration_setup_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_loop_epilogue();
     [[nodiscard]] NativeRuntimeEffectBatch make_loop_epilogue_effect_batch(std::string id) const;
-    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_movem_restore_compatibility();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_movem_frame(const MillenniumAtariMovemFrameObservation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_jsr_2aa68();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_xbios_selector_38(
         const MillenniumAtariXbiosSelector38Observation& observation);
-    [[nodiscard]] NativeRuntimeEffectBatch make_native_tos_vbl_environment_effect_batch(
-        std::string id, const NativeRuntimeMemory& memory) const;
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_native_tos_xbios_selector_38(
-        std::uint64_t sequence, const NativeRuntimeMemory& memory);
-    [[nodiscard]] NativeRuntimeEffectBatch make_selector_38_effect_batch(
-        std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_jsr_2aa0c();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_gemdos_selector_61(
         const MillenniumAtariGemdosSelector61Observation& observation);
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_native_tos_gemdos_selector_61(
-        std::uint64_t sequence, const NativeRuntimeMemory& memory);
     [[nodiscard]] NativeRuntimeEffectBatch make_gemdos_selector_61_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult execute_jsr_2a5c2();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_gemdos_selector_63(
@@ -637,23 +570,14 @@ public:
     [[nodiscard]] NativeRuntimeEffectBatch make_game_init_palette_arithmetic_effect_batch(std::string id) const;
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_palette_xbios_selector_6(
         const MillenniumAtariGameInitPaletteXbios6Observation& observation);
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_native_tos_game_init_palette_selector_6(
-        std::uint64_t sequence, const std::array<std::uint16_t,16>& palette_words);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_palette_recurrence(
         const MillenniumAtariGameInitPaletteRecurrenceObservation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_palette_rts(
         const MillenniumAtariGameInitPaletteRtsObservation& observation);
-    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_game_init_palette_rts_compatibility();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_second_config_fopen(
         const MillenniumAtariGemdosSelector61Observation& observation);
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_game_init_second_config_fopen_result(
-        std::uint16_t handle);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_second_config_fread(
         const MillenniumAtariGemdosSelector63Observation& observation);
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_game_init_second_config_fread_result(
-        std::uint32_t byte_count);
-    [[nodiscard]] MillenniumAtariConfigConsumerResult service_game_init_second_config_fclose_result();
-    [[nodiscard]] MillenniumAtariConfigConsumerResult execute_game_init_second_config_rts();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_second_config_fclose(
         const MillenniumAtariGemdosSelector62Observation& observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_game_init_second_config_rts(

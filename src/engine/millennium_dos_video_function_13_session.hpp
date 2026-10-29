@@ -52,11 +52,6 @@ public:
     [[nodiscard]] std::optional<MillenniumDosVideoFunction13Outcome> outcome() const {
         return outcome_;
     }
-    // The hash-bound driver leaf changes DX and AL while polling but contains
-    // no BX write. Once RET is reached, return the caller-supplied BX unchanged;
-    // this preserves caller data without assuming its value.
-    [[nodiscard]] std::optional<std::uint16_t> return_bx_for_entry(
-        std::uint16_t entry_bx) const noexcept;
 
     void observe_status(const MillenniumDosVideoFunction13PortRead& read);
 

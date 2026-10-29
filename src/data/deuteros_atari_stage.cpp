@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <array>
 #include <limits>
-#include <optional>
 #include <stdexcept>
 #include <utility>
 
@@ -420,24 +419,12 @@ DeuterosAtariState5State1Prefix validate_deuteros_atari_state5_state1_prefix(
     const DeuterosAtariState5RawLoadPlan& state5,
     const std::span<const std::uint8_t> state1_bytes,
     const std::span<const std::uint8_t> state5_bytes) {
-    constexpr std::array<std::string_view, 2> state1_sha256{
-        "0d5ccb3a337fcbd4d34d34b3ad24f20c3bb2edca7e7b734b8abb14f6c0a30f47",
-        "fc7dd59628db9ec05397ec74e197515e1c866646493bebf6bd44ef6d12c7d6e6",
-    };
-    constexpr std::array<std::string_view, 2> prefix_sha256{
-        "ed55ad2a893a87af9f11d269faa6358420c47ed6beb1fee7a177e9beaed1e77c",
-        "3a47c5f9153c5c693cbad3fafd6083f84a1b4c47b18e924fc1cd5bb394abea51",
-    };
+    constexpr std::string_view state1_sha256 =
+        "0d5ccb3a337fcbd4d34d34b3ad24f20c3bb2edca7e7b734b8abb14f6c0a30f47";
+    constexpr std::string_view prefix_sha256 =
+        "ed55ad2a893a87af9f11d269faa6358420c47ed6beb1fee7a177e9beaed1e77c";
     const auto first_end = state5.first_read.source_offset + state5.first_read.byte_count;
     const auto second_end = state5.second_read.source_offset + state5.second_read.byte_count;
-    std::optional<std::size_t> variant;
-    for (std::size_t index = 0; index < state1_sha256.size(); ++index) {
-        if (to_hex(sha256(state1_bytes)) == state1_sha256[index]
-            && to_hex(sha256(state5_bytes)) == prefix_sha256[index]) {
-            variant = index;
-            break;
-        }
-    }
     if (first_end < state5.first_read.source_offset || second_end < state5.second_read.source_offset
         || state1.source_offset != state5.first_read.source_offset
         || first_end != state5.second_read.source_offset
@@ -446,10 +433,11 @@ DeuterosAtariState5State1Prefix validate_deuteros_atari_state5_state1_prefix(
         || state5_bytes.size() != state5.first_read.byte_count + state5.second_read.byte_count
         || state5_bytes.size() > state1_bytes.size()
         || !std::equal(state5_bytes.begin(), state5_bytes.end(), state1_bytes.begin())
-        || !variant) {
+        || to_hex(sha256(state1_bytes)) != state1_sha256
+        || to_hex(sha256(state5_bytes)) != prefix_sha256) {
         throw std::runtime_error("Unexpected Deuteros Atari ST state-5/state-1 raw prefix");
     }
-    return {state1.source_offset, state5_bytes.size(), std::string(prefix_sha256[*variant])};
+    return {state1.source_offset, state5_bytes.size(), std::string(prefix_sha256)};
 }
 
 DeuterosAtariState5ReturnProfile parse_deuteros_atari_state5_return(

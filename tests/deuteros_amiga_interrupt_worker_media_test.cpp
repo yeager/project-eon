@@ -91,19 +91,6 @@ void set_long(std::vector<std::uint8_t>& memory, const std::uint32_t address,
     set_word(memory, address + 2, static_cast<std::uint16_t>(value));
 }
 
-void set_stage_word(std::vector<std::uint8_t>& memory, const std::uint32_t address,
-    const std::uint16_t value) {
-    const auto offset = static_cast<std::size_t>(address - 0x20000U);
-    memory[offset] = static_cast<std::uint8_t>(value >> 8U);
-    memory[offset + 1U] = static_cast<std::uint8_t>(value);
-}
-
-void set_stage_long(std::vector<std::uint8_t>& memory, const std::uint32_t address,
-    const std::uint32_t value) {
-    set_stage_word(memory, address, static_cast<std::uint16_t>(value >> 16U));
-    set_stage_word(memory, address + 2U, static_cast<std::uint16_t>(value));
-}
-
 } // namespace
 
 int main(int argc, char** argv) {
@@ -113,81 +100,6 @@ int main(int argc, char** argv) {
     assert(disk.kind() == eon::AmigaDiskKind::dos);
 
     const auto plan = eon::parse_deuteros_amiga_load_plan(disk);
-    const auto vertb = eon::parse_deuteros_amiga_vertb_handler(disk, plan);
-    assert(vertb.entry_address == 0x207ec && vertb.source_disk_offset == 0x5fec
-        && vertb.source_length == 0x100);
-    eon::DeuterosAmigaVertbSession vertb_session(vertb);
-    vertb_session.observe_registration({1, 0x208b4, 0x208b8, -0xa8, 5, 0x2086a, 0x207ec});
-    const auto vertb_tick = vertb_session.observe_idle_invocation(
-        {2, 0x207ec, 0, 0, 0x00001234});
-    assert(vertb_tick.address == 0x2079e && vertb_tick.before == 0x1234
-        && vertb_tick.after == 0x1238);
-
-    // Synthetic RAM inputs are layered over the genuine loaded main-stage
-    // bytes. This exercises one explicitly observed handler event, including
-    // the double-buffer word copy and the existing hash-bound $22bea model.
-    const auto original_main_stage = disk.bytes(0x5800, 0x4200);
-    std::vector<std::uint8_t> vertb_memory(original_main_stage.begin(), original_main_stage.end());
-    set_stage_long(vertb_memory, 0x2079e, 0xfffffffcU);
-    set_stage_word(vertb_memory, 0x207b0, 0);
-    vertb_memory[0x207ea - 0x20000] = 1;
-    vertb_memory[0x207eb - 0x20000] = 1;
-    const std::array<std::uint16_t, 4> copied_words{0x1234, 0x5678, 0x9abc, 0xdef0};
-    for (std::size_t i = 0; i < copied_words.size(); ++i)
-        set_stage_word(vertb_memory, 0x207bc + static_cast<std::uint32_t>(i * 2U), copied_words[i]);
-    set_stage_long(vertb_memory, 0x2197a, 0x23000);
-    set_stage_long(vertb_memory, 0x2197e, 0x23100);
-    set_stage_word(vertb_memory, 0x22a6c, 0);
-    for (std::size_t i = 0; i < 56; ++i) vertb_memory[0x22a6e - 0x20000 + i] = 0;
-    set_stage_word(vertb_memory, 0x22a32, 0);
-    const auto owned_stage_byte = [&vertb_memory](const std::uint32_t address)
-        -> std::optional<std::uint8_t> {
-        if (address < 0x20000U || address - 0x20000U >= vertb_memory.size())
-            return std::nullopt;
-        return vertb_memory[address - 0x20000U];
-    };
-    eon::DeuterosAmigaVertbSession observed_vertb_session(vertb);
-    observed_vertb_session.observe_registration(
-        {10, 0x208b4, 0x208b8, -0xa8, 5, 0x2086a, 0x207ec});
-    const auto translated_vertb = observed_vertb_session.observe_invocation(
-        11, 0x207ec, owned_stage_byte);
-    assert(translated_vertb.trace_sequence == 11);
-    assert(translated_vertb.memory_writes.size() == 13);
-    assert(translated_vertb.register_writes.size() == 14);
-    const auto find_owned = [&translated_vertb](const std::uint32_t address) {
-        return std::find_if(translated_vertb.memory_writes.begin(),
-            translated_vertb.memory_writes.end(), [address](const auto& write) {
-                return write.address == address;
-            });
-    };
-    assert(find_owned(0x2079e) != translated_vertb.memory_writes.end());
-    assert(find_owned(0x2079e)->value == 0);
-    assert(find_owned(0x207b0)->value == 0);
-    assert(find_owned(0x2302a)->value == 0x12);
-    assert(find_owned(0x2302b)->value == 0x34);
-    assert(find_owned(0x2302e)->value == 0x56);
-    assert(find_owned(0x2302f)->value == 0x78);
-    assert(find_owned(0x2312a)->value == 0x9a);
-    assert(find_owned(0x2312b)->value == 0xbc);
-    assert(find_owned(0x2312e)->value == 0xde);
-    assert(find_owned(0x2312f)->value == 0xf0);
-    assert(translated_vertb.register_writes[0].address == 0xdff096
-        && translated_vertb.register_writes[0].value == 0);
-    assert(translated_vertb.register_writes[1].address == 0xdff096
-        && translated_vertb.register_writes[1].value == 0x800f);
-    assert(translated_vertb.register_writes[2].address == 0xdff0a0);
-    bool missing_sound_dependency_rejected = false;
-    try {
-        static_cast<void>(eon::evaluate_deuteros_amiga_vertb_entry(vertb, 12, 0x207ec,
-            [&owned_stage_byte](const std::uint32_t address) -> std::optional<std::uint8_t> {
-                if (address == 0x22a6e) return std::nullopt;
-                return owned_stage_byte(address);
-            }));
-    } catch (const std::exception&) {
-        missing_sound_dependency_rejected = true;
-    }
-    assert(missing_sound_dependency_rejected);
-
     const auto prefix = eon::parse_deuteros_amiga_installed_interrupt_prefix(disk, plan);
     const auto worker = eon::parse_deuteros_amiga_installed_interrupt_worker(
         disk, plan, prefix);

@@ -27,15 +27,10 @@ MillenniumAmigaBootstrapSession::MillenniumAmigaBootstrapSession(
         parse_millennium_amiga_bootstrap_opaque_invocation_boundary(disk, plan_);
     first_stage_entry_boundary_ =
         parse_millennium_amiga_first_stage_entry_boundary(disk, plan_);
-    input_device_open_boundary_ =
-        parse_millennium_amiga_input_device_open_boundary(disk, plan_);
     relocation_boundary_ = parse_millennium_amiga_bootstrap_relocation_boundary(disk, plan_);
     if (opaque_invocation_boundary_.first_stage_target != plan_.first_stage.destination
         || opaque_invocation_boundary_.resident_stage_target != plan_.resident_entry
         || first_stage_entry_boundary_.destination != plan_.first_stage.destination
-        || input_device_open_boundary_.entry_address != 0x41d4a
-        || input_device_open_boundary_.call_address != 0x41d78
-        || input_device_open_boundary_.request_address != 0x41cd0
         || relocation_boundary_.raw_continuation_source_address
             != opaque_invocation_boundary_.entry_address) {
         throw std::runtime_error("Millennium Amiga bootstrap evidence is detached from load plan");

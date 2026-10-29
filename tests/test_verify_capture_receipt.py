@@ -18,132 +18,6 @@ SPEC.loader.exec_module(TOOL)
 
 
 class ReceiptVerifierTests(LfTextFixtureWrites, unittest.TestCase):
-    def test_schema41_title_callback_sidecar_recomputes_and_is_schema_bound(self) -> None:
-        runner = TOOL.load_tool("run_deuteros_amiga_capture")
-        with temporary_directory() as directory:
-            root = Path(directory)
-            host = CanonicalReceiptPath(root / "host-input-receipt.txt")
-            sidecar = CanonicalReceiptPath(root / "title-callback.txt")
-            host.write_text(
-                "host-input 1 frame=80 line=2 action=149 state=1\n", encoding="ascii")
-            rows = []
-            for ordinal, (stage, pc) in enumerate(runner.TITLE_CALLBACK_STAGES_V32, 1):
-                valid, value, source, destination, width = 0, 0, 0, 0, 0
-                cell_x_valid, cell_x, cell_y_valid, cell_y = 0, 0, 0, 0
-                if stage == "gate-test":
-                    valid, source, width = 1, 0x1EE16, 1
-                elif stage == "selector-compare":
-                    valid, value, source = 1, 0x00FF, 0x20006
-                elif stage == "copy-x":
-                    valid, value, source, destination, width = 1, 0x0078, 0x2100, 0x1EE10, 2
-                elif stage == "copy-y":
-                    valid, value, source, destination, width = 1, 0x0078, 0x2102, 0x1EE12, 2
-                elif stage == "service-entry":
-                    cell_x_valid, cell_x, cell_y_valid, cell_y = 1, 0x0078, 1, 0x0078
-                rows.append(
-                    f"title-callback {ordinal} sequence=1 stage={stage} cycles={100 + ordinal} "
-                    f"pc=0x{pc:06x} input_ordinal=1 input_frame=80 value_valid={valid} "
-                    f"value=0x{value:04x} source=0x{source:08x} "
-                    f"destination=0x{destination:08x} width={width} "
-                    f"cell_x_valid={cell_x_valid} cell_x=0x{cell_x:04x} "
-                    f"cell_y_valid={cell_y_valid} cell_y=0x{cell_y:04x}\n")
-            sidecar.write_text("".join(rows), encoding="ascii")
-            fields = {"capture_receipt_version": "41"}
-            fields.update(dict(line.split("=", 1) for line in
-                runner.title_callback_status_v32(sidecar, host).splitlines()))
-            TOOL.verify_deuteros_title_callback(fields, root)
-            fields["title_callback_outer_returns"] = "1"
-            with self.assertRaisesRegex(ValueError, "grammar/count"):
-                TOOL.verify_deuteros_title_callback(fields, root)
-            fields = {"capture_receipt_version": "40"}
-            with self.assertRaisesRegex(ValueError, "requires receipt schema 41"):
-                TOOL.verify_deuteros_title_callback(fields, root)
-
-    def test_schema41_recorder_stays_unpinned_until_v32_binary_is_reviewed(self) -> None:
-        runner = TOOL.load_tool("run_deuteros_amiga_capture")
-        with self.assertRaisesRegex(ValueError, "identity is unavailable"):
-            TOOL.verify_deuteros_recorder_identity(
-                {"recorder_protocol": "deuteros-amiga-fsuae-v32-title-callback"},
-                "41", runner)
-
-    def test_schema35_negative_selector_routes_are_bounded_and_joined(self) -> None:
-        runner = TOOL.load_tool("run_deuteros_amiga_capture")
-        with temporary_directory() as directory:
-            root = Path(directory)
-            host = root / "host-input-receipt.txt"
-            sidecar = root / "negative-selector.txt"
-            CanonicalReceiptPath(host).write_text(
-                "host-input 1 frame=50 line=1 action=157 state=1\n", encoding="ascii")
-
-            def row(n: int, phase: str, pc: int, *, d0: int = 0x50, d1: int = 0,
-                    opcode0: int = 0, opcode1: int = 0, sr: int = 0) -> str:
-                if phase == "branch":
-                    opcode0, opcode1, sr = 0x6A0000AC, 0x2F005300, 0x0008
-                if phase == "gate":
-                    opcode0, opcode1, sr = 0x67127013, 0x720C2F08, 0x0004 if d0 == 0x20 else 0
-                if phase == "skip":
-                    opcode0, opcode1, d0, sr = 0x203C0000, 0x4E205380, 0x20, 0x0004
-                if phase == "call":
-                    opcode0, opcode1 = 0x4EB90003, 0xFBF84E75
-                    d0, d1 = 0x13, 0x0C
-                if phase == "callee":
-                    opcode0, opcode1 = 0x48E78000, 0x4E714E71
-                    d0, d1 = 0x13, 0x0C
-                if phase == "epilogue":
-                    opcode0 = 0x4E754E71
-                if phase == "caller":
-                    opcode0 = 0x4A390001
-                return (f"negative-selector {n} route=1 cycles={100+n} phase={phase} "
-                        f"pc=0x{pc:08x} opcode0=0x{opcode0:08x} opcode1=0x{opcode1:08x} opcode_valid=1 "
-                        f"d0=0x{d0:08x} d1=0x{d1:08x} sr=0x{sr:04x} "
-                        "selector=0xff secondary=0x00 input_ordinal=1 input_frame=50\n")
-
-            pcs = runner.NEGATIVE_SELECTOR_PHASE_PC
-            phases = ["dispatch", "branch", "gate", "call", "callee", "return", "epilogue", "caller"]
-            sidecar.write_text("".join(row(i, phase, pcs[phase])
-                                         for i, phase in enumerate(phases, 1)), encoding="ascii")
-            parsed = runner.parse_negative_selector_receipt(sidecar)
-            self.assertEqual([record["phase"] for record in parsed], phases)
-            status = dict(line.split("=", 1) for line in
-                          runner.negative_selector_status(sidecar, host).splitlines())
-            fields = {"capture_receipt_version": "35", **status}
-            TOOL.verify_deuteros_negative_selector(fields, root)
-
-            # A valid truncated prefix remains useful evidence.
-            sidecar.write_text("".join(row(i, phase, pcs[phase])
-                                         for i, phase in enumerate(phases[:3], 1)), encoding="ascii")
-            self.assertEqual(len(runner.parse_negative_selector_receipt(sidecar)), 3)
-
-            # D0=$20 suppresses exactly the callee/return portion.
-            suppressed = ["dispatch", "branch", "gate", "skip", "epilogue", "caller"]
-            sidecar.write_text("".join(
-                row(i, phase, pcs[phase], d0=0x20)
-                for i, phase in enumerate(suppressed, 1)), encoding="ascii")
-            self.assertEqual(len(runner.parse_negative_selector_receipt(sidecar)), 6)
-
-            invalid_cases = [
-                "".join(row(i, phase, pcs[phase])
-                        for i, phase in enumerate(phases, 1)).replace(
-                            "phase=branch pc=0x0001fbee opcode0=0x6a0000ac opcode1=0x2f005300 opcode_valid=1 "
-                            "d0=0x00000050 d1=0x00000000 sr=0x0008",
-                            "phase=branch pc=0x0001fbee opcode0=0x6a0000ac opcode1=0x2f005300 opcode_valid=1 "
-                            "d0=0x00000050 d1=0x00000000 sr=0x0000"),
-                row(1, "dispatch", pcs["dispatch"]) + row(2, "branch", pcs["branch"] + 2),
-                "".join(row(i, phase, pcs[phase], d0=0x20 if phase == "gate" else 0x50)
-                        for i, phase in enumerate(phases, 1)),
-                row(1, "dispatch", pcs["dispatch"]).replace("opcode_valid=1", "opcode_valid=0"),
-            ]
-            for payload in invalid_cases:
-                sidecar.write_text(payload, encoding="ascii")
-                with self.assertRaises(runner.CaptureError):
-                    runner.parse_negative_selector_receipt(sidecar)
-
-            sidecar.write_text(row(1, "dispatch", pcs["dispatch"]), encoding="ascii")
-            fields = {"capture_receipt_version": "34"}
-            fields.update(status)
-            with self.assertRaisesRegex(ValueError, "requires receipt schema 35"):
-                TOOL.verify_deuteros_negative_selector(fields, root)
-
     def test_schema33_pins_v23_and_recomputes_latch_write_fields(self) -> None:
         runner = TOOL.load_tool("run_deuteros_amiga_capture")
         identity = {
@@ -239,118 +113,6 @@ class ReceiptVerifierTests(LfTextFixtureWrites, unittest.TestCase):
             fields["late_display_records"] = "2"
             with self.assertRaisesRegex(ValueError, "grammar/count"):
                 TOOL.verify_deuteros_late_display(fields, root)
-
-    def test_schema34_pins_v24_and_recomputes_windowed_display_receipt(self) -> None:
-        runner = TOOL.load_tool("run_deuteros_amiga_capture")
-        identity = {
-            "recorder_sha256": runner.TRV2_RECORDER_V24_SHA256,
-            "recorder_bytes": str(runner.TRV2_RECORDER_V24_SIZE),
-            "recorder_protocol": "deuteros-amiga-fsuae-v24",
-        }
-        self.assertIsNone(TOOL.verify_deuteros_recorder_identity(identity, "34", runner))
-        with self.assertRaisesRegex(ValueError, "v24 receipt schema"):
-            TOOL.verify_deuteros_recorder_identity({
-                **identity, "recorder_protocol": "deuteros-amiga-fsuae-v23",
-            }, "34", runner)
-        with temporary_directory() as directory:
-            root = Path(directory)
-            inputs = CanonicalReceiptPath(root / "host-input-receipt.txt")
-            inputs.write_text("".join(
-                f"host-input {ordinal} frame={ordinal * 10} line=3 action=149 state=1\n"
-                for ordinal in range(1, 24)), encoding="ascii")
-            CanonicalReceiptPath(root / "late-display.txt").write_text(
-                "late-display-write 1 cycles=100 vpos=54 hpos=104 origin=copper "
-                "register=0x0090 value=0x40c1 input_ordinal=21 input_frame=210\n"
-                "late-display-write 2 cycles=110 vpos=55 hpos=108 origin=cpu "
-                "register=0x0180 value=0x0000 input_ordinal=23 input_frame=230\n",
-                encoding="ascii")
-            fields = {"capture_receipt_version": "34"}
-            fields.update(dict(line.split("=", 1) for line in
-                runner.late_display_receipt_status(
-                    root / "late-display.txt", inputs, windowed=True).splitlines()))
-            TOOL.verify_deuteros_late_display(fields, root)
-            fields["late_display_window_records"] = "21:2"
-            with self.assertRaisesRegex(ValueError, "grammar/count"):
-                TOOL.verify_deuteros_late_display(fields, root)
-
-            latch = CanonicalReceiptPath(root / "latch-write.txt")
-            latch.write_text(
-                "latch-write 1 cycles=200 site=0x00021868 next_pc=0x00021870 "
-                "opcode=0x13fc target=0x00021720 before=0x00 after=0x01 "
-                "input_ordinal=1 input_frame=10\n", encoding="ascii")
-            latch_fields = {"capture_receipt_version": "34"}
-            latch_fields.update(dict(line.split("=", 1) for line in
-                runner.latch_write_receipt_status(latch, inputs).splitlines()))
-            TOOL.verify_deuteros_latch_write(latch_fields, root)
-
-    def test_schema34_top_level_receipt_accepts_bounded_v24_statuses(self) -> None:
-        runner = TOOL.load_tool("run_deuteros_amiga_capture")
-        with temporary_directory() as directory:
-            root = Path(directory)
-            config = root / "deuteros-amiga-capture.fs-uae"
-            config.write_text("warp_mode = 0\n", encoding="utf-8")
-            console = b"visible emulator output\n"
-            (root / "recorder-console.log").write_bytes(console)
-            cfg_hash, cfg_size = hashlib.sha256(config.read_bytes()).hexdigest(), config.stat().st_size
-            console_hash = hashlib.sha256(console).hexdigest()
-            fields = {
-                "capture_receipt_version": "34",
-                "recorder_protocol": "deuteros-amiga-fsuae-v24",
-                "source_layout": runner.SOURCE_LAYOUT_STANDALONE,
-                "source_container": "two-independent-zip-files",
-                "content_release_sha256": runner.EXPECTED_RELEASE_SHA256,
-                "disk1_archive_sha256": runner.EXPECTED_DISK1_ARCHIVE_SHA256,
-                "disk1_archive_bytes": str(runner.EXPECTED_DISK1_ARCHIVE_SIZE),
-                "disk2_archive_sha256": runner.EXPECTED_DISK2_ARCHIVE_SHA256,
-                "disk2_archive_bytes": str(runner.EXPECTED_DISK2_ARCHIVE_SIZE),
-                "kickstart_archive_sha256": runner.EXPECTED_KICKSTART_SHA256,
-                "kickstart_archive_bytes": str(runner.EXPECTED_KICKSTART_SIZE),
-                "recorder_sha256": runner.TRV2_RECORDER_V24_SHA256,
-                "recorder_bytes": str(runner.TRV2_RECORDER_V24_SIZE),
-                "configuration_sha256": cfg_hash,
-                "configuration_bytes": str(cfg_size),
-                "timing_profile": "realtime",
-                "capture_intent": "diagnostic-no-input",
-                "capture_intent_input_requirement": "forbidden",
-                "host_input_observed_during_capture": "false",
-                "exit_status": "0",
-                "recorder_console": "present",
-                "recorder_console_sha256": console_hash,
-                "recorder_console_total_bytes": str(len(console)),
-                "recorder_console_retained_bytes": str(len(console)),
-                "recorder_console_retained_sha256": console_hash,
-                "recorder_console_over_limit": "false",
-                "recorder_console_truncated": "false",
-            }
-            statuses = [
-                runner.raw_observation_status(root / "raw-pc.txt", "raw_pc", "v9-v19-phased"),
-                runner.input_receipt_status(root / "host-input-receipt.txt"),
-                runner.title_display_receipt_status(root / "title-display.txt", root / "host-input-receipt.txt"),
-                runner.late_raw_pc_status(root / "late-input-pc.txt", root / "host-input-receipt.txt", "v20"),
-                runner.late_selector_dispatch_status(root / "late-selector-dispatch.txt",
-                    root / "late-input-pc.txt", root / "host-input-receipt.txt", "v20"),
-                runner.zero_route_observation_status(root / "zero-route-observation.txt",
-                    root / "host-input-receipt.txt"),
-                runner.late_display_receipt_status(root / "late-display.txt",
-                    root / "host-input-receipt.txt", windowed=True),
-                runner.latch_write_receipt_status(root / "latch-write.txt",
-                    root / "host-input-receipt.txt"),
-                runner.capture_intent_status("diagnostic-no-input", "host_input_receipt=absent\n", False),
-            ]
-            for status in statuses:
-                fields.update(dict(line.split("=", 1) for line in status.splitlines()))
-            (root / "run-status.txt").write_text(
-                "".join(f"{key}={value}\n" for key, value in fields.items()), encoding="utf-8")
-            (root / "recorder").write_bytes(b"fixture")
-            original_digest = TOOL.digest
-
-            def fixture_digest(path: Path) -> tuple[str, int]:
-                if path.name == "recorder":
-                    return runner.TRV2_RECORDER_V24_SHA256, runner.TRV2_RECORDER_V24_SIZE
-                return original_digest(path)
-
-            with mock.patch.object(TOOL, "digest", side_effect=fixture_digest):
-                TOOL.verify("deuteros-amiga", root)
     def test_experimental_driver_load_return_receipt_is_bound_to_sidecar(self) -> None:
         runner = TOOL.load_tool("run_millennium_dos_capture")
         protocol = "millennium-dos-en-driver-load-return-v1"
@@ -372,107 +134,14 @@ class ReceiptVerifierTests(LfTextFixtureWrites, unittest.TestCase):
             fields["recorder_protocol"] = "v21-int93-installation"
             with self.assertRaisesRegex(ValueError, "exact recorder protocol"):
                 TOOL.verify_millennium_driver_load_returns(fields, root)
-            protocol_v2 = "millennium-dos-en-driver-load-return-v2"
-            fields = {"recorder_protocol": protocol_v2}
-            fields.update(dict(line.split("=", 1) for line in
-                               runner.driver_load_return_status(sidecar, protocol_v2).splitlines()))
-            TOOL.verify_millennium_driver_load_returns(fields, root)
-
-    def test_experimental_ah48_receipt_is_bound_to_exact_raw_sidecar_and_protocol(self) -> None:
-        runner = TOOL.load_tool("run_millennium_dos_capture")
-        protocol = runner.AH48_HANDLER_RETURN_PROTOCOL
-        register_names = ("ax", "bx", "cx", "dx", "si", "di", "bp", "cs", "ip", "ds", "es", "ss", "sp", "flags")
-        values = {name: 0x1000 + index for index, name in enumerate(register_names)}
-        values.update({"ax": 0x4801, "cs": 0x0E70, "ip": 0x1B2F, "sp": 0xFF00, "flags": 0x7202})
-        row = ["event", "sequence=1", "site=1b2d", "observed_return_ip=1b2f",
-               "dispatch_return=before-IRET"]
-        for phase in ("pre", "post"):
-            for name, value in values.items():
-                row.append(f"{phase}_{name}={value if phase == 'pre' else (value + 1) & 0xffff:04x}")
-        with temporary_directory() as directory:
-            root = Path(directory)
-            sidecar = CanonicalReceiptPath(root / "dos-ah48-return.raw")
-            sidecar.write_text(runner.AH48_HEADER.decode("ascii")
-                               + "\t".join(row) + "\nend\tstatus=complete\tevents=1\n",
-                               encoding="ascii")
-            sidecar.chmod(0o600)
-            status = runner.ah48_handler_return_status(sidecar, protocol)
-            fields = {"recorder_protocol": protocol}
-            fields.update(dict(line.split("=", 1) for line in status.splitlines()))
-            TOOL.verify_millennium_ah48_returns(fields, root)
-            fields["ah48_return_events"] = "2"
-            with self.assertRaisesRegex(ValueError, "hash/count receipt mismatch"):
-                TOOL.verify_millennium_ah48_returns(fields, root)
-            fields["recorder_protocol"] = "v21-int93-installation"
-            with self.assertRaisesRegex(ValueError, "exact recorder protocol"):
-                TOOL.verify_millennium_ah48_returns(fields, root)
-
-    def test_experimental_ah48_v2_verifies_site_1b4f_with_separate_grammar(self) -> None:
-        runner = TOOL.load_tool("run_millennium_dos_capture")
-        protocol = runner.AH48_SITE_1B4F_RETURN_PROTOCOL
-        register_names = ("ax", "bx", "cx", "dx", "si", "di", "bp", "cs", "ip", "ds", "es", "ss", "sp", "flags")
-        values = {name: 0x1000 + index for index, name in enumerate(register_names)}
-        values.update({"ax": 0x4801, "cs": 0x0E70, "ip": 0x1B51, "sp": 0xFF00, "flags": 0x7202})
-        row = ["event", "sequence=1", "site=1b4f", "observed_return_ip=1b51",
-               "dispatch_return=before-IRET"]
-        for phase in ("pre", "post"):
-            for name, value in values.items():
-                row.append(f"{phase}_{name}={value if phase == 'pre' else (value + 1) & 0xffff:04x}")
-        with temporary_directory() as directory:
-            root = Path(directory)
-            sidecar = CanonicalReceiptPath(root / "dos-ah48-return.raw")
-            sidecar.write_text(runner.AH48_SITE_1B4F_HEADER.decode("ascii")
-                               + "\t".join(row) + "\nend\tstatus=complete\tevents=1\n",
-                               encoding="ascii")
-            sidecar.chmod(0o600)
-            status = runner.ah48_handler_return_status(sidecar, protocol)
-            fields = {"recorder_protocol": protocol}
-            fields.update(dict(line.split("=", 1) for line in status.splitlines()))
-            TOOL.verify_millennium_ah48_returns(fields, root)
-            fields["recorder_protocol"] = runner.AH48_HANDLER_RETURN_PROTOCOL
-            with self.assertRaisesRegex(ValueError, "invalid header"):
-                TOOL.verify_millennium_ah48_returns(fields, root)
-
-    def test_experimental_ah48_v3_verifies_allocator_and_free_sidecar(self) -> None:
-        runner = TOOL.load_tool("run_millennium_dos_capture")
-        protocol = runner.AH48_SITES_1BCA_1BD5_RETURN_PROTOCOL
-        digest = "c8d0795e32e566a7a998ef9f26542fd85652f27b957144a06858181ae9379d41"
-        self.assertEqual(runner.EXPERIMENTAL_OBSERVER_PROTOCOLS[protocol], {digest})
-        self.assertEqual(runner.EXPERIMENTAL_OBSERVER_SIZES[protocol][digest], 134_030_152)
-        register_names = ("ax", "bx", "cx", "dx", "si", "di", "bp", "cs", "ip", "ds", "es", "ss", "sp", "flags")
-        rows = []
-        for sequence, (site, ah) in enumerate(((0x1BCA, 0x48), (0x1BD5, 0x49)), 1):
-            values = {name: 0x1000 + index for index, name in enumerate(register_names)}
-            values.update({"ax": ah << 8 | sequence, "cs": 0x0E70, "ip": site + 2,
-                           "sp": 0xFF00, "flags": 0x7202})
-            row = ["event", f"sequence={sequence}", f"site={site:04x}",
-                   f"observed_return_ip={site + 2:04x}", "dispatch_return=before-IRET"]
-            for phase in ("pre", "post"):
-                for name, value in values.items():
-                    row.append(f"{phase}_{name}={value if phase == 'pre' else (value + 1) & 0xffff:04x}")
-            rows.append("\t".join(row) + "\n")
-        with temporary_directory() as directory:
-            root = Path(directory)
-            sidecar = CanonicalReceiptPath(root / "dos-ah48-return.raw")
-            sidecar.write_text(runner.AH48_SITES_1BCA_1BD5_HEADER.decode("ascii")
-                               + "".join(rows) + "end\tstatus=complete\tevents=2\n",
-                               encoding="ascii")
-            sidecar.chmod(0o600)
-            status = runner.ah48_handler_return_status(sidecar, protocol)
-            fields = {"recorder_protocol": protocol}
-            fields.update(dict(line.split("=", 1) for line in status.splitlines()))
-            TOOL.verify_millennium_ah48_returns(fields, root)
-            fields["recorder_protocol"] = runner.AH48_SITE_1B4F_RETURN_PROTOCOL
-            with self.assertRaisesRegex(ValueError, "invalid header"):
-                TOOL.verify_millennium_ah48_returns(fields, root)
 
     def test_driver_loader_experiment_verifies_only_with_explicit_experimental_opt_in(self) -> None:
         runner = TOOL.load_tool("run_millennium_dos_capture")
-        protocol = "millennium-dos-en-driver-load-return-v2"
+        protocol = "millennium-dos-en-driver-load-return-v1"
         with temporary_directory() as directory:
             root = Path(directory)
             configuration = root / "recorder.conf"
-            configuration.write_text("machine=svga_s3\nquit warning=false\n", encoding="ascii")
+            configuration.write_text("machine=svga_s3\n", encoding="ascii")
             console = root / "recorder-console.log"
             console_payload = b"diagnostic observer stopped\n"
             console.write_bytes(console_payload)
@@ -485,7 +154,7 @@ class ReceiptVerifierTests(LfTextFixtureWrites, unittest.TestCase):
             sidecar_status = dict(line.split("=", 1) for line in
                                   runner.driver_load_return_status(sidecar, protocol).splitlines())
             config_digest, config_size = runner.sha256_file(configuration)
-            recorder_hash = "a03a43372a31b89514007c5053a8890c2b13a653c1562c379c3eaee6edc030e6"
+            recorder_hash = "57020c1138879a6f53394f592b6f88bcd69875bfc06c98f7cd9b9a64372e8404"
             console_hash = hashlib.sha256(console_payload).hexdigest()
             fields = {
                 "capture_receipt_version": "22",
@@ -494,7 +163,7 @@ class ReceiptVerifierTests(LfTextFixtureWrites, unittest.TestCase):
                 "source_release_sha256": runner.EXPECTED_RELEASE_SHA256,
                 "source_release_bytes": str(runner.EXPECTED_RELEASE_SIZE),
                 "recorder_sha256": recorder_hash,
-                "recorder_bytes": "132934416",
+                "recorder_bytes": "15809768",
                 "events_raw": "not-collected",
                 "results_raw": "not-collected",
                 "host_input_receipt": "absent",
@@ -523,7 +192,6 @@ class ReceiptVerifierTests(LfTextFixtureWrites, unittest.TestCase):
                 TOOL.verify("millennium-dos", root)
             self.assertEqual(TOOL.verify("millennium-dos", root,
                                          allow_experimental_observer=True), "22")
-            fields["recorder_protocol"] = "millennium-dos-en-driver-load-return-v1"
             fields["recorder_sha256"] = (
                 "942f30f2199350a51d0ff1e7c024f4e226d29b5576dc6ea0d61b7556c12468e8")
             fields["recorder_bytes"] = "132933552"
@@ -566,7 +234,6 @@ class ReceiptVerifierTests(LfTextFixtureWrites, unittest.TestCase):
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "21"}), "21")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "22"}), "22")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "23"}), "23")
-        self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "34"}), "34")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "26"}), "26")
         self.assertEqual(TOOL.require_receipt_schema({"capture_receipt_version": "29"}), "29")
 
@@ -642,8 +309,7 @@ class ReceiptVerifierTests(LfTextFixtureWrites, unittest.TestCase):
             display_gate.assert_called_once_with(fields, root)
 
             pre_v16_hashes = [digest for digest in runner.reviewed_recorder_hashes().values()
-                              if digest not in {runner.TRV2_RECORDER_V16_SHA256,
-                                                runner.TRV2_RECORDER_V24_SHA256}]
+                              if digest != runner.TRV2_RECORDER_V16_SHA256]
             for reviewed_hash in pre_v16_hashes:
                 fields["recorder_sha256"] = reviewed_hash
                 status.write_text("".join(f"{key}={value}\n" for key, value in fields.items()), encoding="utf-8")
@@ -689,11 +355,10 @@ class ReceiptVerifierTests(LfTextFixtureWrites, unittest.TestCase):
         fields = {
             "capture_intent": "physical-input", "capture_intent_input_requirement": "required",
             "host_input_receipt": "present", "host_input_observed_during_capture": "true",
-            "capture_intent_input_observation": "observed-during-capture",
         }
         TOOL.verify_capture_intent(fields, millennium)
         fields["host_input_observed_during_capture"] = "false"
-        with self.assertRaisesRegex(ValueError, "lacks an observed recorder receipt"):
+        with self.assertRaisesRegex(ValueError, "does not match"):
             TOOL.verify_capture_intent(fields, millennium)
 
     def test_receipt_rejects_duplicate_or_malformed_fields(self) -> None:
@@ -706,7 +371,7 @@ class ReceiptVerifierTests(LfTextFixtureWrites, unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "invalid"):
                 TOOL.receipt(path)
 
-    def test_receipt_allows_empty_phase_summaries_and_rejects_empty_identity(self) -> None:
+    def test_receipt_allows_only_empty_no_input_phase_summary(self) -> None:
         with temporary_directory() as directory:
             path = Path(directory) / "run-status.txt"
             path.write_text(
@@ -717,15 +382,6 @@ class ReceiptVerifierTests(LfTextFixtureWrites, unittest.TestCase):
             path.write_text("recorder_sha256=\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "empty"):
                 TOOL.receipt(path)
-
-    def test_receipt_allows_empty_pre_input_summary_when_capture_starts_after_input(self) -> None:
-        with temporary_directory() as directory:
-            path = Path(directory) / "run-status.txt"
-            path.write_text(
-                "raw_pc_pre_input_site_counts=\n"
-                "raw_pc_post_input_site_counts=0x000210d4:128\n", encoding="utf-8")
-            self.assertEqual(
-                TOOL.receipt(path)["raw_pc_pre_input_site_counts"], "")
 
     def test_optional_artifact_is_hash_bound_and_rejects_symlink(self) -> None:
         with temporary_directory() as directory:

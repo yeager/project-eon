@@ -9,9 +9,7 @@ never claim parity or invent behaviour that evidence does not support.
 ## Original media
 
 - Original game data is user supplied and read in place only. Never unpack,
-  install, mutate, redistribute, or commit it. Copy user-supplied media into
-  `~/.projecteon` only when the user explicitly requests staging there; verify
-  source and destination hashes, and keep the copied media outside the repo.
+  copy, install, mutate, redistribute, or commit it.
 - Prefer real supplied media in the local Downloads directory for verification; never
   create synthetic replacements when an original asset or state is available.
 - Keep parsers bounded and hash-addressed. Treat malformed or unproven formats

@@ -31,36 +31,11 @@ result value. Overflow, metadata disagreement, changed relocation source
 words, and any result outside the bounded 24-bit address space are rejected
 before the image is admitted.
 
-The native Atari session also reserves a zeroed 32,000-byte low-resolution
-screen region at `$00030000`. This Eon-owned address is 256-byte aligned, begins
-after the PRG+BSS image end `$0002fd58`, and ends well below the Atari hardware
-register window at `$00ff8000`. It is a native allocation, not a claim about
-TOS's Physbase or Logbase result. The recovered XBIOS 2/3/4 boundary still
-admits only Physbase/Logbase values equal to this reservation and low-resolution
-Getrez. The title frame is decoded from the exact `MILL22C.INF` packed stream
-into 16,000 four-plane words and paired with the initial palette at
-`MILL22A.INF +$f28`. Seven passes over the 96-byte palette source at `+$16c`
-produce RGB3 words `0000 0664 0520 0666 0366 0163 0040 0026 0036 0046 0005
-0004 0003 0002 0001 0006`. SDL displays this source-derived 320x200 frame;
-this does not assert that it is the last screen state in an original Atari
-run or that gameplay input is recovered.
-
-`decode_millennium_atari_title_frame` is the bounded native decoder. It
-rechecks both original file hashes and decoded planar, index, palette, and RGBA
-hashes before publishing a frame. The planar hash is
-`97ca82e4296c649a853d45f3900f90b2b8490c1cf12c0580258b3c89e13b4475`, the
-index hash is `1bc61a2ecf3dd75a317996e56bf836f4e0aa304c496d5ec2d366da53fd64d8b8`,
-the RGB3 palette hash is `19e71f573ee6cec84d629becc821360b8384766ca6f9a308f7c2b0d67922cb02`,
-and the expanded RGBA hash is
-`d4d37cfc50ea59fe3453bb2bf4c3e8b3880cd31261bee5b7f02a9a68c3190595`.
-RGB3 expansion is a renderer mapping; the original source words remain in the
-snapshot.
-
 The `$00010000` base belongs to Eon's native address map. It is deliberately
 not presented as the address selected by an original TOS machine. Project Eon
-does not emulate TOS or execute the BSS copy instructions. It validates their
-hash-bound profile and reproduces the bounded copy directly in native memory,
-stopping before the next GEMDOS call.
+has no general 68000 or TOS emulator; the later BSS copy routine is admitted
+as one bounded instruction sequence with an explicit stop before the next
+GEMDOS call.
 
 ## Atomic runtime ownership
 
@@ -76,28 +51,26 @@ The UI-facing snapshot contains only sizes, digests, addresses, and the first
 and last relocation facts. It never copies the executable image or complete
 configuration payload across the renderer boundary.
 
-The native C++ return model applies the recovered word-MOVE condition codes
-along with its register and memory effects: N/Z follow the moved word, V/C
-clear, and X plus the upper status register remain unchanged. A following
-recovered branch can therefore consume only flags derived from the observed
-service result.
+The bounded interpreter applies 68000 word-MOVE condition codes as well as
+register and memory effects: N/Z follow the moved word, V/C clear, and X plus
+the upper status register remain unchanged. A following recovered branch can
+therefore consume only flags produced by the original instruction.
 
 ## Post-config filename provenance
 
-The BSS entry at `$1d636` now materializes its exact self-initializing copy
-directly in native C++. Its instruction profile is limited to `MOVEA.L #imm,An`,
+The BSS entry at `$1d636` now executes its exact self-initializing 68000 copy
+routine. The instruction subset is limited to `MOVEA.L #imm,An`,
 `MOVE.W #imm,Dn`, `MOVE.W (A0)+,(A1)+`, `DBF`, and absolute-long `JMP`.
 Its 28-byte instruction span is hash-anchored as
 `bae3f526a7a7e42ca59d840ed80606f0f2b5a9f420fe221ddd30f04d9388e30b`.
-The source routine corresponds to 518 instructions, including 257 word copies, reads only
+The routine executes 518 instructions, including 257 word copies, reads only
 the 514-byte source interval at `$1d652`, and writes only `$77000..$77201`.
 It stops at the verified `JMP $77000` before executing the target code. The
 source consists of 188 hash-identified DATA bytes followed by 326 bytes from
 the PRG's loader-zeroed BSS. Any opcode outside this routine's small grammar,
 out-of-range access, unexpected step count, or different jump target is a
-hard failure. The data spans are copied and zero-filled directly; no 68000
-interpreter is involved in PRG materialization. This does not emulate TOS,
-execute GEMDOS, or establish game playability.
+hard failure. This does not emulate TOS, execute GEMDOS, or establish game
+playability.
 
 The staged caller at `$77042` pushes filename pointer `$1d6d8` before its
 second GEMDOS `Fopen`. This address is `+$86` into the exact bootstrap source
@@ -460,19 +433,20 @@ executes `ADDQ.L #8,A7`, stores D0.W at `$12056`, performs `TST.L D0`, and
 returns through `RTS` at `$11fe4`. A second typed observation requires GEMDOS's
 observed PC, A7, SR, and D0 at `$11fda`, verifies that suffix in module and
 runtime memory, and reads the dynamic RTS address from the owned stack. The
-native C++ continuation applies the exact four hash-locked operations
-(`ADDQ.L`, absolute `MOVE.W`, `TST.L`, `RTS`) using the observed D0, SR, and
-stack. It stores the resulting D0.W at `$12056`, checks the observed post-RTS
-PC/A7, and records the four-instruction count. The session commits that word
-only after all checks pass. It does not infer whether Fopen succeeded or what
-the caller does next.
+bounded 68000 executor now runs those exact 12 loaded bytes with the observed
+D0, SR, and stack. It must execute the four supported instructions (`ADDQ.L`,
+absolute `MOVE.W`, `TST.L`, `RTS`), store the resulting D0.W at `$12056`,
+reproduce the observed post-RTS PC/A7, and reach the stop address within five
+steps. The session commits that instruction-produced word only after all
+checks pass. It does not infer whether Fopen succeeded or what the caller does
+next.
 
 The exact Equinox continuation at `$11fe6` is bounded conditionally. The RTS
 destination remains the address read from the observed stack; only when that
 destination is `$11fe6` does the session verify the following 18-byte local
 span through the next `TRAP #1` against SHA-256
 `352b6ca9a375e016e129667085dbd6fcd89d1e2eece201d75d97972c60b94cd4`, and
-applies its four deterministic 68000 instructions directly in C++. The resulting external
+executes its four deterministic 68000 instructions. The resulting external
 boundary is GEMDOS selector `$3c` at `$11ff6`, with attribute 0 and the
 `2200AD.PRG` pointer `$1204a` on the native stack. The coordinator commits
 only the D0.W store and this exact stack frame; it does not invoke Fcreate or
@@ -482,8 +456,8 @@ recorder-backed trace has confirmed that the dynamic RTS destination is
 `$11fe6`; other destinations stop after the typed Fopen return. The Fcreate
 return suffix at `$11ff8..$12003` is also hash-bound to
 `b8822e86ef570519d8a3ebedfb3164a8e05d3e6305b3f7ca862bdf874439ae59`. A typed
-service return applies only its four local instructions in C++, checks the raw
-D0, SR, stack, and dynamic RTS destination, and commits the resulting D0.W store
+service return executes only its four local instructions, checks the raw D0,
+SR, stack, and dynamic RTS destination, and commits the resulting D0.W store
 to `$12056`. It does not interpret the Fcreate result or emulate file
 creation. The actual service return, disk state, and caller after RTS remain
 unobserved.
@@ -519,14 +493,8 @@ commits its D6/D7 words atomically, and stops before the source-byte read at
 `$2b2de`. The older file-`+0xde0` candidate is not executed.
 One typed byte at `$2c250` drives the exact mask/bit dispatch. Production
 acceptance also requires every typed token byte to match the corresponding
-byte in the native Fread buffer. The original caller at `$2aad4` opens
-`MILL22C.INF` through `$2a640` before reaching this decoder. The native GEMDOS
-Fread path now recognizes that exact filename and materializes the returned
-prefix from the hash-verified 9,597-byte FAT12 file at `$2c24a`. It rejects a
-different filename or a byte count outside the guest request/file bounds.
-This connects authentic decoder input, but does not yet prove that the decoder
-produces a correct frame or that play begins. Contradictory or unavailable
-bytes fail atomically instead of creating display data. On the normal
+byte of the immutable, hash-admitted `MILL22A.INF` Fread image. Contradictory
+or unavailable bytes fail atomically instead of creating display data. On the normal
 zero-bit path, one bounded pair observation admits `$2c251..$2c252`, copies
 the bytes atomically to the owned A5 destination, advances A4/A5 and
 decrements D6 through the exact eight-byte prefix whose SHA-256 is

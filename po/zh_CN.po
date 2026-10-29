@@ -9,21 +9,6 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "INTERACTIVE AMIGA FLOW IS NOT YET RECOVERED."
-msgstr "Amiga 交互流程尚未恢复。"
-
-msgid "ORIGINAL ATARI ST TITLE - SOURCE DECODED"
-msgstr "原始 Atari ST 标题画面 - 根据源数据解码"
-
-msgid "320 X 200 / 4 PLANES / SOURCE RGB3 PALETTE"
-msgstr "320 × 200 / 4 个位面 / 源 RGB3 调色板"
-
-msgid "GAMEPLAY FLOW REMAINS UNRECOVERED."
-msgstr "游戏流程仍未恢复。"
-
-msgid "BOOTSTRAP BOUNDARIES ARE STATIC; TITLE PIXELS ARE SOURCE DECODED."
-msgstr "引导边界为静态数据；标题像素根据源数据解码。"
-
 msgid "Welcome to Millennium."
 msgstr "欢迎来到 Millennium。"
 

@@ -40,8 +40,7 @@ public:
     [[nodiscard]] MillenniumDosTitleChildCompatibilityCheckpoint checkpoint() const;
 
     [[nodiscard]] static constexpr std::uint16_t required_paragraphs() {
-        // TITLES sets SS=CS and SP=$da00 before its recovered private call.
-        return 0x0da0;
+        return 455; // ceil(($0100 + 7022) / 16)
     }
 
 private:

@@ -1,5 +1,6 @@
 #include "engine/millennium_atari_post_config_entry_session.hpp"
 
+#include "data/m68k_executor.hpp"
 #include "data/sha256.hpp"
 
 #include <algorithm>
@@ -1244,24 +1245,49 @@ MillenniumAtariPostConfigEntrySession::observe_gemdos_fopen_return(
         }
     }
 
-    bool stored_word_mapped = true;
-    for (std::size_t index = 0; index < 2U; ++index) {
+    std::array<std::uint8_t, 12> stack_bytes{};
+    for (std::size_t index = 0; index < stack_bytes.size(); ++index) {
+        const auto byte = memory.read_byte({NativeRuntimeAddressSpace::linear,
+            std::nullopt, static_cast<std::uint64_t>(stack) + index});
+        if (!byte) return {false, "MILL22B.INF return suffix stack span is incomplete"};
+        stack_bytes[index] = *byte;
+    }
+    std::array<std::uint8_t, 2> stored_word{};
+    for (std::size_t index = 0; index < stored_word.size(); ++index) {
         const auto byte = memory.read_byte({NativeRuntimeAddressSpace::linear,
             std::nullopt, 0x12056U + index});
-        stored_word_mapped = stored_word_mapped && byte.has_value();
+        if (!byte) return {false, "MILL22B.INF return suffix destination is unmapped"};
+        stored_word[index] = *byte;
     }
-    if (!stored_word_mapped) return {false, "MILL22B.INF return suffix destination is unmapped"};
-    // The exact suffix is ADDQ.L #8,A7; MOVE.W D0,$12056; TST.L D0; RTS.
-    // Derive these effects directly from the hash-locked source bytes.
-    const auto suffix_post_a7 = stack + 12U;
-    if (observation.post_rts_pc != return_pc
-        || observation.post_rts_a7 != suffix_post_a7) {
+    std::array<m68k::MemoryRange, 2> execution_memory{{
+        {stack, stack_bytes, false},
+        {0x12056U, stored_word, true},
+    }};
+    m68k::MachineState initial;
+    initial.pc = suffix_address;
+    initial.sr = observation.post_service_sr;
+    initial.data[0] = observation.result_d0;
+    initial.address[7] = stack;
+    const auto execution = m68k::execute(suffix, suffix_address, initial,
+        execution_memory, 5U, return_pc);
+    if (execution.reason != m68k::StopReason::requested_address
+        || execution.instructions_executed != 4U
+        || execution.state.pc != observation.post_rts_pc
+        || execution.state.address[7] != observation.post_rts_a7) {
         return {false, "MILL22B.INF bounded Fopen suffix execution contradicts observed RTS"};
     }
     auto expected_sr = static_cast<std::uint16_t>(observation.post_service_sr & 0xfff0U);
     if ((observation.result_d0 & 0x80000000U) != 0) expected_sr |= 0x0008U;
     if (observation.result_d0 == 0) expected_sr |= 0x0004U;
-    const auto executed_store = static_cast<std::uint16_t>(observation.result_d0);
+    const auto stored_value = static_cast<std::uint16_t>(
+        (static_cast<std::uint16_t>(stored_word[0]) << 8U) | stored_word[1]);
+    const auto executed_store = static_cast<std::uint16_t>(
+        (static_cast<std::uint16_t>(execution_memory[1].bytes[0]) << 8U)
+        | execution_memory[1].bytes[1]);
+    if (execution.state.sr != expected_sr || stored_value != executed_store
+        || executed_store != static_cast<std::uint16_t>(observation.result_d0)) {
+        return {false, "MILL22B.INF bounded Fopen suffix effects mismatch"};
+    }
 
     constexpr std::uint32_t fcreate_code_address = 0x11fe6U;
     constexpr std::size_t fcreate_code_size = 18U;
@@ -1294,28 +1320,38 @@ MillenniumAtariPostConfigEntrySession::observe_gemdos_fopen_return(
                 return {false, "MILL22B.INF Fcreate setup code is absent or changed"};
             }
         }
-        if (suffix_post_a7 < 8U) {
+        if (execution.state.address[7] < 8U) {
             return {false, "MILL22B.INF Fcreate argument stack address underflows"};
         }
-        fcreate_stack_base = suffix_post_a7 - 8U;
+        fcreate_stack_base = execution.state.address[7] - 8U;
         if ((fcreate_stack_base & 1U) != 0U) {
             return {false, "MILL22B.INF Fcreate argument stack address is invalid"};
         }
-        bool fcreate_stack_mapped = true;
-        for (std::size_t index = 0; index < expected_fcreate_arguments.size(); ++index) {
+        std::array<std::uint8_t, 8> fcreate_stack{};
+        for (std::size_t index = 0; index < fcreate_stack.size(); ++index) {
             const auto byte = memory.read_byte({NativeRuntimeAddressSpace::linear,
                 std::nullopt, static_cast<std::uint64_t>(fcreate_stack_base) + index});
-            fcreate_stack_mapped = fcreate_stack_mapped && byte.has_value();
+            if (!byte) return {false, "MILL22B.INF Fcreate argument stack is incomplete"};
+            fcreate_stack[index] = *byte;
         }
-        if (!fcreate_stack_mapped) {
-            return {false, "MILL22B.INF Fcreate argument stack is incomplete"};
+        std::array<m68k::MemoryRange, 1> fcreate_memory{{
+            {fcreate_stack_base, fcreate_stack, true},
+        }};
+        const auto fcreate_execution = m68k::execute(fcreate_code, fcreate_code_address,
+            execution.state, fcreate_memory, 5U, 0x11fff8U);
+        if (fcreate_execution.reason != m68k::StopReason::trap_instruction
+            || fcreate_execution.stop_opcode != 0x4e41U
+            || fcreate_execution.instructions_executed != 4U
+            || fcreate_execution.state.pc != 0x11ff6U
+            || fcreate_execution.state.address[7] != fcreate_stack_base
+            || fcreate_execution.state.data[7] != 0x1204aU
+            || !std::equal(fcreate_memory[0].bytes.begin(), fcreate_memory[0].bytes.end(),
+                expected_fcreate_arguments.begin(), expected_fcreate_arguments.end())) {
+            return {false, "MILL22B.INF bounded Fcreate setup does not reach the observed trap frame"};
         }
-        // Exact four-instruction source shape: MOVE.L #$1204a,D7;
-        // MOVE.L D7,-(A7); MOVE.W #1,-(A7); MOVE.W #$3c,-(A7).
-        // Stop before the following TRAP #1; D7 and the ABI frame are known.
-        fcreate_trap_address = 0x11ff6U;
-        fcreate_data_register_7 = 0x1204aU;
-        std::copy(expected_fcreate_arguments.begin(), expected_fcreate_arguments.end(),
+        fcreate_trap_address = fcreate_execution.state.pc;
+        fcreate_data_register_7 = fcreate_execution.state.data[7];
+        std::copy(fcreate_memory[0].bytes.begin(), fcreate_memory[0].bytes.end(),
             fcreate_argument_bytes.begin());
         fcreate_boundary_prepared = true;
     }
@@ -1326,11 +1362,12 @@ MillenniumAtariPostConfigEntrySession::observe_gemdos_fopen_return(
     next.gemdos_fopen_result_observed = true;
     next.gemdos_fopen_result_d0 = observation.result_d0;
     next.gemdos_fopen_post_service_sr = observation.post_service_sr;
-    next.gemdos_fopen_result_sr = expected_sr;
+    next.gemdos_fopen_result_sr = execution.state.sr;
     next.gemdos_fopen_return_pc = return_pc;
     next.gemdos_fopen_result_a7 = stack + 12U;
     next.gemdos_fopen_stored_word = executed_store;
-    next.gemdos_fopen_suffix_instruction_count = 4U;
+    next.gemdos_fopen_suffix_instruction_count =
+        static_cast<std::uint32_t>(execution.instructions_executed);
     next.gemdos_fcreate_boundary_prepared = fcreate_boundary_prepared;
     next.gemdos_fcreate_trap_address = fcreate_trap_address;
     next.gemdos_fcreate_argument_stack_address = fcreate_stack_base;
@@ -1417,17 +1454,17 @@ MillenniumAtariPostConfigEntrySession::observe_gemdos_fcreate_return(
             return {false, "MILL22B.INF Fcreate arguments changed before service return"};
         }
     }
-    std::array<std::uint8_t, 4> return_bytes{};
-    for (std::size_t index = 0; index < return_bytes.size(); ++index) {
+    std::array<std::uint8_t, 12> stack_bytes{};
+    for (std::size_t index = 0; index < stack_bytes.size(); ++index) {
         const auto byte = memory.read_byte({NativeRuntimeAddressSpace::linear,
-            std::nullopt, static_cast<std::uint64_t>(stack) + 8U + index});
+            std::nullopt, static_cast<std::uint64_t>(stack) + index});
         if (!byte) return {false, "MILL22B.INF Fcreate RTS address is absent from native stack"};
-        return_bytes[index] = *byte;
+        stack_bytes[index] = *byte;
     }
-    const auto return_pc = (static_cast<std::uint32_t>(return_bytes[0]) << 24U)
-        | (static_cast<std::uint32_t>(return_bytes[1]) << 16U)
-        | (static_cast<std::uint32_t>(return_bytes[2]) << 8U)
-        | static_cast<std::uint32_t>(return_bytes[3]);
+    const auto return_pc = (static_cast<std::uint32_t>(stack_bytes[8]) << 24U)
+        | (static_cast<std::uint32_t>(stack_bytes[9]) << 16U)
+        | (static_cast<std::uint32_t>(stack_bytes[10]) << 8U)
+        | static_cast<std::uint32_t>(stack_bytes[11]);
     if (return_pc == 0U || (return_pc & 1U) != 0U || return_pc > 0x00ffffffU
         || stack > 0x00fffff1U || observation.post_rts_a7 != stack + 12U
         || observation.post_rts_pc != return_pc) {
@@ -1454,37 +1491,53 @@ MillenniumAtariPostConfigEntrySession::observe_gemdos_fcreate_return(
             return {false, "MILL22B.INF Fcreate return code is absent or changed"};
         }
     }
-    bool stored_word_mapped = true;
-    for (std::size_t index = 0; index < 2U; ++index) {
+    std::array<std::uint8_t, 2> stored_word{};
+    for (std::size_t index = 0; index < stored_word.size(); ++index) {
         const auto byte = memory.read_byte({NativeRuntimeAddressSpace::linear,
             std::nullopt, 0x12056U + index});
-        stored_word_mapped = stored_word_mapped && byte.has_value();
+        if (!byte) return {false, "MILL22B.INF Fcreate result destination is unmapped"};
+        stored_word[index] = *byte;
     }
-    if (!stored_word_mapped) return {false, "MILL22B.INF Fcreate result destination is unmapped"};
-    // Same hash-locked ADDQ/MOVE/TST/RTS suffix as Fopen, with the Fcreate
-    // service's independently observed D0/SR/RTS frame.
+    std::array<m68k::MemoryRange, 2> execution_memory{{
+        {stack, stack_bytes, false},
+        {0x12056U, stored_word, true},
+    }};
+    m68k::MachineState initial;
+    initial.pc = suffix_address;
+    initial.sr = observation.post_service_sr;
+    initial.data[0] = observation.result_d0;
+    initial.address[7] = stack;
+    const auto execution = m68k::execute(suffix, suffix_address, initial,
+        execution_memory, 5U, return_pc);
     const auto expected_sr = [&] {
         auto value = static_cast<std::uint16_t>(observation.post_service_sr & 0xfff0U);
         if ((observation.result_d0 & 0x80000000U) != 0U) value |= 0x0008U;
         if (observation.result_d0 == 0U) value |= 0x0004U;
         return value;
     }();
-    if (observation.post_rts_pc != return_pc
-        || observation.post_rts_a7 != stack + 12U) {
+    const auto executed_word = static_cast<std::uint16_t>(
+        (static_cast<std::uint16_t>(execution_memory[1].bytes[0]) << 8U)
+        | execution_memory[1].bytes[1]);
+    if (execution.reason != m68k::StopReason::requested_address
+        || execution.instructions_executed != 4U
+        || execution.state.pc != observation.post_rts_pc
+        || execution.state.address[7] != observation.post_rts_a7
+        || execution.state.sr != expected_sr
+        || executed_word != static_cast<std::uint16_t>(observation.result_d0)) {
         return {false, "MILL22B.INF bounded Fcreate suffix contradicts observed RTS/result"};
     }
-    const auto executed_word = static_cast<std::uint16_t>(observation.result_d0);
     auto next = checkpoint_;
     next.state = MillenniumAtariPostConfigEntryState::gemdos_fcreate_result_observed;
     next.last_sequence = observation.sequence;
     next.gemdos_fcreate_result_observed = true;
     next.gemdos_fcreate_result_d0 = observation.result_d0;
     next.gemdos_fcreate_post_service_sr = observation.post_service_sr;
-    next.gemdos_fcreate_result_sr = expected_sr;
+    next.gemdos_fcreate_result_sr = execution.state.sr;
     next.gemdos_fcreate_return_pc = return_pc;
     next.gemdos_fcreate_result_a7 = stack + 12U;
     next.gemdos_fcreate_stored_word = executed_word;
-    next.gemdos_fcreate_suffix_instruction_count = 4U;
+    next.gemdos_fcreate_suffix_instruction_count =
+        static_cast<std::uint32_t>(execution.instructions_executed);
     checkpoint_ = std::move(next);
     return {true, {}};
 }

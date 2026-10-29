@@ -72,10 +72,6 @@ DeuterosAmigaOpening::installed_interrupt_worker() const {
     return parse_deuteros_amiga_installed_interrupt_worker(disk_, load_plan_, prefix);
 }
 
-DeuterosAmigaVertbHandlerProfile DeuterosAmigaOpening::vertb_handler_profile() const {
-    return parse_deuteros_amiga_vertb_handler(disk_, load_plan_);
-}
-
 std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
 DeuterosAmigaOpening::commit_title_stage_program_entry(const std::uint16_t profile) {
     if (profile != 1 && profile != 5) return std::nullopt;

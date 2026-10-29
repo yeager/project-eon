@@ -1,11 +1,9 @@
 #pragma once
 
 #include "data/millennium_dos_game_flow.hpp"
-#include "engine/native_runtime_memory.hpp"
 
 #include <cstddef>
 #include <cstdint>
-#include <deque>
 #include <optional>
 #include <span>
 #include <vector>
@@ -50,13 +48,6 @@ struct MillenniumDosPostOverlayRuntimeByteEffect {
     constexpr bool operator==(const MillenniumDosPostOverlayRuntimeByteEffect&) const = default;
 };
 
-[[nodiscard]] NativeRuntimeMemoryApplyResult
-commit_millennium_dos_post_overlay_runtime_byte_effect(
-    NativeRuntimeMemory& memory, std::uint64_t generation,
-    std::size_t effect_ordinal,
-    std::uint16_t child_code_segment,
-    const MillenniumDosPostOverlayRuntimeByteEffect& effect);
-
 // A manually recompiled continuation after the post-overlay INT 91h return.
 // The selected mode is the already observed $da05 value from the preceding
 // typed process boundary. No caller, interrupt, call, or input is invented.
@@ -83,13 +74,6 @@ public:
     }
     [[nodiscard]] const std::vector<MillenniumDosPostOverlayRuntimeByteEffect>&
     runtime_effects() const { return runtime_effects_; }
-
-    // Eon's DOS AH=06h compatibility input. A PC extended key is queued as
-    // the DOS two-poll sequence (AL=0, then scan code); bytes are consumed
-    // only when the authenticated $d3db->$0f05 call returns.
-    [[nodiscard]] bool enqueue_console_character(std::uint8_t value);
-    [[nodiscard]] bool enqueue_function_key(std::uint8_t scan_code);
-    void clear_console_input() noexcept { console_input_.clear(); }
 
     void observe_private_interrupt_return(std::uint16_t interrupt_address,
         std::uint16_t ax);
@@ -120,7 +104,6 @@ private:
     std::optional<std::uint16_t> dispatch_call_address_;
     std::optional<std::uint16_t> dispatch_call_target_;
     std::vector<MillenniumDosPostOverlayRuntimeByteEffect> runtime_effects_;
-    std::deque<std::uint8_t> console_input_;
 };
 
 } // namespace eon

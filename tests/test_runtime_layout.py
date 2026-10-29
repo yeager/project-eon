@@ -83,10 +83,8 @@ class RuntimeLayoutTests(unittest.TestCase):
 
     def test_public_docs_distinguish_stx_metadata_reads_from_flattening(self) -> None:
         self.assertIn("physical media such as STX remain in their original container form", README)
-        self.assertIn("both complete\ncluster chains and byte streams agree", PRESERVATION)
-        self.assertIn("The sector reader leaves the physical STX unchanged", PRESERVATION)
-        self.assertIn("does not create a flat filesystem image", PRESERVATION)
-        self.assertIn("sector reader leaves the physical STX unchanged", PRESERVATION)
+        self.assertIn("file-payload extraction, boot interpretation", PRESERVATION)
+        self.assertIn("read-only metadata traversal", PRESERVATION)
         self.assertNotIn("STX flattening, filesystem traversal, boot interpretation", PRESERVATION)
 
     def test_windows_stage_matches_runtime_search_order_without_data_directory(self) -> None:
