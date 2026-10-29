@@ -24,6 +24,11 @@ public:
     }
     [[nodiscard]] const MillenniumAmigaFirstStageEntryBoundary&
     first_stage_entry_boundary() const { return first_stage_entry_boundary_; }
+    // Hash-bound setup prefix reached after the resident first-stage view
+    // initialization. This is static source evidence only; it does not claim
+    // an OpenDevice result or that input.device has been called.
+    [[nodiscard]] const MillenniumAmigaInputDeviceOpenBoundary&
+    input_device_open_boundary() const { return input_device_open_boundary_; }
     // The relocator is retained as a stop boundary. Its final source byte is
     // outside the verified boot I/O request, so this session never exposes a
     // relocated executable image or treats either reported PC as runnable.
@@ -35,6 +40,7 @@ private:
     MillenniumAmigaLoadPlan plan_;
     MillenniumAmigaBootstrapOpaqueInvocationBoundary opaque_invocation_boundary_;
     MillenniumAmigaFirstStageEntryBoundary first_stage_entry_boundary_;
+    MillenniumAmigaInputDeviceOpenBoundary input_device_open_boundary_;
     MillenniumAmigaBootstrapRelocationBoundary relocation_boundary_;
 };
 

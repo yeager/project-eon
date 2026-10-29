@@ -94,6 +94,15 @@ int main() {
     assert(after_replay.initialized_bytes==before_replay.initialized_bytes
         &&after_replay.applied_batch_count==before_replay.applied_batch_count
         &&after_replay.checksum==before_replay.checksum);
+    const std::array<eon::NativeRuntimeLocation,2> unknown_stack_words{{
+        {eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x800},
+        {eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x801}}};
+    assert(overwrite_memory.forget("unknown-stack-slot",unknown_stack_words).accepted);
+    assert(!overwrite_memory.read_byte(unknown_stack_words[0])
+        &&!overwrite_memory.read_byte(unknown_stack_words[1])
+        &&overwrite_memory.diagnostics().initialized_byte_count==0
+        &&overwrite_memory.revision()==3);
+    assert(!overwrite_memory.forget("unknown-stack-slot",unknown_stack_words).accepted);
 
     eon::MillenniumDosExternalTransferAdmission bdf_transfer(
         eon::MillenniumDosExternalTransferKind::bdf_mode_two_jump);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/millennium_dos_native_process.hpp"
+#include "engine/millennium_dos_video_function_31_session.hpp"
 #include "engine/millennium_dos_post_overlay_loop_session.hpp"
 #include "engine/millennium_dos_function_dispatch_admission.hpp"
 #include "engine/millennium_dos_seventh_function_session.hpp"
@@ -23,6 +24,7 @@
 #include "engine/millennium_dos_tenth_function_session.hpp"
 
 #include <cstdint>
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <span>
@@ -56,6 +58,81 @@ struct MillenniumDosNativeProcessCheckpoint {
     std::uint16_t child_code_segment = 0;
     std::uint64_t last_observation_sequence = 0;
     std::optional<MillenniumDosNativeBiosInterruptReturnObservation> startup_bios_return;
+    std::size_t startup_ega_palette_write_count = 0;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation> startup_dos_return;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_allocator_second_dos_return;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_allocator_free_dos_return;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_allocator_third_dos_return;
+    std::optional<MillenniumDosNativeStartupFileOpenRequest> startup_file_open_request;
+    std::optional<MillenniumDosNativeStartupFileOpenRequest>
+        startup_zero_path_file_open_request;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_zero_path_file_open_dos_return;
+    std::optional<MillenniumDosNativeStartupFileRequest>
+        startup_zero_path_file_read_request;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_zero_path_file_read_dos_return;
+    std::optional<MillenniumDosNativeStartupFileRequest>
+        startup_zero_path_file_close_request;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_zero_path_file_close_dos_return;
+    std::optional<MillenniumDosNativeStartupFileRequest>
+        startup_zero_path_vector_get_request;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_zero_path_vector_get_dos_return;
+    std::optional<MillenniumDosNativeStartupFileRequest>
+        startup_zero_path_vector_set_request;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_zero_path_vector_set_dos_return;
+    std::optional<MillenniumDosNativeRuntimeByteObservation>
+        startup_zero_path_continuation_byte;
+    std::optional<std::uint8_t> startup_zero_path_selector_value;
+    std::optional<MillenniumDosSibmFunctionZeroCheckpoint>
+        startup_sibm_function_zero;
+    std::optional<MillenniumDosNativeStartupFileRequest> startup_file_seek_request;
+    std::optional<MillenniumDosNativeStartupFileRequest> startup_file_close_request;
+    std::optional<MillenniumDosNativeStartupFileRequest> startup_allocator_fourth_request;
+    std::optional<MillenniumDosNativeStartupFileRequest> startup_allocator_fifth_request;
+    std::optional<MillenniumDosNativeStartupFileRequest> startup_allocator_seventh_request;
+    std::optional<MillenniumDosNativeStartupFileRequest> startup_allocator_eighth_request;
+    std::optional<MillenniumDosNativeStartupFileRequest> startup_allocator_ninth_request;
+    std::optional<MillenniumDosNativeStartupFileRequest> startup_allocator_tenth_request;
+    std::optional<MillenniumDosNativeStartupFileRequest> startup_allocator_eleventh_request;
+    std::optional<std::uint16_t> startup_file_handle;
+    std::optional<std::uint16_t> startup_file_size;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_allocator_fourth_dos_return;
+    std::optional<std::uint16_t> startup_allocator_fourth_segment;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_allocator_fifth_dos_return;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_allocator_sixth_dos_return;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_allocator_seventh_dos_return;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_allocator_eighth_dos_return;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_allocator_ninth_dos_return;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_allocator_tenth_dos_return;
+    std::optional<MillenniumDosNativeDosInterruptReturnObservation>
+        startup_allocator_eleventh_dos_return;
+    std::optional<std::uint16_t> startup_allocator_return_ax;
+    std::optional<std::uint16_t> startup_allocator_stored_bx;
+    std::optional<std::uint16_t> startup_allocator_es_segment;
+};
+
+struct MillenniumDosNativeFunction31DispatchResult {
+    bool accepted = false;
+    std::string error;
+    std::uint64_t sequence = 0;
+    std::uint16_t target_address = 0;
+    std::uint16_t local_state_address = 0;
+    std::uint8_t local_state_value = 0;
+    std::uint16_t returned_ax = 0;
 };
 
 struct MillenniumDosNativePrivateInterruptReturnObservation {
@@ -121,11 +198,45 @@ public:
         std::uint16_t code_segment) const;
 
     void observe_private_interrupt_return(std::uint16_t address, std::uint16_t ax);
+    void begin_startup_ega_palette(
+        const MillenniumDosGameFunctionFourDispatchResult& function_four);
+    void observe_startup_allocation_request(std::uint16_t interrupt_address);
     void observe_private_interrupt_return(
         const MillenniumDosNativePrivateInterruptReturnObservation& observation);
     void observe_bios_interrupt_return(
         const MillenniumDosNativeBiosInterruptReturnObservation& observation);
+    void continue_startup_ega_caller(std::uint8_t selector_value,
+        std::uint16_t first_return_word, std::uint16_t outer_return_word);
+    void continue_startup_ega_allocator_request(std::uint16_t outer_return_word);
+    void observe_dos_interrupt_return(
+        const MillenniumDosNativeDosInterruptReturnObservation& observation);
+    void observe_runtime_byte(std::uint64_t sequence, std::uint16_t instruction_address,
+        std::uint16_t runtime_address, std::uint8_t value);
+    void observe_startup_sibm_function_zero_prefix(
+        const MillenniumDosSibmFunctionZeroCheckpoint& result);
+    void observe_startup_sibm_timer_vector_get_return(
+        const MillenniumDosNativeDosInterruptReturnObservation& observation,
+        const MillenniumDosSibmFunctionZeroCheckpoint& result,
+        std::uint16_t loaded_driver_segment);
+    void observe_startup_sibm_timer_vector_set_return(
+        const MillenniumDosNativeDosInterruptReturnObservation& observation,
+        const MillenniumDosSibmFunctionZeroCheckpoint& result,
+        std::uint16_t loaded_driver_segment);
     void observe_child_process_entry(std::uint64_t sequence, std::uint16_t code_segment);
+    // Execute only the exact first 2200AD private INT 91h function ($1f),
+    // and only from the admitted MCGA/EGA vector and its owned loaded image.
+    // The function reads the current driver-local state byte; no return value
+    // is supplied by the caller or inferred from the original file.
+    [[nodiscard]] MillenniumDosNativeFunction31DispatchResult
+    execute_startup_function_31_return(
+        std::uint64_t sequence,
+        std::span<const std::uint8_t> exact_driver_image,
+        std::span<const std::uint8_t> owned_loaded_driver_image,
+        MillenniumDosVideoDriverKind kind,
+        std::uint16_t loaded_driver_segment,
+        std::uint8_t vector_interrupt,
+        std::uint16_t vector_offset,
+        std::uint16_t vector_segment);
     void observe_runtime_byte(std::uint16_t instruction_address,
         std::uint16_t runtime_address, std::uint8_t value);
     void observe_native_call_return(std::uint16_t call_address,

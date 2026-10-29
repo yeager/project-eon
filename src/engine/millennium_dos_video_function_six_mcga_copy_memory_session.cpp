@@ -60,7 +60,7 @@ execute_millennium_dos_video_function_six_mcga_copy_loop(
         auto address = static_cast<std::uint64_t>(segment) * 16U + offset + byte_in_element;
         if (address_mapping == MillenniumDosRealModeAddressMapping::a20_wrapped_20_bit) {
             address &= 0xfffffU;
-        } else if (address > 0x10fff0U) {
+        } else if (address > 0x10ffefU) {
             return std::nullopt;
         }
         return address;

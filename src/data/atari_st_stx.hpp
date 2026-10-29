@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace eon {
@@ -39,7 +40,7 @@ private:
 // A deliberately narrow FAT12 view over identified physical STX sectors. It
 // never constructs a flat .st image or returns file contents: its purpose is
 // to establish whether the on-media BPB, mirrored FATs and root records form
-// a credible sector-backed namespace for later, separately proven readers.
+// a credible sector-backed namespace and read one consensus-checked file.
 struct AtariStStxFat12RootEntry {
     std::string name;
     std::uint8_t attributes = 0;
@@ -62,10 +63,15 @@ public:
     [[nodiscard]] std::uint16_t root_start_lba() const { return root_start_lba_; }
     [[nodiscard]] std::uint16_t root_sector_count() const { return root_sector_count_; }
     [[nodiscard]] const std::vector<AtariStStxFat12RootEntry>& entries() const { return entries_; }
+    // Reads one exact root file into bounded memory without flattening the
+    // physical STX disk. Divergent FAT copies are accepted only when both
+    // resolve the requested file to the same complete chain and bytes.
+    [[nodiscard]] std::vector<std::uint8_t> read_file(
+        const AtariStStxFat12RootEntry& entry) const;
 
 private:
     std::span<const std::uint8_t> logical_sector(std::uint16_t lba) const;
-    std::uint16_t next_cluster(std::uint16_t cluster) const;
+    std::uint16_t next_cluster(std::uint16_t cluster, std::uint8_t fat_copy) const;
     void validate_mirrored_fats();
     void validate_file_chain(const AtariStStxFat12RootEntry& entry) const;
 
@@ -85,6 +91,37 @@ private:
     std::string fat_primary_sha256_;
     std::string fat_secondary_sha256_;
     std::vector<AtariStStxFat12RootEntry> entries_;
+};
+
+enum class AtariStStxSourceDisk : std::uint8_t {
+    disk1,
+    disk2,
+};
+
+struct AtariStStxPairedFile {
+    AtariStStxSourceDisk disk = AtariStStxSourceDisk::disk1;
+    std::vector<std::uint8_t> bytes;
+};
+
+// Read-only filename lookup over two original physical STX disks. The pair
+// keeps each image in its original container and reads payloads only through
+// the corresponding FAT-consensus root view.
+class AtariStStxPairedFileSource {
+public:
+    AtariStStxPairedFileSource(std::vector<std::uint8_t> disk1,
+        std::vector<std::uint8_t> disk2);
+    AtariStStxPairedFileSource(const AtariStStxPairedFileSource&) = delete;
+    AtariStStxPairedFileSource& operator=(const AtariStStxPairedFileSource&) = delete;
+    AtariStStxPairedFileSource(AtariStStxPairedFileSource&&) = delete;
+    AtariStStxPairedFileSource& operator=(AtariStStxPairedFileSource&&) = delete;
+
+    [[nodiscard]] AtariStStxPairedFile read_file(std::string_view exact_8_3_name) const;
+
+private:
+    AtariStStxPhysicalDisk disk1_;
+    AtariStStxPhysicalDisk disk2_;
+    AtariStStxFat12Root root1_;
+    AtariStStxFat12Root root2_;
 };
 
 } // namespace eon

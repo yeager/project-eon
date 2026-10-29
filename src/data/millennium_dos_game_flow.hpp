@@ -535,7 +535,9 @@ struct MillenniumDosStartupZeroPathBoundary {
     std::array<std::uint16_t, 4> selector_name_addresses{};
     std::uint16_t selector_call_address = 0;
     std::uint16_t selector_call_target = 0;
-    std::uint16_t security_name_address = 0;
+    // A separate entry in the same helper sets this name; the zero-path
+    // caller skips that MOV and retains the selector's DX value.
+    std::uint16_t alternate_security_name_address = 0;
     std::uint16_t first_external_interrupt_site = 0;
     std::uint8_t first_external_interrupt = 0;
     std::uint8_t first_external_service = 0;
@@ -836,6 +838,19 @@ struct MillenniumDosPostOverlayAdapterLoop {
     std::uint16_t following_dispatch_address = 0;
     std::string loop_sha256;
 };
+
+// Exact DOS INT 21h/AH=06h/DL=FFh nonblocking console poll called by the
+// post-overlay loop. The span proves only this leaf's instruction bytes;
+// DOS return semantics remain an external compatibility boundary.
+struct MillenniumDosDosConsolePollLeaf {
+    std::string executable_sha256;
+    std::uint16_t entry_address = 0;
+    std::size_t byte_count = 0;
+    std::string code_sha256;
+};
+
+[[nodiscard]] MillenniumDosDosConsolePollLeaf parse_millennium_dos_dos_console_poll_leaf(
+    std::span<const std::uint8_t> game_executable);
 
 [[nodiscard]] MillenniumDosPostOverlayAdapterLoop
 parse_millennium_dos_post_overlay_adapter_loop(

@@ -10,6 +10,37 @@
 
 namespace eon {
 
+struct DeuterosAmigaTitleHitTestRow {
+    std::uint16_t minimum_x = 0;
+    std::uint16_t maximum_x = 0;
+    std::uint16_t minimum_y = 0;
+    std::uint16_t maximum_y = 0;
+    std::uint16_t identifier = 0;
+    std::uint16_t action = 0;
+    friend bool operator==(const DeuterosAmigaTitleHitTestRow&,
+        const DeuterosAmigaTitleHitTestRow&) = default;
+};
+
+// Source facts connecting the ordinary title hit-test action word to its
+// dispatch-table cell and first local handler instructions. This profile does
+// not claim that the native runtime reached the hit test or dispatched it.
+struct DeuterosAmigaTitleActionDispatchProfile {
+    std::uint32_t dispatch_table_base = 0;
+    std::uint16_t ordinary_action = 0;
+    std::uint32_t dispatch_cell_address = 0;
+    std::uint32_t handler_address = 0;
+    std::uint32_t handler_prefix_length = 0;
+    std::uint32_t local_setup_call_address = 0;
+    std::uint32_t next_jump_target = 0;
+    std::uint32_t first_external_call_address = 0;
+    std::uint32_t first_external_call_target = 0;
+    std::uint16_t first_external_call_d0 = 0;
+    std::uint32_t local_setup_prefix_length = 0;
+    std::string dispatch_cell_sha256{};
+    std::string handler_prefix_sha256{};
+    std::string local_setup_prefix_sha256{};
+};
+
 // Facts recovered from the entry point of profile one.  This is intentionally
 // a control-flow profile, not a claim that the original stage has been fully
 // interpreted as game state.
@@ -160,7 +191,9 @@ struct DeuterosAmigaTitleStageProfile {
     std::uint32_t initialization_stack_address = 0;
     std::uint32_t initialization_exec_base_address = 0;
     std::array<std::int16_t, 2> initialization_exec_vectors{};
-    std::uint32_t initialization_exec_allocation_size = 0;
+    // Literal passed in D0 to UserState(). Preserve the argument without
+    // claiming that its target is initialized or owned by this session.
+    std::uint32_t initialization_user_state_stack_argument = 0;
     std::array<std::uint32_t, 11> initialization_internal_calls{};
     std::uint32_t initialization_copy_source_address = 0;
     std::array<std::uint32_t, 2> initialization_copy_destinations{};
@@ -189,6 +222,16 @@ struct DeuterosAmigaTitleStageProfile {
     std::uint32_t bootstrap_profile_five_second_read_destination = 0;
     std::uint32_t bootstrap_profile_five_second_read_disk_offset = 0;
     std::uint32_t bootstrap_profile_five_common_tail_address = 0;
+    // Profile-one startup's source-level pointer write and ordinary table.
+    // This does not prove that startup ran or that the table is active.
+    std::uint32_t title_hit_test_pointer_store_address = 0;
+    std::uint32_t title_hit_test_pointer_cell_address = 0;
+    std::uint32_t title_hit_test_table_address = 0;
+    std::uint16_t title_hit_test_table_header = 0;
+    std::uint16_t title_hit_test_table_record_count = 0;
+    std::array<DeuterosAmigaTitleHitTestRow, 9> title_hit_test_table_rows{};
+    std::string title_hit_test_table_sha256{};
+    DeuterosAmigaTitleActionDispatchProfile title_action_dispatch{};
 };
 
 // The wholly local prefix of the timer-gated $4069a transition, ending just
@@ -620,6 +663,9 @@ struct DeuterosAmigaTitlePostExecLoadServiceProfile {
     std::uint32_t read_exec_base_source_address = 0;
     std::uint32_t read_request_pointer_cell_address = 0;
     std::uint32_t read_buffer_address = 0;
+    // Initial value stored at the title's $206a4 staging-pointer cell in the
+    // hash-verified loaded image.
+    std::uint32_t read_staging_pointer_initial_value = 0;
     // Offset of io_Error within the runtime IORequest, not an absolute address.
     std::uint32_t read_status_offset = 0;
     std::uint32_t read_status_instruction_address = 0;
@@ -657,6 +703,19 @@ struct DeuterosAmigaTitlePostLoadDispatchProfile {
     std::string caller_sha256;
     std::string routine_sha256;
     std::string parser_prefix_sha256;
+    // Hash-addressed candidate data for the literal D0=1 selection. These
+    // source bytes inform a future runtime generation, but do not imply that
+    // the pointer initializer or caller has executed.
+    std::uint32_t source_table_base_value = 0;
+    std::uint32_t source_table_disk_offset = 0;
+    std::uint32_t source_table_byte_count = 0;
+    std::string source_table_sha256;
+    bool index_one_source_candidate_admitted = false;
+    std::int16_t index_one_signed_offset = 0;
+    std::uint32_t index_one_stream_address = 0;
+    std::uint32_t index_one_stream_disk_offset = 0;
+    std::uint32_t index_one_stream_prefix_size = 0;
+    std::string index_one_stream_prefix_sha256;
 };
 
 [[nodiscard]] DeuterosAmigaTitlePostLoadDispatchProfile
@@ -1008,6 +1067,7 @@ struct DeuterosAmigaTitleResponseQueueResult {
     std::uint16_t pending_count_after = 0;
     std::array<std::uint8_t, 21> shifted_bytes{};
     std::uint32_t return_address = 0;
+    bool operator==(const DeuterosAmigaTitleResponseQueueResult&) const = default;
 };
 
 // Hash-locked facts from the original title callback registration and its
@@ -1053,6 +1113,14 @@ struct DeuterosAmigaTitleCallbackRegistrationProfile {
     std::uint32_t callback_destination_address = 0;
     std::string registration_sha256;
     std::string callback_sha256;
+    // Operand facts from the earlier IORequest preparation and OpenDevice
+    // call. These do not supply an OpenDevice result or device side effects.
+    std::uint32_t open_device_request_address = 0;
+    std::uint32_t open_device_name_address = 0;
+    std::uint32_t open_device_call_address = 0;
+    std::int16_t open_device_exec_vector = 0;
+    std::uint16_t open_device_unit = 0;
+    std::uint16_t open_device_flags = 0;
 };
 
 // Controlled inputs for the callback's one-byte producer route only. These
@@ -1077,7 +1145,9 @@ struct DeuterosAmigaTitleCallbackProducerResult {
     std::uint8_t queued_byte = 0;
     std::uint32_t destination_address = 0;
     std::uint16_t destination_offset = 0;
+    std::uint32_t pending_count_address = 0;
     std::uint16_t pending_count_after = 0;
+    bool operator==(const DeuterosAmigaTitleCallbackProducerResult&) const = default;
 };
 
 // Explicit frame values for the callback's byte-two arm. The gate value is
@@ -1110,6 +1180,40 @@ struct DeuterosAmigaTitleCallbackSecondEventResult {
     DeuterosAmigaTitleCallbackSecondEventStop stop =
         DeuterosAmigaTitleCallbackSecondEventStop::ordinary_return;
     std::uint32_t next_address = 0;
+};
+
+// Explicit original RAM words read by the title-stage routine at $20118.
+// Any evidence use must supply values from a verified runtime snapshot; this
+// input is not a host event or an instruction to invoke graphics.library.
+struct DeuterosAmigaTitleMoveSpriteInput {
+    std::uint16_t x = 0;
+    std::uint16_t x_delta = 0;
+    std::uint16_t x_min = 0;
+    std::uint16_t x_max = 0;
+    std::uint16_t y = 0;
+    std::uint16_t y_delta = 0;
+    std::uint16_t y_min = 0;
+    std::uint16_t y_max = 0;
+    constexpr bool operator==(const DeuterosAmigaTitleMoveSpriteInput&) const = default;
+};
+
+// Read-only argument trace for the hash-locked $20118 routine. The original
+// routine's register/stack save and actual MoveSprite call/return are outside
+// this evaluator; it computes only the locally decoded word arithmetic and
+// final A0/A1/D0/D1 arguments.
+struct DeuterosAmigaTitleMoveSpriteResult {
+    std::uint16_t x_after_delta = 0;
+    std::uint16_t x_after_clamp = 0;
+    std::uint16_t y_after_delta = 0;
+    std::uint16_t y_after_clamp = 0;
+    std::uint16_t d0 = 0;
+    std::uint16_t d1 = 0;
+    std::uint32_t viewport_address = 0;
+    std::uint32_t sprite_address = 0;
+    std::uint32_t call_address = 0;
+    std::uint32_t return_address = 0;
+    std::int16_t library_vector = 0;
+    constexpr bool operator==(const DeuterosAmigaTitleMoveSpriteResult&) const = default;
 };
 
 // The first known title-stage exit has a fixed, conditional in-memory byte
@@ -1306,6 +1410,10 @@ evaluate_deuteros_amiga_title_callback_producer(
 evaluate_deuteros_amiga_title_callback_second_event(
     const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
     DeuterosAmigaTitleCallbackSecondEventInput input);
+[[nodiscard]] DeuterosAmigaTitleMoveSpriteResult
+evaluate_deuteros_amiga_title_move_sprite(
+    const AmigaAdf& disk, const DeuterosAmigaLoadPlan& plan,
+    DeuterosAmigaTitleMoveSpriteInput input);
 
 // Validates and models only the literal byte-copy part of the first title
 // exit. The model reads the supplied ADF in place; it does not invoke either

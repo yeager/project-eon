@@ -557,6 +557,17 @@ new absolute files outside the checkout and `/tmp`. This preserves media
 provenance while permitting direct in-memory full-range inspection. Its
 full-range listing is byte-complete by the same explicit `.byte` rule.
 
+### Millennium DOS `$740f..$7414` ambiguous code/data span
+
+`tools/analyze_dos_self_modifying_ranges.py` reopens the exact English DOS ZIP
+and exact `2200AD.EXE` member, verifies their hashes, then scans each byte
+start for direct absolute references to the span and its four save cells. The
+scan reports candidate alignment against the whole-image linear decode but
+does not treat alignment as code classification. It writes only a mode-0600
+report under `~/.cache/project-eon-analysis`; output outside that external
+cache, the checkout, or `/tmp` is rejected. The report identity and bounded
+findings are in `PRESERVATION.md`.
+
 ## Completion rule
 
 “Complete disassembly” for any release means every reachable executable range

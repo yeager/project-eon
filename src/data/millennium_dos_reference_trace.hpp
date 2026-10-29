@@ -62,6 +62,29 @@ struct MillenniumDosTitleHandoffReferenceTraceDiagnostics {
     std::size_t interrupt_count = 0;
 };
 
+struct MillenniumDosTitleExecEntryTraceDiagnostics {
+    std::size_t event_count = 0;
+    std::uint64_t exec_request_sequence = 0;
+    std::uint64_t child_entry_sequence = 0;
+};
+
+// Raw fields from the v4 EXEC/entry records are transient validated capture
+// observations. Parsing them does not run DOS or advance a game session.
+struct MillenniumDosTitleExecEntryObservations {
+    std::uint64_t exec_request_sequence = 0;
+    std::uint64_t child_entry_sequence = 0;
+    std::uint16_t restored_stack_segment = 0;
+    std::uint16_t restored_stack_pointer = 0;
+    std::uint16_t exec_call_instruction = 0;
+    std::uint16_t exec_helper_target = 0;
+    std::uint16_t program_address = 0;
+    std::uint16_t parameter_block = 0;
+    std::uint16_t child_entry_ip = 0;
+    std::uint16_t child_code_segment = 0;
+    std::uint16_t initial_stack_segment = 0;
+    std::uint16_t initial_stack_pointer = 0;
+};
+
 // Decoded only after the complete eight-record grammar validates. These are
 // transient observations for the native title-to-game state machine, never a
 // retained event log or a substitute DOS process state.
@@ -108,6 +131,15 @@ parse_millennium_dos_gx_startup_reference_observations(std::string_view events,
 
 [[nodiscard]] std::optional<MillenniumDosTitleHandoffReferenceTraceObservations>
 parse_millennium_dos_title_handoff_reference_observations(std::string_view events,
+    std::string& error);
+
+[[nodiscard]] bool validate_millennium_dos_title_exec_entry_reference_events(
+    std::string_view events,
+    MillenniumDosTitleExecEntryTraceDiagnostics& diagnostics,
+    std::string& error);
+
+[[nodiscard]] std::optional<MillenniumDosTitleExecEntryObservations>
+parse_millennium_dos_title_exec_entry_reference_observations(std::string_view events,
     std::string& error);
 
 } // namespace eon

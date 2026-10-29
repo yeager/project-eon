@@ -6,6 +6,8 @@
 #include "platform/resource_paths.hpp"
 #include "game_text_localization.hpp"
 #include "engine/deuteros_amiga_opening.hpp"
+#include "engine/deuteros_amiga_owned_outer_loop.hpp"
+#include "engine/deuteros_amiga_host_input.hpp"
 #include "engine/release_runtime.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
 #include "engine/deuteros_atari_bootstrap_session.hpp"
@@ -72,8 +74,10 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <limits>
+#include <cmath>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -97,6 +101,22 @@ enum class ModernPackAdmission {
     ready,
     rejected,
 };
+
+std::optional<std::uint8_t> millennium_dos_function_scan_code(const SDL_Keycode key) {
+    switch (key) {
+    case SDLK_F1: return 0x3b;
+    case SDLK_F2: return 0x3c;
+    case SDLK_F3: return 0x3d;
+    case SDLK_F4: return 0x3e;
+    case SDLK_F5: return 0x3f;
+    case SDLK_F6: return 0x40;
+    case SDLK_F7: return 0x41;
+    case SDLK_F8: return 0x42;
+    case SDLK_F9: return 0x43;
+    case SDLK_F10: return 0x44;
+    default: return std::nullopt;
+    }
+}
 
 // SDL's native file-dialog callback may run after the initiating UI event and
 // on another thread. Keep its mailbox alive for the process lifetime: the
@@ -651,6 +671,12 @@ struct ModernRuntimeDiagnostics {
     case eon::MillenniumDosTitleExternalObservationKind::dos_vector_result:
         kind = "DOS-VECTOR";
         break;
+    case eon::MillenniumDosTitleExternalObservationKind::title_private_interrupt_result:
+        kind = "TITLE-INT91-RESULT";
+        break;
+    case eon::MillenniumDosTitleExternalObservationKind::video_function_zero_bios_result:
+        kind = "VIDEO-FUNCTION-00-BIOS";
+        break;
     case eon::MillenniumDosTitleExternalObservationKind::setup_bios_result:
         kind = "SETUP-BIOS";
         break;
@@ -665,9 +691,16 @@ struct ModernRuntimeDiagnostics {
         break;
     case eon::MillenniumDosTitleExternalObservationKind::far_byte:
         break;
+    case eon::MillenniumDosTitleExternalObservationKind::process_prefix_byte:
+        kind = "DOS-PROCESS-PREFIX-BYTE";
+        break;
     }
     std::ostringstream summary;
     summary << "WAIT=" << kind << " @$" << std::hex << requirement.instruction_address;
+    if (requirement.service_number != 0) {
+        summary << " INT=" << std::dec << requirement.service_number
+                << " FN=$" << std::hex << requirement.service_function;
+    }
     if (requirement.source_segment || requirement.source_offset) {
         summary << " SRC=$" << requirement.source_segment << ':' << requirement.source_offset;
     }
@@ -1392,7 +1425,8 @@ void report_native_step_diagnostics_json(const eon::ResolvedLaunchRequest& launc
     std::cout << ",\"sha256\":"; write_json_string(std::cout, launch.release.sha256);
     std::cout << "},\"driver\":";
     const char* driver = result.driver == eon::ActiveNativeSessionDriver::millennium_dos ? "millennium-dos"
-        : result.driver == eon::ActiveNativeSessionDriver::deuteros_amiga ? "deuteros-amiga" : "unavailable";
+        : result.driver == eon::ActiveNativeSessionDriver::deuteros_amiga ? "deuteros-amiga"
+        : result.driver == eon::ActiveNativeSessionDriver::millennium_atari ? "millennium-atari" : "unavailable";
     write_json_string(std::cout, driver);
     std::cout << ",\"result\":";
     if (result.millennium_dos) {
@@ -1410,7 +1444,13 @@ void report_native_step_diagnostics_json(const eon::ResolvedLaunchRequest& launc
             << drive.stop_before_address; return value.str(); }());
         std::cout << ",\"waiting_for_external_observation\":"
             << (drive.stop_reason == eon::MillenniumDosSessionStopReason::external_observation
-                ? "true" : "false") << '}';
+                ? "true" : "false") << ",\"external_requirement\":";
+        if (drive.external_observation_requirement)
+            write_json_string(std::cout, millennium_dos_external_requirement_summary(
+                *drive.external_observation_requirement));
+        else
+            std::cout << "null";
+        std::cout << '}';
     } else if (result.deuteros_amiga) {
         const auto& drive = *result.deuteros_amiga;
         if (reported_error.empty()) reported_error = drive.error;
@@ -1419,19 +1459,185 @@ void report_native_step_diagnostics_json(const eon::ResolvedLaunchRequest& launc
         const char* stop_reason = drive.stop_reason == eon::DeuterosAmigaSessionStopReason::external_observation
             ? "external-observation" : drive.stop_reason == eon::DeuterosAmigaSessionStopReason::step_limit
             ? "step-limit" : drive.stop_reason == eon::DeuterosAmigaSessionStopReason::failed
-            ? "failed" : "inactive";
+            ? "failed" : drive.stop_reason == eon::DeuterosAmigaSessionStopReason::native_translation_boundary
+            ? "native-translation-boundary" : "inactive";
         write_json_string(std::cout, stop_reason);
         std::cout << ",\"stop_before\":";
         write_json_string(std::cout, "$" + [&] { std::ostringstream value; value << std::hex
             << drive.stop_before_address; return value.str(); }());
         std::cout << ",\"waiting_for_external_observation\":"
             << (drive.stop_reason == eon::DeuterosAmigaSessionStopReason::external_observation
-                ? "true" : "false") << '}';
+                ? "true" : "false") << ",\"external_requirement\":";
+        if (drive.external_requirement)
+            write_json_string(std::cout, *drive.external_requirement);
+        else
+            std::cout << "null";
+        std::cout << '}';
+    } else if (result.millennium_atari) {
+        const auto& drive = *result.millennium_atari;
+        if (reported_error.empty()) reported_error = drive.error;
+        const char* state = "other";
+        switch (drive.state) {
+        case eon::MillenniumAtariConfigConsumerState::status_register_boundary:
+            state = "status-register"; break;
+        case eon::MillenniumAtariConfigConsumerState::xbios_trap_boundary:
+            state = "xbios-selector-2"; break;
+        case eon::MillenniumAtariConfigConsumerState::xbios_selector_three_boundary:
+            state = "xbios-selector-3"; break;
+        case eon::MillenniumAtariConfigConsumerState::xbios_selector_four_boundary:
+            state = "xbios-selector-4"; break;
+        case eon::MillenniumAtariConfigConsumerState::xbios_selector_21_boundary:
+            state = "xbios-selector-21"; break;
+        case eon::MillenniumAtariConfigConsumerState::xbios_selector_6_boundary:
+            state = "xbios-selector-6"; break;
+        case eon::MillenniumAtariConfigConsumerState::xbios_selector_38_boundary:
+            state = "xbios-selector-38"; break;
+        case eon::MillenniumAtariConfigConsumerState::gemdos_selector_61_boundary:
+            state = "gemdos-selector-61"; break;
+        case eon::MillenniumAtariConfigConsumerState::jsr_2b55a_boundary:
+            state = "jsr-2b55a"; break;
+        case eon::MillenniumAtariConfigConsumerState::jsr_2aa68_boundary:
+            state = "jsr-2aa68"; break;
+        case eon::MillenniumAtariConfigConsumerState::jsr_2aa0c_boundary:
+            state = "jsr-2aa0c"; break;
+        case eon::MillenniumAtariConfigConsumerState::bsr_2b59a_boundary:
+            state = "bsr-2b59a"; break;
+        case eon::MillenniumAtariConfigConsumerState::d0_indexed_write_boundary:
+            state = "d0-indexed-write"; break;
+        case eon::MillenniumAtariConfigConsumerState::a1_setup_boundary:
+            state = "a1-setup"; break;
+        case eon::MillenniumAtariConfigConsumerState::d0_indexed_word_boundary:
+            state = "d0-indexed-word"; break;
+        case eon::MillenniumAtariConfigConsumerState::a0_indexed_word_boundary:
+            state = "a0-indexed-word"; break;
+        case eon::MillenniumAtariConfigConsumerState::loop_branch_boundary:
+            state = "loop-branch"; break;
+        case eon::MillenniumAtariConfigConsumerState::movem_restore_boundary:
+            state = "movem-restore"; break;
+        case eon::MillenniumAtariConfigConsumerState::line_a_init_boundary:
+            state = "line-a-init"; break;
+        case eon::MillenniumAtariConfigConsumerState::game_init_complete:
+            state = "game-init-complete"; break;
+        case eon::MillenniumAtariConfigConsumerState::game_init_source_byte_boundary:
+            state = "game-init-source-byte"; break;
+        case eon::MillenniumAtariConfigConsumerState::game_init_zero_copy_boundary:
+            state = "game-init-zero-copy"; break;
+        case eon::MillenniumAtariConfigConsumerState::game_init_zero_counter_branch_boundary:
+            state = "game-init-zero-counter-branch"; break;
+        case eon::MillenniumAtariConfigConsumerState::game_init_bit6_clear_boundary:
+            state = "game-init-bit6-clear"; break;
+        case eon::MillenniumAtariConfigConsumerState::game_init_bit7_set_boundary:
+            state = "game-init-bit7-set"; break;
+        case eon::MillenniumAtariConfigConsumerState::game_init_second_source_boundary:
+            state = "game-init-second-source"; break;
+        case eon::MillenniumAtariConfigConsumerState::game_init_palette_transform_boundary:
+            state = "game-init-palette-transform"; break;
+        case eon::MillenniumAtariConfigConsumerState::game_init_palette_xbios_selector_6_boundary:
+            state = "game-init-palette-xbios-selector-6"; break;
+        case eon::MillenniumAtariConfigConsumerState::game_init_palette_outer_recurrence_boundary:
+            state = "game-init-palette-recurrence"; break;
+        case eon::MillenniumAtariConfigConsumerState::game_init_palette_terminal_xbios_selector_6_boundary:
+            state = "game-init-palette-terminal-xbios-selector-6"; break;
+        case eon::MillenniumAtariConfigConsumerState::game_init_palette_rts_boundary:
+            state = "game-init-palette-rts"; break;
+        case eon::MillenniumAtariConfigConsumerState::game_init_second_config_rts_boundary:
+            state = "game-init-second-config-rts"; break;
+        case eon::MillenniumAtariConfigConsumerState::game_init_post_second_config_xbios_38_boundary:
+            state = "game-init-second-config-xbios-38"; break;
+        default: break;
+        }
+        const char* service_origin = drive.status_register_origin
+                == eon::MillenniumAtariServiceOrigin::eon_tos_compatibility
+            ? "eon-tos-compatibility" : "none";
+        std::cout << "{\"accepted\":" << (drive.accepted ? "true" : "false")
+            << ",\"steps\":" << drive.steps << ",\"state\":";
+        write_json_string(std::cout, state);
+        std::cout << ",\"stop_before\":";
+        write_json_string(std::cout, "$" + [&] { std::ostringstream value; value << std::hex
+            << drive.stop_before_address; return value.str(); }());
+        std::cout << ",\"waiting_for_external_observation\":"
+            << (drive.requires_external_observation ? "true" : "false")
+            << ",\"step_limit_reached\":" << (drive.step_limit_reached ? "true" : "false")
+            << ",\"state_id\":" << static_cast<unsigned>(drive.state_id)
+            << ",\"last_sequence\":" << drive.last_sequence
+            << ",\"local_instruction_count\":" << drive.local_instruction_count
+            << ",\"loop_iteration\":" << drive.loop_iteration
+            << ",\"loop_d7_value\":" << drive.loop_d7_value
+            << ",\"palette_helper_entry_count\":" << drive.palette_helper_entry_count
+            << ",\"status_register_origin\":";
+        write_json_string(std::cout, service_origin);
+        std::cout << ",\"line_a_origin\":";
+        write_json_string(std::cout, drive.line_a_origin
+                == eon::MillenniumAtariServiceOrigin::eon_tos_compatibility
+            ? "eon-tos-compatibility" : "none");
+        std::cout << ",\"selector_21_origin\":";
+        write_json_string(std::cout, drive.selector_21_origin
+                == eon::MillenniumAtariServiceOrigin::eon_tos_compatibility
+            ? "eon-tos-compatibility" : "none");
+        std::cout << ",\"selector_6_origin\":";
+        write_json_string(std::cout, drive.selector_6_origin
+                == eon::MillenniumAtariServiceOrigin::eon_tos_compatibility
+            ? "eon-tos-compatibility" : "none");
+        std::cout << ",\"selector_38_origin\":";
+        write_json_string(std::cout, drive.selector_38_origin
+                == eon::MillenniumAtariServiceOrigin::eon_tos_compatibility
+            ? "eon-tos-compatibility" : "none");
+        std::cout << ",\"selector_6_palette_loaded\":"
+            << (drive.selector_6_palette_loaded ? "true" : "false")
+            << ",\"movem_registers_preserved_opaque\":"
+            << (drive.movem_registers_preserved_opaque ? "true" : "false")
+            << ",\"abstract_movem_rts_stack_delta\":"
+            << drive.abstract_movem_rts_stack_delta;
+        std::cout << '}';
     } else {
         std::cout << "null";
     }
     std::cout << ",\"error\":"; write_json_string(std::cout, reported_error);
     std::cout << "}\n";
+}
+
+void report_native_video_probe_json(const eon::ResolvedLaunchRequest& launch,
+    const eon::MillenniumDosMcgaVideoProbe& probe) {
+    const auto hex16 = [](const std::uint16_t value) {
+        std::ostringstream out;
+        out << "0x" << std::hex << std::setw(4) << std::setfill('0') << value;
+        return out.str();
+    };
+    std::cout << "{\"schema\":\"project-eon.native-video-probe/v1\",\"diagnostic_only\":true"
+        << ",\"provenance\":\"synthetic_eon_video_policy\""
+        << ",\"probe_live_session_advanced\":false,\"probe_runtime_memory_written\":false"
+        << ",\"release\":{\"game\":";
+    write_json_string(std::cout, eon::name(launch.release.game));
+    std::cout << ",\"platform\":";
+    write_json_string(std::cout, eon::name(launch.release.platform));
+    std::cout << ",\"language\":";
+    write_json_string(std::cout, launch.release.language);
+    std::cout << ",\"sha256\":";
+    write_json_string(std::cout, launch.release.sha256);
+    std::cout << "},\"driver_sha256\":\"bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228\""
+        << ",\"startup_input\":";
+    write_json_string(std::cout, std::string(1, probe.startup_input));
+    std::cout << ",\"source_boundary\":{\"instruction\":";
+    write_json_string(std::cout, hex16(probe.source_query_address));
+    std::cout << ",\"interrupt\":" << static_cast<unsigned>(probe.source_interrupt)
+        << ",\"function\":" << static_cast<unsigned>(probe.source_function)
+        << ",\"al_known\":false}"
+        << ",\"synthetic_service_result\":{\"al\":"
+        << static_cast<unsigned>(probe.synthetic_al)
+        << ",\"ax\":null,\"bx\":null,\"cx\":null,\"dx\":null,\"flags\":null}"
+        << ",\"hypothetical_local_effect\":{\"instruction\":";
+    write_json_string(std::cout, hex16(probe.hypothetical_store_instruction));
+    std::cout << ",\"driver_offset\":";
+    write_json_string(std::cout, hex16(probe.hypothetical_driver_offset));
+    std::cout << ",\"value\":" << static_cast<unsigned>(probe.synthetic_al) << '}'
+        << ",\"next_source_boundary\":{\"instruction\":";
+    write_json_string(std::cout, hex16(probe.next_interrupt_address));
+    std::cout << ",\"interrupt\":" << static_cast<unsigned>(probe.next_interrupt)
+        << ",\"ax\":";
+    write_json_string(std::cout, hex16(probe.next_ax));
+    std::cout << ",\"ax_known_mask\":";
+    write_json_string(std::cout, hex16(probe.next_ax_known_mask));
+    std::cout << "},\"interpretation\":\"source-predicted request only; no BIOS behavior or runtime reachability is claimed\"}\n";
 }
 
 // This is the one headless driver for the already recovered Deuteros opening.
@@ -1496,7 +1702,9 @@ void report_deuteros_amiga_opening_step_diagnostics_json(
             const char* stop_reason = drive.stop_reason
                 == eon::DeuterosAmigaSessionStopReason::external_observation ? "external-observation"
                 : drive.stop_reason == eon::DeuterosAmigaSessionStopReason::step_limit ? "step-limit"
-                : drive.stop_reason == eon::DeuterosAmigaSessionStopReason::failed ? "failed" : "inactive";
+                : drive.stop_reason == eon::DeuterosAmigaSessionStopReason::failed ? "failed"
+                : drive.stop_reason == eon::DeuterosAmigaSessionStopReason::native_translation_boundary
+                    ? "native-translation-boundary" : "inactive";
             std::cout << "\"accepted\":" << (drive.accepted ? "true" : "false")
                 << ",\"steps\":" << drive.steps << ",\"stop_reason\":";
             write_json_string(std::cout, stop_reason);
@@ -1505,7 +1713,50 @@ void report_deuteros_amiga_opening_step_diagnostics_json(
                 << drive.stop_before_address; return value.str(); }());
             std::cout << ",\"waiting_for_external_observation\":"
                 << (drive.stop_reason == eon::DeuterosAmigaSessionStopReason::external_observation
-                    ? "true" : "false");
+                    ? "true" : "false")
+                << ",\"external_requirement\":";
+            if (drive.external_requirement)
+                write_json_string(std::cout, *drive.external_requirement);
+            else
+                std::cout << "null";
+            std::cout
+                << ",\"observed_service_setup_plan_present\":"
+                << (drive.observed_service_setup_plan_present ? "true" : "false")
+                << ",\"native_service_setup\":";
+            if (drive.native_service_setup_plan) {
+                const auto& plan = *drive.native_service_setup_plan;
+                std::cout << "{\"origin\":\"eon-native-compatibility\",\"runtime_generation\":"
+                    << plan.runtime_generation << ",\"task_address\":\"$" << std::hex
+                    << plan.task_address << "\",\"service_sequences\":[" << std::dec
+                    << plan.find_task_sequence << ',' << plan.first_add_port_sequence << ','
+                    << plan.first_open_device_sequence << ',' << plan.second_add_port_sequence << ','
+                    << plan.second_open_device_sequence << "],\"setup_entry\":\"$" << std::hex
+                    << plan.setup_entry_address << "\",\"virtual_stack\":{\"origin\":\"eon-virtual-stack-bank-policy\",\"supervisor_stack_argument\":\"$"
+                    << plan.supervisor_stack_argument << "\",\"user_a7\":\"$"
+                    << plan.user_stack_pointer << "\",\"caller_return_word\":\"$"
+                    << plan.caller_return_word_address << "\",\"saved_task_word\":\"$"
+                    << plan.saved_task_word_address << "\",\"saved_task_value\":\"$"
+                    << plan.saved_task_value << "\",\"service_call_low_water\":\"$"
+                    << plan.service_call_low_water_address << "\",\"final_a7\":\"$"
+                    << plan.final_stack_pointer << "\",\"return_pc\":\"$"
+                    << plan.final_pc << "\",\"assumes_balanced_intervening_calls\":"
+                    << (plan.assumes_balanced_intervening_calls ? "true" : "false")
+                    << ",\"assumes_userstate_bank_switch_succeeds\":"
+                    << (plan.assumes_userstate_bank_switch_succeeds ? "true" : "false")
+                    << "},\"stop_before\":\"$"
+                    << plan.stop_before_address << "\"}";
+            } else {
+                std::cout << "null";
+            }
+            std::cout << ",\"controller_pointer_seed\":";
+            if (drive.controller_pointer_seed_plan) {
+                const auto& plan = *drive.controller_pointer_seed_plan;
+                std::cout << "{\"origin\":\"eon-native-compatibility\",\"service_sequence\":"
+                    << plan.eon_native_service_sequence << ",\"stop_before\":\"$" << std::hex
+                    << plan.stop_before_address << "\"}";
+            } else {
+                std::cout << "null";
+            }
         } else {
             continuation_error = continuation_error.empty()
                 ? "Title continuation did not select the Deuteros driver" : continuation_error;
@@ -2150,7 +2401,8 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << title_stage.initialization_exec_base_address << " vectors -0x"
         << static_cast<std::uint16_t>(-title_stage.initialization_exec_vectors[0]) << "/-0x"
         << static_cast<std::uint16_t>(-title_stage.initialization_exec_vectors[1])
-        << ", D0 0x" << title_stage.initialization_exec_allocation_size
+        << ", UserState stack argument D0=0x"
+        << title_stage.initialization_user_state_stack_argument
         << "; custom 0x" << title_stage.initialization_custom_base_address
         << "+40/42/9a/96 (not called or written)" << std::dec << '\n';
     const auto post_exec_pointer_seed =
@@ -2357,6 +2609,9 @@ void report_deuteros_amiga(const eon::ReleaseArchive& release) {
         << title_callback.callback_second_event_gate_address << " -> service 0x"
         << title_callback.callback_second_event_service_address << std::dec
         << " (static provenance only; no Exec/callback/input execution)\n";
+    std::cout << "          Title MoveSprite routine: 0x20118 -> graphics vector -0x1aa; "
+        << "call 0x201b6, return 0x201ba; coordinate/sprite preimages and "
+        << "graphics result unobserved\n";
     std::cout << "          Timed title transition: 0x" << std::hex
         << title_stage.transition_source_palette_address << " -> 0x"
         << title_stage.transition_work_palette_address << ", " << std::dec
@@ -2868,7 +3123,7 @@ void report_millennium_dos(const eon::ReleaseArchive& release) {
         << startup_zero_path.selector_mode_byte_address << "; local CALL 0x"
         << startup_zero_path.selector_call_address << " -> 0x"
         << startup_zero_path.selector_call_target << " replaces DX with name 0x"
-        << startup_zero_path.security_name_address << " before INT 0x"
+        << startup_zero_path.alternate_security_name_address << " before INT 0x"
         << static_cast<unsigned>(startup_zero_path.first_external_interrupt) << " at 0x"
         << startup_zero_path.first_external_interrupt_site << " (AH=0x"
         << static_cast<unsigned>(startup_zero_path.first_external_service) << ", AL=0x"
@@ -4680,6 +4935,29 @@ int main(int argc, char** argv) {
             return 4;
         }
         if (request.native_step_diagnostics_json) {
+            if (request.native_video_probe) {
+                if (!request.native_startup_input
+                    || active_launch()->release.game != eon::Game::millennium
+                    || active_launch()->release.platform != eon::Platform::dos
+                    || active_launch()->release.language != "en") {
+                    std::cerr << "Native video probe requires the English Millennium DOS release and startup input 0, 1, or 2.\n";
+                    return 4;
+                }
+                try {
+                    constexpr std::string_view mcga_sha =
+                        "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228";
+                    auto media = eon::VerifiedReleaseMedia::open(active_launch()->release);
+                    const auto driver = media.borrow(mcga_sha);
+                    if (!driver) throw std::runtime_error("Verified MCGA.BIN is unavailable");
+                    const auto probe = eon::evaluate_millennium_dos_mcga_video_probe(
+                        *driver, *request.native_startup_input);
+                    report_native_video_probe_json(*active_launch(), probe);
+                    return 0;
+                } catch (const std::exception& error) {
+                    std::cerr << "Native video probe failed: " << error.what() << '\n';
+                    return 4;
+                }
+            }
             if (request.native_opening_ticks) {
                 const bool input_held = request.native_opening_input_held.value_or(false);
                 if (runtime.observe_input(eon::RuntimeInputObservation::opening_input_held(input_held))
@@ -4745,7 +5023,8 @@ int main(int argc, char** argv) {
                     return 4;
                 }
             }
-            const auto result = runtime.drive_active_native_session();
+            const auto result = runtime.drive_active_native_session(
+                request.native_step_limit.value_or(4096U));
             report_native_step_diagnostics_json(*active_launch(), result);
             return result.accepted() ? 0 : 4;
         }
@@ -5040,11 +5319,14 @@ int main(int argc, char** argv) {
     std::optional<eon::ModernAssetPackPresentationResolver> millennium_external_modern_resolver;
     bool millennium_external_modern_attempted = false;
     SDL_Texture* millennium_gx_canvas_texture = nullptr;
+    SDL_Texture* millennium_atari_title_texture = nullptr;
+    std::optional<std::uint64_t> millennium_atari_title_generation;
     const auto discard_millennium_assets = [&] {
         if (millennium_preview_texture) SDL_DestroyTexture(millennium_preview_texture);
         if (millennium_modern_preview_texture) SDL_DestroyTexture(millennium_modern_preview_texture);
         if (millennium_external_modern_texture) SDL_DestroyTexture(millennium_external_modern_texture);
         if (millennium_gx_canvas_texture) SDL_DestroyTexture(millennium_gx_canvas_texture);
+        if (millennium_atari_title_texture) SDL_DestroyTexture(millennium_atari_title_texture);
         millennium_preview_texture = nullptr;
         millennium_modern_preview_texture = nullptr;
         millennium_modern_pipeline.reset();
@@ -5053,6 +5335,8 @@ int main(int argc, char** argv) {
         millennium_external_modern_resolver.reset();
         millennium_external_modern_attempted = false;
         millennium_gx_canvas_texture = nullptr;
+        millennium_atari_title_texture = nullptr;
+        millennium_atari_title_generation.reset();
         millennium_assets.reset();
     };
     const auto create_millennium_textures = [&] {
@@ -5154,12 +5438,46 @@ int main(int argc, char** argv) {
     };
 
     Screen screen = request.game ? Screen::launching : Screen::menu;
-    bool deuteros_fire_held = false;
-    bool deuteros_keyboard_fire_held = false;
-    bool deuteros_gamepad_fire_held = false;
-    bool deuteros_mouse_fire_held = false;
-    bool deuteros_right_mouse_held = false;
-    std::uint64_t deuteros_outer_input_sequence = 0;
+    eon::DeuterosAmigaHostInput deuteros_host_input;
+    bool deuteros_raw_left_button = false;
+    bool deuteros_raw_right_button = false;
+    SDL_FRect deuteros_input_viewport{};
+    double deuteros_mouse_x_fractional_remainder = 0.0;
+    double deuteros_mouse_y_fractional_remainder = 0.0;
+    const auto clear_deuteros_raw_mouse_buttons = [&]() {
+        if (runtime.deuteros_amiga_title_stage_boundary()) {
+            if (deuteros_raw_left_button) {
+                static_cast<void>(runtime.observe_input(
+                    eon::RuntimeInputObservation::deuteros_amiga_raw_mouse_button(
+                        0xe8, deuteros_raw_right_button ? 0x2000 : 0)));
+            }
+            if (deuteros_raw_right_button) {
+                static_cast<void>(runtime.observe_input(
+                    eon::RuntimeInputObservation::deuteros_amiga_raw_mouse_button(
+                        0xe9, 0)));
+            }
+        }
+        deuteros_raw_left_button = false;
+        deuteros_raw_right_button = false;
+    };
+    const auto read_deuteros_owned_word = [&](const std::uint32_t address)
+        -> std::optional<std::uint16_t> {
+        const auto memory = runtime.native_runtime_memory_checkpoint();
+        if (!memory) return std::nullopt;
+        const auto read_byte = [&](const std::uint32_t offset) -> std::optional<std::uint8_t> {
+            const auto found = std::find_if(memory->initialized_bytes.begin(),
+                memory->initialized_bytes.end(), [&](const auto& cell) {
+                    return cell.location.address_space == eon::NativeRuntimeAddressSpace::linear
+                        && cell.location.offset == offset;
+                });
+            return found == memory->initialized_bytes.end()
+                ? std::nullopt : std::optional<std::uint8_t>{found->value};
+        };
+        const auto high = read_byte(address);
+        const auto low = read_byte(address + 1U);
+        if (!high || !low) return std::nullopt;
+        return static_cast<std::uint16_t>((std::uint16_t{*high} << 8U) | *low);
+    };
     auto& launcher_page = launcher_route.page;
     eon::Game selected = request.game.value_or(eon::Game::millennium);
     auto& card_focus = launcher_interaction.focus;
@@ -5220,10 +5538,11 @@ int main(int argc, char** argv) {
     };
     std::optional<std::uint32_t> deuteros_title_resource;
     std::optional<eon::MillenniumDosStartupInputSnapshot> millennium_startup_input;
-    // SDL text input is the host analogue of DOS' character-availability
-    // poll. Keep it active only while TITLES.EXE's recovered title boundary
-    // is live; raw key presses alone do not prove a nonzero DOS AL result.
-    bool millennium_title_text_input_active = false;
+    // SDL text input is used for the title's character-availability signal
+    // and, after an authenticated post-overlay loop exists, for literal
+    // single-byte DOS console characters. Raw key presses alone do not prove
+    // a nonzero title AL result.
+    bool millennium_dos_text_input_active = false;
     // This evidence-only object is intentionally never constructed by the
     // launcher until a genuine DOS return/startup path is recovered.
     std::unique_ptr<eon::MillenniumDosGameSession> millennium_game_session;
@@ -5329,8 +5648,8 @@ int main(int argc, char** argv) {
     const auto stop_millennium_title = [&] {
         // This is host lifecycle cleanup only. It neither sends an additional
         // DOS availability result nor modifies original title/game data.
-        if (millennium_title_text_input_active) SDL_StopTextInput(window);
-        millennium_title_text_input_active = false;
+        if (millennium_dos_text_input_active) SDL_StopTextInput(window);
+        millennium_dos_text_input_active = false;
         millennium_startup_input.reset();
     };
     const auto reset_deuteros_runtime = [&] {
@@ -5343,6 +5662,9 @@ int main(int argc, char** argv) {
             static_cast<void>(SDL_ClearAudioStream(deuteros_audio_stream));
         }
         deuteros_title_resource.reset();
+        deuteros_input_viewport = {};
+        deuteros_mouse_x_fractional_remainder = 0.0;
+        deuteros_mouse_y_fractional_remainder = 0.0;
         deuteros_preview_rgba.reset();
         deuteros_preview_source_tick.reset();
         deuteros_modern_pipeline.reset();
@@ -5409,12 +5731,12 @@ int main(int argc, char** argv) {
         if (millennium_startup_input && millennium_startup_input->title_active) millennium_state_page = 0;
         if (millennium_startup_input && (millennium_startup_input->sound_selection_active
                 || millennium_startup_input->title_active)
-            && !millennium_title_text_input_active) {
+            && !millennium_dos_text_input_active) {
             if (!SDL_StartTextInput(window)) {
                 std::cerr << "Unable to enable Millennium DOS title text input: "
                           << SDL_GetError() << '\n';
             } else {
-                millennium_title_text_input_active = true;
+                millennium_dos_text_input_active = true;
             }
         }
     };
@@ -6053,6 +6375,28 @@ int main(int argc, char** argv) {
                 mailbox.pending_selection.reset();
             }
         }
+        const bool millennium_dos_console_input_active = screen == Screen::launching
+            && selected == eon::Game::millennium
+            && !show_modern_graphics_settings
+            && runtime.millennium_dos_post_overlay_loop_checkpoint().has_value();
+        const bool millennium_dos_startup_text_input_active = screen == Screen::launching
+            && selected == eon::Game::millennium && millennium_startup_input
+            && (millennium_startup_input->sound_selection_active
+                || millennium_startup_input->title_active);
+        if (!millennium_dos_console_input_active
+            && !millennium_dos_startup_text_input_active
+            && millennium_dos_text_input_active) {
+            SDL_StopTextInput(window);
+            millennium_dos_text_input_active = false;
+        }
+        if (millennium_dos_console_input_active && !millennium_dos_text_input_active) {
+            if (!SDL_StartTextInput(window)) {
+                std::cerr << "Unable to enable Millennium DOS console text input: "
+                          << SDL_GetError() << '\n';
+            } else {
+                millennium_dos_text_input_active = true;
+            }
+        }
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) running = false;
@@ -6065,17 +6409,43 @@ int main(int argc, char** argv) {
                 // original opening after focus returns.
                 static_cast<void>(runtime.observe_input(
                     eon::RuntimeInputObservation::opening_input_held(false)));
-                deuteros_fire_held = false;
-                deuteros_keyboard_fire_held = false;
-                deuteros_gamepad_fire_held = false;
-                deuteros_mouse_fire_held = false;
-                deuteros_right_mouse_held = false;
+                deuteros_host_input.clear();
+                clear_deuteros_raw_mouse_buttons();
             }
-            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F10 && !event.key.repeat) {
-                // F10 is consumed by Project Eon's renderer chrome, never by
-                // original DOS/Amiga input. Original exposes only its two
-                // display-only controls; it never switches into Modern or
-                // enables a filter, art pack, pacing change, or diagnostic.
+            if (event.type == SDL_EVENT_WINDOW_FOCUS_LOST
+                && event.window.windowID == SDL_GetWindowID(window)
+                && screen == Screen::launching && selected == eon::Game::millennium
+                && runtime.millennium_dos_post_overlay_loop_checkpoint()) {
+                static_cast<void>(runtime.observe_input(
+                    eon::RuntimeInputObservation::millennium_dos_console_flush()));
+            }
+            const bool millennium_game_input_active = screen == Screen::launching
+                && selected == eon::Game::millennium
+                && !show_modern_graphics_settings
+                && runtime.millennium_dos_post_overlay_loop_checkpoint().has_value();
+            if (event.type == SDL_EVENT_TEXT_INPUT && event.text.text
+                && event.text.text[0] != '\0' && millennium_game_input_active) {
+                // DOS AH=06h returns one console byte in AL. ASCII is
+                // byte-identical in the English DOS code page; do not
+                // truncate a multi-byte UTF-8 character or invent a mapping
+                // for characters outside that source-compatible range.
+                if (const auto byte = eon::millennium_dos_ascii_console_byte(
+                        event.text.text)) {
+                    const auto input = runtime.observe_input(
+                        eon::RuntimeInputObservation::millennium_dos_character(*byte));
+                    if (input != eon::RuntimeInputDisposition::observed) {
+                        std::cerr << "Millennium DOS console character was rejected by its poll queue\n";
+                    }
+                }
+                continue;
+            }
+            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_F10 && !event.key.repeat
+                && !millennium_game_input_active) {
+                // Outside the authenticated Millennium DOS poll, F10 is
+                // consumed by Project Eon's renderer chrome. Original exposes only its two
+                // display-only controls; it never switches into Modern
+                // or enables a filter, art pack, pacing change, or
+                // diagnostic. The active DOS poll handles F10 above instead.
                 if (show_modern_runtime_diagnostics) {
                     // F10 follows the displayed back target: the function
                     // map returns to diagnostics, while diagnostics returns
@@ -6087,11 +6457,8 @@ int main(int argc, char** argv) {
                 if (!show_modern_graphics_settings) {
                     clear_deuteros_opening_input();
                     if (screen == Screen::launching && selected == eon::Game::deuteros) {
-                        deuteros_keyboard_fire_held = false;
-                        deuteros_gamepad_fire_held = false;
-                        deuteros_mouse_fire_held = false;
-                        deuteros_fire_held = false;
-                        deuteros_right_mouse_held = false;
+                        deuteros_host_input.clear();
+                        clear_deuteros_raw_mouse_buttons();
                     }
                 } else {
                     runtime.set_input_suppressed(false);
@@ -6213,9 +6580,9 @@ int main(int argc, char** argv) {
                         eon::RuntimeInputObservation::ascii(event.text.text[0]));
                     millennium_startup_input = runtime.millennium_dos_startup_input();
                     if (input_result == eon::RuntimeInputDisposition::boundary_reached
-                        && millennium_title_text_input_active) {
+                        && millennium_dos_text_input_active) {
                         SDL_StopTextInput(window);
-                        millennium_title_text_input_active = false;
+                        millennium_dos_text_input_active = false;
                     }
                     continue;
                 }
@@ -6228,10 +6595,21 @@ int main(int argc, char** argv) {
                         eon::RuntimeInputObservation::available_character());
                     millennium_startup_input = runtime.millennium_dos_startup_input();
                     if (input_result == eon::RuntimeInputDisposition::boundary_reached
-                        && millennium_title_text_input_active) {
+                        && millennium_dos_text_input_active) {
                         SDL_StopTextInput(window);
-                        millennium_title_text_input_active = false;
+                        millennium_dos_text_input_active = false;
                     }
+                }
+            }
+            if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat
+                && millennium_game_input_active) {
+                if (const auto scan_code = millennium_dos_function_scan_code(event.key.key)) {
+                    const auto input = runtime.observe_input(
+                        eon::RuntimeInputObservation::millennium_dos_function_key(*scan_code));
+                    if (input != eon::RuntimeInputDisposition::observed) {
+                        std::cerr << "Millennium DOS function key was rejected by its console queue\n";
+                    }
+                    continue;
                 }
             }
             if ((event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP)
@@ -6243,9 +6621,41 @@ int main(int argc, char** argv) {
                 static_cast<void>(runtime.observe_input(
                     eon::RuntimeInputObservation::opening_input_held(
                         event.type == SDL_EVENT_KEY_DOWN)));
-                deuteros_keyboard_fire_held = event.type == SDL_EVENT_KEY_DOWN;
-                deuteros_fire_held = deuteros_keyboard_fire_held
-                    || deuteros_gamepad_fire_held || deuteros_mouse_fire_held;
+                deuteros_host_input.set_keyboard_fire(
+                    event.key.key == SDLK_SPACE
+                        ? eon::DeuterosAmigaHostInput::KeyboardFireKey::space
+                        : eon::DeuterosAmigaHostInput::KeyboardFireKey::enter,
+                    event.type == SDL_EVENT_KEY_DOWN);
+            }
+            if ((event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP)
+                && screen == Screen::launching && selected == eon::Game::deuteros
+                && !(event.type == SDL_EVENT_KEY_DOWN && event.key.repeat)
+                && runtime.deuteros_amiga_title_stage_boundary()) {
+                const bool key_up = event.type == SDL_EVENT_KEY_UP;
+                const auto raw_key = eon::deuteros_amiga_raw_key_code_from_usb_usage(
+                    static_cast<std::uint16_t>(event.key.scancode), key_up);
+                if (raw_key) {
+                    // SDL scancodes use physical USB HID positions. Convert
+                    // only modifier state to the matching InputEvent bits;
+                    // game character/keymap interpretation stays in the
+                    // original callback path.
+                    std::uint16_t qualifier = 0;
+                    if ((event.key.mod & SDL_KMOD_LSHIFT) != 0) qualifier |= 0x0001;
+                    if ((event.key.mod & SDL_KMOD_RSHIFT) != 0) qualifier |= 0x0002;
+                    if ((event.key.mod & SDL_KMOD_CAPS) != 0) qualifier |= 0x0004;
+                    if ((event.key.mod & (SDL_KMOD_LCTRL | SDL_KMOD_RCTRL)) != 0) qualifier |= 0x0008;
+                    if ((event.key.mod & SDL_KMOD_LALT) != 0) qualifier |= 0x0010;
+                    if ((event.key.mod & SDL_KMOD_RALT) != 0) qualifier |= 0x0020;
+                    if ((event.key.mod & SDL_KMOD_LGUI) != 0) qualifier |= 0x0040;
+                    if ((event.key.mod & SDL_KMOD_RGUI) != 0) qualifier |= 0x0080;
+                    if ((event.key.mod & SDL_KMOD_NUM) != 0) qualifier |= 0x0100;
+                    const auto input = runtime.observe_input(
+                        eon::RuntimeInputObservation::deuteros_amiga_raw_key(
+                            *raw_key, qualifier));
+                    if (input != eon::RuntimeInputDisposition::observed) {
+                        std::cerr << "Deuteros title raw-key input was rejected by its runtime boundary\n";
+                    }
+                }
             }
             if ((event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN
                     || event.type == SDL_EVENT_GAMEPAD_BUTTON_UP)
@@ -6257,20 +6667,71 @@ int main(int argc, char** argv) {
                 static_cast<void>(runtime.observe_input(
                     eon::RuntimeInputObservation::opening_input_held(
                         event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN)));
-                deuteros_gamepad_fire_held = event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN;
-                deuteros_fire_held = deuteros_keyboard_fire_held
-                    || deuteros_gamepad_fire_held || deuteros_mouse_fire_held;
+                deuteros_host_input.set_gamepad_fire(event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN);
             }
             if ((event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP)
                 && screen == Screen::launching && selected == eon::Game::deuteros
                 && event.button.which != SDL_TOUCH_MOUSEID) {
                 const bool held = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
+                if (event.button.button == SDL_BUTTON_LEFT) deuteros_raw_left_button = held;
+                if (event.button.button == SDL_BUTTON_RIGHT) deuteros_raw_right_button = held;
                 if (event.button.button == SDL_BUTTON_LEFT) {
-                    deuteros_mouse_fire_held = held;
-                    deuteros_fire_held = deuteros_keyboard_fire_held
-                        || deuteros_gamepad_fire_held || deuteros_mouse_fire_held;
+                    deuteros_host_input.set_left_mouse_fire(held);
                 }
-                if (event.button.button == SDL_BUTTON_RIGHT) deuteros_right_mouse_held = held;
+                if (event.button.button == SDL_BUTTON_RIGHT)
+                    deuteros_host_input.set_right_mouse(held);
+                if (runtime.deuteros_amiga_title_stage_boundary()) {
+                    const auto raw_code = eon::deuteros_amiga_raw_mouse_button_code(
+                        event.button.button, !held);
+                    if (raw_code) {
+                        const std::uint16_t qualifier =
+                            static_cast<std::uint16_t>(
+                                (deuteros_raw_left_button ? 0x4000U : 0U)
+                                | (deuteros_raw_right_button ? 0x2000U : 0U));
+                        const auto input = runtime.observe_input(
+                            eon::RuntimeInputObservation::deuteros_amiga_raw_mouse_button(
+                                *raw_code, qualifier));
+                        if (input != eon::RuntimeInputDisposition::observed) {
+                            std::cerr << "Deuteros title raw-mouse input was rejected by its runtime boundary\n";
+                        }
+                    }
+                }
+            }
+            if (event.type == SDL_EVENT_MOUSE_MOTION
+                && screen == Screen::launching && selected == eon::Game::deuteros
+                && event.motion.which != SDL_TOUCH_MOUSEID
+                && runtime.deuteros_amiga_title_stage_boundary()
+                && deuteros_input_viewport.w > 0.0F
+                && deuteros_input_viewport.h > 0.0F) {
+                SDL_FPoint previous{};
+                SDL_FPoint current{};
+                const bool converted = SDL_RenderCoordinatesFromWindow(renderer,
+                        event.motion.x - event.motion.xrel,
+                        event.motion.y - event.motion.yrel,
+                        &previous.x, &previous.y)
+                    && SDL_RenderCoordinatesFromWindow(renderer,
+                        event.motion.x, event.motion.y, &current.x, &current.y);
+                const auto x_delta = converted
+                    ? eon::deuteros_amiga_raw_mouse_delta_from_renderer(
+                        current.x - previous.x, deuteros_input_viewport.w, 640,
+                        deuteros_mouse_x_fractional_remainder)
+                    : std::nullopt;
+                const auto y_delta = converted
+                    ? eon::deuteros_amiga_raw_mouse_delta_from_renderer(
+                        current.y - previous.y, deuteros_input_viewport.h, 200,
+                        deuteros_mouse_y_fractional_remainder)
+                    : std::nullopt;
+                if (x_delta && y_delta && (*x_delta != 0 || *y_delta != 0)) {
+                    const auto qualifier = eon::deuteros_amiga_raw_mouse_motion_qualifier(
+                        deuteros_raw_left_button, deuteros_raw_right_button);
+                    const auto input = runtime.observe_input(
+                        eon::RuntimeInputObservation::deuteros_amiga_raw_mouse_motion(
+                            *x_delta, *y_delta, qualifier));
+                    if (input != eon::RuntimeInputDisposition::boundary_reached
+                        && input != eon::RuntimeInputDisposition::observed) {
+                        std::cerr << "Deuteros title raw-mouse motion was rejected by its runtime boundary\n";
+                    }
+                }
             }
             if (screen == Screen::menu && event.type == SDL_EVENT_KEY_DOWN
                 && event.key.key == SDLK_D && !event.key.repeat) show_scanner = !show_scanner;
@@ -6349,23 +6810,78 @@ int main(int argc, char** argv) {
             if (selected == eon::Game::deuteros
                 && runtime.state() == eon::NativeSessionState::deuteros_amiga_title_stage_boundary) {
                 if (const auto checkpoint = runtime.deuteros_amiga_title_dependency_chain_checkpoint();
-                    checkpoint && checkpoint->main_stage_loop_graphics) {
-                    const auto instruction = checkpoint->main_stage_loop_graphics->pending_read_instruction;
-                    std::uint32_t port = 0;
-                    std::uint8_t bit = 0;
-                    std::uint8_t value = 0;
-                    if (instruction == 0x21822) {
-                        port = 0xdff016;
-                        bit = 10;
-                        value = deuteros_right_mouse_held ? 0x00U : 0x04U;
-                    } else if (instruction == 0x2185e || instruction == 0x218be) {
-                        port = 0xbfe001;
-                        bit = 6;
-                        value = deuteros_fire_held ? 0x00U : 0x40U;
+                    checkpoint) {
+                    if (checkpoint->main_stage_last_command_sequence
+                        != std::numeric_limits<std::uint64_t>::max()) {
+                        const auto sequence = checkpoint->main_stage_last_command_sequence + 1U;
+                        if (checkpoint->main_stage_state
+                            == eon::DeuterosAmigaMainStageState::awaiting_cia_a_bit_set) {
+                            if (const auto source_word = read_deuteros_owned_word(0x21704)) {
+                                static_cast<void>(runtime.observe_deuteros_amiga_main_stage_cia_a_bit_set({
+                                    sequence, 0x217e4, 0xbfe001, 1,
+                                    eon::deuteros_amiga_ciaa_fire_sample(deuteros_host_input.fire_held()),
+                                    0x21704, *source_word}));
+                            }
+                        } else if (checkpoint->main_stage_state
+                            == eon::DeuterosAmigaMainStageState::awaiting_initial_resource_load) {
+                            if (const auto resource_index = read_deuteros_owned_word(0x21704)) {
+                                static_cast<void>(runtime.observe_deuteros_amiga_main_stage_resource_load({
+                                    sequence, *resource_index, 0x21932, 0x2196e,
+                                    0xdff016, 10,
+                                    eon::deuteros_amiga_potinp_right_mouse_sample(
+                                        deuteros_host_input.right_mouse_held())}));
+                            }
+                        }
                     }
-                    if (port != 0) {
-                        static_cast<void>(runtime.observe_deuteros_amiga_outer_input({
-                            ++deuteros_outer_input_sequence, instruction, port, bit, value}));
+                    if (checkpoint->main_stage_loop_graphics) {
+                        // The scheduler's first POTINP read is represented by
+                        // next_instruction_address ($21822); later reads are
+                        // explicit pending_read_instruction boundaries. Keep
+                        // both forms on the same exact-boundary input path.
+                        const auto instruction = eon::deuteros_amiga_outer_input_candidate(
+                            checkpoint->main_stage_loop_graphics->pending_read_instruction,
+                            checkpoint->main_stage_loop_graphics->next_instruction_address);
+                        std::uint32_t port = 0;
+                        std::uint8_t bit = 0;
+                        std::uint8_t value = 0;
+                        if (instruction == 0x217e4) {
+                            port = 0xbfe001;
+                            bit = 1;
+                            value = eon::deuteros_amiga_ciaa_fire_sample(
+                                deuteros_host_input.fire_held());
+                        } else if (instruction == 0x21822) {
+                            port = 0xdff016;
+                            bit = 10;
+                            value = eon::deuteros_amiga_potinp_right_mouse_sample(
+                                deuteros_host_input.right_mouse_held());
+                        } else if (instruction == 0x2185e || instruction == 0x218be) {
+                            port = 0xbfe001;
+                            bit = 6;
+                            value = eon::deuteros_amiga_ciaa_fire_sample(
+                                deuteros_host_input.fire_held());
+                        }
+                        if (port != 0 && checkpoint->main_stage_last_command_sequence
+                                != std::numeric_limits<std::uint64_t>::max()) {
+                            static_cast<void>(runtime.observe_deuteros_amiga_outer_input({
+                                checkpoint->main_stage_last_command_sequence + 1U,
+                                instruction, port, bit, value}));
+                        }
+                        if (checkpoint->main_stage_loop_graphics->next_instruction_address
+                                == 0x21926
+                            && checkpoint->main_stage_last_command_sequence
+                                != std::numeric_limits<std::uint64_t>::max()) {
+                            const auto resource_index = static_cast<std::uint16_t>(
+                                checkpoint->main_stage_loop_graphics->d0_value);
+                            // Resource bytes come only from the already verified,
+                            // read-only ADF. POTINP bit 10 remains a live SDL
+                            // right-button sample for the original retry loop.
+                            static_cast<void>(runtime.observe_deuteros_amiga_main_stage_resource_load({
+                                checkpoint->main_stage_last_command_sequence + 1U,
+                                resource_index, 0x21932,
+                                0x2196e, 0xdff016, 10,
+                                eon::deuteros_amiga_potinp_right_mouse_sample(
+                                    deuteros_host_input.right_mouse_held())}));
+                        }
                     }
                 }
             }
@@ -6979,12 +7495,12 @@ int main(int argc, char** argv) {
                 && *active_platform != eon::Platform::dos) {
                 draw_text(renderer, 64, 220,
                     tr("VERIFIED NATIVE MILLENNIUM DATA - NO DOS RESOURCE SUBSTITUTION"));
-                draw_text(renderer, 64, 244,
-                    tr("INTERACTIVE AMIGA/ATARI ST FLOW IS NOT YET RECOVERED."));
-                draw_text(renderer, 64, 268,
-                    tr("NO SYNTHETIC SCREEN OR STATE WILL RUN FOR THIS PLATFORM."));
                 const auto amiga_bootstrap = runtime.millennium_amiga_bootstrap_presentation();
                 if (*active_platform == eon::Platform::amiga && amiga_bootstrap) {
+                    draw_text(renderer, 64, 244,
+                        tr("INTERACTIVE AMIGA FLOW IS NOT YET RECOVERED."));
+                    draw_text(renderer, 64, 268,
+                        tr("NO SYNTHETIC SCREEN OR STATE WILL RUN FOR THIS PLATFORM."));
                     // These are source-range and caller-side handoff facts
                     // from the same hash-validated session. They make the
                     // native Amiga boundary inspectable, but do not decode
@@ -7011,7 +7527,39 @@ int main(int argc, char** argv) {
                         tr("HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."));
                 } else if (*active_platform == eon::Platform::atari_st) {
                     const auto atari_bootstrap = runtime.millennium_atari_bootstrap_presentation();
-                    if (atari_bootstrap) {
+                    if (atari_bootstrap && atari_bootstrap->title_frame) {
+                        const auto& frame = *atari_bootstrap->title_frame;
+                        if (!millennium_atari_title_texture
+                            || millennium_atari_title_generation != frame.generation) {
+                            if (millennium_atari_title_texture) {
+                                SDL_DestroyTexture(millennium_atari_title_texture);
+                            }
+                            millennium_atari_title_texture = SDL_CreateTexture(renderer,
+                                SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC,
+                                frame.width, frame.height);
+                            millennium_atari_title_generation.reset();
+                            if (!millennium_atari_title_texture
+                                || !SDL_UpdateTexture(millennium_atari_title_texture, nullptr,
+                                    frame.rgba.data(), static_cast<int>(frame.width) * 4)) {
+                                if (millennium_atari_title_texture) {
+                                    SDL_DestroyTexture(millennium_atari_title_texture);
+                                }
+                                millennium_atari_title_texture = nullptr;
+                            } else {
+                                millennium_atari_title_generation = frame.generation;
+                            }
+                        }
+                        if (millennium_atari_title_texture) {
+                            const SDL_FRect title_bounds{64, 270, 640, 400};
+                            SDL_RenderTexture(renderer, millennium_atari_title_texture,
+                                nullptr, &title_bounds);
+                        }
+                        draw_text(renderer, 730, 270,
+                            tr("ORIGINAL ATARI ST TITLE - SOURCE DECODED"));
+                        draw_text(renderer, 730, 294,
+                            tr("320 X 200 / 4 PLANES / SOURCE RGB3 PALETTE"));
+                        draw_text(renderer, 730, 318,
+                            tr("GAMEPLAY FLOW REMAINS UNRECOVERED."));
                         // The Atari session is just as release-bound as the
                         // Amiga one. Show its locally executed loader facts,
                         // not a substituted DOS image or a fabricated GEMDOS
@@ -7036,7 +7584,7 @@ int main(int argc, char** argv) {
                              << fread.stop_before_trap_offset;
                         draw_text(renderer, 64, 324, read.str());
                         draw_text(renderer, 64, 340,
-                            tr("HASH-VALIDATED STATIC EVIDENCE ONLY - NO CALL RETURN OR RUNTIME STATE."));
+                            tr("BOOTSTRAP BOUNDARIES ARE STATIC; TITLE PIXELS ARE SOURCE DECODED."));
                     }
                 }
                 draw_text(renderer, 64, 680, request.game ? tr("ESC: QUIT") : tr("ESC: BACK TO MENU"));
@@ -7187,7 +7735,8 @@ int main(int argc, char** argv) {
                                       << "; VBL=0x" << std::hex << opening->checkpoint.vblank_counter
                                       << "; PAL=" << std::dec << opening->palette_index
                                       << "; CH=" << opening->active_channel_count
-                                      << "; $2171e=" << (opening->checkpoint.input_gate ? 1 : 0);
+                                      << "; $2171e=" << (opening->checkpoint.input_gate ? 1 : 0)
+                                      << "; HOST-IN=" << (opening->host_input_held ? 1 : 0);
                     draw_text(renderer, 760, 238, opening_provenance.str());
                 }
                 if (deuteros_title_resource) {
@@ -7342,6 +7891,7 @@ int main(int argc, char** argv) {
                         : deuteros_title_resource ? 306.0F : 274.0F,
                     576, title_stage || title_surface || bootstrap_frame || main_stage_frame ? 350.0F : 400.0F,
                     modern_graphics_settings);
+                deuteros_input_viewport = preview_bounds;
                 if (modern && modern_graphics_settings.frame) draw_modern_surface_frame(renderer, preview_bounds);
                 if (texture) SDL_RenderTexture(renderer, texture, nullptr, &preview_bounds);
                 if (modern && modern_graphics_settings.scanlines) draw_scanlines(renderer, preview_bounds);
@@ -7396,11 +7946,12 @@ int main(int argc, char** argv) {
 
     for (auto& card : cards) SDL_DestroyTexture(card.texture);
     SDL_DestroyTexture(project_eon_logo_texture);
-    if (millennium_title_text_input_active) SDL_StopTextInput(window);
+    if (millennium_dos_text_input_active) SDL_StopTextInput(window);
     SDL_DestroyTexture(millennium_preview_texture);
     SDL_DestroyTexture(millennium_modern_preview_texture);
     SDL_DestroyTexture(millennium_external_modern_texture);
     SDL_DestroyTexture(millennium_gx_canvas_texture);
+    SDL_DestroyTexture(millennium_atari_title_texture);
     SDL_DestroyTexture(preview_texture);
     SDL_DestroyTexture(modern_preview_texture);
     SDL_DestroyTexture(deuteros_title_planar_texture);

@@ -6,6 +6,37 @@ namespace eon {
 namespace {
 constexpr std::uint16_t private_interrupt_site = 0x0129;
 constexpr std::uint16_t palette_interrupt_site = 0x0476;
+constexpr std::size_t max_console_input_bytes = 32;
+}
+
+NativeRuntimeMemoryApplyResult
+commit_millennium_dos_post_overlay_runtime_byte_effect(
+    NativeRuntimeMemory& memory, const std::uint64_t generation,
+    const std::size_t effect_ordinal,
+    const std::uint16_t child_code_segment,
+    const MillenniumDosPostOverlayRuntimeByteEffect& effect) {
+    if (generation == 0 || effect_ordinal == 0 || child_code_segment == 0
+        || effect.address != 0x07f9
+        || effect.value != static_cast<std::uint8_t>(effect.previous ^ 1U)) {
+        return {false, "Post-overlay byte effect is detached from the admitted XOR target"};
+    }
+    const NativeRuntimeLocation location{NativeRuntimeAddressSpace::dos_segmented,
+        child_code_segment, effect.address};
+    auto next = memory;
+    if (const auto previous = next.read_byte(location);
+        previous && *previous != effect.previous) {
+        return {false, "Post-overlay runtime-byte preimage contradicts owned DOS memory"};
+    }
+    NativeRuntimeEffectBatch batch{
+        "millennium-dos-post-overlay-runtime-byte-" + std::to_string(generation)
+            + "-" + std::to_string(effect_ordinal),
+        true,
+        {{1, location, MemoryTransferElementWidth::byte,
+            NativeRuntimeByteOrder::little_endian, effect.value}}};
+    const auto applied = next.apply(batch);
+    if (!applied.accepted) return applied;
+    memory = std::move(next);
+    return {true, {}};
 }
 
 MillenniumDosPostOverlayLoopSession::MillenniumDosPostOverlayLoopSession(
@@ -19,11 +50,13 @@ MillenniumDosPostOverlayLoopSession::MillenniumDosPostOverlayLoopSession(
     const auto followups = parse_millennium_dos_english_game_startup_followups(
         game_executable_, callees);
     const auto private_wrapper = parse_millennium_dos_private_int91_wrapper(game_executable_);
+    const auto console_poll = parse_millennium_dos_dos_console_poll_leaf(game_executable_);
     if (loop_.entry_address != 0xd39d || loop_.following_dispatch_address != dispatch_.entry_address
         || callees.equal_private_target_address != private_wrapper.entry_address
         || callees.other_private_target_address != private_wrapper.entry_address
         || private_wrapper.private_interrupt_site != private_interrupt_site
         || private_wrapper.private_interrupt != 0x91
+        || loop_.call_targets.back() != console_poll.entry_address
         || followups.equal_return_address != 0x0455
         || followups.palette_entry_address != 0x0466
         || followups.bios_interrupt != 0x10
@@ -125,9 +158,33 @@ void MillenniumDosPostOverlayLoopSession::observe_call_return(
     } else if (call_ordinal_ == 14) {
         ++action_poll_count_;
         state_ = MillenniumDosPostOverlayLoopState::awaiting_action_al;
+        if (!console_input_.empty()) {
+            const auto value = console_input_.front();
+            console_input_.pop_front();
+            observe_al(loop_.loop_al_test_address, value);
+        }
     } else {
         enter_call(call_ordinal_ + 1);
     }
+}
+
+bool MillenniumDosPostOverlayLoopSession::enqueue_console_character(
+    const std::uint8_t value) {
+    if (value == 0 || console_input_.size() >= max_console_input_bytes) return false;
+    console_input_.push_back(value);
+    return true;
+}
+
+bool MillenniumDosPostOverlayLoopSession::enqueue_function_key(
+    const std::uint8_t scan_code) {
+    if (scan_code < 0x3b || scan_code > 0x44
+        || console_input_.size() > max_console_input_bytes - 2U) return false;
+    // DOS extended keyboard input presents a zero prefix on the first read
+    // and the scan code on the next read. The game's AL test naturally
+    // returns to its poll loop for that prefix.
+    console_input_.push_back(0);
+    console_input_.push_back(scan_code);
+    return true;
 }
 
 void MillenniumDosPostOverlayLoopSession::observe_al(

@@ -398,6 +398,89 @@ def main() -> int:
             f"{launch_check_json.stdout}\n{launch_check_json.stderr}"
         )
 
+    # A synthetic Eon mode byte is admitted only by this isolated probe. It
+    # reports the next hash-bound request and must not advance the live
+    # function-zero session or write runtime memory.
+    native_video_probe = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "millennium",
+            "--platform", "dos", "--release-language", "en", "--release-sha256",
+            "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+            "--native-step-diagnostics-json", "--native-video-probe",
+            "--native-startup-input", "1"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    try:
+        native_video_probe_payload = json.loads(native_video_probe.stdout)
+    except json.JSONDecodeError as error:
+        raise SystemExit(f"--native-video-probe did not emit JSON: {error}") from error
+    if (native_video_probe.returncode != 0
+            or native_video_probe_payload != {
+                "schema": "project-eon.native-video-probe/v1",
+                "diagnostic_only": True,
+                "provenance": "synthetic_eon_video_policy",
+                "probe_live_session_advanced": False,
+                "probe_runtime_memory_written": False,
+                "release": {
+                    "game": "Millennium 2.2", "platform": "DOS", "language": "en",
+                    "sha256": "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+                },
+                "driver_sha256": "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228",
+                "startup_input": "1",
+                "source_boundary": {
+                    "instruction": "0x01f4", "interrupt": 16,
+                    "function": 15, "al_known": False,
+                },
+                "synthetic_service_result": {
+                    "al": 19, "ax": None, "bx": None,
+                    "cx": None, "dx": None, "flags": None,
+                },
+                "hypothetical_local_effect": {
+                    "instruction": "0x01f6", "driver_offset": "0x00ae", "value": 19,
+                },
+                "next_source_boundary": {
+                    "instruction": "0x01fc", "interrupt": 16,
+                    "ax": "0x0013", "ax_known_mask": "0xffff",
+                },
+                "interpretation": "source-predicted request only; no BIOS behavior or runtime reachability is claimed",
+            }
+            or any(token in native_video_probe.stdout
+                   for token in (str(data_directory), "Hämtningar", "Downloads"))):
+        raise SystemExit(
+            "--native-video-probe crossed its diagnostic boundary or reported incorrect provenance:\n"
+            f"{native_video_probe.stdout}\n{native_video_probe.stderr}"
+        )
+
+    # The live DOS adapter reports the exact private INT 91h result boundary
+    # and its typed input requirement. It must not manufacture that result.
+    native_video_policy = subprocess.run(
+        (str(executable), "--data", str(data_directory), "--game", "millennium",
+            "--platform", "dos", "--release-language", "en", "--release-sha256",
+            "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123",
+            "--native-step-diagnostics-json", "--native-step-limit", "262144",
+            "--native-startup-input", "0"),
+        env=environment, check=False, capture_output=True, text=True,
+    )
+    try:
+        native_video_policy_payload = json.loads(native_video_policy.stdout)
+    except json.JSONDecodeError as error:
+        raise SystemExit(f"Native MCGA video policy did not emit JSON: {error}") from error
+    if (native_video_policy.returncode != 0
+            or native_video_policy_payload.get("driver") != "millennium-dos"
+            or native_video_policy_payload.get("result") != {
+                "accepted": True, "steps": 53,
+                "stop_reason": "external-observation", "stop_before": "$127",
+                "waiting_for_external_observation": True,
+                "external_requirement":
+                    "WAIT=TITLE-INT91-RESULT @$127 INT=145 FN=$19 SRC=$e2c5:fe9",
+            }
+            or native_video_policy_payload.get("error") != ""
+            or any(token in native_video_policy.stdout
+                   for token in (str(data_directory), "Hämtningar", "Downloads"))):
+        raise SystemExit(
+            "Native DOS startup did not report its unresolved function-$19 INT 91h boundary:\n"
+            f"{native_video_policy.stdout}\n{native_video_policy.stderr}"
+        )
+
     # The recovered Amiga opening can be advanced only through its explicit,
     # bounded native diagnostic route. This tests actual hash-bound media
     # admission rather than a synthetic VM fixture, while the emitted record
@@ -477,8 +560,8 @@ def main() -> int:
             }
             or deuteros_continuation_payload.get("checkpoint") is not None
             or continuation != {
-                "accepted": True, "steps": 1,
-                "stop_reason": "external-observation", "stop_before": "$40456",
+                "accepted": True, "steps": 7,
+                "stop_reason": "external-observation", "stop_before": "$206d4",
                 "waiting_for_external_observation": True, "error": "",
             }
             or deuteros_continuation_payload.get("error")
@@ -1001,6 +1084,28 @@ def main() -> int:
                 or report_bytes.count(b"\n") != 2495
                 or b"file-image-relative, unrelocated" not in report_bytes):
             raise SystemExit("MILL22A.INF report did not retain its file-relative preservation identity")
+        alternate_report = Path(analysis_root) / "mill22a-vbl-entry.md"
+        alternate_analysis = subprocess.run(
+            (sys.executable, str(Path(__file__).resolve().parents[1] / "tools" / "analyze_atari_st_config.py"),
+             "--archive", str(atari_archive),
+             "--archive-sha256", "ba1174123a0531abeab5788f4ac87a3c2500696bf1c87a7efd209441b3ebdf01",
+             "--nested-member", "Millenium 2.2 (1989)(Electric Dreams)[cr Equinox][one disk].zip",
+             "--nested-sha256", "0056e9fe1bae35ba61660a4b563772e4037e8a6390d1f579ec160044e80a1d69",
+             "--disk-member", "Millenium 2.2 (1989)(Electric Dreams)[cr Equinox][one disk].st",
+             "--disk-sha256", "3f090651ee586cf32a3f37f41b748ba36c78799e7bf761b66ddca2352579afe7",
+             "--file-sha256", "74d7d630779fd811aedcdbe31b14e54198eb9ffd673df512dd70b6165c4a37b6",
+             "--alternate-entry-offset", "0x53a", "--alternate-entry-size", "0x22",
+             "--output", str(alternate_report)),
+            env=environment, check=False, capture_output=True, text=True,
+        )
+        if alternate_analysis.returncode != 0 or not alternate_report.is_file():
+            raise SystemExit(f"MILL22A.INF alternate-entry disassembly failed:\n{alternate_analysis.stderr}")
+        alternate_text = alternate_report.read_text(encoding="utf-8")
+        if ("Alternate entry candidate" not in alternate_text
+                or "+0x0053a  jsr        $2b568.l" not in alternate_text
+                or "+0x00540  rts" not in alternate_text
+                or "+0x00542  move.l     $4ba.w, d0" not in alternate_text):
+            raise SystemExit("MILL22A.INF alternate-entry decode missed the VBL install path")
     dos_archive = archive_by_sha256.get(
         "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123"
     )

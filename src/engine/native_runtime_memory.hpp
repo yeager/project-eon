@@ -8,6 +8,7 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -65,6 +66,8 @@ public:
     NativeRuntimeMemory(std::uint64_t linear_limit_exclusive = 0x100000000ULL,
         std::uint64_t segmented_offset_limit_exclusive = 0x10000ULL);
     [[nodiscard]] NativeRuntimeMemoryApplyResult apply(const NativeRuntimeEffectBatch& batch);
+    [[nodiscard]] NativeRuntimeMemoryApplyResult forget(
+        std::string batch_id, std::span<const NativeRuntimeLocation> locations);
     [[nodiscard]] std::optional<std::uint8_t> read_byte(
         const NativeRuntimeLocation& location) const;
     [[nodiscard]] std::optional<std::vector<std::uint8_t>> read_linear_range(

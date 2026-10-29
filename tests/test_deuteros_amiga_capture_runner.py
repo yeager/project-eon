@@ -24,11 +24,89 @@ SPEC.loader.exec_module(TOOL)
 
 
 class DeuterosAmigaCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
-    def test_zero_route_observer_sidecar_is_enabled_for_v21_through_v23(self) -> None:
+    @staticmethod
+    def _title_callback_payload() -> str:
+        rows: list[str] = []
+        for ordinal, (stage, pc) in enumerate(TOOL.TITLE_CALLBACK_STAGES_V32, 1):
+            valid, value, source, destination, width = 0, 0, 0, 0, 0
+            cell_x_valid, cell_x, cell_y_valid, cell_y = 0, 0, 0, 0
+            if stage == "gate-test":
+                valid, source, width = 1, 0x1EE16, 1
+            elif stage == "selector-compare":
+                valid, value, source = 1, 0x00FF, 0x20006
+            elif stage == "copy-x":
+                valid, value, source, destination, width = 1, 0x0078, 0x2100, 0x1EE10, 2
+            elif stage == "copy-y":
+                valid, value, source, destination, width = 1, 0x0078, 0x2102, 0x1EE12, 2
+            elif stage == "service-entry":
+                cell_x_valid, cell_x, cell_y_valid, cell_y = 1, 0x0078, 1, 0x0078
+            rows.append(
+                f"title-callback {ordinal} sequence=1 stage={stage} cycles={100 + ordinal} "
+                f"pc=0x{pc:06x} input_ordinal=1 input_frame=80 value_valid={valid} "
+                f"value=0x{value:04x} source=0x{source:08x} "
+                f"destination=0x{destination:08x} width={width} "
+                f"cell_x_valid={cell_x_valid} cell_x=0x{cell_x:04x} "
+                f"cell_y_valid={cell_y_valid} cell_y=0x{cell_y:04x}\n")
+        return "".join(rows)
+
+    def test_v32_title_callback_sequence_is_ordered_input_linked_and_abi_neutral(self) -> None:
+        payload = self._title_callback_payload()
+        with temporary_directory() as directory:
+            root = Path(directory)
+            sidecar = CanonicalReceiptPath(root / "title-callback.txt")
+            host = CanonicalReceiptPath(root / "host-input-receipt.txt")
+            sidecar.write_text(payload, encoding="ascii")
+            host.write_text("host-input 1 frame=80 line=2 action=149 state=1\n", encoding="ascii")
+            status = dict(line.split("=", 1) for line in
+                          TOOL.title_callback_status_v32(sidecar, host).splitlines())
+            self.assertEqual(status["title_callback_records"],
+                             str(len(TOOL.TITLE_CALLBACK_STAGES_V32)))
+            self.assertEqual(status["title_callback_complete_sequences"], "1")
+            self.assertEqual(status["title_callback_input_chronology"], "linked")
+            self.assertEqual(status["title_callback_outer_returns"], "0")
+            self.assertEqual(status["title_callback_runtime_abi"], "unknown")
+            self.assertEqual(status["title_callback_sha256"],
+                             hashlib.sha256(payload.encode("ascii")).hexdigest())
+
+            out_of_order = payload.replace("stage=gate-branch", "stage=selector-load", 1)
+            sidecar.write_text(out_of_order, encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "stage or PC"):
+                TOOL.title_callback_status_v32(sidecar, host)
+
+            sidecar.write_text(payload.replace("value=0x0000", "value=0x0001", 1), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "gate sample"):
+                TOOL.title_callback_status_v32(sidecar, host)
+
+            sidecar.write_text(payload, encoding="ascii")
+            host.write_text("host-input 1 frame=81 line=2 action=149 state=1\n", encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "host-input chronology"):
+                TOOL.title_callback_status_v32(sidecar, host)
+
+    def test_v32_title_callback_rejects_incomplete_and_over_cap_sidecars(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            sidecar = CanonicalReceiptPath(root / "title-callback.txt")
+            host = CanonicalReceiptPath(root / "host-input-receipt.txt")
+            host.write_text("host-input 1 frame=80 line=2 action=149 state=1\n", encoding="ascii")
+            payload = self._title_callback_payload()
+            sidecar.write_text(payload.rsplit("title-callback ", 1)[0], encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "incomplete ordered sequence"):
+                TOOL.title_callback_status_v32(sidecar, host)
+            sidecar.write_bytes(b"x" * (TOOL.MAX_TITLE_CALLBACK_BYTES_V32 + 1))
+            with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
+                TOOL.title_callback_status_v32(sidecar, host)
+
+    def test_zero_route_observer_sidecar_is_enabled_only_for_declared_protocols(self) -> None:
         self.assertEqual(TOOL.RECORDER_ZERO_ROUTE_OBSERVATION_HASHES, frozenset((
-            TOOL.TRV2_RECORDER_V21_SHA256,
-            TOOL.TRV2_RECORDER_V22_SHA256,
-            TOOL.TRV2_RECORDER_V23_SHA256,
+            TOOL.TRV2_RECORDER_V21_SHA256, TOOL.TRV2_RECORDER_V22_SHA256,
+            TOOL.TRV2_RECORDER_V23_SHA256, TOOL.TRV2_RECORDER_V24_SHA256,
+            TOOL.TRV2_RECORDER_V25_SHA256, TOOL.TRV2_RECORDER_V26_CALLBACK_MEMORY_SHA256,
+            TOOL.TRV2_RECORDER_V27_CALLBACK_MEMORY_TARGETED_DISPLAY_SHA256,
+            TOOL.TRV2_RECORDER_V29_SERVICE_BOUNDARY_DISPLAY_SHA256,
+            TOOL.TRV2_RECORDER_V30_SERVICE_RETURN_DISPLAY_SHA256,
+            TOOL.TRV2_RECORDER_V31_RESPONSE_QUEUE_SHA256,
+            TOOL.TRV2_RECORDER_V32_TITLE_CALLBACK_SHA256,
+            TOOL.TRV2_RECORDER_V33_SERVICE_BOUNDARY_SHA256,
         )))
         self.assertNotIn(TOOL.TRV2_RECORDER_V20_SHA256,
                          TOOL.RECORDER_ZERO_ROUTE_OBSERVATION_HASHES)
@@ -209,6 +287,7 @@ class DeuterosAmigaCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
         self.assertIn("floppy_image_0 = /safe/disk1.adf", configuration)
         self.assertIn("floppy_image_1 = /safe/disk2.adf", configuration)
         self.assertIn("floppy_write_protect = 1", configuration)
+        self.assertIn("keyboard_key_f10 = action_drive_0_insert_floppy_1", configuration)
         self.assertIn("console_debugger = 0", configuration)
         self.assertIn("use_debugger = 0", configuration)
         self.assertIn("warp_mode = 0", configuration)
@@ -495,6 +574,28 @@ class DeuterosAmigaCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
             with self.assertRaisesRegex(TOOL.CaptureError, "not a reviewed recorder contract"):
                 TOOL.parse_late_raw_pc_receipt(late, "v21")
 
+    def test_v23_recorder_uses_the_reviewed_extended_late_pc_contract(self) -> None:
+        self.assertEqual(
+            TOOL.late_raw_pc_version_for_recorder(TOOL.TRV2_RECORDER_V19_SHA256),
+            "v19")
+        for digest in (TOOL.TRV2_RECORDER_V20_SHA256, TOOL.TRV2_RECORDER_V21_SHA256,
+                       TOOL.TRV2_RECORDER_V22_SHA256, TOOL.TRV2_RECORDER_V23_SHA256):
+            self.assertEqual(TOOL.late_raw_pc_version_for_recorder(digest), "v20")
+        with temporary_directory() as directory:
+            root = Path(directory)
+            host = CanonicalReceiptPath(root / "host-input-receipt.txt")
+            host.write_text("".join(
+                f"host-input {i} frame={i * 10} line=3 action=149 state=1\n"
+                for i in range(1, 10)), encoding="ascii")
+            late = CanonicalReceiptPath(root / "late-input-pc.txt")
+            late.write_text(
+                "late-pc 1 cycles=90 pc=0x0001fc22 ir_opcode=0x4e75 memory_opcode=0x4e75 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=9 input_frame=90\n", encoding="ascii")
+            version = TOOL.late_raw_pc_version_for_recorder(TOOL.TRV2_RECORDER_V23_SHA256)
+            self.assertEqual(version, "v20")
+            self.assertIn("0x0001fc22:1", TOOL.late_raw_pc_status(late, host, version))
+
     def test_v17_selector_dispatch_is_joined_to_raw_pc_and_host_input(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)
@@ -713,6 +814,45 @@ class DeuterosAmigaCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
             self.assertNotIn("source_release_sha256=", receipt)
             self.assertNotIn("source_release_bytes=", receipt)
 
+    def test_v24_capture_wires_windowed_display_and_latch_sidecars(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            media, cache = root / "media", root / "cache"
+            media.mkdir()
+            cache.mkdir()
+            disk1, disk2, kickstart, recorder = (media / name for name in
+                ("disk1.zip", "disk2.zip", "kickstart.zip", "recorder"))
+            for path in (disk1, disk2, kickstart, recorder):
+                path.write_bytes(b"placeholder")
+            recorder.chmod(0o700)
+            output = cache / "capture"
+            args = SimpleNamespace(source_release=None, disk1_archive=str(disk1),
+                disk2_archive=str(disk2), kickstart_archive=str(kickstart), recorder=str(recorder),
+                output=str(output), duration_seconds=15, focus_settle_seconds=0,
+                capture_intent="diagnostic-no-input", timing_profile="realtime")
+            process = SimpleNamespace(stdout=io.BytesIO(b"bounded test console\n"), poll=lambda: 0)
+            with mock.patch.object(TOOL, "require_visible_operator_input"), \
+                    mock.patch.object(TOOL, "validate_identity", side_effect=lambda p, _l, h, s: (h, s)), \
+                    mock.patch.object(TOOL, "validate_recorder", return_value=(
+                        TOOL.TRV2_RECORDER_V24_SHA256, TOOL.TRV2_RECORDER_V24_SIZE)), \
+                    mock.patch.object(TOOL, "mount_read_only"), \
+                    mock.patch.object(TOOL, "unmount"), \
+                    mock.patch.object(TOOL.subprocess, "Popen", return_value=process) as popen, \
+                    contextlib.redirect_stdout(io.StringIO()):
+                TOOL.run_capture(args)
+
+            env = popen.call_args.kwargs["env"]
+            self.assertEqual(env["PROJECT_EON_FS_UAE_LATE_DISPLAY_RECORD"],
+                             str(output / "late-display.txt"))
+            self.assertEqual(env["PROJECT_EON_FS_UAE_LATCH_WRITE_RECORD"],
+                             str(output / "latch-write.txt"))
+            receipt = (output / "run-status.txt").read_text(encoding="utf-8")
+            self.assertIn("capture_receipt_version=34\n", receipt)
+            self.assertIn("recorder_protocol=deuteros-amiga-fsuae-v24\n", receipt)
+            self.assertIn("late_display_format=v2\n", receipt)
+            self.assertIn("late_display_windows=0\n", receipt)
+            self.assertIn("latch_write_format=v1\n", receipt)
+
     def test_standalone_capture_rejects_disk_change_and_unmounts_all_views(self) -> None:
         with temporary_directory() as directory:
             root = Path(directory)
@@ -783,7 +923,7 @@ class DeuterosAmigaCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
         self.assertNotIn("press and release", diagnostic)
         self.assertIn("press and release", physical)
         self.assertIn("Choose 1: ENGLISH only when the language selector is on screen", physical)
-        self.assertIn("At the Disk 2 prompt, press F10 once", physical)
+        self.assertIn("At the visible Disk 2 prompt, press F10 once", physical)
         late_physical = "\n".join(TOOL.capture_operator_instructions("physical-input", late_sampling=True))
         self.assertIn("late probe begins after host-input ordinal 8", late_physical)
 
@@ -933,6 +1073,101 @@ class DeuterosAmigaCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
                 encoding="ascii")
             with self.assertRaisesRegex(TOOL.CaptureError, "does not match"):
                 TOOL.late_display_receipt_status(display, inputs)
+
+    def test_v24_recorder_uses_four_distinct_bounded_late_display_windows(self) -> None:
+        hashes = TOOL.reviewed_recorder_hashes()
+        self.assertEqual(
+            TOOL.TRV2_RECORDER_V24_SHA256,
+            "ddd6e2df32c9d785e93b96c0a55b6244fab034212b6842e031ef09648d7765ac",
+        )
+        self.assertEqual(hashes["reviewed-fs-uae-trv2-v24"], TOOL.TRV2_RECORDER_V24_SHA256)
+        self.assertEqual(TOOL.TRV2_RECORDER_V24_SIZE, 62_039_936)
+        rows: list[str] = []
+        cycles = 0
+        for input_ordinal in range(21, 25):
+            for register in range(0x0180, 0x01c0, 2):
+                for _ in range(TOOL.MAX_LATE_DISPLAY_WRITES_PER_REGISTER):
+                    cycles += 1
+                    rows.append(
+                        f"late-display-write {len(rows) + 1} cycles={cycles} vpos=1 hpos=2 "
+                        f"origin=copper register=0x{register:04x} value=0x0000 "
+                        f"input_ordinal={input_ordinal} input_frame={input_ordinal * 10}\n")
+        self.assertEqual(len(rows), TOOL.MAX_LATE_DISPLAY_WRITES_V24)
+        with temporary_directory() as directory:
+            root = Path(directory)
+            display = CanonicalReceiptPath(root / "late-display.txt")
+            inputs = CanonicalReceiptPath(root / "host-input-receipt.txt")
+            inputs.write_text("".join(
+                f"host-input {ordinal} frame={ordinal * 10} line=0 action=157 state=1\n"
+                for ordinal in range(1, 25)), encoding="ascii")
+            display.write_text("".join(rows), encoding="ascii")
+            self.assertEqual(len(TOOL.parse_late_display_receipt(display, windowed=True)), 8192)
+            status = dict(line.split("=", 1) for line in
+                          TOOL.late_display_receipt_status(display, inputs, windowed=True).splitlines())
+            self.assertEqual(status["late_display_format"], "v2")
+            self.assertEqual(status["late_display_records"], "8192")
+            self.assertEqual(status["late_display_windows"], "4")
+            self.assertEqual(status["late_display_window_records"],
+                             "21:2048,22:2048,23:2048,24:2048")
+            self.assertEqual(status["late_display_register_counts"],
+                             ",".join(f"0x{register:04x}:256"
+                                      for register in range(0x0180, 0x01c0, 2)))
+
+            display.write_text("".join((
+                "late-display-write 1 cycles=1 vpos=1 hpos=2 origin=copper "
+                "register=0x0180 value=0x0000 input_ordinal=21 input_frame=210\n",
+                "late-display-write 2 cycles=2 vpos=1 hpos=2 origin=copper "
+                "register=0x0180 value=0x0000 input_ordinal=23 input_frame=230\n",
+            )), encoding="ascii")
+            status = dict(line.split("=", 1) for line in
+                          TOOL.late_display_receipt_status(display, inputs, windowed=True).splitlines())
+            self.assertEqual(status["late_display_windows"], "2")
+            self.assertEqual(status["late_display_window_records"], "21:1,23:1")
+
+    def test_v24_late_display_enforces_window_register_and_byte_caps(self) -> None:
+        with temporary_directory() as directory:
+            root = Path(directory)
+            display = CanonicalReceiptPath(root / "late-display.txt")
+            host = CanonicalReceiptPath(root / "host-input-receipt.txt")
+            host.write_text("".join(
+                f"host-input {i} frame={i} line=0 action=157 state=1\n"
+                for i in range(1, 27)), encoding="ascii")
+
+            too_many_for_register = "".join(
+                f"late-display-write {i} cycles={i} vpos=1 hpos=2 origin=copper "
+                f"register=0x0180 value=0x0000 input_ordinal=21 input_frame=21\n"
+                for i in range(1, 66))
+            display.write_text(too_many_for_register, encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "per-register window cap"):
+                TOOL.parse_late_display_receipt(display, windowed=True)
+
+            rows: list[str] = []
+            cycles = 0
+            for register in range(0x0180, 0x01c0, 2):
+                for _ in range(64):
+                    cycles += 1
+                    rows.append(
+                        f"late-display-write {len(rows) + 1} cycles={cycles} vpos=1 hpos=2 "
+                        f"origin=copper register=0x{register:04x} value=0x0000 "
+                        "input_ordinal=21 input_frame=21\n")
+            register_rows = "".join(rows)
+            display.write_text(register_rows + (
+                f"late-display-write 2049 cycles=2049 vpos=1 hpos=2 origin=copper "
+                "register=0x0080 value=0x0000 input_ordinal=21 input_frame=21\n"),
+                encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "per-window recorder cap"):
+                TOOL.parse_late_display_receipt(display, windowed=True)
+
+            display.write_text("".join(
+                f"late-display-write {i} cycles={i} vpos=1 hpos=2 origin=copper "
+                f"register=0x0180 value=0x0000 input_ordinal={20+i} input_frame={20+i}\n"
+                for i in range(1, 6)), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "window cap"):
+                TOOL.parse_late_display_receipt(display, windowed=True)
+
+            display.write_bytes(b"x" * (TOOL.MAX_LATE_DISPLAY_RECEIPT_BYTES_V24 + 1))
+            with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
+                TOOL.parse_late_display_receipt(display, windowed=True)
 
     def test_console_transcript_is_hashed_but_disk_bounded(self) -> None:
         with temporary_directory() as directory:

@@ -3,6 +3,7 @@
 #include "data/sha256.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <limits>
 #include <stdexcept>
@@ -37,6 +38,47 @@ std::string trim_name(std::span<const std::uint8_t> field) {
         result.push_back(static_cast<char>(byte));
     }
     return result;
+}
+
+std::string normalize_8_3_name(const std::string_view name) {
+    const auto dot = name.find('.');
+    if (dot == std::string_view::npos || dot == 0 || dot > 8
+        || dot + 1U >= name.size() || name.size() - dot - 1U > 3
+        || name.find('.', dot + 1U) != std::string_view::npos) {
+        throw std::runtime_error("STX file lookup requires an exact 8.3 filename");
+    }
+    std::string normalized;
+    normalized.reserve(name.size());
+    for (const auto character : name) {
+        const auto byte = static_cast<unsigned char>(character);
+        if (byte >= 'a' && byte <= 'z') {
+            normalized.push_back(static_cast<char>(byte - 'a' + 'A'));
+        } else if ((byte >= 'A' && byte <= 'Z') || (byte >= '0' && byte <= '9')
+            || byte == '.' || byte == '_' || byte == '-') {
+            normalized.push_back(static_cast<char>(byte));
+        } else {
+            throw std::runtime_error("STX file lookup contains a non-8.3 filename character");
+        }
+    }
+    return normalized;
+}
+
+const AtariStStxFat12RootEntry* find_unique_entry(
+    const AtariStStxFat12Root& root, const std::string_view normalized_name) {
+    const AtariStStxFat12RootEntry* match = nullptr;
+    for (const auto& entry : root.entries()) {
+        std::string normalized_entry;
+        normalized_entry.reserve(entry.name.size());
+        for (const auto character : entry.name) {
+            const auto byte = static_cast<unsigned char>(character);
+            normalized_entry.push_back(byte >= 'a' && byte <= 'z'
+                ? static_cast<char>(byte - 'a' + 'A') : character);
+        }
+        if (normalized_entry != normalized_name) continue;
+        if (match) throw std::runtime_error("Duplicate STX 8.3 filename in one disk root");
+        match = &entry;
+    }
+    return match;
 }
 
 } // namespace
@@ -212,11 +254,17 @@ std::span<const std::uint8_t> AtariStStxFat12Root::logical_sector(const std::uin
     return result;
 }
 
-std::uint16_t AtariStStxFat12Root::next_cluster(const std::uint16_t cluster) const {
+std::uint16_t AtariStStxFat12Root::next_cluster(
+    const std::uint16_t cluster, const std::uint8_t fat_copy) const {
+    if (fat_copy >= fat_count_) throw std::runtime_error("Invalid STX FAT copy index");
     const auto offset = static_cast<std::uint32_t>(cluster) + cluster / 2U;
-    const auto fat_lba = static_cast<std::uint32_t>(reserved_sectors_) + offset / bytes_per_sector_;
+    const auto fat_lba = static_cast<std::uint32_t>(reserved_sectors_)
+        + static_cast<std::uint32_t>(fat_copy) * sectors_per_fat_
+        + offset / bytes_per_sector_;
     const auto within_sector = static_cast<std::size_t>(offset % bytes_per_sector_);
-    if (fat_lba >= static_cast<std::uint32_t>(reserved_sectors_) + sectors_per_fat_
+    const auto fat_begin = static_cast<std::uint32_t>(reserved_sectors_)
+        + static_cast<std::uint32_t>(fat_copy) * sectors_per_fat_;
+    if (fat_lba >= fat_begin + sectors_per_fat_
         || within_sector + 2U > bytes_per_sector_) {
         throw std::runtime_error("STX FAT12 cluster lies outside FAT");
     }
@@ -234,7 +282,8 @@ void AtariStStxFat12Root::validate_file_chain(const AtariStStxFat12RootEntry& en
         return;
     }
     const auto cluster_bytes = static_cast<std::uint32_t>(sectors_per_cluster_) * bytes_per_sector_;
-    const auto cluster_count = (entry.size + cluster_bytes - 1U) / cluster_bytes;
+    const auto cluster_count = (static_cast<std::uint64_t>(entry.size) + cluster_bytes - 1U)
+        / cluster_bytes;
     const auto max_clusters = static_cast<std::uint32_t>(
         (total_sectors_ - data_start_lba_) / sectors_per_cluster_);
     if (entry.first_cluster < 2 || cluster_count > max_clusters) {
@@ -252,8 +301,116 @@ void AtariStStxFat12Root::validate_file_chain(const AtariStStxFat12RootEntry& en
         if (first_sector >= total_sectors_ || sectors_per_cluster_ > total_sectors_ - first_sector) {
             throw std::runtime_error("STX FAT12 file cluster is outside declared medium");
         }
-        if (index + 1U < cluster_count) cluster = next_cluster(cluster);
+        if (index + 1U < cluster_count) cluster = next_cluster(cluster, 0);
     }
+}
+
+std::vector<std::uint8_t> AtariStStxFat12Root::read_file(
+    const AtariStStxFat12RootEntry& entry) const {
+    const auto admitted = std::find_if(entries_.begin(), entries_.end(),
+        [&](const AtariStStxFat12RootEntry& candidate) {
+            return candidate.name == entry.name
+                && candidate.attributes == entry.attributes
+                && candidate.first_cluster == entry.first_cluster
+                && candidate.size == entry.size;
+        });
+    if (admitted == entries_.end()) {
+        throw std::runtime_error("STX FAT12 file is not an admitted root entry");
+    }
+    if ((entry.attributes & 0x10U) != 0) {
+        throw std::runtime_error("STX FAT12 root directory entry is unsupported");
+    }
+    if (entry.size == 0) {
+        if (entry.first_cluster != 0) {
+            throw std::runtime_error("STX FAT12 empty file has a cluster");
+        }
+        return {};
+    }
+
+    const auto cluster_bytes = static_cast<std::uint32_t>(sectors_per_cluster_)
+        * bytes_per_sector_;
+    if (cluster_bytes == 0) throw std::runtime_error("Invalid STX FAT12 cluster size");
+    const auto cluster_count = (static_cast<std::uint64_t>(entry.size) + cluster_bytes - 1U)
+        / cluster_bytes;
+    const auto max_clusters = static_cast<std::uint32_t>(
+        (total_sectors_ - data_start_lba_) / sectors_per_cluster_);
+    if (entry.first_cluster < 2 || cluster_count > max_clusters) {
+        throw std::runtime_error("Invalid STX FAT12 file cluster chain");
+    }
+
+    if (entry.size > static_cast<std::uint64_t>(max_clusters) * cluster_bytes) {
+        throw std::runtime_error("STX FAT12 file size exceeds declared data area");
+    }
+    std::array<std::vector<std::uint8_t>, 2> copies;
+    std::array<std::vector<std::uint16_t>, 2> chains;
+    for (std::uint8_t fat_copy = 0; fat_copy < 2; ++fat_copy) {
+        auto cluster = entry.first_cluster;
+        std::vector<bool> visited(static_cast<std::size_t>(max_clusters) + 2U, false);
+        auto& bytes = copies[fat_copy];
+        auto& chain = chains[fat_copy];
+        bytes.reserve(static_cast<std::size_t>(entry.size));
+        chain.reserve(static_cast<std::size_t>(cluster_count));
+        for (std::uint32_t index = 0; index < cluster_count; ++index) {
+            if (cluster < 2 || cluster >= visited.size() || visited[cluster]) {
+                throw std::runtime_error("Invalid or cyclic STX FAT12 file cluster chain");
+            }
+            visited[cluster] = true;
+            chain.push_back(cluster);
+            const auto first_sector = static_cast<std::uint32_t>(data_start_lba_)
+                + static_cast<std::uint32_t>(cluster - 2U) * sectors_per_cluster_;
+            if (first_sector >= total_sectors_
+                || sectors_per_cluster_ > total_sectors_ - first_sector) {
+                throw std::runtime_error("STX FAT12 file cluster is outside declared medium");
+            }
+            for (std::uint8_t sector_index = 0;
+                sector_index < sectors_per_cluster_ && bytes.size() < entry.size;
+                ++sector_index) {
+                const auto sector = logical_sector(static_cast<std::uint16_t>(
+                    first_sector + sector_index));
+                const auto remaining = static_cast<std::size_t>(entry.size) - bytes.size();
+                const auto count = std::min(remaining, sector.size());
+                bytes.insert(bytes.end(), sector.begin(), sector.begin()
+                    + static_cast<std::ptrdiff_t>(count));
+            }
+            const auto next = next_cluster(cluster, fat_copy);
+            if (index + 1U < cluster_count) {
+                if (next >= 0x0ff8U) {
+                    throw std::runtime_error("STX FAT12 file chain ends before declared size");
+                }
+                cluster = next;
+            } else if (next < 0x0ff8U) {
+                throw std::runtime_error("STX FAT12 file chain exceeds declared size");
+            }
+        }
+        if (bytes.size() != entry.size) {
+            throw std::runtime_error("STX FAT12 file chain yielded the wrong byte count");
+        }
+    }
+    if (chains[0] != chains[1]) {
+        throw std::runtime_error("STX FAT12 mirror copies disagree on file cluster chain");
+    }
+    if (copies[0] != copies[1]) {
+        throw std::runtime_error("STX FAT12 mirror copies disagree on file bytes");
+    }
+    return std::move(copies[0]);
+}
+
+AtariStStxPairedFileSource::AtariStStxPairedFileSource(
+    std::vector<std::uint8_t> disk1, std::vector<std::uint8_t> disk2)
+    : disk1_(std::move(disk1)), disk2_(std::move(disk2)),
+      root1_(disk1_), root2_(disk2_) {}
+
+AtariStStxPairedFile AtariStStxPairedFileSource::read_file(
+    const std::string_view exact_8_3_name) const {
+    const auto normalized_name = normalize_8_3_name(exact_8_3_name);
+    const auto* first = find_unique_entry(root1_, normalized_name);
+    const auto* second = find_unique_entry(root2_, normalized_name);
+    if (first && second) {
+        throw std::runtime_error("Duplicate STX 8.3 filename across paired disks");
+    }
+    if (!first && !second) throw std::runtime_error("Unknown STX 8.3 filename");
+    if (first) return {AtariStStxSourceDisk::disk1, root1_.read_file(*first)};
+    return {AtariStStxSourceDisk::disk2, root2_.read_file(*second)};
 }
 
 } // namespace eon

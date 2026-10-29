@@ -18,10 +18,13 @@ import stat
 import sys
 from typing import Optional
 
-from capstone import CS_ARCH_X86, CS_MODE_16, CS_GRP_CALL, CS_GRP_JUMP, CS_GRP_RET, Cs
+from capstone import (
+    CS_AC_READ, CS_AC_WRITE, CS_ARCH_X86, CS_MODE_16, CS_GRP_CALL,
+    CS_GRP_JUMP, CS_GRP_RET, Cs,
+)
 from capstone.x86_const import (
     X86_OP_IMM, X86_OP_MEM, X86_OP_REG, X86_REG_AH, X86_REG_AL, X86_REG_AX,
-    X86_REG_CS, X86_REG_DS, X86_REG_SI, X86_REG_SP, X86_REG_SS,
+    X86_REG_BX, X86_REG_CS, X86_REG_DS, X86_REG_SI, X86_REG_SP, X86_REG_SS,
 )
 
 try:
@@ -37,7 +40,12 @@ TITLES_SHA256 = "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe
 TITLES_SIZE = 7_022
 DOS_BASE = 0x0100
 ENTRY_IP = 0x1B80
-TARGETS = (0x0134, 0x125C)
+TARGETS = (0x0134, 0x125C, 0x104A, 0x1247)
+# Static xref candidates used to review the possible title-loader route. These
+# include a data pointer and candidate instruction targets; none are asserted
+# to be instruction starts or reachable from the COM entry.
+REFERENCE_TARGETS = tuple(sorted({*TARGETS, 0x011C, 0x104A, 0x1066,
+                                  0x1082, 0x1247, 0x124B}))
 DEFAULT_STATE_LIMIT = 100_000
 DEFAULT_CALL_DEPTH = 64
 
@@ -49,19 +57,36 @@ class ContextReachabilityError(ValueError):
 Frame = tuple[int, int]  # return IP and expected SP delta at the callee's RET
 State = tuple[int, tuple[Frame, ...], int, Optional[int], Optional[int],
               Optional[bool], int, Optional[bool], Optional[bool], Optional[int],
-              bool, Optional[bool], Optional[tuple[int, ...]], Optional[bool]]
+              bool, Optional[bool], Optional[tuple[int, ...]], Optional[bool],
+              Optional[int], Optional[int]]
+
+_INHERIT = object()
 
 
 def _memory_may_alias_return_word(
     operand, call_stack: tuple[Frame, ...], *, ss_equals_cs: bool | None,
     stack_pointer_base: int | None, ds_equals_cs: bool | None,
     si_values: tuple[int, ...] | None,
+    stack_pointer_base_max: int | None = None,
+    bx_constant: int | None = None,
 ) -> bool:
     """Prove an aliased CS/DS operand disjoint from return words."""
     if not call_stack:
         return False
     memory = operand.mem
-    if memory.base or memory.index:
+    if memory.base == X86_REG_BX and not memory.index:
+        if (memory.segment not in {0, X86_REG_CS, X86_REG_DS}
+                or (memory.segment != X86_REG_CS and ds_equals_cs is not True)
+                or bx_constant is None):
+            return True
+        if ss_equals_cs is None or stack_pointer_base is None:
+            return True
+        if not ss_equals_cs:
+            return False
+        start = (bx_constant + memory.disp) & 0xFFFF
+        access = {(start + index) & 0xFFFF
+                  for index in range(max(1, operand.size))}
+    elif memory.base or memory.index:
         if (memory.base != X86_REG_SI or memory.index
                 or memory.segment not in {0, X86_REG_DS}
                 or ds_equals_cs is not True or si_values is None):
@@ -83,9 +108,14 @@ def _memory_may_alias_return_word(
     else:
         return True
     for _, return_delta in call_stack:
-        return_start = (stack_pointer_base + return_delta) & 0xFFFF
-        return_word = {return_start, (return_start + 1) & 0xFFFF}
-        if access & return_word:
+        return_start = stack_pointer_base + return_delta
+        return_end = ((stack_pointer_base_max if stack_pointer_base_max is not None
+                       else stack_pointer_base) + return_delta)
+        if return_start < 0 or return_end >= 0xFFFF:
+            return True
+        # A near return word covers the start offset and its following byte.
+        # The two DOSBox-X COM stack bounds form a small, non-wrapping interval.
+        if any(return_start <= value <= return_end + 1 for value in access):
             return True
     return False
 
@@ -106,6 +136,11 @@ def analyze_context_reachable(
     preserve_int91_wrapper_stack: bool = False,
     preserve_bios_ds_at_046d: bool = False,
     return_from_dos_int21_at_1b26: bool = False,
+    return_from_dos_int21_at_1b2d: bool = False,
+    return_from_dos_int21_at_1b38: bool = False,
+    return_from_dos_int21_at_1b3f: bool = False,
+    dos_int21_return_sites: tuple[int, ...] = (),
+    dosboxx_com_loader_stack: bool = False,
 ) -> dict[str, object]:
     """Explore candidate instruction paths with a matched near-call stack.
 
@@ -128,6 +163,21 @@ def analyze_context_reachable(
     if (len(int91_return_ax_sequence) > 2
             or any(not 0 <= value <= 0xFFFF for value in int91_return_ax_sequence)):
         raise ContextReachabilityError("INT 91h scenario must contain at most two 16-bit AX values")
+    if (len(set(dos_int21_return_sites)) != len(dos_int21_return_sites)
+            or any(site not in {0x0549, 0x1B4F, 0x1B64, 0x1B74, 0x1BCA, 0x1BD5}
+                   for site in dos_int21_return_sites)):
+        raise ContextReachabilityError(
+            "additional DOS INT 21h return sites are limited to 0x0549, 0x1b4f, 0x1b64, 0x1b74, 0x1bca, and 0x1bd5")
+    if 0x0549 in dos_int21_return_sites:
+        offset = 0x0549 - DOS_BASE
+        if data[offset - 4:offset + 2] != bytes.fromhex("b002b43dcd21"):
+            raise ContextReachabilityError(
+                "DOS INT 21h/AH=3Dh scenario requires the exact 0x0545 preimage")
+    if 0x1BD5 in dos_int21_return_sites:
+        offset = 0x1BD5 - DOS_BASE
+        if data[offset - 2:offset + 2] != bytes.fromhex("b449cd21"):
+            raise ContextReachabilityError(
+                "DOS INT 21h/AH=49h scenario requires the exact 0x1bd3 preimage")
     int91_wrapper = bytes.fromhex("1e56575506cd91075d5f5e1fc3")
     if preserve_int91_wrapper_stack and not int91_return_ax_sequence:
         raise ContextReachabilityError(
@@ -139,11 +189,20 @@ def analyze_context_reachable(
     if preserve_bios_ds_at_046d and not return_from_bios_int10_at_046d:
         raise ContextReachabilityError(
             "BIOS DS-preservation scenario requires the exact INT 10h return scenario")
+    if dosboxx_com_loader_stack and (
+            len(data) != TITLES_SIZE or hashlib.sha256(data).hexdigest() != TITLES_SHA256):
+        raise ContextReachabilityError(
+            "DOSBox-X COM-loader stack scenario requires the exact hash-matched TITLES.EXE")
 
     decoder = Cs(CS_ARCH_X86, CS_MODE_16)
     decoder.detail = True
-    start: State = (entry_ip, (), 0, None, None, None, 0, None, None, None,
-                    False, None, None, None)
+    start: State = (entry_ip, (), 0, None, None, None, 0, None,
+                    True if dosboxx_com_loader_stack else None,
+                    0x1D6E if dosboxx_com_loader_stack else None,
+                    False,
+                    True if dosboxx_com_loader_stack else None, None, None,
+                    0xFFFE if dosboxx_com_loader_stack else None,
+                    None)
     pending: deque[State] = deque([start])
     parents: dict[State, tuple[State, str] | None] = {start: None}
     instructions: dict[int, dict[str, object]] = {}
@@ -157,12 +216,20 @@ def analyze_context_reachable(
                 ax_is_cs: bool | None, ss_equals_cs: bool | None,
                 stack_pointer_base: int | None, push_cs_pending: bool,
                 ds_equals_cs: bool | None, si_values: tuple[int, ...] | None,
-                direction_decrement: bool | None, kind: str) -> None:
+                direction_decrement: bool | None, kind: str,
+                stack_pointer_base_max: int | None = None,
+                bx_constant: int | None | object = _INHERIT) -> None:
         target_ip &= 0xFFFF
+        if (stack_pointer_base_max is None and stack_pointer_base == source[9]
+                and source[14] is not None):
+            stack_pointer_base_max = source[14]
+        if bx_constant is _INHERIT:
+            bx_constant = source[15]
         target: State = (target_ip, stack, stack_delta, al_constant, ah_constant,
                          zf_constant, int91_return_index, ax_is_cs, ss_equals_cs,
                          stack_pointer_base, push_cs_pending, ds_equals_cs,
-                         si_values, direction_decrement)
+                         si_values, direction_decrement,
+                         stack_pointer_base_max, bx_constant)
         edges.append((source[0], target_ip, kind, len(stack)))
         if _file_offset(target_ip, len(data)) is None:
             return
@@ -192,6 +259,8 @@ def analyze_context_reachable(
             "ds_equals_cs": state[11],
             "si_values": state[12],
             "direction_decrement": state[13],
+            "stack_pointer_base_max": state[14],
+            "bx_constant": state[15],
         }
         if vector is not None:
             row["interrupt_vector"] = vector
@@ -205,7 +274,8 @@ def analyze_context_reachable(
         state = pending.popleft()
         (ip, call_stack, stack_delta, al_constant, ah_constant, zf_constant,
          int91_index, ax_is_cs, ss_equals_cs, stack_pointer_base,
-         push_cs_pending, ds_equals_cs, si_values, direction_decrement) = state
+         push_cs_pending, ds_equals_cs, si_values, direction_decrement,
+         stack_pointer_base_max, bx_constant) = state
         offset = _file_offset(ip, len(data))
         if offset is None:
             block(state, "target-outside-image")
@@ -233,7 +303,9 @@ def analyze_context_reachable(
         if any(operand.type == X86_OP_MEM and _memory_may_alias_return_word(
                 operand, call_stack, ss_equals_cs=ss_equals_cs,
                 stack_pointer_base=stack_pointer_base,
-                ds_equals_cs=ds_equals_cs, si_values=si_values)
+                ds_equals_cs=ds_equals_cs, si_values=si_values,
+                stack_pointer_base_max=stack_pointer_base_max,
+                bx_constant=bx_constant)
                for operand in instruction.operands):
             block(state, "memory-operand-with-active-call-frame")
             continue
@@ -328,7 +400,8 @@ def analyze_context_reachable(
                         observed_ax & 0xFF, (observed_ax >> 8) & 0xFF,
                         None, int91_index + 1, None, ss_equals_cs,
                         stack_pointer_base, False, ds_equals_cs, si_values, None,
-                        f"scenario-int91-return-ax-{observed_ax:04x}")
+                        f"scenario-int91-return-ax-{observed_ax:04x}",
+                        bx_constant=None)
                 continue
             if ip == 0x046D and vector == 0x10 and return_from_bios_int10_at_046d:
                 enqueue(state, next_ip, call_stack, stack_delta,
@@ -336,13 +409,43 @@ def analyze_context_reachable(
                         stack_pointer_base, False,
                         ds_equals_cs if preserve_bios_ds_at_046d else None,
                         None, None,
-                        "scenario-bios-int10-iret-at-046d;effects-opaque")
+                        "scenario-bios-int10-iret-at-046d;effects-opaque",
+                        bx_constant=None)
                 continue
             if ip == 0x1B26 and vector == 0x21 and return_from_dos_int21_at_1b26:
                 enqueue(state, next_ip, call_stack, stack_delta,
                         None, None, None, int91_index, None, ss_equals_cs,
                         stack_pointer_base, False, None, None, None,
-                        "scenario-dos-int21-return-at-1b26;effects-opaque")
+                        "scenario-dos-int21-return-at-1b26;effects-opaque",
+                        bx_constant=None)
+                continue
+            if ip == 0x1B2D and vector == 0x21 and return_from_dos_int21_at_1b2d:
+                enqueue(state, next_ip, call_stack, stack_delta,
+                        None, None, None, int91_index, None, ss_equals_cs,
+                        stack_pointer_base, False, None, None, None,
+                        "scenario-dos-int21-return-at-1b2d;effects-opaque",
+                        bx_constant=None)
+                continue
+            if ip == 0x1B38 and vector == 0x21 and return_from_dos_int21_at_1b38:
+                enqueue(state, next_ip, call_stack, stack_delta,
+                        None, None, None, int91_index, None, ss_equals_cs,
+                        stack_pointer_base, False, None, None, None,
+                        "scenario-dos-int21-return-at-1b38;effects-opaque",
+                        bx_constant=None)
+                continue
+            if ip == 0x1B3F and vector == 0x21 and return_from_dos_int21_at_1b3f:
+                enqueue(state, next_ip, call_stack, stack_delta,
+                        None, None, None, int91_index, None, ss_equals_cs,
+                        stack_pointer_base, False, None, None, None,
+                        "scenario-dos-int21-return-at-1b3f;effects-opaque",
+                        bx_constant=None)
+                continue
+            if ip in dos_int21_return_sites and vector == 0x21:
+                enqueue(state, next_ip, call_stack, stack_delta,
+                        None, None, None, int91_index, None, ss_equals_cs,
+                        stack_pointer_base, False, None, None, None,
+                        f"scenario-dos-int21-return-at-{ip:04x};effects-opaque",
+                        bx_constant=None)
                 continue
             block(state, "software-interrupt-opaque", vector=vector)
             continue
@@ -482,6 +585,7 @@ def analyze_context_reachable(
                 stack_pointer_base = ((source.imm & 0xFFFF)
                                       if source.type == X86_OP_IMM else
                                       ((ah_constant << 8) | al_constant))
+                stack_pointer_base_max = stack_pointer_base
             else:
                 block(state, "stack-pointer-write-opaque")
                 continue
@@ -534,10 +638,22 @@ def analyze_context_reachable(
                 updated_si = sorted({(value + delta) & 0xFFFF
                                      for value in si_values for delta in deltas})
                 si_values = tuple(updated_si) if len(updated_si) <= 64 else None
+        bx_is_operand = any(operand.type == X86_OP_REG
+                            and operand.reg == X86_REG_BX
+                            for operand in instruction.operands)
+        if instruction.mnemonic in {"popa", "popaw"} or bx_is_operand:
+            bx_constant = None
+        if (instruction.mnemonic == "mov" and len(instruction.operands) == 2
+                and instruction.operands[0].type == X86_OP_REG
+                and instruction.operands[0].reg == X86_REG_BX):
+            source = instruction.operands[1] if len(instruction.operands) > 1 else None
+            bx_constant = (source.imm & 0xFFFF
+                           if source is not None and source.type == X86_OP_IMM else None)
         enqueue(state, next_ip, call_stack, stack_delta, al_constant, ah_constant,
                 zf_constant, int91_index, ax_is_cs, ss_equals_cs,
                 stack_pointer_base, push_cs_pending, ds_equals_cs, si_values,
-                direction_decrement, "fallthrough")
+                direction_decrement, "fallthrough",
+                bx_constant=bx_constant)
 
     def route_for(target_ip: int) -> tuple[State | None, list[tuple[int, int, str, int]]]:
         found = next((state for state in parents if state[0] == target_ip), None)
@@ -562,7 +678,9 @@ def analyze_context_reachable(
                       bool(stop.get("push_cs_pending")), stop.get("ds_equals_cs"),
                       (tuple(int(value) for value in stop["si_values"])
                        if stop.get("si_values") is not None else None),
-                      stop.get("direction_decrement"))
+                      stop.get("direction_decrement"),
+                      stop.get("stack_pointer_base_max"),
+                      stop.get("bx_constant"))
         route: list[tuple[int, int, str, int]] = []
         cursor = stop_state
         while cursor in parents and parents[cursor] is not None:
@@ -592,6 +710,11 @@ def analyze_context_reachable(
         "int91_wrapper_stack_preserved": preserve_int91_wrapper_stack,
         "bios_ds_preserved_at_046d": preserve_bios_ds_at_046d,
         "dos_int21_return_at_1b26": return_from_dos_int21_at_1b26,
+        "dos_int21_return_at_1b2d": return_from_dos_int21_at_1b2d,
+        "dos_int21_return_at_1b38": return_from_dos_int21_at_1b38,
+        "dos_int21_return_at_1b3f": return_from_dos_int21_at_1b3f,
+        "dos_int21_return_sites": list(dos_int21_return_sites),
+        "dosboxx_com_loader_stack": dosboxx_com_loader_stack,
         "state_count": len(parents),
         "instruction_count": len(instructions),
         "instructions": instructions,
@@ -627,10 +750,18 @@ def static_reference_candidates(data: bytes, target: int) -> list[dict[str, obje
                              "bytes_hex": instruction.bytes.hex()})
             elif (operand.type == X86_OP_MEM and operand.mem.base == 0
                   and operand.mem.index == 0 and (operand.mem.disp & 0xFFFF) == target):
+                access_bits = operand.access
+                access = (
+                    "read-write" if access_bits & CS_AC_READ and access_bits & CS_AC_WRITE
+                    else "read" if access_bits & CS_AC_READ
+                    else "write" if access_bits & CS_AC_WRITE
+                    else "unknown"
+                )
                 rows.append({"kind": "byte-start-absolute-memory-candidate", "offset": offset,
                              "ip": DOS_BASE + offset, "operand_index": operand_index,
                              "mnemonic": instruction.mnemonic, "operands": instruction.op_str,
-                             "bytes_hex": instruction.bytes.hex()})
+                             "bytes_hex": instruction.bytes.hex(), "access": access,
+                             "segment": instruction.reg_name(operand.mem.segment) or "default"})
     literal = target.to_bytes(2, "little")
     start = 0
     while True:
@@ -641,6 +772,41 @@ def static_reference_candidates(data: bytes, target: int) -> list[dict[str, obje
                      "bytes_hex": literal.hex()})
         start = offset + 1
     return sorted(rows, key=lambda row: (int(row["offset"]), str(row["kind"])))
+
+
+def indirect_control_flow_candidates(data: bytes) -> list[dict[str, object]]:
+    """List byte-start candidates for register/memory and far control flow.
+
+    Candidate offsets are deliberately not classified as instruction starts.
+    This inventory can identify unresolved transfer forms near a loader, but
+    it does not resolve their runtime targets or establish reachability.
+    """
+    decoder = Cs(CS_ARCH_X86, CS_MODE_16)
+    decoder.detail = True
+    rows: list[dict[str, object]] = []
+    for offset in range(len(data)):
+        instruction = next(decoder.disasm(data[offset:offset + 15],
+                                          DOS_BASE + offset, count=1), None)
+        if instruction is None or instruction.address != DOS_BASE + offset:
+            continue
+        is_call_or_jump = (instruction.group(CS_GRP_CALL)
+                           or instruction.group(CS_GRP_JUMP))
+        far_transfer = instruction.mnemonic in {"lcall", "ljmp"}
+        indirect = any(operand.type in {X86_OP_MEM, X86_OP_REG}
+                       for operand in instruction.operands)
+        if not is_call_or_jump or not (far_transfer or indirect):
+            continue
+        operand_kind = "+".join(
+            "memory" if operand.type == X86_OP_MEM else "register"
+            for operand in instruction.operands
+            if operand.type in {X86_OP_MEM, X86_OP_REG}
+        ) or "far-immediate"
+        rows.append({"offset": offset, "ip": DOS_BASE + offset,
+                     "mnemonic": instruction.mnemonic,
+                     "operands": instruction.op_str,
+                     "bytes_hex": instruction.bytes.hex(),
+                     "operand_kind": operand_kind})
+    return rows
 
 
 def external_output(path: Path) -> Path:
@@ -661,11 +827,13 @@ def external_output(path: Path) -> Path:
 def write_report(path: Path, data: bytes, result: dict[str, object]) -> str:
     output = external_output(path)
     lines = [
-        "# schema=project-eon.dos-context-reachability/v2",
+        "# schema=project-eon.dos-context-reachability/v4",
         f"# direct_media_set_sha256={DIRECT_MEDIA_SET_SHA256}",
         f"# image=TITLES.EXE;size={TITLES_SIZE};sha256={TITLES_SHA256};base=0x{DOS_BASE:04x}",
         f"# input_sha256={hashlib.sha256(data).hexdigest()}",
         "# analysis=bounded-context-sensitive-static;code-data-unclassified;no-runtime-claim",
+        "# xrefs=byte-start candidates only;memory access direction is decoder metadata;"
+        "no source instruction-start, code/data, reachability, or runtime claim",
         ("# scenario-int91=opaque" if not result["int91_return_ax_sequence"] else
          "# scenario=observed-TITLES-INT91-return-AX-at-0127:" +
          ",".join(f"0x{int(value):04x}" for value in result["int91_return_ax_sequence"]) +
@@ -680,15 +848,33 @@ def write_report(path: Path, data: bytes, result: dict[str, object]) -> str:
         ("# scenario-dos-int21-1b26=opaque" if not result["dos_int21_return_at_1b26"] else
          "# scenario-dos-int21-1b26=return-to-1b28;restore-caller-CS-IP-SS-SP-and-preserve-active-return-words;"
          "registers-flags-and-memory-effects-unknown;assumption-only;not-runtime-proof"),
-        f"# entry_ip=0x{ENTRY_IP:04x};state_count={result['state_count']};instructions={result['instruction_count']}",
+        ("# scenario-dos-int21-1b2d=opaque" if not result["dos_int21_return_at_1b2d"] else
+         "# scenario-dos-int21-1b2d=return-to-1b2f;restore-caller-CS-IP-SS-SP-and-preserve-active-return-words;"
+         "registers-flags-allocation-and-memory-effects-unknown;assumption-only;not-runtime-proof"),
+        ("# scenario-dos-int21-1b38=opaque" if not result["dos_int21_return_at_1b38"] else
+         "# scenario-dos-int21-1b38=return-to-1b3a;restore-caller-CS-IP-SS-SP-and-preserve-active-return-words;"
+         "registers-flags-free-and-memory-effects-unknown;assumption-only;not-runtime-proof"),
+        ("# scenario-dos-int21-1b3f=opaque" if not result["dos_int21_return_at_1b3f"] else
+         "# scenario-dos-int21-1b3f=return-to-1b41;restore-caller-CS-IP-SS-SP-and-preserve-active-return-words;"
+         "registers-flags-allocation-and-memory-effects-unknown;assumption-only;not-runtime-proof"),
+        "# scenario-extra-dos-int21-return-sites=" +
+        (",".join(f"0x{int(site):04x}" for site in result["dos_int21_return_sites"])
+         if result["dos_int21_return_sites"] else "opaque") +
+        ";registers-flags-and-memory-effects-unknown;assumption-only;not-runtime-proof",
+        ("# scenario-dosboxx-com-loader-stack=opaque" if not result["dosboxx_com_loader_stack"] else
+         "# scenario-dosboxx-com-loader-stack=SS-equals-DS-equals-CS;SP-base-interval=0x1d6e..0xfffe;"
+         "exact-TITLES-EXE-size-and-SHA256;successful-pinned-DOSBox-X-COM-loader-model;"
+         "not-an-observed-stack-or-general-DOS-runtime-proof"),
+        f"# entry_ip=0x{int(result['entry_ip']):04x};state_count={result['state_count']};instructions={result['instruction_count']}",
         f"# limits=call_depth:{DEFAULT_CALL_DEPTH};states:{DEFAULT_STATE_LIMIT}",
-        "# memory_alias=CS-absolute-or-DS-absolute-when-DS-equals-CS-or-DS:SI;"
+        "# memory_alias=CS-absolute-or-BX-relative-when-BX-is-known-or-DS-absolute-when-DS-equals-CS-or-DS:SI;"
         "only-when-provably-disjoint-from-return-words;"
         "memory-values-and-effects-unmodeled;LODSB-SI-direction-forks-when-DF-unknown",
-        "# semantics=near-call-return-candidates;active-frame-memory-opaque-except-proven-disjoint-CS-absolute-or-DS-absolute-when-DS=CS-or-DS:SI;memory-effects-not-modeled;"
-        "INT91-0127-AX,INT10-046D-IRET,and-INT21-1B26-return-only-when-scenario-provided;"
+        "# semantics=near-call-return-candidates;active-frame-memory-opaque-except-proven-disjoint-CS-absolute-or-known-BX-relative-or-DS-absolute-when-DS=CS-or-DS:SI;"
+        "BX-immediate-constant-tracked;other-BX-uses-invalidate-it;DOSBox-X-stack-interval-only-when-scenario-provided;memory-effects-not-modeled;"
+        "INT91-0127-AX,INT10-046D-IRET,and-INT21-1B26/1B2D/1B38/1B3F/extra-sites-including-0549/1BCA/1BD5-return-only-when-scenario-provided;"
         "BIOS-DOS-register-flags-memory-device-effects-unknown;"
-        "INT91-wrapper-saved-DS-and-BIOS-DS-preserved-only-when-scenario-provided;"
+        "INT91-wrapper-saved-DS,and-BIOS-DS-preserved-only-when-scenario-provided;"
         "AL-AH-constants;CMP-TEST-ZF-only;"
         "unknown-conditional-branches-both;indirect-and-far-transfers-opaque",
     ]
@@ -713,12 +899,18 @@ def write_report(path: Path, data: bytes, result: dict[str, object]) -> str:
             lines.append(f"blocked_route\t{source:04x}\t{kind}\t{destination:04x}\tdepth={depth}")
     lines.append("stop_counts\t" + ",".join(
         f"{key}:{value}" for key, value in sorted(result["stop_counts"].items())))
-    lines.append("target\treference_kind\tfile_offset\tinstruction_ip\tmnemonic\toperands\tbytes")
-    for target in TARGETS:
+    lines.append("target\treference_kind\tfile_offset\tinstruction_ip\tmnemonic\toperands\tbytes\taccess\tsegment")
+    for target in REFERENCE_TARGETS:
         for ref in static_reference_candidates(data, target):
             lines.append(f"{target:04x}\t{ref['kind']}\t{int(ref['offset']):04x}\t"
                          f"{int(ref.get('ip', 0)):04x}\t{ref.get('mnemonic', '-')}\t"
-                         f"{ref.get('operands', '-')}\t{ref['bytes_hex']}")
+                         f"{ref.get('operands', '-')}\t{ref['bytes_hex']}\t"
+                         f"{ref.get('access', '-')}\t{ref.get('segment', '-')}")
+    lines.append("file_offset\truntime_ip\tmnemonic\toperands\tbytes\toperand_kind")
+    for candidate in indirect_control_flow_candidates(data):
+        lines.append(f"{int(candidate['offset']):04x}\t{int(candidate['ip']):04x}\t"
+                     f"{candidate['mnemonic']}\t{candidate['operands']}\t"
+                     f"{candidate['bytes_hex']}\t{candidate['operand_kind']}")
     lines.append("ip\tfile_offset\tmnemonic\toperands\tbytes")
     for ip, row in sorted(result["instructions"].items()):  # type: ignore[union-attr]
         lines.append(f"{ip:04x}\t{int(row['file_offset']):04x}\t{row['mnemonic']}\t"
@@ -743,6 +935,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="Existing direct-media directory; media is read in place")
     parser.add_argument("--output", type=Path, required=True,
                         help="New report path under ~/.cache/project-eon-tools")
+    parser.add_argument("--entry-ip", type=lambda value: int(value, 0), default=ENTRY_IP,
+                        help="16-bit analysis start IP (default: the established title-loader site 0x1b80)")
     parser.add_argument("--scenario-observed-int91-returns", action="store_true",
                         help="Explore only the two captured TITLES.EXE INT 91h AX values at 0x0127, in observed order (0x0101, 0x0000); this is a static scenario, not runtime proof")
     parser.add_argument("--scenario-return-from-bios-int10-at-046d", action="store_true",
@@ -753,6 +947,26 @@ def main(argv: list[str] | None = None) -> int:
                         help="Additionally assume BIOS INT 10h at 0x046d preserves the incoming DS value")
     parser.add_argument("--scenario-return-from-dos-int21-at-1b26", action="store_true",
                         help="Assume DOS INT 21h at TITLES.EXE runtime 0x1b26 returns to 0x1b28 with the caller stack and active return words intact; all other effects stay unknown")
+    parser.add_argument("--scenario-return-from-dos-int21-at-1b2d", action="store_true",
+                        help="Assume DOS INT 21h/AH=48h at TITLES.EXE runtime 0x1b2d returns to 0x1b2f with the caller stack and active return words intact; register, flags, allocation, and memory effects stay unknown")
+    parser.add_argument("--scenario-return-from-dos-int21-at-1b38", action="store_true",
+                        help="Assume DOS INT 21h at TITLES.EXE runtime 0x1b38 returns to 0x1b3a with the caller stack and active return words intact; register, flags, free, and memory effects stay unknown")
+    parser.add_argument("--scenario-return-from-dos-int21-at-1b3f", action="store_true",
+                        help="Assume DOS INT 21h/AH=48h at TITLES.EXE runtime 0x1b3f returns to 0x1b41 with the caller stack and active return words intact; register, flags, allocation, and memory effects stay unknown")
+    parser.add_argument("--scenario-return-from-dos-int21-at-1b4f", action="store_true",
+                        help="Assume DOS INT 21h at 0x1b4f returns to 0x1b51 with caller stack preserved; register, flags, allocation and memory effects stay unknown")
+    parser.add_argument("--scenario-return-from-dos-int21-at-1b64", action="store_true",
+                        help="Assume DOS INT 21h at 0x1b64 returns to 0x1b66 with caller stack preserved; register, flags, allocation and memory effects stay unknown")
+    parser.add_argument("--scenario-return-from-dos-int21-at-1b74", action="store_true",
+                        help="Assume DOS INT 21h at 0x1b74 returns to 0x1b76 with caller stack preserved; register, flags, allocation and memory effects stay unknown")
+    parser.add_argument("--scenario-return-from-dos-int21-at-1bca", action="store_true",
+                        help="Assume DOS INT 21h/AH=48h at 0x1bca returns to 0x1bcc with caller stack preserved; AX, BX, flags, allocation and memory effects stay unknown")
+    parser.add_argument("--scenario-return-from-dos-int21-at-1bd5", action="store_true",
+                        help="Assume DOS INT 21h/AH=49h at 0x1bd5 returns to 0x1bd7 with caller stack preserved; registers, flags, free and memory effects stay unknown")
+    parser.add_argument("--scenario-return-from-dos-int21-at-0549", action="store_true",
+                        help="Assume DOS INT 21h/AH=3Dh at 0x0549 returns to 0x054b with caller stack preserved; returned registers, flags, file effects and memory stay unknown")
+    parser.add_argument("--scenario-dosboxx-com-loader-stack", action="store_true",
+                        help="Use the pinned DOSBox-X successful COM-loader model for exact hash-matched TITLES.EXE: SS=DS=CS and complete initial SP interval 0x1d6e..0xfffe; static scenario only, not observed runtime proof")
     args = parser.parse_args(argv)
     try:
         media = verify_direct_directory(args.media_root, DIRECT_MEDIA_SET_SHA256)
@@ -761,11 +975,24 @@ def main(argv: list[str] | None = None) -> int:
             raise ContextReachabilityError("hash-matched TITLES.EXE has unexpected size")
         scenario_returns = (0x0101, 0x0000) if args.scenario_observed_int91_returns else ()
         result = analyze_context_reachable(
-            data, int91_return_ax_sequence=scenario_returns,
+            data, entry_ip=args.entry_ip,
+            int91_return_ax_sequence=scenario_returns,
             return_from_bios_int10_at_046d=args.scenario_return_from_bios_int10_at_046d,
             preserve_int91_wrapper_stack=args.scenario_preserve_int91_wrapper_stack,
             preserve_bios_ds_at_046d=args.scenario_preserve_bios_ds_at_046d,
-            return_from_dos_int21_at_1b26=args.scenario_return_from_dos_int21_at_1b26)
+            return_from_dos_int21_at_1b26=args.scenario_return_from_dos_int21_at_1b26,
+            return_from_dos_int21_at_1b2d=args.scenario_return_from_dos_int21_at_1b2d,
+            return_from_dos_int21_at_1b38=args.scenario_return_from_dos_int21_at_1b38,
+            return_from_dos_int21_at_1b3f=args.scenario_return_from_dos_int21_at_1b3f,
+            dos_int21_return_sites=tuple(
+                site for site, enabled in ((0x1B4F, args.scenario_return_from_dos_int21_at_1b4f),
+                                           (0x1B64, args.scenario_return_from_dos_int21_at_1b64),
+                                           (0x1B74, args.scenario_return_from_dos_int21_at_1b74),
+                                           (0x1BCA, args.scenario_return_from_dos_int21_at_1bca),
+                                           (0x1BD5, args.scenario_return_from_dos_int21_at_1bd5),
+                                           (0x0549, args.scenario_return_from_dos_int21_at_0549))
+                if enabled),
+            dosboxx_com_loader_stack=args.scenario_dosboxx_com_loader_stack)
         digest = write_report(args.output, data, result)
     except (OSError, ContextReachabilityError, ValueError) as error:
         print(f"DOS CONTEXT REACHABILITY REJECTED  {error}", file=sys.stderr)
@@ -785,6 +1012,21 @@ def main(argv: list[str] | None = None) -> int:
     if result["dos_int21_return_at_1b26"]:
         print("  scenario DOS INT 21h at TITLES.EXE:0x1b26 returns to 0x1b28; "
               "register and memory effects unknown")
+    if result["dos_int21_return_at_1b2d"]:
+        print("  scenario DOS INT 21h/AH=48h at TITLES.EXE:0x1b2d returns to 0x1b2f; "
+              "register, flags, allocation and memory effects unknown")
+    if result["dos_int21_return_at_1b38"]:
+        print("  scenario DOS INT 21h at TITLES.EXE:0x1b38 returns to 0x1b3a; "
+              "register, flags, free and memory effects unknown")
+    if result["dos_int21_return_at_1b3f"]:
+        print("  scenario DOS INT 21h/AH=48h at TITLES.EXE:0x1b3f returns to 0x1b41; "
+              "register, flags, allocation and memory effects unknown")
+    for site in result["dos_int21_return_sites"]:
+        print(f"  scenario DOS INT 21h at TITLES.EXE:0x{int(site):04x} returns; "
+              "register, flags, allocation and memory effects unknown")
+    if result["dosboxx_com_loader_stack"]:
+        print("  scenario pinned DOSBox-X COM loader: SS=DS=CS, initial SP base "
+              "0x1d6e..0xfffe; exact image only; not runtime proof")
     for target in TARGETS:
         reach = result["targets"][target]  # type: ignore[index]
         print(f"  {target:04x}: reachable={str(reach['reachable']).lower()}")

@@ -259,6 +259,46 @@ bool title_handoff_schema_matches(const std::size_t index, const std::string_vie
     return false;
 }
 
+bool title_exec_entry_schema_matches(const std::size_t index, const std::string_view type,
+    const std::map<std::string_view, std::string_view>& fields) {
+    if (index < 4 || (index >= 5 && index < 8)) {
+        return title_handoff_schema_matches(index, type, fields);
+    }
+    if (index == 4) {
+        const auto segment = fields.find("segment");
+        const auto value = fields.find("value");
+        return type == "stack-word" && segment != fields.end()
+            && fixed_lowercase_hex(segment->second, 4) && value != fields.end()
+            && fixed_lowercase_hex(value->second, 4)
+            && fields_equal(fields, {{"image", "titles.exe"}, {"pc", "0x1c60"},
+                 {"segment", segment->second}, {"address", "0x1aa0"}, {"value", value->second}});
+    }
+    if (index == 8) {
+        return type == "game-exec-request" && fields_equal(fields,
+            {{"image", "mill.com"}, {"call_pc", "0x024c"}, {"helper_pc", "0x031c"},
+             {"program", "0x069a"}, {"parameter_block", "0x067a"}});
+    }
+    if (index == 9) {
+        const auto segment = fields.find("cs");
+        const auto stack_segment = fields.find("ss");
+        const auto stack_pointer = fields.find("sp");
+        const auto image_hash = fields.find("image_sha256");
+        return segment != fields.end() && segment->second != "0x0000"
+            && fixed_lowercase_hex(segment->second, 4)
+            && stack_segment != fields.end() && stack_segment->second == segment->second
+            && stack_pointer != fields.end() && fixed_lowercase_hex(stack_pointer->second, 4)
+            && image_hash != fields.end()
+            && image_hash->second == "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57"
+            && type == "child-process-entry" && fields_equal(fields,
+                {{"image", "2200ad.exe"}, {"image_sha256", image_hash->second},
+                 {"call_pc", "0x024c"}, {"exec_pc", "0x0337"}, {"ax", "0x4b00"},
+                 {"dx", "0x069a"}, {"parameter_block", "0x067a"},
+                 {"ip", "0x0100"}, {"cs", segment->second}, {"ss", stack_segment->second},
+                 {"sp", stack_pointer->second}});
+    }
+    return false;
+}
+
 bool parse_title_handoff_event_line(const std::string_view line, const std::size_t index,
                                     std::uint64_t& sequence, std::uint64_t& tick,
                                     std::string& error) {
@@ -273,6 +313,24 @@ bool parse_title_handoff_event_line(const std::string_view line, const std::size
     if (!parse_fields(line.substr(tab + 1), sequence, tick, type, fields)
         || !title_handoff_schema_matches(index, type, fields)) {
         error = "Millennium DOS title-handoff event is outside the ordered native-boundary schema";
+        return false;
+    }
+    return true;
+}
+
+bool parse_title_exec_entry_event_line(const std::string_view line, const std::size_t index,
+    std::uint64_t& sequence, std::uint64_t& tick, std::string& error) {
+    const auto tab = line.find('\t');
+    if (line.size() > 4096 || line.empty() || line.find('\r') != std::string_view::npos
+        || tab == std::string_view::npos || tab != line.rfind('\t') || line.substr(0, tab) != "event") {
+        error = "Millennium DOS EXEC-entry event is not event<TAB>sequence tick type fields";
+        return false;
+    }
+    std::string_view type;
+    std::map<std::string_view, std::string_view> fields;
+    if (!parse_fields(line.substr(tab + 1), sequence, tick, type, fields)
+        || !title_exec_entry_schema_matches(index, type, fields)) {
+        error = "Millennium DOS EXEC-entry event is outside the ordered raw-observation schema";
         return false;
     }
     return true;
@@ -487,6 +545,97 @@ parse_millennium_dos_title_handoff_reference_observations(const std::string_view
                 observations.restored_stack_pointer)) {
             error = "Millennium DOS title-handoff stack observation is invalid";
             return std::nullopt;
+        }
+        cursor = end + 1;
+    }
+    return observations;
+}
+
+bool validate_millennium_dos_title_exec_entry_reference_events(
+    const std::string_view events, MillenniumDosTitleExecEntryTraceDiagnostics& diagnostics,
+    std::string& error) {
+    diagnostics = {};
+    if (events.empty() || events.back() != '\n') {
+        error = "Millennium DOS EXEC-entry events must use LF-terminated records";
+        return false;
+    }
+    std::uint64_t previous_sequence = 0;
+    std::uint64_t previous_tick = 0;
+    std::size_t cursor = 0;
+    for (std::size_t index = 0; index < 10; ++index) {
+        const auto end = events.find('\n', cursor);
+        if (end == std::string_view::npos) {
+            error = "Millennium DOS EXEC-entry trace ended before its documented boundary";
+            return false;
+        }
+        std::uint64_t sequence = 0;
+        std::uint64_t tick = 0;
+        if (!parse_title_exec_entry_event_line(events.substr(cursor, end - cursor), index,
+                sequence, tick, error)
+            || (index != 0 && (sequence <= previous_sequence || tick <= previous_tick))) {
+            if (error.empty()) error = "Millennium DOS EXEC-entry events have invalid ordering";
+            return false;
+        }
+        if (index == 8) diagnostics.exec_request_sequence = sequence;
+        if (index == 9) diagnostics.child_entry_sequence = sequence;
+        previous_sequence = sequence;
+        previous_tick = tick;
+        cursor = end + 1;
+    }
+    if (cursor != events.size()) {
+        error = "Millennium DOS EXEC-entry trace must contain exactly its documented boundary records";
+        return false;
+    }
+    diagnostics.event_count = 10;
+    return true;
+}
+
+std::optional<MillenniumDosTitleExecEntryObservations>
+parse_millennium_dos_title_exec_entry_reference_observations(const std::string_view events,
+    std::string& error) {
+    MillenniumDosTitleExecEntryTraceDiagnostics diagnostics;
+    if (!validate_millennium_dos_title_exec_entry_reference_events(events, diagnostics, error)) {
+        return std::nullopt;
+    }
+    MillenniumDosTitleExecEntryObservations observations;
+    observations.exec_request_sequence = diagnostics.exec_request_sequence;
+    observations.child_entry_sequence = diagnostics.child_entry_sequence;
+    std::size_t cursor = 0;
+    for (std::size_t index = 0; index < 10; ++index) {
+        const auto end = events.find('\n', cursor);
+        const auto line = events.substr(cursor, end - cursor);
+        const auto tab = line.find('\t');
+        std::uint64_t ignored_sequence = 0;
+        std::uint64_t ignored_tick = 0;
+        std::string_view type;
+        std::map<std::string_view, std::string_view> fields;
+        if (tab == std::string_view::npos
+            || !parse_fields(line.substr(tab + 1), ignored_sequence, ignored_tick, type, fields)) {
+            error = "Millennium DOS EXEC-entry events changed after schema validation";
+            return std::nullopt;
+        }
+        if (index == 8) {
+            if (!parse_fixed_hex(fields.at("call_pc"), 4, observations.exec_call_instruction)
+                || !parse_fixed_hex(fields.at("helper_pc"), 4, observations.exec_helper_target)
+                || !parse_fixed_hex(fields.at("program"), 4, observations.program_address)
+                || !parse_fixed_hex(fields.at("parameter_block"), 4, observations.parameter_block)) {
+                error = "Millennium DOS EXEC-request observation is invalid";
+                return std::nullopt;
+            }
+        } else if (index == 4) {
+            if (!parse_fixed_hex(fields.at("segment"), 4, observations.restored_stack_segment)
+                || !parse_fixed_hex(fields.at("value"), 4, observations.restored_stack_pointer)) {
+                error = "Millennium DOS stack-word observation is invalid";
+                return std::nullopt;
+            }
+        } else if (index == 9) {
+            if (!parse_fixed_hex(fields.at("ip"), 4, observations.child_entry_ip)
+                || !parse_fixed_hex(fields.at("cs"), 4, observations.child_code_segment)
+                || !parse_fixed_hex(fields.at("ss"), 4, observations.initial_stack_segment)
+                || !parse_fixed_hex(fields.at("sp"), 4, observations.initial_stack_pointer)) {
+                error = "Millennium DOS child-entry observation is invalid";
+                return std::nullopt;
+            }
         }
         cursor = end + 1;
     }

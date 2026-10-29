@@ -10,11 +10,19 @@ namespace eon {
 
 MillenniumDosVideoFunctionZeroSession::MillenniumDosVideoFunctionZeroSession(
     const std::span<const std::uint8_t> english_driver,
-    const MillenniumDosVideoDriverKind kind, const std::uint8_t initial_cached_mode)
+    const MillenniumDosVideoDriverKind kind, const std::uint8_t initial_cached_mode,
+    const std::uint64_t first_sequence,
+    const std::optional<std::uint16_t> initial_cx)
     : driver_(parse_millennium_dos_video_driver(english_driver, kind)),
       state_(initial_cached_mode == driver_.function_zero_cached_mode_unknown_sentinel
           ? MillenniumDosVideoFunctionZeroState::awaiting_cached_mode_query_result
-          : MillenniumDosVideoFunctionZeroState::awaiting_set_mode_result) {
+          : MillenniumDosVideoFunctionZeroState::awaiting_set_mode_result),
+      next_sequence_(first_sequence),
+      current_cx_(initial_cx.value_or(0)),
+      current_cx_known_mask_(initial_cx ? 0xffff : 0) {
+    if (first_sequence == 0 || first_sequence == std::numeric_limits<std::uint64_t>::max()) {
+        throw std::runtime_error("Invalid Millennium DOS function-zero sequence origin");
+    }
     const bool ega = kind == MillenniumDosVideoDriverKind::ega640;
     // The primary mode-check span ends at the first successful-continuation
     // byte; a second independently hash-bound prefix is advanced only by the
@@ -93,6 +101,18 @@ MillenniumDosVideoFunctionZeroSession::MillenniumDosVideoFunctionZeroSession(
                 != multi_count_hash) {
             throw std::runtime_error("Unsupported Millennium DOS EGA multi-count loop");
         }
+    } else {
+        constexpr auto single_count_tail_offset = static_cast<std::size_t>(0x23d);
+        constexpr auto single_count_tail_size = static_cast<std::size_t>(0x0f);
+        constexpr auto single_count_tail_hash =
+            "ae64033de75339c4fba83f0663e0b84776ed8c1dfc54b190c772cfb9982ce23d";
+        if (single_count_tail_offset > english_driver.size()
+            || english_driver.size() - single_count_tail_offset < single_count_tail_size
+            || to_hex(sha256(english_driver.subspan(
+                    single_count_tail_offset, single_count_tail_size)))
+                != single_count_tail_hash) {
+            throw std::runtime_error("Unsupported Millennium DOS MCGA single-count store prefix");
+        }
     }
 }
 
@@ -103,12 +123,13 @@ MillenniumDosVideoFunctionZeroSession::boundary() const {
         // Only AH is set before this INT 10h. AL remains caller-owned.
         return MillenniumDosVideoFunctionZeroBoundary{
             MillenniumDosVideoFunctionZeroBoundaryKind::cached_mode_query, next_sequence_,
-            driver_.function_zero_cached_mode_query_interrupt_site, 0x10, 0x0f00, 0xff00};
+            driver_.function_zero_cached_mode_query_interrupt_site, 0x10, 0x0f00, 0xff00,
+            current_cx_, current_cx_known_mask_};
     case MillenniumDosVideoFunctionZeroState::awaiting_set_mode_result:
         return MillenniumDosVideoFunctionZeroBoundary{
             MillenniumDosVideoFunctionZeroBoundaryKind::set_mode, next_sequence_,
             driver_.function_zero_set_mode_interrupt_site, 0x10,
-            driver_.function_zero_video_mode, 0xffff};
+            driver_.function_zero_video_mode, 0xffff, current_cx_, current_cx_known_mask_};
     case MillenniumDosVideoFunctionZeroState::awaiting_verify_mode_result: {
         if (!set_mode_result_al_) {
             throw std::runtime_error("Missing Millennium DOS function-zero set-mode result");
@@ -117,7 +138,8 @@ MillenniumDosVideoFunctionZeroSession::boundary() const {
         return MillenniumDosVideoFunctionZeroBoundary{
             MillenniumDosVideoFunctionZeroBoundaryKind::verify_mode_query, next_sequence_,
             driver_.function_zero_verify_mode_interrupt_site, 0x10,
-            static_cast<std::uint16_t>(0x0f00 | al), 0xffff};
+            static_cast<std::uint16_t>(0x0f00 | al), 0xffff,
+            current_cx_, current_cx_known_mask_};
     }
     case MillenniumDosVideoFunctionZeroState::mode_match_continuation_boundary:
     case MillenniumDosVideoFunctionZeroState::mode_success_postlude_prefix_recorded:
@@ -125,6 +147,7 @@ MillenniumDosVideoFunctionZeroSession::boundary() const {
     case MillenniumDosVideoFunctionZeroState::mode_success_ega_loop_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_pop_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_store_prefix_recorded:
+    case MillenniumDosVideoFunctionZeroState::mode_success_mcga_store_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_returned_boundary:
     case MillenniumDosVideoFunctionZeroState::mode_mismatch_ret_boundary:
         return std::nullopt;
@@ -145,6 +168,8 @@ void MillenniumDosVideoFunctionZeroSession::observe_bios_result(
     // Append only after all identity checks. Following mutations are
     // non-throwing, so rejected or reordered observations are transactional.
     bios_results_.push_back(result);
+    current_cx_ = result.cx;
+    current_cx_known_mask_ = result.cx_known_mask;
     switch (state_) {
     case MillenniumDosVideoFunctionZeroState::awaiting_cached_mode_query_result:
         cache_write_ = MillenniumDosVideoFunctionZeroLocalWrite{
@@ -177,6 +202,7 @@ void MillenniumDosVideoFunctionZeroSession::observe_bios_result(
     case MillenniumDosVideoFunctionZeroState::mode_success_ega_loop_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_pop_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_store_prefix_recorded:
+    case MillenniumDosVideoFunctionZeroState::mode_success_mcga_store_prefix_recorded:
     case MillenniumDosVideoFunctionZeroState::mode_success_returned_boundary:
     case MillenniumDosVideoFunctionZeroState::mode_mismatch_ret_boundary:
         throw std::runtime_error("Millennium DOS function-zero session has stopped");
@@ -219,6 +245,31 @@ void MillenniumDosVideoFunctionZeroSession::advance_success_postlude_prefix() {
         }
     }
     state_ = MillenniumDosVideoFunctionZeroState::mode_success_postlude_prefix_recorded;
+}
+
+void MillenniumDosVideoFunctionZeroSession::advance_mcga_single_count_store_prefix() {
+    if (driver_.kind != MillenniumDosVideoDriverKind::mcga
+        || state_ != MillenniumDosVideoFunctionZeroState::mode_success_postlude_prefix_recorded
+        || !postlude_prefix_outcome_
+        || postlude_prefix_outcome_->endpoint
+            != MillenniumDosVideoFunctionZeroPostludeEndpoint::mcga_single_count_branch
+        || postlude_prefix_outcome_->instruction_address != 0x023d
+        || !postlude_prefix_outcome_->di) {
+        throw std::runtime_error("Millennium DOS MCGA single-count store is not pending");
+    }
+
+    auto& outcome = *postlude_prefix_outcome_;
+    auto ax = *outcome.di;
+    ax = static_cast<std::uint16_t>(ax - 0x0080U);
+    ax = static_cast<std::uint16_t>(ax >> 1U);
+    ax = static_cast<std::uint16_t>(ax >> 1U);
+    const auto low_ax = static_cast<std::uint8_t>(ax & 0xffU);
+    outcome.endpoint = MillenniumDosVideoFunctionZeroPostludeEndpoint::mcga_ret;
+    outcome.instruction_address = 0x024b;
+    outcome.ax = static_cast<std::uint16_t>(0x0100U | low_ax);
+    outcome.local_write = MillenniumDosVideoFunctionZeroLocalWrite{
+        0x0246, 0x00ac, low_ax};
+    state_ = MillenniumDosVideoFunctionZeroState::mode_success_mcga_store_prefix_recorded;
 }
 
 void MillenniumDosVideoFunctionZeroSession::advance_ega_success_stack_prefix(
@@ -348,6 +399,7 @@ void MillenniumDosVideoFunctionZeroSession::observe_ega_near_return(
         || observation.instruction_address != 0x0234
         || observation.ss != ega_stack_outcome_->ss
         || observation.sp != ega_stack_outcome_->sp_before
+        || observation.return_ip != 0x0012
         || next_sequence_ == std::numeric_limits<std::uint64_t>::max()) {
         throw std::runtime_error("Detached Millennium DOS EGA near-RET stack observation");
     }

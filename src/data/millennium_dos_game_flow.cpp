@@ -582,7 +582,7 @@ parse_millennium_dos_startup_zero_path_boundary(
     }
     return {std::string(executable_sha256), 0xd2f5, 0x1161, 0xda05,
         {0x01, 0x03, 0x02}, {0x1131, 0x113d, 0x1155, 0x1149}, 0x117c, 0x053a,
-        0x2f6a, 0x0550, 0x21, 0x3d, 0x02, std::string(zero_path_sha256),
+        0x2f6a, 0x054d, 0x21, 0x3d, 0x02, std::string(zero_path_sha256),
         std::string(selector_sha256), std::string(security_loader_prefix_sha256),
         std::string(selector_names_sha256), std::string(security_name_sha256)};
 }
@@ -1013,6 +1013,24 @@ MillenniumDosPostOverlayAdapterLoop parse_millennium_dos_post_overlay_adapter_lo
          0x11a4, 0x0b0c, 0x0ea4, 0x0b5b, 0x0ebb, 0x7601, 0x7bcb, 0x0f05},
         0xd3ba, 0xd3bc, 0xd3c6, 0xd3be, 0x07f9, 0xd3c1, 0x01,
         0xd3c3, 0xd3de, 0xd3e0, 0xd3d2, 0xd3e2, std::string(loop_sha256)};
+}
+
+MillenniumDosDosConsolePollLeaf parse_millennium_dos_dos_console_poll_leaf(
+    const std::span<const std::uint8_t> game_executable) {
+    constexpr std::size_t load_bias = 0x100;
+    constexpr std::string_view executable_sha256 =
+        "427574e5f780b2a7b5c4207d167116dc44aea3fb67096fbf12a46c4f544a0a57";
+    constexpr std::uint16_t entry = 0x0f05;
+    constexpr ExecutableByteAnchor<7> leaf{
+        "96715350de2c4a159dd994b1c40dafb21c038f38f52937aa1a54491485146dc6"};
+    constexpr std::size_t file_offset = entry - load_bias;
+    if (game_executable.size() != 54'391
+        || to_hex(sha256(game_executable)) != executable_sha256
+        || !has_bytes(game_executable, file_offset, leaf)) {
+        throw std::runtime_error("Unsupported Millennium DOS AH=06h console-poll leaf");
+    }
+    return {std::string(executable_sha256), entry, leaf.size(),
+        "96715350de2c4a159dd994b1c40dafb21c038f38f52937aa1a54491485146dc6"};
 }
 
 MillenniumDosPostOverlayDispatchPrefix parse_millennium_dos_post_overlay_dispatch_prefix(

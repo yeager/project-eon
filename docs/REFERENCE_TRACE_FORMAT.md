@@ -93,6 +93,7 @@ capture tooling must choose the row below before it writes a manifest.
 | `millennium-dos-en-gx-startup-v2` | `millennium`/`dos`/`en`, 328383, `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | None | Ten ordered private-return, original-byte-read, overlay-return and local-return observations through the GX startup continuation. |
 | `millennium-dos-en-title-init-v2` | `millennium`/`dos`/`en`, 328383, `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | None | One exact launcher/title request prefix and two ordered `TITLES.EXE` private-vector return observations. |
 | `millennium-dos-en-title-handoff-v3` | `millennium`/`dos`/`en`, 328383, `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | None | Eight ordered title-exit, stack-word, title-termination, parent-EXEC and child-status observations at the existing native title-to-game boundaries. |
+| `millennium-dos-en-title-exec-entry-v4` | `millennium`/`dos`/`en`, 328383, `e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` | None | The eight v3 boundaries with the stack segment recorded, followed by exact `MILL.COM` game-EXEC request and hash-identified `2200AD.EXE` child-entry records. Diagnostics only. |
 | `deuteros-atari-st-boot-v1` | `deuteros`/`atari-st`/`en`, 3021682, `c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653` | `source_media_sha256=aba874134807360ccde0ff98d6b82a965f57dcae5800b5b54394472522ef5bee`; `source_stage_sha256=2489256511e857a4a1b20d413b4f869edaae1f4df7f62ce869e324cad40e81d7` | Replicants Disk 1 and its copied second-stage interval. |
 | `millennium-amiga-en-defjam-bootstrap-v1` | `millennium`/`amiga`/`en`, 2558009, `2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400` | None | Two caller-side Defjam bootstrap handoffs. |
 | `deuteros-amiga-en-title-stage-v1` | `deuteros`/`amiga`/`en`, 4066771, `f4dc8dd1c27c5d389837783becd9b95ab09b78baf40e94e39e2b7e590e470e04` | `source_media_sha256=6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`; `source_stage_sha256=48d65260e9b5f5cbf8d8b3675a178c81b8764810b61a6a2539a56dcb40a8de03` | Clean system ADF and `ADF +0x6e000`, 0x6ca00-byte title stage. |
@@ -133,6 +134,7 @@ similar platform's evidence.
 | `millennium-dos-en-gx-startup-v2` | `millennium-dos-game-flow`, `millennium-dos-gx-overlay` |
 | `millennium-dos-en-title-init-v2` | `millennium-dos-launcher`, `millennium-dos-title-flow` |
 | `millennium-dos-en-title-handoff-v3` | `millennium-dos-title-flow`, `millennium-dos-game-flow` |
+| `millennium-dos-en-title-exec-entry-v4` | `millennium-dos-title-flow`, `millennium-dos-game-flow` |
 | `deuteros-atari-st-boot-v1` | `deuteros-atari-protected-boot`, `deuteros-atari-first-stage` |
 | `millennium-amiga-en-defjam-bootstrap-v1` | `millennium-amiga-defjam-bootstrap`, `millennium-amiga-defjam-first-stage-entry` |
 | `deuteros-amiga-en-title-stage-v1` | `deuteros-amiga-main-stage`, `deuteros-amiga-title-handoff` |
@@ -399,11 +401,33 @@ non-carry parent `MILL.COM` EXEC return at `$0337`, and zero child status at
 audio, a successful `2200AD.EXE` startup, or gameplay. Any extra record,
 changed site/value, or non-monotonic sequence/tick is rejected.
 
+The v3 `stack-word` row records the offset `$1aa0` and value but omits the
+segment. A hash-bound disassembly later confirmed that `$1c60` reads through
+the default DS segment. Consequently, v3 does not establish which effective
+address supplied the observed word and cannot prove DS or memory continuity.
+Preserve v3's historical grammar; any future trace that claims that memory
+provenance must use a new adapter version recording the segment used at
+`$1c60`.
+
 After manifest, event, and original-media rehashing, a caller may replay this
 finite sequence into a fresh native state machine and inspect its terminal
 `2200AD.EXE` EXEC boundary. The replay retains neither the event text nor a
 DOS process, and it never launches the child executable or publishes a game
 runtime.
+
+### Millennium DOS title EXEC-entry v4 capture profile
+
+`millennium-dos-en-title-exec-entry-v4` accepts the same ordered title-exit
+prefix as v3, but its stack-word record also binds the observed segment. It
+then requires a `MILL.COM` game-EXEC request at `$024c` to helper `$031c` with
+program `$069a` and parameter block `$067a`, followed by a child-entry record
+for `2200AD.EXE` whose full image SHA-256 matches the recognised English
+member, whose IP is `$0100`, and whose initial SS equals CS. The entry record
+also retains the observed initial SP. The parser returns only these raw
+observations after the complete sequence validates; the adapter is
+diagnostics-only and does not advance the native session, emulate DOS, or
+claim that a user action caused the path. The existing v3 grammar remains
+unchanged.
 
 ### Millennium DOS GX startup v2 capture profile
 

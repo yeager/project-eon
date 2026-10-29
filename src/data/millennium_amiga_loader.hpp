@@ -66,8 +66,58 @@ struct MillenniumAmigaFirstStageEntryBoundary {
     std::uint32_t first_trace_resume_address = 0;
 };
 
+// Hash-bound local prefix of the resident first-stage setup routine. It
+// initializes the exact input.device IORequest and stops at Exec OpenDevice;
+// it provides no OpenDevice/DoIO result and does not claim the call ran.
+struct MillenniumAmigaInputDeviceOpenBoundary {
+    std::uint32_t entry_address = 0;
+    std::size_t raw_disk_offset = 0;
+    std::size_t prefix_byte_count = 0;
+    std::string prefix_sha256;
+    std::uint32_t device_name_address = 0;
+    std::string device_name;
+    std::uint32_t request_address = 0;
+    std::uint32_t reply_port_address = 0;
+    std::uint32_t exec_base_source_address = 0;
+    std::uint32_t call_address = 0;
+    std::int16_t vector = 0;
+    std::uint32_t return_address = 0;
+    std::uint32_t unit = 0;
+    std::uint32_t flags = 0;
+    std::uint32_t success_continuation_address = 0;
+    std::uint32_t failure_target_address = 0;
+    std::size_t setup_span_byte_count = 0;
+    std::string setup_span_sha256;
+    std::uint32_t reset_doio_call_address = 0;
+    std::int16_t reset_doio_vector = 0;
+    std::uint32_t reset_doio_return_address = 0;
+    std::uint16_t reset_doio_command = 0;
+    std::uint32_t input_handler_struct_address = 0;
+    std::uint32_t input_handler_data_address = 0;
+    std::uint32_t input_handler_code_address = 0;
+    std::uint8_t input_handler_priority = 0;
+    std::uint32_t add_handler_doio_call_address = 0;
+    std::int16_t add_handler_doio_vector = 0;
+    std::uint32_t add_handler_doio_return_address = 0;
+    std::uint16_t add_handler_doio_command = 0;
+    std::uint32_t add_handler_data_address = 0;
+    std::uint32_t input_handler_entry_address = 0;
+    std::size_t input_handler_byte_count = 0;
+    std::string input_handler_sha256;
+    std::uint32_t key_translation_table_address = 0;
+    std::size_t key_translation_table_byte_count = 0;
+    std::string key_translation_table_sha256;
+    std::uint32_t key_queue_consumer_address = 0;
+    std::size_t key_queue_consumer_byte_count = 0;
+    std::string key_queue_consumer_sha256;
+};
+
 [[nodiscard]] MillenniumAmigaFirstStageEntryBoundary
 parse_millennium_amiga_first_stage_entry_boundary(
+    const AmigaAdf&, const MillenniumAmigaLoadPlan&);
+
+[[nodiscard]] MillenniumAmigaInputDeviceOpenBoundary
+parse_millennium_amiga_input_device_open_boundary(
     const AmigaAdf&, const MillenniumAmigaLoadPlan&);
 
 // The bootstrap block starts at $70000, then contains a byte-copy relocator

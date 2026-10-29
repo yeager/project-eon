@@ -3,10 +3,12 @@
 #include "engine/millennium_dos_video_function_13_session.hpp"
 #include "engine/millennium_dos_video_function_13_interrupt_session.hpp"
 #include "engine/millennium_dos_video_function_zero_session.hpp"
+#include "engine/millennium_dos_video_int91_dispatch_session.hpp"
 #include "engine/millennium_dos_video_function_six_clip_session.hpp"
 #include "engine/millennium_dos_video_function_six_mcga_table_session.hpp"
 #include "engine/millennium_dos_video_function_six_mcga_pointer_setup_session.hpp"
 
+#include <array>
 #include <cassert>
 #include <cstdlib>
 #include <filesystem>
@@ -22,25 +24,25 @@ namespace {
 
 std::vector<std::uint8_t> read_driver(const std::filesystem::path& path,
     const std::size_t expected_size) {
-    if (expected_size == 0 || expected_size > 4'632) {
-        throw std::runtime_error("Invalid bound for Millennium DOS video-driver leaf");
+    if (expected_size == 0 || expected_size > 18'907) {
+        throw std::runtime_error("Invalid bound for Millennium DOS original leaf");
     }
     std::ifstream stream(path, std::ios::binary);
     if (!stream) {
-        throw std::runtime_error("Missing real Millennium DOS video-driver leaf: " + path.filename().string());
+        throw std::runtime_error("Missing real Millennium DOS original leaf: " + path.filename().string());
     }
     std::vector<std::uint8_t> bytes(expected_size);
     stream.read(reinterpret_cast<char*>(bytes.data()),
         static_cast<std::streamsize>(bytes.size()));
     if (stream.gcount() != static_cast<std::streamsize>(bytes.size())) {
-        throw std::runtime_error("Millennium DOS video-driver leaf changed size while being read");
+        throw std::runtime_error("Millennium DOS original leaf changed size while being read");
     }
     char trailing_byte = 0;
     if (stream.get(trailing_byte)) {
-        throw std::runtime_error("Millennium DOS video-driver leaf exceeds its bounded size");
+        throw std::runtime_error("Millennium DOS original leaf exceeds its bounded size");
     }
     if (!stream.eof() || stream.bad()) {
-        throw std::runtime_error("Unable to finish reading Millennium DOS video-driver leaf");
+        throw std::runtime_error("Unable to finish reading Millennium DOS original leaf");
     }
     return bytes;
 }
@@ -131,6 +133,10 @@ int main(const int argc, char** argv) {
     const auto driver_paths = find_hash_admitted_driver_pair(root);
     const auto ega_bytes = read_driver(driver_paths.ega, 4'632);
     const auto mcga_bytes = read_driver(driver_paths.mcga, 4'366);
+    const auto title_lib_bytes = read_driver(
+        driver_paths.mcga.parent_path() / "TITLE.LIB", 18'907);
+    const auto titles_path = driver_paths.mcga.parent_path() / "TITLES.EXE";
+    const auto titles_bytes = read_driver(titles_path, 7'022);
     const auto ega = eon::parse_millennium_dos_video_driver(
         ega_bytes, eon::MillenniumDosVideoDriverKind::ega640);
     const auto mcga = eon::parse_millennium_dos_video_driver(
@@ -148,6 +154,233 @@ int main(const int argc, char** argv) {
     assert(mcga.function_zero_verify_mode_interrupt_site == 0x200);
     assert(mcga.function_zero_mode_match_branch_target == 0x209);
     assert(mcga.function_zero_mode_mismatch_return == 0x208);
+    assert(ega.function_nineteen_address == 0x234);
+    assert(mcga.function_nineteen_address == 0x9ee);
+    const auto ega_function_nineteen = eon::execute_millennium_dos_ega_function_nineteen(
+        ega_bytes, ega_bytes, 0x0019);
+    assert(ega_function_nineteen
+        && ega_function_nineteen->driver_entry_address == 0x0234
+        && ega_function_nineteen->handler_dispatch_offset == 0x0032
+        && ega_function_nineteen->handler_return_ax == 0x0032
+        && ega_function_nineteen->caller_flags_restored_unknown);
+    assert(!eon::execute_millennium_dos_ega_function_nineteen(
+        ega_bytes, ega_bytes, 0x0018));
+    assert(!eon::execute_millennium_dos_ega_function_nineteen(
+        mcga_bytes, mcga_bytes, 0x0019));
+    auto altered_ega_loaded = ega_bytes;
+    altered_ega_loaded[0x234] = 0x90;
+    assert(!eon::execute_millennium_dos_ega_function_nineteen(
+        ega_bytes, altered_ega_loaded, 0x0019));
+
+    constexpr std::uint16_t child_segment = 0x2468;
+    std::array<std::uint8_t, 10> function_nineteen_record{
+        0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x4c, 0x01,
+        static_cast<std::uint8_t>(child_segment),
+        static_cast<std::uint8_t>(child_segment >> 8U)};
+    const auto palette_source = std::span<const std::uint8_t>(title_lib_bytes)
+        .subspan(0x25f9, 0x02fe);
+    assert(palette_source[5] == 0x2a
+        && palette_source[5] != titles_bytes[0x51]);
+    const auto mcga_function_nineteen =
+        eon::execute_millennium_dos_mcga_function_nineteen(
+            mcga_bytes, mcga_bytes, titles_bytes, function_nineteen_record,
+            palette_source, child_segment, 0xd9ea, 0x0019, 0, 0);
+    assert(mcga_function_nineteen
+        && mcga_function_nineteen->driver_entry_address == 0x09ee
+        && mcga_function_nineteen->handler_dispatch_offset == 0x0032
+        && mcga_function_nineteen->handler_return_ax == 0x0100
+        && mcga_function_nineteen->first_dac_index == 0
+        && mcga_function_nineteen->dac_entry_count == 255
+        && mcga_function_nineteen->dac_component_value == 0
+        && mcga_function_nineteen->caller_flags_restored_unknown
+        && mcga_function_nineteen->retrace_wait_durations_abstracted_by_eon);
+    assert(!eon::execute_millennium_dos_mcga_function_nineteen(
+        mcga_bytes, mcga_bytes, titles_bytes, function_nineteen_record,
+        palette_source, child_segment, 0xd9ec, 0x0019, 0, 0));
+    assert(!eon::execute_millennium_dos_mcga_function_nineteen(
+        mcga_bytes, mcga_bytes, titles_bytes, function_nineteen_record,
+        palette_source, child_segment, 0xd9ea, 0x0018, 0, 0));
+    assert(!eon::execute_millennium_dos_mcga_function_nineteen(
+        mcga_bytes, mcga_bytes, titles_bytes, function_nineteen_record,
+        palette_source, child_segment, 0xd9ea, 0x0019, 1, 0));
+    assert(!eon::execute_millennium_dos_mcga_function_nineteen(
+        mcga_bytes, mcga_bytes, titles_bytes, function_nineteen_record,
+        palette_source, child_segment, 0xd9ea, 0x0019, 0, 1));
+    auto altered_mcga_loaded = mcga_bytes;
+    altered_mcga_loaded[0x09ee] = 0x90;
+    assert(!eon::execute_millennium_dos_mcga_function_nineteen(
+        mcga_bytes, altered_mcga_loaded, titles_bytes, function_nineteen_record,
+        palette_source, child_segment, 0xd9ea, 0x0019, 0, 0));
+    auto altered_mcga_record = function_nineteen_record;
+    altered_mcga_record[6] = 0x4d;
+    assert(!eon::execute_millennium_dos_mcga_function_nineteen(
+        mcga_bytes, mcga_bytes, titles_bytes, altered_mcga_record,
+        palette_source, child_segment, 0xd9ea, 0x0019, 0, 0));
+    auto altered_mcga_palette = std::vector<std::uint8_t>(palette_source.begin(),
+        palette_source.end());
+    altered_mcga_palette[0] ^= 1;
+    assert(eon::execute_millennium_dos_mcga_function_nineteen(
+        mcga_bytes, mcga_bytes, titles_bytes, function_nineteen_record,
+        altered_mcga_palette, child_segment, 0xd9ea, 0x0019, 0, 0));
+    auto altered_mcga_titles = titles_bytes;
+    altered_mcga_titles[0x04c] ^= 1;
+    assert(!eon::execute_millennium_dos_mcga_function_nineteen(
+        mcga_bytes, mcga_bytes, altered_mcga_titles, function_nineteen_record,
+        palette_source, child_segment, 0xd9ea, 0x0019, 0, 0));
+
+    auto function_twenty_six_record = function_nineteen_record;
+    function_twenty_six_record[4] = 0x19;
+    const auto mcga_function_twenty_six =
+        eon::execute_millennium_dos_mcga_function_twenty_six(
+            mcga_bytes, mcga_bytes, function_twenty_six_record,
+            palette_source, child_segment, 0);
+    constexpr eon::MillenniumDosMcgaFunctionTwentySixDacWrite first_fade_write{0,0,0,0,0};
+    constexpr eon::MillenniumDosMcgaFunctionTwentySixDacWrite last_initial_write{0,254,0,0,0};
+    constexpr eon::MillenniumDosMcgaFunctionTwentySixDacWrite first_nonzero_blue{1,1,0,0,1};
+    constexpr eon::MillenniumDosMcgaFunctionTwentySixDacWrite middle_fade_write{12,42,21,0,0};
+    constexpr eon::MillenniumDosMcgaFunctionTwentySixDacWrite final_fade_write{24,254,3,0,0};
+    assert(mcga_function_twenty_six
+        && mcga_function_twenty_six->driver_entry_address == 0x0b67
+        && mcga_function_twenty_six->handler_dispatch_offset == 0x0032
+        && mcga_function_twenty_six->phase_count == 25
+        && mcga_function_twenty_six->dac_writes.size() == 25U * 255U
+        && mcga_function_twenty_six->dac_writes.front() == first_fade_write
+        && mcga_function_twenty_six->dac_writes[254] == last_initial_write
+        && mcga_function_twenty_six->dac_writes[255U + 1U] == first_nonzero_blue
+        && mcga_function_twenty_six->dac_writes[12U * 255U + 42U] == middle_fade_write
+        && mcga_function_twenty_six->dac_writes.back().phase == 24
+        && mcga_function_twenty_six->dac_writes.back().register_index == 254
+        && mcga_function_twenty_six->dac_writes.back() == final_fade_write
+        && mcga_function_twenty_six->caller_flags_restored_unknown
+        && mcga_function_twenty_six->retrace_wait_durations_abstracted_by_eon);
+    auto altered_function_twenty_six_record = function_twenty_six_record;
+    altered_function_twenty_six_record[4] = 0x18;
+    assert(!eon::execute_millennium_dos_mcga_function_twenty_six(
+        mcga_bytes, mcga_bytes, altered_function_twenty_six_record,
+        palette_source, child_segment, 0));
+    auto altered_function_twenty_six_driver = mcga_bytes;
+    altered_function_twenty_six_driver[0x09c7] = 1;
+    assert(!eon::execute_millennium_dos_mcga_function_twenty_six(
+        mcga_bytes, altered_function_twenty_six_driver, function_twenty_six_record,
+        palette_source, child_segment, 1));
+
+    // Dispatch the real TITLES.EXE first function-zero call only when INT 91h
+    // names the exact loaded driver image. The next boundary is a BIOS request,
+    // so no private-handler or BIOS result is supplied here.
+    eon::MillenniumDosTitleInitializationCheckpoint title_boundary;
+    title_boundary.state=eon::MillenniumDosTitleInitializationState::private_interrupt_result_boundary;
+    title_boundary.last_sequence=3;
+    title_boundary.child_code_segment=0x2468;
+    title_boundary.continuation_address=0x0127;
+    title_boundary.boundary={0x1b95,0x0122,0x0127,0x91,0,0x2468,0x1ac4,false,false};
+    eon::MillenniumDosVideoInt91DispatchSession ega_dispatch(
+        title_boundary,ega_bytes,ega_bytes,eon::MillenniumDosVideoDriverKind::ega640,
+        0x9abc,0x91,0,0x9abc,4);
+    assert(ega_dispatch.dispatch().title_call_address==0x1b95
+        && ega_dispatch.dispatch().wrapper_address==0x0122
+        && ega_dispatch.dispatch().int91_address==0x0127
+        && ega_dispatch.dispatch().record_segment==0x2468
+        && ega_dispatch.dispatch().record_offset==0x1ac4
+        && ega_dispatch.dispatch().loaded_driver_segment==0x9abc
+        && ega_dispatch.dispatch().dispatch_table_address==0x20
+        && ega_dispatch.dispatch().function_zero_target==0x1c8
+        && ega_dispatch.dispatch().initial_cached_mode==0xff
+        && ega_dispatch.dispatch().first_bios_boundary.instruction_address==0x1d6
+        && ega_dispatch.dispatch().first_bios_boundary.interrupt_number==0x10);
+    using FunctionZeroBiosResult=eon::MillenniumDosVideoFunctionZeroBiosResult;
+    // These result records are fixture inputs that exercise the contract; the
+    // implementation itself never creates a BIOS return.
+    expect_rejected([&] {
+        ega_dispatch.observe_int10_result(FunctionZeroBiosResult{5,0x1d6,0x10,
+            0x560e,0,0,0,0});
+    });
+    expect_rejected([&] {
+        ega_dispatch.observe_int10_result(FunctionZeroBiosResult{4,0x1de,0x10,
+            0x560e,0,0,0,0});
+    });
+    assert(ega_dispatch.boundary()
+        && ega_dispatch.boundary()->instruction_address==0x1d6
+        && !ega_dispatch.cache_write());
+    ega_dispatch.observe_int10_result(FunctionZeroBiosResult{4,0x1d6,0x10,
+        0x560e,0x1234,0x5678,0x9abc,0x0202});
+    assert((ega_dispatch.cache_write()
+        && *ega_dispatch.cache_write()
+            ==eon::MillenniumDosVideoFunctionZeroLocalWrite{0x1d8,0x8c,0x0e}
+        && ega_dispatch.boundary()
+        && ega_dispatch.boundary()->sequence==5
+        && ega_dispatch.boundary()->instruction_address==0x1de
+        && ega_dispatch.boundary()->ax==0x000e));
+    eon::MillenniumDosVideoInt91DispatchSession mcga_dispatch(
+        title_boundary,mcga_bytes,mcga_bytes,eon::MillenniumDosVideoDriverKind::mcga,
+        0x8abc,0x91,0,0x8abc,4,0x01);
+    assert(mcga_dispatch.dispatch().dispatch_table_address==0x32
+        && mcga_dispatch.dispatch().function_zero_target==0x1e6
+        && mcga_dispatch.dispatch().initial_cached_mode==0xff
+        && mcga_dispatch.dispatch().first_bios_boundary.instruction_address==0x1f4
+        && mcga_dispatch.dispatch().initial_argument_byte==0x01
+        && mcga_dispatch.dispatch().initial_cx_from_title_argument
+        && mcga_dispatch.boundary()->cx==0x0001
+        && mcga_dispatch.boundary()->cx_known_mask==0xffff);
+    expect_rejected([&] {
+        eon::MillenniumDosVideoInt91DispatchSession wrong_count(
+            title_boundary,mcga_bytes,mcga_bytes,eon::MillenniumDosVideoDriverKind::mcga,
+            0x8abc,0x91,0,0x8abc,4,0x02);
+    });
+    mcga_dispatch.observe_int10_result(FunctionZeroBiosResult{4,0x1f4,0x10,
+        0x8813,0,1,0,0});
+    assert((mcga_dispatch.cache_write()
+        && *mcga_dispatch.cache_write()
+            ==eon::MillenniumDosVideoFunctionZeroLocalWrite{0x1f6,0xae,0x13}
+        && mcga_dispatch.boundary()
+        && mcga_dispatch.boundary()->sequence==5
+        && mcga_dispatch.boundary()->instruction_address==0x1fc));
+    mcga_dispatch.observe_int10_result(FunctionZeroBiosResult{5,0x1fc,0x10,
+        0x0013,0,1,0,0});
+    mcga_dispatch.observe_int10_result(FunctionZeroBiosResult{6,0x0200,0x10,
+        0xab13,0,1,0,0});
+    assert(mcga_dispatch.state()
+        ==eon::MillenniumDosVideoFunctionZeroState::mode_match_continuation_boundary
+        && !mcga_dispatch.boundary());
+    mcga_dispatch.advance_success_postlude_prefix();
+    assert(mcga_dispatch.postlude_outcome()
+        && mcga_dispatch.postlude_outcome()->endpoint
+            ==eon::MillenniumDosVideoFunctionZeroPostludeEndpoint::mcga_single_count_branch
+        && mcga_dispatch.postlude_outcome()->instruction_address==0x023d);
+    mcga_dispatch.advance_mcga_single_count_store_prefix();
+    assert((mcga_dispatch.state()
+        ==eon::MillenniumDosVideoFunctionZeroState::mode_success_mcga_store_prefix_recorded
+        && !mcga_dispatch.boundary()
+        && mcga_dispatch.postlude_outcome()
+        && mcga_dispatch.postlude_outcome()->endpoint
+            ==eon::MillenniumDosVideoFunctionZeroPostludeEndpoint::mcga_ret
+        && mcga_dispatch.postlude_outcome()->instruction_address==0x024b
+        && mcga_dispatch.postlude_outcome()->ax==0x0101
+        && mcga_dispatch.postlude_outcome()->local_write
+            ==eon::MillenniumDosVideoFunctionZeroLocalWrite{0x0246,0x00ac,1}));
+    auto altered_loaded_driver=ega_bytes;
+    altered_loaded_driver[0x8c]=0x0e;
+    expect_rejected([&] {
+        eon::MillenniumDosVideoInt91DispatchSession detached(
+            title_boundary,ega_bytes,altered_loaded_driver,
+            eon::MillenniumDosVideoDriverKind::ega640,0x9abc,0x91,0,0x9abc,4);
+    });
+    expect_rejected([&] {
+        eon::MillenniumDosVideoInt91DispatchSession detached(
+            title_boundary,ega_bytes,ega_bytes,
+            eon::MillenniumDosVideoDriverKind::ega640,0x9abc,0x91,0,0x1234,4);
+    });
+    auto wrong_title_boundary=title_boundary;
+    wrong_title_boundary.boundary.function=6;
+    expect_rejected([&] {
+        eon::MillenniumDosVideoInt91DispatchSession detached(
+            wrong_title_boundary,ega_bytes,ega_bytes,
+            eon::MillenniumDosVideoDriverKind::ega640,0x9abc,0x91,0,0x9abc,4);
+    });
+    expect_rejected([&] {
+        eon::MillenniumDosVideoInt91DispatchSession detached(
+            title_boundary,ega_bytes,ega_bytes,
+            eon::MillenniumDosVideoDriverKind::ega640,0x9abc,0x91,0,0x9abc,5);
+    });
 
     using FunctionSixClipSession = eon::MillenniumDosVideoFunctionSixClipSession;
     using FunctionSixClipState = eon::MillenniumDosVideoFunctionSixClipState;
@@ -374,7 +607,8 @@ int main(const int argc, char** argv) {
     const eon::MillenniumDosVideoFunction13Boundary ega_first_poll{0x0d3a,0x03da};
     assert(ega_function_13.state() == Function13State::awaiting_retrace_clear
         && ega_function_13.next_sequence() == 1
-        && ega_function_13.boundary() == ega_first_poll);
+        && ega_function_13.boundary() == ega_first_poll
+        && !ega_function_13.return_bx_for_entry(0x5a34));
     expect_rejected([&] { ega_function_13.observe_status({1,0x0d3b,0x03da,0}); });
     expect_rejected([&] { ega_function_13.observe_status({1,0x0d3a,0x03d8,0}); });
     assert(ega_function_13.reads().empty() && ega_function_13.next_sequence() == 1);
@@ -394,7 +628,9 @@ int main(const int argc, char** argv) {
     assert(ega_function_13.state() == Function13State::ret_boundary
         && !ega_function_13.boundary() && ega_retrace
         && ega_retrace->ret_instruction_address == 0x0d44
-        && ega_retrace->reads.size() == 5 && ega_function_13.next_sequence() == 6);
+        && ega_retrace->reads.size() == 5 && ega_function_13.next_sequence() == 6
+        && ega_function_13.return_bx_for_entry(0x5a34) == 0x5a34
+        && ega_function_13.return_bx_for_entry(0x00c7) == 0x00c7);
     expect_rejected([&] { ega_function_13.observe_status({6,0x0d3f,0x03da,0x08}); });
 
     Function13Session mcga_function_13(mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga);
@@ -405,7 +641,8 @@ int main(const int argc, char** argv) {
     const auto mcga_retrace = mcga_function_13.outcome();
     assert(mcga_function_13.state() == Function13State::ret_boundary
         && mcga_retrace && mcga_retrace->ret_instruction_address == 0x0912
-        && mcga_retrace->reads.size() == 2);
+        && mcga_retrace->reads.size() == 2
+        && mcga_function_13.return_bx_for_entry(0x9b0c) == 0x9b0c);
 
     using Function13Interrupt = eon::MillenniumDosVideoFunction13InterruptSession;
     using Function13InterruptState = eon::MillenniumDosVideoFunction13InterruptState;
@@ -493,7 +730,9 @@ int main(const int argc, char** argv) {
     assert(mcga_callback.boundary()
         == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0024});
     mcga_callback.execute_iret(8,0x0024);
-    assert(mcga_callback.state() == Function13InterruptState::returned);
+    assert(mcga_callback.state() == Function13InterruptState::returned
+        && mcga_callback.outcome()
+        && mcga_callback.outcome()->memory_effects.empty());
 
     Function13Interrupt mcga_callback_empty_counter(mcga_bytes,
         eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
@@ -521,6 +760,18 @@ int main(const int argc, char** argv) {
     mcga_altered_driver[0x0ca2] ^= 0x01;
     expect_rejected([&] {
         Function13Interrupt unsupported(mcga_altered_driver,
+            eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
+    });
+    auto mcga_short_zero_copy = mcga_bytes;
+    mcga_short_zero_copy.resize(0x0cd4);
+    expect_rejected([&] {
+        Function13Interrupt unsupported(mcga_short_zero_copy,
+            eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
+    });
+    auto mcga_altered_zero_copy = mcga_bytes;
+    mcga_altered_zero_copy[0x0cb0] ^= 0x01;
+    expect_rejected([&] {
+        Function13Interrupt unsupported(mcga_altered_zero_copy,
             eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
     });
     expect_rejected([&] { mcga_callback_empty_counter.execute_mcga_callback_register_saves(
@@ -562,6 +813,60 @@ int main(const int argc, char** argv) {
         && mcga_callback_empty_counter.callback_stack_effects().back()
             == (eon::MillenniumDosVideoFunction13CallbackStackWordEffect{
                 0x0caf,0x4000,0x0ffe,0xfffe}));
+    expect_rejected([&] {
+        mcga_callback_empty_counter.observe_mcga_callback_zero_counter_descriptor_word(
+            {9,0x0cb1,0x6000,0xfffe,0x1234,
+                eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
+    });
+    mcga_callback_empty_counter.observe_mcga_callback_zero_counter_descriptor_word(
+        {9,0x0cb0,0x6000,0xfffe,0x1234,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::word});
+    expect_rejected([&] {
+        mcga_callback_empty_counter.observe_mcga_callback_zero_counter_descriptor_byte(
+            {10,0x0cb3,0x6000,0xffff,0x56,
+                eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    });
+    mcga_callback_empty_counter.observe_mcga_callback_zero_counter_descriptor_byte(
+        {10,0x0cb3,0x6000,0x0000,0x56,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    expect_rejected([&] {
+        mcga_callback_empty_counter.observe_mcga_callback_zero_counter_length(
+            {11,0x0cbd,0x3456,0x0c8b,0x0100,
+                eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    });
+    mcga_callback_empty_counter.observe_mcga_callback_zero_counter_length(
+        {11,0x0cbd,0x3456,0x0c8b,2,
+            eon::MillenniumDosVideoFunction13McgaCallbackReadWidth::byte});
+    assert(mcga_callback_empty_counter.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0cca});
+    const std::array<std::uint8_t,6> mcga_zero_copy_source{0x10,0x20,0x30,0x40,0x50,0x60};
+    expect_rejected([&] {
+        mcga_callback_empty_counter.execute_mcga_callback_zero_counter_copy(
+            12,0x0cca,0x6000,0x0002,mcga_zero_copy_source);
+    });
+    mcga_callback_empty_counter.execute_mcga_callback_zero_counter_copy(
+        12,0x0cca,0x6000,0x0001,mcga_zero_copy_source);
+    assert(mcga_callback_empty_counter.callback_memory_byte_effects().size() == 6
+        && mcga_callback_empty_counter.callback_memory_byte_effects().front()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackMemoryByteEffect{
+                0x0cca,0x6000,0xfffe,0x10})
+        && mcga_callback_empty_counter.callback_memory_byte_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackMemoryByteEffect{
+                0x0cca,0x6000,0x0003,0x60}));
+    mcga_callback_empty_counter.execute_mcga_callback_zero_counter_descriptor_store(13,0x0ccc);
+    assert(mcga_callback_empty_counter.callback_memory_word_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackMemoryWordEffect{
+                0x0ccc,0x6000,0x0004,0x1234})
+        && mcga_callback_empty_counter.callback_memory_byte_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackMemoryByteEffect{
+                0x0ccf,0x6000,0x0006,0x56}));
+    mcga_callback_empty_counter.execute_mcga_callback_zero_counter_retrace_setup(14,0x0cd3);
+    assert(mcga_callback_empty_counter.boundary()
+        == eon::MillenniumDosVideoFunction13InterruptBoundary{0x0cd8}
+        && mcga_callback_empty_counter.callback_register_effects().back()
+            == (eon::MillenniumDosVideoFunction13McgaCallbackRegisterEffect{
+                0x0cd5,eon::MillenniumDosVideoFunction13McgaCallbackRegister::dx,0x03da}));
+
     Function13Interrupt mcga_callback_wrap_counter(mcga_bytes,
         eon::MillenniumDosVideoDriverKind::mcga, 0x3456);
     mcga_callback_wrap_counter.observe_interrupt_request({1,0x0127,0x0013,0x0129,0x5678,0x0302});
@@ -1095,7 +1400,8 @@ int main(const int argc, char** argv) {
     mcga_callback_palette_index.execute_iret(palette_sequence++,0x0024);
     assert(mcga_callback_palette_index.state() == Function13InterruptState::returned
         && mcga_callback_palette_index.outcome()
-        && mcga_callback_palette_index.outcome()->return_ip == 0x0129);
+        && mcga_callback_palette_index.outcome()->return_ip == 0x0129
+        && mcga_callback_palette_index.outcome()->memory_effects.empty());
 
     auto mcga_callback_palette_wrap = mcga_callback_copy_complete;
     mcga_callback_palette_wrap.observe_mcga_callback_palette_descriptor_count(
@@ -1306,14 +1612,17 @@ int main(const int argc, char** argv) {
     expect_rejected([&] {
         ega_multi_count.observe_ega_near_return({5,0x0235,0x2000,0x0100,0x5678});
     });
+    expect_rejected([&] {
+        ega_multi_count.observe_ega_near_return({4,0x0234,0x2000,0x0100,0x5678});
+    });
     assert(ega_multi_count.state() == State::mode_success_store_prefix_recorded
         && ega_multi_count.next_sequence() == 4 && !ega_multi_count.ega_return_outcome());
-    ega_multi_count.observe_ega_near_return({4,0x0234,0x2000,0x0100,0x5678});
+    ega_multi_count.observe_ega_near_return({4,0x0234,0x2000,0x0100,0x0012});
     const auto ega_near_ret = ega_multi_count.ega_return_outcome();
     assert(ega_multi_count.state() == State::mode_success_returned_boundary
         && ega_multi_count.next_sequence() == 5
         && ega_near_ret
-        && ega_near_ret->observation.return_ip == 0x5678
+        && ega_near_ret->observation.return_ip == 0x0012
         && ega_near_ret->observation.ss == 0x2000
         && ega_near_ret->observation.sp == 0x0100
         && ega_near_ret->sp_after == 0x0102
@@ -1332,7 +1641,7 @@ int main(const int argc, char** argv) {
     ega_wrapped_ret.advance_ega_multi_count_loop(0x4567);
     ega_wrapped_ret.advance_ega_success_pop_prefix();
     ega_wrapped_ret.advance_ega_success_store_prefix(0x4567);
-    ega_wrapped_ret.observe_ega_near_return({4,0x0234,0x2000,0xfffe,0x5678});
+    ega_wrapped_ret.observe_ega_near_return({4,0x0234,0x2000,0xfffe,0x0012});
     const auto ega_wrapped_near_ret = ega_wrapped_ret.ega_return_outcome();
     assert(ega_wrapped_near_ret
         && ega_wrapped_near_ret->observation.sp == 0xfffe
@@ -1435,6 +1744,21 @@ int main(const int argc, char** argv) {
         && mcga_single_postlude->ax == 0x0013 && mcga_single_postlude->cx == 1
         && mcga_single_postlude->si == 0 && mcga_single_postlude->di == 0x0084
         && mcga_single_postlude->interrupt_number == 0);
+    mcga_single_count.advance_mcga_single_count_store_prefix();
+    const auto mcga_single_return = mcga_single_count.postlude_prefix_outcome();
+    const eon::MillenniumDosVideoFunctionZeroLocalWrite mcga_single_write{
+        0x0246,0x00ac,1};
+    assert(mcga_single_count.state()
+        == eon::MillenniumDosVideoFunctionZeroState::mode_success_mcga_store_prefix_recorded
+        && mcga_single_return
+        && mcga_single_return->endpoint
+            == eon::MillenniumDosVideoFunctionZeroPostludeEndpoint::mcga_ret
+        && mcga_single_return->instruction_address == 0x024b
+        && mcga_single_return->ax == 0x0101
+        && mcga_single_return->local_write == mcga_single_write);
+    expect_rejected([&] {
+        mcga_single_count.advance_mcga_single_count_store_prefix();
+    });
 
     Session mcga_known(mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga, 0x13);
     mcga_known.observe_bios_result(Result{1,0x1fc,0x10,0xbeef,0,0,0,0});
@@ -1444,6 +1768,16 @@ int main(const int argc, char** argv) {
         && mcga_mismatch->instruction_address == 0x208
         && mcga_mismatch->verify_result.ax == 0xabcd
         && mcga_mismatch->ax_after_local_effect == 0 && !mcga_mismatch->ax_is_routine_return);
+
+    Session sequenced(mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga, 0x13, 41);
+    assert(sequenced.boundary() && sequenced.boundary()->sequence == 41);
+    sequenced.observe_bios_result(Result{41,0x1fc,0x10,0x0013,0,0,0,0});
+    assert(sequenced.boundary() && sequenced.boundary()->sequence == 42
+        && sequenced.boundary()->instruction_address == 0x0200);
+    expect_rejected([&] {
+        static_cast<void>(Session(mcga_bytes, eon::MillenniumDosVideoDriverKind::mcga,
+            0x13, 0));
+    });
 
     expect_rejected([&] {
         Session unsupported(mcga_bytes, eon::MillenniumDosVideoDriverKind::ega640, 0xff);

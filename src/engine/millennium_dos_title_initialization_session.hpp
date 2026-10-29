@@ -1,5 +1,8 @@
 #pragma once
 
+#include "data/millennium_dos_video_driver.hpp"
+#include "engine/millennium_dos_video_function_13_session.hpp"
+
 #include <array>
 #include <cstdint>
 #include <cstddef>
@@ -105,6 +108,8 @@ enum class MillenniumDosTitleInitializationState {
     post_descriptor_loop_return_boundary,
     descriptor_loop_complete_boundary,
     descriptor_loop_wait_private_interrupt_boundary,
+    descriptor_loop_post_wait_animation_call_boundary,
+    descriptor_loop_animation_record_word_boundary,
     post_descriptor_next_loop_far_read_boundary,
     post_descriptor_next_loop_record_word_read_boundary,
     post_descriptor_next_loop_payload_byte_boundary,
@@ -135,6 +140,7 @@ struct MillenniumDosTitlePrivateInterruptResultObservation {
     std::uint16_t record_segment = 0;
     std::uint16_t record_offset = 0;
     std::vector<std::uint8_t> record_bytes;
+    bool flags_known = true;
 };
 
 struct MillenniumDosTitleSelectedCalleeResultObservation {
@@ -144,6 +150,7 @@ struct MillenniumDosTitleSelectedCalleeResultObservation {
     std::uint16_t selected_callee_return_address = 0;
     std::uint16_t ax = 0;
     std::uint16_t flags = 0;
+    bool flags_known = true;
 };
 
 struct MillenniumDosTitleBiosInterruptBoundary {
@@ -166,6 +173,8 @@ struct MillenniumDosTitleBiosResultObservation {
     std::uint16_t return_address = 0;
     std::uint16_t ax = 0;
     std::uint16_t flags = 0;
+    bool ax_known = true;
+    bool flags_known = true;
 };
 
 struct MillenniumDosTitleBiosResultRecord {
@@ -174,6 +183,17 @@ struct MillenniumDosTitleBiosResultRecord {
     std::uint16_t return_address = 0;
     std::uint16_t ax = 0;
     std::uint16_t flags = 0;
+    bool ax_known = true;
+    bool flags_known = true;
+};
+
+struct MillenniumDosTitleDacWrite {
+    std::uint64_t sequence = 0;
+    std::uint8_t register_index = 0;
+    std::uint8_t red = 0;
+    std::uint8_t green = 0;
+    std::uint8_t blue = 0;
+    constexpr bool operator==(const MillenniumDosTitleDacWrite&) const = default;
 };
 
 struct MillenniumDosTitleDosResultObservation {
@@ -228,6 +248,7 @@ struct MillenniumDosTitleDosVectorResultObservation {
     std::uint16_t bx = 0;
     std::uint16_t es = 0;
     std::uint16_t flags = 0;
+    bool eon_virtual_ivt_policy = false;
 };
 
 struct MillenniumDosTitleDosVectorResultRecord {
@@ -238,6 +259,20 @@ struct MillenniumDosTitleDosVectorResultRecord {
     std::uint16_t bx = 0;
     std::uint16_t es = 0;
     std::uint16_t flags = 0;
+    bool eon_virtual_ivt_policy = false;
+};
+
+enum class MillenniumDosTitleVectorInstallProvenance {
+    eon_dos_compatibility_service
+};
+
+struct MillenniumDosTitleVectorInstallRecord {
+    std::uint64_t sequence = 0;
+    std::uint8_t vector = 0;
+    std::uint16_t offset = 0;
+    std::uint16_t segment = 0;
+    MillenniumDosTitleVectorInstallProvenance provenance =
+        MillenniumDosTitleVectorInstallProvenance::eon_dos_compatibility_service;
 };
 
 struct MillenniumDosTitleSetupBiosResultObservation {
@@ -247,6 +282,27 @@ struct MillenniumDosTitleSetupBiosResultObservation {
     std::uint16_t ax = 0;
     std::uint16_t bx = 0;
     std::uint16_t flags = 0;
+};
+
+// Records only that execution returned from the hash-bound BIOS INT site.
+// Register and FLAGS results deliberately remain unknown.
+struct MillenniumDosTitleSetupBiosReturnObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t interrupt_address = 0;
+    std::uint16_t return_address = 0;
+};
+
+enum class MillenniumDosTitleSetupBiosReturnProvenance {
+    external_return_observation,
+    eon_ah01_cassette_off_compatibility_noop
+};
+
+struct MillenniumDosTitleSetupBiosReturnRecord {
+    std::uint64_t sequence = 0;
+    std::uint16_t interrupt_address = 0;
+    std::uint16_t return_address = 0;
+    MillenniumDosTitleSetupBiosReturnProvenance provenance =
+        MillenniumDosTitleSetupBiosReturnProvenance::external_return_observation;
 };
 
 struct MillenniumDosTitleSetupBiosBoundary {
@@ -276,6 +332,12 @@ struct MillenniumDosTitleFarWordsObservation {
     std::uint16_t source_offset = 0;
     std::uint16_t first_word = 0;
     std::uint16_t second_word = 0;
+    // False means the corresponding external word was not observed. The
+    // numeric member is then only an unused placeholder and must not be
+    // committed to guest memory.
+    bool first_word_known = true;
+    bool second_word_known = true;
+    bool eon_virtual_ivt_policy = false;
 };
 struct MillenniumDosTitleFarWordObservation {
     std::uint64_t sequence=0;
@@ -391,14 +453,17 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::uint16_t selected_followup_call_target = 0;
     MillenniumDosTitleBiosInterruptBoundary bios_boundary;
     std::vector<MillenniumDosTitleBiosResultRecord> bios_results;
+    std::vector<MillenniumDosTitleDacWrite> dac_writes;
     std::uint16_t title_main_call_address = 0;
     std::uint16_t title_main_call_target = 0;
     MillenniumDosTitleDosBoundary dos_boundary;
     std::vector<MillenniumDosTitleDosResultRecord> dos_results;
     std::vector<MillenniumDosTitleDosFileResultRecord> dos_file_results;
     std::vector<MillenniumDosTitleDosVectorResultRecord> dos_vector_results;
+    std::vector<MillenniumDosTitleVectorInstallRecord> vector_installs;
     MillenniumDosTitleSetupBiosBoundary setup_bios_boundary;
     std::vector<MillenniumDosTitleSetupBiosResultObservation> setup_bios_results;
+    std::vector<MillenniumDosTitleSetupBiosReturnRecord> setup_bios_returns;
     MillenniumDosTitleFarReadBoundary far_read_boundary;
     std::vector<MillenniumDosTitleFarWordsObservation> far_word_observations;
     std::vector<MillenniumDosTitleFarWordObservation> far_single_word_observations;
@@ -415,6 +480,23 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::vector<std::uint8_t> post_descriptor_observed_record;
     std::uint32_t title_library_cursor = 0;
     std::uint16_t title_library_read_count = 0;
+    bool observed_flags_known = true;
+    bool selected_callee_observed_flags_known = true;
+    bool post_video_ega_function_nineteen_return_native = false;
+    bool post_video_mcga_function_nineteen_return_native = false;
+    bool post_video_observed_flags_known = true;
+};
+
+// The first half of the post-retrace animation helper at $1917 is entirely
+// local: $18f9 chooses a byte from the current process segment and $1712 turns its
+// normalized value into a $170-byte record displacement.  The following
+// LODSW pair at $174a reads an in-process dynamic table, so it remains a
+// separate owned-memory boundary rather than an inferred static table.
+struct MillenniumDosTitleAnimationSelectorObservation {
+    std::uint64_t sequence = 0;
+    std::uint16_t selector_state_word = 0;
+    std::uint16_t selector_accumulator_word = 0;
+    std::uint8_t selector_source_byte = 0;
 };
 
 // Native execution of TITLES.EXE's deterministic $1b80 startup through the
@@ -432,6 +514,26 @@ public:
         std::uint16_t entry_address, std::uint16_t call_address,
         std::uint16_t wrapper_address, std::uint8_t interrupt);
     void observe_private_interrupt_result(
+        const MillenniumDosTitlePrivateInterruptResultObservation&);
+    void execute_post_video_ega_function_nineteen_return(
+        std::uint64_t sequence, std::uint16_t interrupt_address,
+        std::uint16_t wrapper_return_address, std::uint16_t driver_entry_address,
+        std::uint16_t dispatch_offset, std::uint16_t returned_ax);
+    void execute_post_video_mcga_function_nineteen_return(
+        std::uint64_t sequence, std::uint16_t driver_segment,
+        const MillenniumDosMcgaFunctionNineteenReturn&);
+    // The exact function-$0006 caller overwrites AX before the following
+    // function-$001a request and does not consume FLAGS.  Once an owned,
+    // hash-bound implementation has completed the copy, this advances only
+    // that dead-result edge without manufacturing an interrupt return.
+    void execute_graphics_record_function_six_return(std::uint64_t sequence);
+    void execute_graphics_record_function_twenty_six_return(std::uint64_t sequence,
+        const MillenniumDosMcgaFunctionTwentySixReturn&);
+    void execute_descriptor_loop_wait_function_thirteen_return(std::uint64_t sequence,
+        const MillenniumDosVideoFunction13Outcome&);
+    void execute_descriptor_loop_animation_selector(
+        const MillenniumDosTitleAnimationSelectorObservation&);
+    void observe_private_interrupt_result_after_owned_dispatch(
         const MillenniumDosTitlePrivateInterruptResultObservation&);
     void execute_selected_callee_start(std::uint64_t sequence,
         std::uint16_t selected_call_address, std::uint16_t selected_call_target);
@@ -456,8 +558,15 @@ public:
         std::uint16_t call_address, std::uint16_t call_target);
     void observe_dos_vector_result(
         const MillenniumDosTitleDosVectorResultObservation&);
+    // Executes the exact INT 21h/AH=25h call at $1106 or $111d using the
+    // source-established AL and DS:DX. The previous vector remains whatever
+    // the preceding AH=35h observation supplied.
+    void execute_dos_set_vector_compatibility(std::uint64_t sequence);
     void observe_setup_bios_result(
         const MillenniumDosTitleSetupBiosResultObservation&);
+    void observe_setup_bios_return(
+        const MillenniumDosTitleSetupBiosReturnObservation&);
+    void execute_setup_bios_compatibility_noop(std::uint64_t sequence);
     void execute_next_setup(std::uint64_t sequence,
         std::uint16_t call_address, std::uint16_t call_target);
     void execute_followup_setup(std::uint64_t sequence,
@@ -494,6 +603,10 @@ public:
     [[nodiscard]] MillenniumDosTitleInitializationCheckpoint checkpoint() const;
 
 private:
+    void observe_private_interrupt_result_impl(
+        const MillenniumDosTitlePrivateInterruptResultObservation&, bool allow_sequence_gap);
+    void advance_post_descriptor_loop(std::uint64_t sequence,
+        const std::vector<std::uint8_t>& record_bytes, bool record_was_observed);
     void advance_encoded_record_complete();
     void advance_descriptor_mode_two_return();
     [[nodiscard]] std::optional<std::uint16_t> descriptor_cached_local_word(
@@ -510,6 +623,11 @@ private:
     MillenniumDosTitlePrivateInterruptBoundary selected_callee_boundary_;
     std::uint16_t observed_ax_ = 0;
     std::uint16_t observed_flags_ = 0;
+    bool observed_flags_known_ = true;
+    bool selected_callee_observed_flags_known_ = true;
+    bool post_video_ega_function_nineteen_return_native_ = false;
+    bool post_video_mcga_function_nineteen_return_native_ = false;
+    bool post_video_observed_flags_known_ = true;
     std::uint8_t selected_mode_ = 0;
     std::uint16_t selected_call_address_ = 0;
     std::uint16_t selected_call_target_ = 0;
@@ -532,6 +650,7 @@ private:
     std::uint16_t descriptor_output_segment_ = 0;
     MillenniumDosTitleBiosInterruptBoundary bios_boundary_;
     std::vector<MillenniumDosTitleBiosResultRecord> bios_results_;
+    std::vector<MillenniumDosTitleDacWrite> dac_writes_;
     std::uint16_t title_main_call_address_ = 0;
     std::uint16_t title_main_call_target_ = 0;
     MillenniumDosTitleDosBoundary dos_boundary_;
@@ -551,8 +670,10 @@ private:
     std::uint16_t mode_one_translation_remaining_ = 0;
     std::uint16_t continuation_address_ = 0;
     std::vector<MillenniumDosTitleDosVectorResultRecord> dos_vector_results_;
+    std::vector<MillenniumDosTitleVectorInstallRecord> vector_installs_;
     MillenniumDosTitleSetupBiosBoundary setup_bios_boundary_;
     std::vector<MillenniumDosTitleSetupBiosResultObservation> setup_bios_results_;
+    std::vector<MillenniumDosTitleSetupBiosReturnRecord> setup_bios_returns_;
     MillenniumDosTitleFarReadBoundary far_read_boundary_;
     std::vector<MillenniumDosTitleFarWordsObservation> far_word_observations_;
     std::vector<MillenniumDosTitleFarWordObservation> far_single_word_observations_;

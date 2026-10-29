@@ -61,6 +61,22 @@ int main(const int argc, const char* const argv[]) {
         assert(session.execution().second_copy_instruction_count == 518
             && session.execution().second_copy_stop_address == 0x77000
             && session.target().bytes.size() == 0x202);
+        // This is the recovered title image presented by the launcher. Pin
+        // the decoded source result separately from the native guest startup
+        // checkpoint below; decoding source art does not prove that the guest
+        // has reached or drawn it.
+        const auto title_frame = session.title_frame();
+        assert(title_frame
+            && title_frame->width == 320 && title_frame->height == 200
+            && title_frame->generation == 1
+            && title_frame->planar_sha256
+                == "97ca82e4296c649a853d45f3900f90b2b8490c1cf12c0580258b3c89e13b4475"
+            && title_frame->color_indices_sha256
+                == "1bc61a2ecf3dd75a317996e56bf836f4e0aa304c496d5ec2d366da53fd64d8b8"
+            && title_frame->palette_sha256
+                == "19e71f573ee6cec84d629becc821360b8384766ca6f9a308f7c2b0d67922cb02"
+            && title_frame->rgba_sha256
+                == "d4d37cfc50ea59fe3453bb2bf4c3e8b3880cd31261bee5b7f02a9a68c3190595");
         const auto post_config_batch = session.make_post_config_fread_effect_batch(
             84720, "exact-post-config-read");
         const auto* post_config_entry = disk.find("MILL22B.INF");
@@ -72,6 +88,51 @@ int main(const int argc, const char* const argv[]) {
             && post_config_batch.effects.back().location.offset == 0x11e00 + 84719
             && post_config_batch.effects.front().value == post_config_bytes.front()
             && post_config_batch.effects.back().value == post_config_bytes.back());
+        const auto second_config_batch = session.make_game_init_second_config_fread_effect_batch(
+            18428, "exact-game-init-second-config-read");
+        const auto serviced_second_config_batch = session.make_game_init_second_config_fread_service_effect_batch(
+            "eon-exact-game-init-second-config-read");
+        const auto* game_init_entry = disk.find("MILL22D.INF");
+        assert(game_init_entry && !game_init_entry->directory());
+        const auto game_init_bytes = disk.read(*game_init_entry);
+        assert(second_config_batch.fully_admitted
+            && second_config_batch.effects.size() == game_init_bytes.size()
+            && second_config_batch.effects.front().location.offset == 0x2c24a
+            && second_config_batch.effects.back().location.offset == 0x2c24a + game_init_bytes.size() - 1U
+            && second_config_batch.effects.front().value == game_init_bytes.front()
+            && second_config_batch.effects.back().value == game_init_bytes.back());
+        assert(serviced_second_config_batch.fully_admitted
+            && serviced_second_config_batch.effects.size() == game_init_bytes.size()
+            && serviced_second_config_batch.effects.front().value == game_init_bytes.front()
+            && serviced_second_config_batch.effects.back().value == game_init_bytes.back());
+        const auto decoder_batch = session.make_game_init_decoder_fread_effect_batch(
+            9597, "exact-game-init-decoder-read");
+        const auto* decoder_entry = disk.find("MILL22C.INF");
+        assert(decoder_entry && !decoder_entry->directory());
+        const auto decoder_bytes = disk.read(*decoder_entry);
+        assert(decoder_bytes.size() == 9597U
+            && decoder_batch.fully_admitted
+            && decoder_batch.effects.size() == decoder_bytes.size()
+            && decoder_batch.effects.front().location.offset == 0x2c24a
+            && decoder_batch.effects.back().location.offset == 0x2c24a + decoder_bytes.size() - 1U
+            && decoder_batch.effects.front().value == decoder_bytes.front()
+            && decoder_batch.effects.back().value == decoder_bytes.back());
+        eon::NativeRuntimeMemory second_config_prefix_memory;
+        assert(second_config_prefix_memory.apply(second_config_batch).accepted
+            && second_config_prefix_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+                std::nullopt, 0x2c24a}) == game_init_bytes.front()
+            && second_config_prefix_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+                std::nullopt, 0x2c24a + game_init_bytes.size() - 1U}) == game_init_bytes.back());
+        eon::NativeRuntimeMemory serviced_second_config_memory;
+        assert(serviced_second_config_memory.apply(serviced_second_config_batch).accepted
+            && serviced_second_config_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+                std::nullopt, 0x2c24a}) == game_init_bytes.front()
+            && serviced_second_config_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+                std::nullopt, 0x2c24a + game_init_bytes.size() - 1U}) == game_init_bytes.back());
+        rejects([&] { static_cast<void>(session.make_game_init_second_config_fread_effect_batch(
+            18429, "oversized-game-init-second-config-read")); });
+        rejects([&] { static_cast<void>(session.make_game_init_decoder_fread_effect_batch(
+            9598, "oversized-game-init-decoder-read")); });
         const auto& post_config_module = session.post_config_module_entry();
         assert(post_config_module.load_address == 0x11e00
             && post_config_module.initial_jump_address == 0x1c62c
@@ -624,7 +685,10 @@ int main(const int argc, const char* const argv[]) {
                 fopen_return, gemdos_memory).accepted);
             assert(gemdos_path.checkpoint().gemdos_fcreate_boundary_prepared
                 && gemdos_path.checkpoint().gemdos_fopen_stored_word == 0x42U
-                && gemdos_path.checkpoint().gemdos_fopen_suffix_instruction_count == 4U);
+                && gemdos_path.checkpoint().gemdos_fopen_suffix_instruction_count == 4U
+                && gemdos_path.checkpoint().gemdos_fopen_result_sr == 0x2700U
+                && gemdos_path.checkpoint().gemdos_fcreate_trap_address == 0x11ff6U
+                && gemdos_path.checkpoint().gemdos_fcreate_data_register_7 == 0x1204aU);
             const auto fopen_effects = gemdos_path.make_gemdos_fopen_result_effect_batch(
                 "post-config-fopen-test-result");
             assert(fopen_effects.effects.size() == 9U
@@ -649,7 +713,8 @@ int main(const int argc, const char* const argv[]) {
             assert(gemdos_path.checkpoint().state
                     == eon::MillenniumAtariPostConfigEntryState::gemdos_fcreate_result_observed
                 && gemdos_path.checkpoint().gemdos_fcreate_stored_word == 0
-                && gemdos_path.checkpoint().gemdos_fcreate_suffix_instruction_count == 4U);
+                && gemdos_path.checkpoint().gemdos_fcreate_suffix_instruction_count == 4U
+                && gemdos_path.checkpoint().gemdos_fcreate_result_sr == 0x2704U);
             const auto fcreate_effects = gemdos_path.make_gemdos_fcreate_result_effect_batch(
                 "post-config-fcreate-test-result");
             assert(fcreate_effects.effects.size() == 1U
@@ -765,6 +830,18 @@ int main(const int argc, const char* const argv[]) {
         const auto image_result = memory.apply(eon::make_atari_st_prg_load_effect_batch(
             exact, "millennium-atari-1-prg"));
         assert(image_result.accepted);
+        const auto screen_batch = session.make_native_screen_buffer_effect_batch(
+            "millennium-atari-1-low-resolution-screen");
+        assert(screen_batch.effects.size()
+                == eon::MillenniumAtariPrgLoadSession::low_resolution_screen_bytes
+            && screen_batch.effects.front().location.offset == 0x30000
+            && screen_batch.effects.back().location.offset == 0x37cff
+            && screen_batch.effects.front().value == 0
+            && screen_batch.effects.back().value == 0);
+        assert(memory.apply(screen_batch).accepted
+            && memory.read_linear_range(0x30000,
+                eon::MillenniumAtariPrgLoadSession::low_resolution_screen_bytes)->size()
+                == eon::MillenniumAtariPrgLoadSession::low_resolution_screen_bytes);
         const auto& gemdos = session.read_only_gemdos();
         assert(gemdos.checkpoint().config_jsr_instruction_address == 0x7703c
             && gemdos.checkpoint().config_jsr_target_address == 0x2a500);
@@ -772,8 +849,9 @@ int main(const int argc, const char* const argv[]) {
             gemdos.make_fread_effect_batch("millennium-atari-1-config"));
         assert(config_result.accepted);
         const auto memory_checkpoint = memory.checkpoint();
-        assert(memory_checkpoint.applied_batch_count == 2
-            && memory_checkpoint.initialized_bytes.size() == exact.image.size());
+        assert(memory_checkpoint.applied_batch_count == 3
+            && memory_checkpoint.initialized_bytes.size() == exact.image.size()
+                + eon::MillenniumAtariPrgLoadSession::low_resolution_screen_bytes);
         assert(memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
             std::nullopt, 0x2a500}) == 0x4e);
         assert(memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
@@ -805,11 +883,12 @@ int main(const int argc, const char* const argv[]) {
             session.fread_mapped_config_prelude());
         assert(!user_consumer.observe_status_register(
             {1, 1, 0x2aa88, 0x2000, eon::MillenniumAtariObservedPrivilege::user}).accepted);
-        assert(user_consumer.observe_status_register(
-            {1, 1, 0x2aa88, 0x0000, eon::MillenniumAtariObservedPrivilege::user}).accepted);
+        assert(user_consumer.service_native_tos_status_register(1).accepted);
         const auto& user_path = user_consumer.checkpoint();
         assert(user_path.state == eon::MillenniumAtariConfigConsumerState::xbios_trap_boundary
             && user_path.branch_taken && user_path.status_register_read
+            && user_path.status_register_origin
+                == eon::MillenniumAtariServiceOrigin::eon_tos_compatibility
             && !user_path.hardware_write_executed && user_path.hardware_writes.empty()
             && user_path.resulting_status_register == 0x0004
             && user_path.converged_jsr_target == 0x2a51c
@@ -820,13 +899,15 @@ int main(const int argc, const char* const argv[]) {
             {1, 1, 0x2a520, 2, 0x12345678}).accepted);
         assert(!user_consumer.observe_xbios_selector_two(
             {1, 2, 0x2a522, 2, 0x12345678}).accepted);
-        assert(user_consumer.observe_xbios_selector_two(
-            {1, 2, 0x2a520, 2, 0x12345678}).accepted);
+        assert(user_consumer.service_native_tos_xbios_selector_two(2).accepted);
         const auto& user_selector_three = user_consumer.checkpoint();
         assert(user_selector_three.state
                 == eon::MillenniumAtariConfigConsumerState::xbios_selector_three_boundary
             && user_selector_three.selector_two_result_observed
-            && user_selector_three.selector_two_result_d0 == 0x12345678
+            && user_selector_three.selector_two_result_d0
+                == eon::MillenniumAtariPrgLoadSession::native_screen_base
+            && user_selector_three.selector_two_result_origin
+                == eon::MillenniumAtariServiceOrigin::eon_tos_compatibility
             && user_selector_three.selector_two_store_address == 0x2a50a
             && user_selector_three.selector_two_stack_cleanup_bytes == 2
             && user_selector_three.xbios_trap_address == 0x2a52e
@@ -836,17 +917,19 @@ int main(const int argc, const char* const argv[]) {
         assert(user_result_memory.apply(user_consumer.make_selector_two_result_effect_batch(
             "user-selector-two-result")).accepted);
         assert(user_result_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
-            std::nullopt, 0x2a50a}) == 0x12);
+            std::nullopt, 0x2a50a}) == 0x00);
         assert(user_result_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
-            std::nullopt, 0x2a50d}) == 0x78);
+            std::nullopt, 0x2a50b}) == 0x03);
         assert(!user_consumer.observe_xbios_selector_three(
             {1, 2, 0x2a52e, 3, 0xa1b2c3d4}).accepted);
-        assert(user_consumer.observe_xbios_selector_three(
-            {1, 3, 0x2a52e, 3, 0xa1b2c3d4}).accepted);
+        assert(user_consumer.service_native_tos_xbios_selector_three(3).accepted);
         const auto& user_selector_four = user_consumer.checkpoint();
         assert(user_selector_four.state
                 == eon::MillenniumAtariConfigConsumerState::xbios_selector_four_boundary
-            && user_selector_four.selector_three_result_d0 == 0xa1b2c3d4
+            && user_selector_four.selector_three_result_d0
+                == eon::MillenniumAtariPrgLoadSession::native_screen_base
+            && user_selector_four.selector_three_result_origin
+                == eon::MillenniumAtariServiceOrigin::eon_tos_compatibility
             && user_selector_four.selector_three_store_address == 0x2a50e
             && user_selector_four.xbios_trap_address == 0x2a53c
             && user_selector_four.xbios_selector == 4
@@ -854,14 +937,15 @@ int main(const int argc, const char* const argv[]) {
         assert(user_result_memory.apply(user_consumer.make_selector_three_result_effect_batch(
             "user-selector-three-result")).accepted);
         assert(user_result_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
-            std::nullopt, 0x2a50e}) == 0xa1);
+            std::nullopt, 0x2a50e}) == 0x00);
         assert(user_result_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
-            std::nullopt, 0x2a511}) == 0xd4);
-        assert(user_consumer.observe_xbios_selector_four(
-            {1, 4, 0x2a53c, 4, 0x1234beef}).accepted);
+            std::nullopt, 0x2a50f}) == 0x03);
+        assert(user_consumer.service_native_tos_xbios_selector_four(4).accepted);
         const auto& line_a = user_consumer.checkpoint();
         assert(line_a.state == eon::MillenniumAtariConfigConsumerState::line_a_init_boundary
-            && line_a.selector_four_result_d0_word == 0xbeef
+            && line_a.selector_four_result_d0_word == 0
+            && line_a.selector_four_result_origin
+                == eon::MillenniumAtariServiceOrigin::eon_tos_compatibility
             && line_a.selector_four_store_address == 0x2a512
             && line_a.selector_four_stack_cleanup_bytes == 2
             && line_a.line_a_init_address == 0x2a546
@@ -869,9 +953,9 @@ int main(const int argc, const char* const argv[]) {
         assert(user_result_memory.apply(user_consumer.make_selector_four_result_effect_batch(
             "user-selector-four-result")).accepted);
         assert(user_result_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
-            std::nullopt, 0x2a512}) == 0xbe);
+            std::nullopt, 0x2a512}) == 0x00);
         assert(user_result_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
-            std::nullopt, 0x2a513}) == 0xef);
+            std::nullopt, 0x2a513}) == 0x00);
         assert(user_consumer.observe_line_a(
             {1, 5, 0x2a546, 0x00f00000, 0x11223344, 0x55667788}).accepted);
         const auto& selector_21 = user_consumer.checkpoint();
@@ -897,6 +981,21 @@ int main(const int argc, const char* const argv[]) {
             && selector_6.selector_6_pointer_argument == 0x2a612
             && selector_6.xbios_trap_address == 0x2aabe
             && selector_6.xbios_selector == 6);
+        auto native_selector_6 = user_consumer;
+        const std::array<std::uint16_t, 16> native_palette_words{
+            0x0000, 0x0111, 0x0222, 0x0333, 0x0444, 0x0555, 0x0666, 0x0777,
+            0x0100, 0x0200, 0x0300, 0x0400, 0x0500, 0x0600, 0x0700, 0x0001};
+        assert(native_selector_6.service_native_tos_xbios_selector_6(
+            7, native_palette_words).accepted);
+        const auto& native_palette = native_selector_6.checkpoint();
+        assert(native_palette.state
+                == eon::MillenniumAtariConfigConsumerState::jsr_2b55a_boundary
+            && native_palette.selector_6_palette_loaded
+            && native_palette.selector_6_palette_words == native_palette_words
+            && !native_palette.selector_6_result_d0_defined
+            && native_palette.selector_6_result_origin
+                == eon::MillenniumAtariServiceOrigin::eon_tos_compatibility
+            && native_palette.boundary_instruction_address == 0x2b55a);
         assert(user_consumer.observe_xbios_selector_6(
             {1, 7, 0x2aabe, 6, 0x12345678}).accepted);
         const auto& jsr_boundary = user_consumer.checkpoint();
@@ -912,7 +1011,7 @@ int main(const int argc, const char* const argv[]) {
         assert(user_consumer.checkpoint().state
                 == eon::MillenniumAtariConfigConsumerState::bsr_2b59a_boundary
             && user_consumer.checkpoint().bsr_instruction_address == 0x2b55e
-            && user_consumer.checkpoint().bsr_target == 0x2b59a);
+            && user_consumer.checkpoint().bsr_target == 0x2b598);
         assert(user_consumer.execute_bsr_2b59a().accepted);
         assert(user_consumer.checkpoint().state
                 == eon::MillenniumAtariConfigConsumerState::d0_indexed_write_boundary
@@ -927,12 +1026,15 @@ int main(const int argc, const char* const argv[]) {
         const auto indexed_source = *memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
             std::nullopt, 0x2bdfd});
         assert(user_consumer.observe_d0_indexed_byte(
-            {1, 9, 0x2b5a6, 0, 0x2bdfd, indexed_source}).accepted);
+            {1, 9, 0x2b5a6, 0, 0x2bdfd, indexed_source, 0x2b6ae,
+                *memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
+                    std::nullopt, 0x2b6ae})}).accepted);
         assert(bsr_memory.apply(user_consumer.make_d0_indexed_effect_batch("indexed")).accepted);
         assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
             std::nullopt, 0x2b6b0}) == indexed_source);
         assert(bsr_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
-            std::nullopt, 0x2b6b1}) == indexed_source);
+            std::nullopt, 0x2b6b1}) == *memory.read_byte({
+                eon::NativeRuntimeAddressSpace::linear, std::nullopt, 0x2b6ae}));
         assert(user_consumer.execute_a1_setup().accepted);
         assert(user_consumer.checkpoint().state
                 == eon::MillenniumAtariConfigConsumerState::d0_indexed_word_boundary
@@ -1001,6 +1103,25 @@ int main(const int argc, const char* const argv[]) {
             && user_consumer.checkpoint().xbios_trap_address==0x2aa72
             && user_consumer.checkpoint().xbios_selector==0x26
             && user_consumer.checkpoint().selector_38_pointer_argument==0x2aa42);
+        auto native_supexec = user_consumer;
+        auto supexec_memory = memory;
+        const auto tos_vbl_environment = native_supexec.make_native_tos_vbl_environment_effect_batch(
+            "atari-test-eon-tos-vbl", supexec_memory);
+        assert(supexec_memory.apply(tos_vbl_environment).accepted);
+        assert(native_supexec.service_native_tos_xbios_selector_38(17, supexec_memory).accepted);
+        assert(native_supexec.checkpoint().state
+                == eon::MillenniumAtariConfigConsumerState::jsr_2aa0c_boundary
+            && native_supexec.checkpoint().selector_38_result_origin
+                == eon::MillenniumAtariServiceOrigin::eon_tos_compatibility
+            && native_supexec.checkpoint().selector_38_result_d0 == 0x2aa3a);
+        assert(supexec_memory.apply(native_supexec.make_selector_38_effect_batch(
+            "atari-test-eon-supexec-callback")).accepted);
+        assert(supexec_memory.read_linear_range(0x2aa34, 4)
+            == std::optional<std::vector<std::uint8_t>>(
+                std::vector<std::uint8_t>{0, 3, 0, 0}));
+        assert(supexec_memory.read_linear_range(0x39004, 4)
+            == std::optional<std::vector<std::uint8_t>>(
+                std::vector<std::uint8_t>{0, 2, 0xaa, 0x3a}));
         assert(user_consumer.observe_xbios_selector_38({1,17,0x2aa72,0x26,0x12345678}).accepted);
         assert(user_consumer.checkpoint().state==eon::MillenniumAtariConfigConsumerState::jsr_2aa0c_boundary
             && user_consumer.checkpoint().caller_d7==0x2a640
@@ -1153,6 +1274,18 @@ int main(const int argc, const char* const argv[]) {
             && single_cell_planes.checkpoint().game_init_palette_result_words[0]==expected_first_word);
         assert(palette_memory.apply(single_cell_planes.make_game_init_palette_arithmetic_effect_batch("palette-arithmetic")).accepted
             && palette_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,std::nullopt,0x2b3c8})==single_cell_planes.checkpoint().game_init_palette_result_bytes[0]);
+        auto native_setpalette = single_cell_planes;
+        assert(native_setpalette.service_native_tos_game_init_palette_selector_6(
+                100, native_setpalette.checkpoint().game_init_palette_result_words).accepted
+            && native_setpalette.checkpoint().state
+                ==eon::MillenniumAtariConfigConsumerState::game_init_palette_outer_recurrence_boundary
+            && native_setpalette.checkpoint().game_init_palette_xbios_serviced_by_eon
+            && native_setpalette.checkpoint().game_init_palette_xbios_service_origin
+                ==eon::MillenniumAtariServiceOrigin::eon_tos_compatibility
+            && !native_setpalette.checkpoint().game_init_palette_xbios_result_observed
+            && !native_setpalette.checkpoint().game_init_palette_xbios_result_d0_defined
+            && native_setpalette.checkpoint().game_init_palette_xbios_palette_words
+                ==native_setpalette.checkpoint().game_init_palette_result_words);
         assert(!single_cell_planes.observe_game_init_palette_xbios_selector_6({1,100,0x2b4ae,6,0x12345678}).accepted);
         assert(single_cell_planes.observe_game_init_palette_xbios_selector_6({1,100,0x2b4ac,6,0x12345678}).accepted
             && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_palette_outer_recurrence_boundary
@@ -1185,6 +1318,12 @@ int main(const int argc, const char* const argv[]) {
         assert(single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_palette_terminal_xbios_selector_6_boundary
             && single_cell_planes.checkpoint().game_init_d7==0xffff
             && single_cell_planes.checkpoint().game_init_palette_terminal_trap_address==0x2b4c2);
+        auto native_terminal_setpalette = single_cell_planes;
+        assert(native_terminal_setpalette.service_native_tos_game_init_palette_selector_6(
+                113, native_terminal_setpalette.checkpoint().game_init_palette_result_words).accepted
+            && native_terminal_setpalette.checkpoint().state
+                ==eon::MillenniumAtariConfigConsumerState::game_init_palette_rts_boundary
+            && !native_terminal_setpalette.checkpoint().game_init_palette_xbios_result_d0_defined);
         assert(single_cell_planes.observe_game_init_palette_xbios_selector_6({1,113,0x2b4c2,6,0x76543210}).accepted
             && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_palette_rts_boundary
             && single_cell_planes.checkpoint().game_init_palette_terminal_result_d0==0x76543210
@@ -1204,6 +1343,17 @@ int main(const int argc, const char* const argv[]) {
             && single_cell_planes.checkpoint().gemdos_filename_pointer==0x2a634
             && single_cell_planes.checkpoint().gemdos_trap_address==0x2a5b4);
         auto second_config_failure=single_cell_planes;
+        auto eon_virtual_second_config=second_config_failure;
+        assert(eon_virtual_second_config.service_game_init_second_config_fopen_result(0x7ffe).accepted
+            &&eon_virtual_second_config.checkpoint().game_init_second_config_fopen_serviced_by_eon
+            &&eon_virtual_second_config.checkpoint().gemdos_61_result_d0==0x7ffe
+            &&eon_virtual_second_config.checkpoint().state==eon::MillenniumAtariConfigConsumerState::jsr_2a5c2_boundary);
+        assert(!eon_virtual_second_config.service_game_init_second_config_fopen_result(0x7ffe).accepted);
+        assert(eon_virtual_second_config.execute_jsr_2a5c2().accepted
+            &&eon_virtual_second_config.checkpoint().gemdos_63_handle==0x7ffe);
+        assert(eon_virtual_second_config.service_game_init_second_config_fread_result(18428).accepted);
+        assert(eon_virtual_second_config.service_game_init_second_config_fclose_result().accepted
+            &&eon_virtual_second_config.checkpoint().game_init_second_config_fclose_serviced_by_eon);
         assert(!single_cell_planes.observe_game_init_second_config_fopen({1,115,0x2a5b6,0x3d,7}).accepted);
         assert(single_cell_planes.observe_game_init_second_config_fopen({1,115,0x2a5b4,0x3d,7}).accepted
             && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::jsr_2a5c2_boundary
@@ -1219,10 +1369,26 @@ int main(const int argc, const char* const argv[]) {
             && second_config_failure.checkpoint().fopen_branch_target==0x2a632);
         assert(single_cell_planes.execute_jsr_2a5c2().accepted
             && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::gemdos_selector_63_boundary);
+        auto eon_serviced_second_config=single_cell_planes;
+        assert(!eon_serviced_second_config.service_game_init_second_config_fread_result(18427).accepted);
+        assert(eon_serviced_second_config.service_game_init_second_config_fread_result(18428).accepted
+            && eon_serviced_second_config.checkpoint().state==eon::MillenniumAtariConfigConsumerState::gemdos_selector_62_boundary
+            && eon_serviced_second_config.checkpoint().game_init_second_config_fread_serviced_by_eon
+            && eon_serviced_second_config.checkpoint().game_init_second_config_fread_service_bytes==18428
+            && eon_serviced_second_config.checkpoint().gemdos_63_result_observed
+            && eon_serviced_second_config.checkpoint().gemdos_63_result_d0==18428);
+        assert(eon_serviced_second_config.service_game_init_second_config_fclose_result().accepted
+            && eon_serviced_second_config.checkpoint().game_init_second_config_fclose_serviced_by_eon
+            && eon_serviced_second_config.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_second_config_rts_boundary
+            && eon_serviced_second_config.checkpoint().gemdos_62_result_d0==0);
+        assert(!eon_serviced_second_config.service_game_init_second_config_fclose_result().accepted);
+        auto wrong_checkpoint_service=second_config_failure;
+        assert(!wrong_checkpoint_service.service_game_init_second_config_fread_result(18428).accepted);
         assert(!single_cell_planes.observe_game_init_second_config_fread({1,116,0x2a5d2,0x3f,0x7d42}).accepted);
         assert(single_cell_planes.observe_game_init_second_config_fread({1,116,0x2a5d0,0x3f,0x7d42}).accepted
             && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::gemdos_selector_62_boundary
             && single_cell_planes.checkpoint().gemdos_63_result_d0==0x7d42);
+        assert(!single_cell_planes.service_game_init_second_config_fclose_result().accepted);
         assert(!single_cell_planes.observe_game_init_second_config_fclose({1,117,0x2a5e8,0x3e,0}).accepted);
         assert(single_cell_planes.observe_game_init_second_config_fclose({1,117,0x2a5e6,0x3e,0}).accepted
             && single_cell_planes.checkpoint().state==eon::MillenniumAtariConfigConsumerState::game_init_second_config_rts_boundary
@@ -1236,7 +1402,8 @@ int main(const int argc, const char* const argv[]) {
             && single_cell_planes.checkpoint().game_init_second_config_caller_sha256=="eea2683953b1fe18e3e7b88e1744fa10a9684444fe183d283efee9f54302c1a0"
             && single_cell_planes.checkpoint().game_init_a3==0x2a64c
             && single_cell_planes.checkpoint().game_init_a0==0x2a66c
-            && single_cell_planes.checkpoint().game_init_second_config_xbios_pointer==0x2ab2c
+            && single_cell_planes.checkpoint().game_init_second_config_xbios_pointer==0x2ab2a
+            && single_cell_planes.checkpoint().game_init_second_config_xbios_callback_branch_target==0x2ab9c
             && single_cell_planes.checkpoint().xbios_trap_address==0x2ab24
             && single_cell_planes.checkpoint().xbios_selector==0x26);
         assert(!single_cell_planes.observe_game_init_second_config_xbios_38({1,119,0x2ab26,0x26,0xabcdef01}).accepted);
@@ -1372,19 +1539,19 @@ int main(const int argc, const char* const argv[]) {
         assert(hardware_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
             std::nullopt, 0xffff8802U}) == 0xff);
         assert(supervisor_consumer.observe_xbios_selector_two(
-            {1, 9, 0x2a520, 2, 0x89abcdef}).accepted);
+            {1, 9, 0x2a520, 2, eon::MillenniumAtariPrgLoadSession::native_screen_base}).accepted);
         assert(hardware_memory.apply(supervisor_consumer.make_selector_two_result_effect_batch(
             "supervisor-selector-two-result")).accepted);
         assert(hardware_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
-            std::nullopt, 0x2a50a}) == 0x89);
+            std::nullopt, 0x2a50a}) == 0x00);
         assert(hardware_memory.read_byte({eon::NativeRuntimeAddressSpace::linear,
-            std::nullopt, 0x2a50d}) == 0xef);
+            std::nullopt, 0x2a50b}) == 0x03);
         assert(supervisor_consumer.observe_xbios_selector_three(
-            {1, 10, 0x2a52e, 3, 0x10203040}).accepted);
+            {1, 10, 0x2a52e, 3, eon::MillenniumAtariPrgLoadSession::native_screen_base}).accepted);
         assert(hardware_memory.apply(supervisor_consumer.make_selector_three_result_effect_batch(
             "supervisor-selector-three-result")).accepted);
         assert(supervisor_consumer.observe_xbios_selector_four(
-            {1, 11, 0x2a53c, 4, 0x50607080}).accepted);
+            {1, 11, 0x2a53c, 4, 0}).accepted);
         rejects([&] {
             const eon::NativeRuntimeMemory empty_memory(0x01000000U);
             static_cast<void>(eon::MillenniumAtariConfigConsumerSession(1, empty_memory,

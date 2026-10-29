@@ -42,6 +42,15 @@ MillenniumDosVideoFunction13Session::boundary() const {
     return std::nullopt;
 }
 
+std::optional<std::uint16_t>
+MillenniumDosVideoFunction13Session::return_bx_for_entry(
+    const std::uint16_t entry_bx) const noexcept {
+    if (state_ != MillenniumDosVideoFunction13State::ret_boundary) {
+        return std::nullopt;
+    }
+    return entry_bx;
+}
+
 void MillenniumDosVideoFunction13Session::observe_status(
     const MillenniumDosVideoFunction13PortRead& read) {
     const auto current = boundary();

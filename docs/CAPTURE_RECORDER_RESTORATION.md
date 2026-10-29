@@ -28,6 +28,8 @@ cache before asking Project Eon to run an evidence capture:
 | Deuteros Amiga | reviewed FS-UAE v21, trv2 x86_64 | `2fc7f47425d0fa005bb59bf41eaeccf32d1cba284dee4f227e7e723b853e1b35` | Schema 31 records a bounded complete zero-route invocation; physical04 verifies but does not establish a game action |
 | Deuteros Amiga | reviewed FS-UAE v22, trv2 x86_64 | `eb0995c70f7f355f674d448b08c0f3e647430562ffde7d179e5aeb12e5abca71` | Schema 32 adds a separate display-register sidecar after host-input ordinal 20; no capture has been run |
 | Deuteros Amiga | reviewed FS-UAE v23, trv2 x86_64 | `e4e46e84cd75eceffb28d26882fef0062582c251b0ef26baa0fccf6aff2e8dd1` | Schema 33 observes the exact main-stage latch write at `$21868`; 2026-10-07 visible attempt rejected for no host input |
+| Deuteros Amiga | reviewed FS-UAE v24, trv2 x86_64 | `ddd6e2df32c9d785e93b96c0a55b6244fab034212b6842e031ef09648d7765ac` | 62,039,936-byte observer successor; schema 34 bounds late-display sampling to four observed input ordinals, 2,048 rows each and 2 MiB total |
+| Deuteros Amiga | reviewed FS-UAE v33, trv2 x86_64 | `f3701b29d1f3b507f7ca759838b04ff4a3fb2927167fedf1e12cabcf8a7f5ceb` | 62,094,200-byte service-boundary observer; schema 42 permits up to 32 input-linked sequences and exact A0/A1 32-byte windows at `$201b6`; no capture |
 
 The v16 source patch SHA-256 is
 `1fa61e7984fe5535b42c07614be4f10a219323bf8536a3dc271a80c0b6f5f361`.
@@ -1077,3 +1079,144 @@ does not by itself establish the source of the CIA bit, a game-state change,
 or a displayed frame. No emulator was launched and no capture was run. The
 v18 binary and source patch remain in the scoped external trv2 cache; original
 media was not accessed or changed for this build.
+
+### 2026-10-08 experimental DOS AH=48 site `$1b4f` observer
+
+A second AH=48 prototype is pinned separately from the four-site v1 observer.
+It observes only the hash-bound `TITLES.EXE` call at `$1b4f` (AH=`$48`) and
+records DOS-handler entry/exit registers before guest IRET. Its sidecar header
+is `project-eon.dos-ah48-observer/v3`, with return IP `$1b51`; attempts at the
+v1 sites are rejected. This prevents a v1 binary or receipt from being
+reinterpreted as evidence for the new site.
+
+The x86_64 DOSBox-X binary is 122,505,616 bytes, SHA-256
+`75ddc62f68817bfb37cb59d8a283ea06e89cf8d46104bf3458c0d99fcfa2b6ef`. It was
+built on trv2 from upstream commit
+`234797680781567e18c374c9e62da24de5423db0`, the existing AH48 observer patch
+`321bc727d4c0529a6ba960ecc6fcf9199c245feb5d45f72dda10f03c2694d868`, and a
+site-only delta patch SHA-256
+`b6bfa41579e7fe4e914f446632dc8442c5de179154642782041c00fe9a7fe1dd`. The
+external C++14 observer/receipt harness passed with `-Wall -Wextra -Werror`.
+The runner and verifier use the distinct experimental protocol
+`millennium-dos-ah48-site-1b4f-v2`; its capture receipt remains schema 22 and
+is rejected for recovery. No guest capture was run. This is a prepared
+diagnostic boundary, not evidence that the DOS call occurred or that the game
+advanced.
+
+### 2026-10-09 trv2 Deuteros FS-UAE v25 negative-selector observer
+
+Built a separate v25 successor from the reviewed v24 binary. Its x86_64
+executable is 62,053,824 bytes, SHA-256
+`89f66139d3dfd47d59addde5901eebcc844825a331e8f0746ca96ae8f09de593`.
+The two-file source delta from v24 is 6,551 bytes, SHA-256
+`6aa3feec1d1fd68990cdf15cbb36809b49e39bf7cfeef60700138ca24046c4d4`.
+The build changed only `newcpu.o` in `libuae.a`; the v24 source tree and
+binary remain intact under the external trv2 cache. The v25 recorder protocol
+uses capture receipt schema 35 and emits a separate, bounded
+`negative-selector.txt` sidecar.
+
+The sidecar observes the hash-bound path from dispatch `$1fbe6`, through the
+negative BPL site `$1fbee`, to the compare/BEQ gate `$1fbfe`. It distinguishes
+the service call at `$1fc08` and target `$3fbf8` from the `$1fc12` service-skip
+path, then records the shared epilogue and caller continuation. The runner
+validates opcode words, branch targets, N/Z flags, service arguments, route
+ordering, bounded row counts, and joins each row to the recorder's host-input
+receipt. The sidecar reports instruction-boundary snapshots only; it does not
+prove the service's external effects, a game action, or a playable state. No
+guest capture was run for v25, and the normal visible FS-UAE session was left
+untouched.
+
+### 2026-10-09 Deuteros response-queue observer candidate v31
+
+Built on trv2 from the pinned v30 source tree. The x86_64 FS-UAE 3.2.35
+executable is 62,093,928 bytes, SHA-256
+`3081ff4b8d12aa550ae065fc83df9f88ff3bfce5ba9ff6af6141bcdce70b74b0`.
+Only `newcpu.o` differs from v30. The external source and patch are under
+`/home/trv2/.cache/project-eon-tools/deuteros-response-queue-v31-20261009/`;
+the candidate source was not launched. Schema 40 pins this binary and bounds
+`response-queue.txt` to 128 KiB, at most 24 observations per site, and seven
+reviewed sites. The observer records an ordered caller/helper/return sequence
+and read-only queue snapshots. No emulator capture or gameplay result is
+claimed; a complete visible, human-input capture and independent receipt
+verification are still required.
+
+### v32 title-callback receipt parser status
+
+Schema 41 and a bounded local parser contract cover the recovered `$00ff`
+callback stages from `$1f094` through the callback RTS at `$1f0ee`. The
+recorded `$1f0be` site is only a branch continuation; no outer callback return
+is claimed. The parser requires a zero gate byte, selector value `$00ff`, the
+two destination copies, ordered `$20118` / `MoveSprite` call and return sites,
+and exact host-input ordinal/frame links. Runtime ABI fields remain unknown.
+No v32 FS-UAE recorder has been built or hash-pinned, so schema 41 is not yet
+admissible and no v32 capture is available. The current recorder validation
+intentionally keeps that identity unpinned.
+
+### 2026-10-12 Deuteros service-boundary recorder v33
+
+Built on trv2 from the pinned v31 response-queue binary. The x86_64 FS-UAE
+3.2.35 executable is 62,094,200 bytes, SHA-256
+`f3701b29d1f3b507f7ca759838b04ff4a3fb2927167fedf1e12cabcf8a7f5ceb`. The
+two-file source patch from v31 is 3,969 bytes, SHA-256
+`658cd6a2eac52fb7cbd7ea794f09e09e7e4dc47dd3e4f54a03e74a5ca8930b92`; only
+`newcpu.o` changed in `libuae.a`. An independent read-only review confirmed
+the source delta and archive-member delta match this build.
+
+Schema 42 observes the ordered `$20118` / `$201b6` / `$201ba` / `$201be` /
+caller-return path for up to 32 increasing host-input ordinals in the bounded
+range 1–256. A later entry abandons an incomplete earlier sequence while
+retaining its rows. At `$201b6`, the A0/A1 windows start at the exact pointer
+addresses and cover 32 bytes; other windows retain their centered policy.
+The parser enforces chronology, order and caps. This remains register and
+memory observation only; the ABI, action meaning, displayed effect and
+playability are unknown. The candidate remains in the scoped external trv2
+cache at `/home/trv2/.cache/project-eon-tools/deuteros-service-boundary-v33-20261012/`.
+No emulator capture was run and original media was not accessed or changed.
+
+### 2026-10-24 pinned-recorder availability check
+
+The earlier local read-only locator checked 1,468 executable candidates and
+the earlier trv2 cache scan checked 7,134 candidates; neither found a reviewed
+Deuteros recorder. A fresh run of the current repository locator on trv2
+checked 131 executable candidates in `/home/trv2/.cache/project-eon-tools`
+and `/home/trv2/.cache/project-eon-analysis`, including the pinned v33
+service-boundary digest, and found zero matches. A broader `/home/trv2` scan
+was rejected by the locator's 10,000-file safety cap, so that result says
+nothing about files elsewhere under the home directory. No emulator was
+launched and no capture was run. Restore the exact reviewed binary before
+requesting a capture; a stock emulator or synthetic recorder output does not
+satisfy this evidence boundary.
+
+### 2026-10-25 trv2 external-tool recorder recheck
+
+The current hash-pinned locator was placed with its two runner modules in the
+external `/home/trv2/.cache/project-eon-locator/tools/` directory so its
+repository-boundary check could search sibling caches. It found no pinned
+recorder in the trv2 build/analysis cache roots (76 executable candidates),
+in `/home/trv2/.cache/project-eon-tools`, or in `/home/trv2/tools`,
+`/home/trv2/.local`, and `/opt`. The locator's JSON results are kept in the
+external analysis cache; no unmatched file paths or hashes are recorded here.
+The `~/Downloads` and `~/FS-UAE` directories contained no executable files.
+This search does not establish absence outside those roots. No emulator was
+launched, no capture was run, and original media was not accessed or changed.
+Continue source-backed native work; do not replace this boundary with a
+rebuilt or unreviewed recorder.
+
+### 2026-10-25 current trv2 cache availability recheck
+
+The local `tools/locate_capture_recorder.py` and the copy at
+`/home/trv2/.cache/project-eon-analysis/worktree/tools/locate_capture_recorder.py`
+had the same SHA-256
+`2415004a647522bf95776c41111cd76e5e211d7689af7932be7a097de4ec7b75`.
+Running that locator on trv2 against `/home/trv2/.cache/project-eon-tools`
+and `/home/trv2/Downloads` found no executable candidates or pinned recorders
+for Deuteros Amiga or Millennium DOS `v21-int93-installation` (two roots,
+zero candidates hashed). The narrower `/home/trv2/.cache/project-eon-tools/recorders`
+directory and Downloads also contained no executable candidates. No emulator
+was launched and no capture was run. This confirms that the previously
+documented recorder restoration is no longer available in those roots; it
+does not establish absence elsewhere under the account.
+The exact documented v33 candidate directory
+`/home/trv2/.cache/project-eon-tools/deuteros-service-boundary-v33-20261012/`
+was also absent on trv2 when checked directly; no permission change or
+unverified binary substitution was attempted.

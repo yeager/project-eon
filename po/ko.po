@@ -9,6 +9,21 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+msgid "INTERACTIVE AMIGA FLOW IS NOT YET RECOVERED."
+msgstr "Amiga의 인터랙티브 진행 경로는 아직 복구되지 않았습니다."
+
+msgid "ORIGINAL ATARI ST TITLE - SOURCE DECODED"
+msgstr "원본 Atari ST 타이틀 - 소스 데이터에서 디코딩됨"
+
+msgid "320 X 200 / 4 PLANES / SOURCE RGB3 PALETTE"
+msgstr "320 × 200 / 4개 평면 / 원본 RGB3 팔레트"
+
+msgid "GAMEPLAY FLOW REMAINS UNRECOVERED."
+msgstr "게임플레이 흐름은 아직 복구되지 않았습니다."
+
+msgid "BOOTSTRAP BOUNDARIES ARE STATIC; TITLE PIXELS ARE SOURCE DECODED."
+msgstr "부트스트랩 경계는 정적이며 타이틀 픽셀은 소스 데이터에서 디코딩됩니다."
+
 msgid "Welcome to Millennium."
 msgstr "Millennium에 오신 것을 환영합니다."
 

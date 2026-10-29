@@ -9,6 +9,21 @@ msgstr ""
 "Language: hi\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
+msgid "INTERACTIVE AMIGA FLOW IS NOT YET RECOVERED."
+msgstr "Amiga का इंटरैक्टिव क्रम अभी पुनर्प्राप्त नहीं हुआ है।"
+
+msgid "ORIGINAL ATARI ST TITLE - SOURCE DECODED"
+msgstr "मूल Atari ST शीर्षक - स्रोत डेटा से डिकोड किया गया"
+
+msgid "320 X 200 / 4 PLANES / SOURCE RGB3 PALETTE"
+msgstr "320 × 200 / 4 प्लेन / स्रोत की RGB3 पैलेट"
+
+msgid "GAMEPLAY FLOW REMAINS UNRECOVERED."
+msgstr "गेमप्ले का क्रम अभी पुनर्प्राप्त नहीं हुआ है।"
+
+msgid "BOOTSTRAP BOUNDARIES ARE STATIC; TITLE PIXELS ARE SOURCE DECODED."
+msgstr "बूटस्ट्रैप सीमाएँ स्थिर हैं; शीर्षक के पिक्सेल स्रोत डेटा से डिकोड किए गए हैं।"
+
 msgid "Welcome to Millennium."
 msgstr "Millennium में आपका स्वागत है।"
 

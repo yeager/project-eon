@@ -140,6 +140,24 @@ void DeuterosAtariDisk::parse_boot_profile() {
         profile_.first_stage_offset = static_cast<std::size_t>(70) * 2U * 9U * 512U;
         profile_.first_stage_length = 9U * 512U;
     }
+
+    // This alternate Replicants Disk 2 enters an overlapping boot path at
+    // $103a. Preserve its literal relocation and HDV_BPB hook cells as a
+    // profile; no copied instruction or TOS service is executed here.
+    constexpr ExecutableByteAnchor<512> replicants_a_boot{
+        "6f90222faa5630be91578058794146aa47d453314ad416714ea0f1679fc47957"};
+    if (starts_with(bytes, 0, replicants_a_boot)) {
+        profile_.has_replicants_a_hdv_bpb_hook = true;
+        profile_.replicants_a_boot_entry = 0x103a;
+        profile_.replicants_a_copy_byte_count = 512;
+        profile_.replicants_a_copy_pointer_cell = 0x4c6; // _dskbufp
+        profile_.replicants_a_copy_addend = 0x600;
+        profile_.replicants_a_relocated_entry_offset = 0x64;
+        profile_.replicants_a_hdv_bpb_vector_cell = 0x472;
+        profile_.replicants_a_callback_offset = 0x7a;
+        profile_.replicants_a_saved_vector_offset = 0x12c;
+        profile_.replicants_a_state_word_offset = 0x130;
+    }
 }
 
 DeuterosAtariMediaEvidence inspect_deuteros_atari_media(

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "engine/deuteros_amiga_title_exec_boundary_session.hpp"
+#include "engine/deuteros_amiga_graphics_library_compatibility.hpp"
+#include "engine/deuteros_amiga_native_display_surface.hpp"
 
 #include <cstdint>
 #include <array>
@@ -26,7 +28,10 @@ struct DeuterosAmigaObservedDisplayBaseRead {
 };
 
 struct DeuterosAmigaTitleDisplayLocalAdvance {
-    DeuterosAmigaObservedDisplayBaseRead observation;
+    std::optional<DeuterosAmigaObservedDisplayBaseRead> observation;
+    std::optional<DeuterosAmigaNativeDisplaySurface> native_surface;
+    std::uint32_t display_base_value = 0;
+    std::uint32_t display_base_source_address = 0;
     std::array<std::uint32_t, 2> base_pointer_destinations{};
     std::uint32_t palette_destination_address = 0;
     std::uint32_t palette_count_address = 0;
@@ -77,6 +82,8 @@ struct DeuterosAmigaTitleOpenLibraryBoundaryCheckpoint {
     std::uint32_t caller_return_address = 0;
     std::uint32_t result_store_address = 0;
     std::optional<DeuterosAmigaObservedOpenLibraryReturn> observed_return;
+    std::optional<DeuterosAmigaNativeOpenLibraryServiceReturn> native_service_return;
+    std::optional<DeuterosAmigaNativeDisplaySurface> native_display_surface_return;
 };
 
 // Continues the hash-validated title chain only far enough to admit the first
@@ -90,11 +97,22 @@ public:
         const DeuterosAmigaTitleGraphicsSetupProfile& setup,
         const DeuterosAmigaTitleStageProfile& stage,
         const DeuterosAmigaTitleDisplayClearProfile& clear) {
+        const bool observed_exec_returns = exec.observed_returns[0]
+            && exec.observed_returns[1]
+            && exec.observed_returns[1]->trace_sequence
+                > exec.observed_returns[0]->trace_sequence;
+        const bool native_privilege_transition = exec.native_privilege_transition
+            && exec.native_privilege_transition->super_state_call_address == 0x4045a
+            && exec.native_privilege_transition->super_state_vector == -0x96
+            && exec.native_privilege_transition->super_state_return_address == 0x4045e
+            && exec.native_privilege_transition->user_state_call_address == 0x40468
+            && exec.native_privilege_transition->user_state_vector == -0x9c
+            && exec.native_privilege_transition->user_state_return_address == 0x4046c
+            && exec.native_privilege_transition->user_state_stack_argument == 0x7fff0
+            && exec.native_privilege_transition->host_privilege_transition_elided;
         if (exec.state != DeuterosAmigaTitleExecBoundaryState::before_open_library_boundary
-            || exec.stop_before_address != 0x4046c || !exec.observed_returns[0]
-            || !exec.observed_returns[1]
-            || exec.observed_returns[1]->trace_sequence
-                <= exec.observed_returns[0]->trace_sequence
+            || exec.stop_before_address != 0x4046c
+            || (!observed_exec_returns && !native_privilege_transition)
             || setup.entry_address != 0x1ed80 || setup.library_name_address != 0x1ed02
             || setup.library_name != "graphics.library" || setup.exec_base_address != 4
             || setup.exec_vector != -0x228 || setup.zero_result_loop_address != 0x1edf6
@@ -123,7 +141,8 @@ public:
                 != "42c96aa502e36711ed274b9ddf4d2d1de53abfebb4ebdf88fa99346d2b03e30b") {
             throw std::runtime_error("Invalid Deuteros OpenLibrary boundary provenance");
         }
-        preceding_trace_sequence_ = exec.observed_returns[1]->trace_sequence;
+        preceding_trace_sequence_ = observed_exec_returns
+            ? exec.observed_returns[1]->trace_sequence : 0;
         checkpoint_.stop_before_address = 0x1ed8c;
         checkpoint_.caller_return_address = 0x40472;
         checkpoint_.result_store_address = setup.nonzero_result_destination_address;
@@ -158,6 +177,36 @@ public:
         return checkpoint_;
     }
 
+    [[nodiscard]] std::optional<DeuterosAmigaTitleOpenLibraryBoundaryCheckpoint>
+    provide_native_service_return(
+        const DeuterosAmigaNativeOpenLibraryServiceReturn& service_return,
+        const std::uint64_t runtime_generation) {
+        if (checkpoint_.state
+                != DeuterosAmigaTitleOpenLibraryBoundaryState::awaiting_open_library_return
+            || checkpoint_.observed_return || checkpoint_.native_service_return
+            || service_return.runtime_generation == 0
+            || service_return.runtime_generation != runtime_generation
+            || service_return.service_sequence != 1
+            || service_return.entry_address != 0x1ed80
+            || service_return.library_name_address != 0x1ed02
+            || service_return.exec_base_source_address != 4
+            || service_return.call_address != 0x1ed8c || service_return.vector != -0x228
+            || service_return.return_address != 0x1ed90
+            || service_return.library_name != "graphics.library"
+            || service_return.minimum_version != 0
+            || service_return.origin != DeuterosAmigaServiceOrigin::native_compatibility
+            || (service_return.native_service_token & 0xf0000000U) != 0xe0000000U
+            || (service_return.native_service_token & 0x0fffffffU)
+                != service_return.runtime_generation) {
+            throw std::runtime_error("Deuteros native graphics-library service return is detached");
+        }
+        checkpoint_.native_service_return = service_return;
+        checkpoint_.state =
+            DeuterosAmigaTitleOpenLibraryBoundaryState::before_graphics_dependent_setup;
+        checkpoint_.stop_before_address = checkpoint_.caller_return_address;
+        return checkpoint_;
+    }
+
     // Executes only the statically proven nonzero local route: retain the
     // observed D0 store, describe (but do not fabricate the result of) the
     // original word increment, return to the caller, and follow both direct
@@ -166,14 +215,20 @@ public:
     advance_nonzero_local_path() {
         if (checkpoint_.state
             != DeuterosAmigaTitleOpenLibraryBoundaryState::before_graphics_dependent_setup
-            || !checkpoint_.observed_return || checkpoint_.observed_return->result_d0 == 0) {
+            || (checkpoint_.observed_return && checkpoint_.native_service_return)
+            || (!checkpoint_.observed_return && !checkpoint_.native_service_return)
+            || (checkpoint_.observed_return && checkpoint_.observed_return->result_d0 == 0)
+            || (checkpoint_.native_service_return
+                && checkpoint_.native_service_return->native_service_token == 0)) {
             return std::nullopt;
         }
         checkpoint_.state =
             DeuterosAmigaTitleOpenLibraryBoundaryState::awaiting_external_display_base_read;
         checkpoint_.stop_before_address = 0x1eda6;
         return DeuterosAmigaTitlePostOpenLibraryLocalAdvance{
-            0x12fec, checkpoint_.observed_return->result_d0,
+            0x12fec, checkpoint_.observed_return
+                ? checkpoint_.observed_return->result_d0
+                : checkpoint_.native_service_return->native_service_token,
             0x1ed70, 1, 0x40472, 0x1f172, 0x1f172, 0x1eda6, 0x1eda6};
     }
 
@@ -199,12 +254,51 @@ public:
             DeuterosAmigaTitleOpenLibraryBoundaryState::before_custom_chip_boundary;
         checkpoint_.stop_before_address = 0x40498;
         return DeuterosAmigaTitleDisplayLocalAdvance{observation,
+            std::nullopt, observation.observed_value, observation.source_address,
             setup_.external_display_base_destinations, setup_.palette_destination_address,
             setup_.palette_count_address, setup_.palette_count,
             setup_.palette_pointer_address,
             setup_.palette_words, setup_.derived_pointer_destination_address,
             observation.observed_value + setup_.derived_pointer_addend, 0x1f16c,
             {0x1f974, 0x410d8}, observation.observed_value,
+            clear_.iteration_count * clear_.write_width_bytes,
+            clear_.write_width_bytes, 0x40498};
+    }
+
+    [[nodiscard]] std::optional<DeuterosAmigaTitleDisplayLocalAdvance>
+    provide_native_display_surface(
+        const DeuterosAmigaNativeDisplaySurface& surface,
+        const std::uint64_t runtime_generation) {
+        constexpr std::uint32_t arena_begin = 0x00e00000;
+        constexpr std::uint32_t arena_end = 0x00f00000;
+        if (checkpoint_.state
+                != DeuterosAmigaTitleOpenLibraryBoundaryState::awaiting_external_display_base_read
+            || !checkpoint_.native_service_return || checkpoint_.observed_return
+            || checkpoint_.native_display_surface_return
+            || surface.runtime_generation == 0
+            || surface.runtime_generation != runtime_generation
+            || surface.service_sequence != 2 || surface.allocation_id != 1
+            || surface.byte_count != 0x7d00 || surface.alignment != 0x1000
+            || surface.base_address < arena_begin
+            || surface.base_address > arena_end - surface.byte_count
+            || (surface.base_address & (surface.alignment - 1U)) != 0
+            || setup_.derived_pointer_addend > surface.byte_count
+            || surface.origin != DeuterosAmigaDisplaySurfaceOrigin::native_compatibility
+            || checkpoint_.native_service_return->runtime_generation != runtime_generation) {
+            throw std::runtime_error("Deuteros native display surface is detached from its graphics service");
+        }
+        checkpoint_.native_display_surface_return = surface;
+        checkpoint_.state =
+            DeuterosAmigaTitleOpenLibraryBoundaryState::before_custom_chip_boundary;
+        checkpoint_.stop_before_address = 0x40498;
+        return DeuterosAmigaTitleDisplayLocalAdvance{std::nullopt, surface,
+            surface.base_address, setup_.external_display_base_source_address,
+            setup_.external_display_base_destinations,
+            setup_.palette_destination_address, setup_.palette_count_address,
+            setup_.palette_count, setup_.palette_pointer_address, setup_.palette_words,
+            setup_.derived_pointer_destination_address,
+            surface.base_address + setup_.derived_pointer_addend, 0x1f16c,
+            {0x1f974, 0x410d8}, surface.base_address,
             clear_.iteration_count * clear_.write_width_bytes,
             clear_.write_width_bytes, 0x40498};
     }

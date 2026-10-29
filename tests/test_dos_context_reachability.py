@@ -1,13 +1,74 @@
 import unittest
 
+from capstone import CS_ARCH_X86, CS_MODE_16, Cs
+
 from tools.analyze_dos_context_reachability import (
     ContextReachabilityError,
+    TITLES_SHA256,
+    TITLES_SIZE,
+    _memory_may_alias_return_word,
     analyze_context_reachable,
+    indirect_control_flow_candidates,
     static_reference_candidates,
 )
 
 
 class DosContextReachabilityTests(unittest.TestCase):
+    def test_dosboxx_com_stack_interval_proves_011e_disjoint(self):
+        decoder = Cs(CS_ARCH_X86, CS_MODE_16)
+        decoder.detail = True
+        operand = next(decoder.disasm(bytes.fromhex("a31e01"), 0x100)).operands[0]
+        self.assertFalse(_memory_may_alias_return_word(
+            operand, ((0x1B46, -4),), ss_equals_cs=True,
+            stack_pointer_base=0x1D6E, stack_pointer_base_max=0xFFFE,
+            ds_equals_cs=True, si_values=None))
+
+    def test_dosboxx_com_stack_interval_detects_possible_alias(self):
+        decoder = Cs(CS_ARCH_X86, CS_MODE_16)
+        decoder.detail = True
+        operand = next(decoder.disasm(bytes.fromhex("a3701d"), 0x100)).operands[0]
+        self.assertTrue(_memory_may_alias_return_word(
+            operand, ((0x1B46, -4),), ss_equals_cs=True,
+            stack_pointer_base=0x1D6E, stack_pointer_base_max=0xFFFE,
+            ds_equals_cs=True, si_values=None))
+
+    def test_bx_relative_cs_write_uses_known_immediate_value(self):
+        decoder = Cs(CS_ARCH_X86, CS_MODE_16)
+        decoder.detail = True
+        operand = next(decoder.disasm(bytes.fromhex("2e894702"), 0x100)).operands[0]
+        args = dict(ss_equals_cs=True, stack_pointer_base=0x1D6E,
+                    stack_pointer_base_max=0xFFFE, ds_equals_cs=True,
+                    si_values=None)
+        self.assertFalse(_memory_may_alias_return_word(
+            operand, ((0x1B46, -4),), bx_constant=0x010C, **args))
+        self.assertTrue(_memory_may_alias_return_word(
+            operand, ((0x1B46, -4),), bx_constant=0x1D68, **args))
+        self.assertTrue(_memory_may_alias_return_word(
+            operand, ((0x1B46, -4),), bx_constant=None, **args))
+        default_segment = next(
+            decoder.disasm(bytes.fromhex("894702"), 0x100)).operands[0]
+        self.assertTrue(_memory_may_alias_return_word(
+            default_segment, ((0x1B46, -4),), bx_constant=0x010C,
+            ss_equals_cs=True, stack_pointer_base=0x1D6E,
+            stack_pointer_base_max=0xFFFE, ds_equals_cs=None, si_values=None))
+
+    def test_bx_immediate_is_tracked_through_near_call(self):
+        # MOV BX,010c immediately precedes the callee's CS:[BX+2] write;
+        # with SS=CS and SP=da00, that write is disjoint from the return word.
+        code = bytes.fromhex("8cc88ed0b800da89c4bb0c01e8020090902e894702c3")
+        result = analyze_context_reachable(code, 0x0100)
+        self.assertIn(0x0111, result["instructions"])
+        self.assertIn((0x0115, 0x010F, "matched-near-ret", 0), result["edges"])
+        self.assertEqual(result["first_blocked"]["reason"],
+                         "near-ret-without-call-frame")
+
+    def test_dosboxx_com_stack_scenario_rejects_unverified_image(self):
+        self.assertEqual(TITLES_SIZE, 7022)
+        self.assertEqual(len(TITLES_SHA256), 64)
+        with self.assertRaises(ContextReachabilityError):
+            analyze_context_reachable(b"\x90" * TITLES_SIZE,
+                                      dosboxx_com_loader_stack=True)
+
     def test_near_ret_matches_call_frame_and_returns_to_caller(self):
         # CALL 0105; INT 91; callee RET. The return is matched to 0103.
         result = analyze_context_reachable(bytes.fromhex("e80200cd91c3"), 0x100)
@@ -185,6 +246,138 @@ class DosContextReachabilityTests(unittest.TestCase):
             return_from_dos_int21_at_1b26=True)
         self.assertNotIn(0x102, other_site["instructions"])
 
+    def test_dos_ah48_return_scenario_is_exact_and_keeps_results_opaque(self):
+        # DOS AH=48 at the reviewed allocator site may be modeled only as a
+        # control-flow return; AX, flags, allocation and memory stay unknown.
+        data = bytearray(b"\x90" * (0x1B2D - 0x100))
+        data.extend(bytes.fromhex("cd2190cd91"))
+        opaque = analyze_context_reachable(bytes(data), 0x1B2D)
+        self.assertEqual(opaque["first_blocked"]["ip"], 0x1B2D)
+        self.assertEqual(opaque["first_blocked"]["interrupt_vector"], 0x21)
+        self.assertIsNone(opaque["first_blocked"]["ax_constant"])
+
+        scenario = analyze_context_reachable(
+            bytes(data), 0x1B2D, return_from_dos_int21_at_1b2d=True)
+        self.assertTrue(scenario["dos_int21_return_at_1b2d"])
+        self.assertEqual(scenario["first_blocked"]["ip"], 0x1B30)
+        self.assertEqual(scenario["first_blocked"]["interrupt_vector"], 0x91)
+        self.assertIsNone(scenario["first_blocked"]["ax_constant"])
+
+        other_site = analyze_context_reachable(
+            bytes.fromhex("cd2190"), 0x0100,
+            return_from_dos_int21_at_1b2d=True)
+        self.assertNotIn(0x0102, other_site["instructions"])
+
+    def test_dos_free_return_scenario_is_site_specific_and_clears_flags(self):
+        data = bytearray(b"\x90" * (0x1B38 - 0x100))
+        data.extend(bytes.fromhex("cd21750190cd91"))
+        opaque = analyze_context_reachable(bytes(data), 0x1B38)
+        self.assertEqual(opaque["first_blocked"]["interrupt_vector"], 0x21)
+
+        scenario = analyze_context_reachable(
+            bytes(data), 0x1B38, return_from_dos_int21_at_1b38=True)
+        self.assertTrue(scenario["dos_int21_return_at_1b38"])
+        self.assertEqual(scenario["first_blocked"]["interrupt_vector"], 0x91)
+        self.assertIsNone(scenario["first_blocked"]["zf_constant"])
+        edge_kinds = {edge[2] for edge in scenario["edges"]}
+        self.assertIn("conditional-taken-flags-unknown", edge_kinds)
+        self.assertIn("conditional-fallthrough-flags-unknown", edge_kinds)
+
+        wrong_site = analyze_context_reachable(
+            bytes.fromhex("cd21"), 0x0100,
+            return_from_dos_int21_at_1b38=True)
+        self.assertNotIn(0x0102, wrong_site["instructions"])
+
+    def test_dos_second_ah48_return_scenario_is_site_specific(self):
+        data = bytearray(b"\x90" * (0x1B3F - 0x100))
+        data.extend(bytes.fromhex("cd2190cd91"))
+        scenario = analyze_context_reachable(
+            bytes(data), 0x1B3F, return_from_dos_int21_at_1b3f=True)
+        self.assertTrue(scenario["dos_int21_return_at_1b3f"])
+        self.assertEqual(scenario["first_blocked"]["ip"], 0x1B42)
+        self.assertEqual(scenario["first_blocked"]["interrupt_vector"], 0x91)
+
+        wrong_site = analyze_context_reachable(
+            bytes.fromhex("cd21"), 0x0100,
+            return_from_dos_int21_at_1b3f=True)
+        self.assertNotIn(0x0102, wrong_site["instructions"])
+
+    def test_additional_dos_return_sites_clear_registers_and_are_allowlisted(self):
+        data = bytearray(b"\x90" * (0x1B4F - 0x100))
+        data.extend(bytes.fromhex("cd21750190cd91"))
+        opaque = analyze_context_reachable(bytes(data), 0x1B4F)
+        self.assertEqual(opaque["first_blocked"]["ip"], 0x1B4F)
+
+        scenario = analyze_context_reachable(
+            bytes(data), 0x1B4F, dos_int21_return_sites=(0x1B4F,))
+        self.assertEqual(scenario["dos_int21_return_sites"], [0x1B4F])
+        self.assertEqual(scenario["first_blocked"]["ip"], 0x1B54)
+        self.assertEqual(scenario["first_blocked"]["interrupt_vector"], 0x91)
+        self.assertIsNone(scenario["first_blocked"]["ax_constant"])
+
+        with self.assertRaises(ContextReachabilityError):
+            analyze_context_reachable(bytes(data), dos_int21_return_sites=(0x1B26,))
+        with self.assertRaises(ContextReachabilityError):
+            analyze_context_reachable(bytes(data), dos_int21_return_sites=(0x1B4F, 0x1B4F))
+
+    def test_dos_ah48_return_at_1bca_preserves_only_the_caller_stack(self):
+        code = bytearray(b"\x90" * (0x1BCA - 0x100))
+        code.extend(bytes.fromhex("cd21750190cd21"))
+        opaque = analyze_context_reachable(bytes(code), 0x1BCA)
+        self.assertEqual(opaque["first_blocked"]["ip"], 0x1BCA)
+
+        scenario = analyze_context_reachable(
+            bytes(code), 0x1BCA, dos_int21_return_sites=(0x1BCA,))
+        self.assertEqual(scenario["dos_int21_return_sites"], [0x1BCA])
+        self.assertEqual(scenario["first_blocked"]["ip"], 0x1BCF)
+        self.assertEqual(scenario["first_blocked"]["interrupt_vector"], 0x21)
+        self.assertIsNone(scenario["first_blocked"]["ax_constant"])
+        self.assertIsNone(scenario["first_blocked"]["bx_constant"])
+
+        with self.assertRaises(ContextReachabilityError):
+            analyze_context_reachable(bytes(code), 0x1BCA,
+                                      dos_int21_return_sites=(0x1BCB,))
+
+    def test_dos_ah49_return_at_1bd5_checks_exact_preimage_and_clears_results(self):
+        code = bytearray(b"\x90" * (0x1BD5 - 0x100 + 6))
+        start = 0x1BD3 - 0x100
+        code[start:start + 6] = bytes.fromhex("b449cd21cd91")
+        opaque = analyze_context_reachable(bytes(code), 0x1BD5)
+        self.assertEqual(opaque["first_blocked"]["ip"], 0x1BD5)
+
+        scenario = analyze_context_reachable(
+            bytes(code), 0x1BD5, dos_int21_return_sites=(0x1BD5,))
+        self.assertEqual(scenario["dos_int21_return_sites"], [0x1BD5])
+        self.assertEqual(scenario["first_blocked"]["ip"], 0x1BD7)
+        self.assertEqual(scenario["first_blocked"]["interrupt_vector"], 0x91)
+        self.assertIsNone(scenario["first_blocked"].get("ax_constant"))
+
+        invalid_preimage = bytearray(code)
+        invalid_preimage[start + 1] = 0x48
+        with self.assertRaisesRegex(ContextReachabilityError, "exact 0x1bd3 preimage"):
+            analyze_context_reachable(
+                bytes(invalid_preimage), 0x1BD5, dos_int21_return_sites=(0x1BD5,))
+
+    def test_dos_ah3d_return_at_0549_checks_exact_preimage_and_clears_results(self):
+        code = bytearray(b"\x90" * (0x0545 - 0x100 + 8))
+        start = 0x0545 - 0x100
+        code[start:start + 8] = bytes.fromhex("b002b43dcd21cd91")
+        opaque = analyze_context_reachable(bytes(code), 0x0549)
+        self.assertEqual(opaque["first_blocked"]["ip"], 0x0549)
+
+        scenario = analyze_context_reachable(
+            bytes(code), 0x0549, dos_int21_return_sites=(0x0549,))
+        self.assertEqual(scenario["dos_int21_return_sites"], [0x0549])
+        self.assertEqual(scenario["first_blocked"]["ip"], 0x054b)
+        self.assertEqual(scenario["first_blocked"]["interrupt_vector"], 0x91)
+        self.assertIsNone(scenario["first_blocked"].get("ax_constant"))
+
+        invalid_preimage = bytearray(code)
+        invalid_preimage[start + 3] = 0x48
+        with self.assertRaisesRegex(ContextReachabilityError, "exact 0x0545 preimage"):
+            analyze_context_reachable(
+                bytes(invalid_preimage), 0x0549, dos_int21_return_sites=(0x0549,))
+
     def test_observed_int91_scenario_tracks_al_and_known_jne_without_runtime_claim(self):
         # The only injected scenario boundary is the observed TITLES.EXE
         # wrapper at $0127. The values select distinct locally decoded paths;
@@ -263,6 +456,42 @@ class DosContextReachabilityTests(unittest.TestCase):
                             and row["offset"] == 0 for row in refs))
         self.assertTrue(any(row["kind"] == "literal-little-endian-word"
                             and row["offset"] == 4 for row in refs))
+
+    def test_loader_candidates_are_reported_as_reachability_targets(self):
+        for target in (0x104A, 0x1247):
+            with self.subTest(target=target):
+                code = bytearray(target - 0x100 + 1)
+                relative = target - (0x100 + 3)
+                code[:3] = b"\xe9" + relative.to_bytes(2, "little")
+                code[target - 0x100] = 0xF4
+                result = analyze_context_reachable(bytes(code), 0x100)
+                self.assertTrue(result["targets"][target]["reachable"])
+
+    def test_absolute_pointer_candidates_report_read_and_write_direction(self):
+        # The loader candidate reads CS:$011c with LDS. An alternate byte
+        # stream can encode a write there; both remain candidates, not proof
+        # that either byte offset is an executed instruction.
+        read = static_reference_candidates(bytes.fromhex("2ec5161c01"), 0x011C)
+        read_operands = [row for row in read
+                         if row["kind"] == "byte-start-absolute-memory-candidate"]
+        self.assertEqual(len(read_operands), 2)
+        self.assertTrue(all(row["access"] == "read" for row in read_operands))
+        self.assertTrue(any(row["segment"] == "cs" for row in read_operands))
+
+        write = static_reference_candidates(bytes.fromhex("2ea31c01"), 0x011C)
+        write_operands = [row for row in write
+                          if row["kind"] == "byte-start-absolute-memory-candidate"]
+        self.assertEqual(len(write_operands), 2)
+        self.assertEqual(write_operands[0]["access"], "write")
+
+    def test_indirect_and_far_transfer_candidates_remain_unresolved(self):
+        # JMP [BX+SI] and far CALL [BX+SI] are retained as unresolved
+        # candidates, while a near direct JMP is handled by the edge scanner.
+        candidates = indirect_control_flow_candidates(
+            bytes.fromhex("ff20 ff18 e90000"))
+        self.assertEqual([(row["mnemonic"], row["operand_kind"])
+                          for row in candidates],
+                         [("jmp", "memory"), ("lcall", "memory")])
 
     def test_state_and_depth_bounds_are_explicit(self):
         with self.assertRaises(ContextReachabilityError):

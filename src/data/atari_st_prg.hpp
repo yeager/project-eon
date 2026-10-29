@@ -116,10 +116,10 @@ struct MillenniumAtariPostConfigModuleEntryEvidence {
     std::string entry_prologue_sha256;
 };
 
-// Result of executing the two wholly local 68000 copy loops at the start of
-// the verified Equinox loader. This is intentionally not a general 68000 or
-// GEMDOS emulator: it performs only fixed, byte-validated transfers and stops
-// at the address of the first TRAP #1 instruction.
+// Result of natively materializing the two wholly local copy routines at the
+// start of the verified Equinox loader. The hash-anchored 68000 bytes are
+// evidence only; no instruction interpreter or GEMDOS emulator runs here.
+// Materialization stops at the address of the first TRAP #1 instruction.
 struct MillenniumAtariBootstrapExecution {
     std::uint32_t initial_pc_offset = 0;
     std::uint32_t branch_pc_offset = 0;
@@ -128,9 +128,9 @@ struct MillenniumAtariBootstrapExecution {
     std::uint32_t second_copy_words = 0;
     std::uint32_t target_address = 0;
     std::uint32_t stop_before_trap_address = 0;
-    // The second, self-initializing BSS copy routine is executed instruction
-    // by instruction from its hash-anchored original bytes. Execution stops
-    // at its JMP target before the target's first GEMDOS trap.
+    // Diagnostic count for the second, self-initializing BSS copy routine's
+    // native equivalent; the original routine remains hash-anchored evidence.
+    // Materialization stops at its JMP target before the first GEMDOS trap.
     std::uint32_t second_copy_instruction_count = 0;
     std::uint32_t second_copy_stop_address = 0;
     // The three fixed instructions at the materialized target create the
@@ -144,11 +144,11 @@ struct MillenniumAtariBootstrapExecution {
     MillenniumAtariMaterializedTarget target;
 };
 
-// Executes exactly the two original copy loops whose inputs are fully local:
-// the PRG DATA interval into loader BSS, then the proved DATA/BSS source to
-// $77000. The established zeroed BSS tail is represented in memory only.
-// Execution stops before the first GEMDOS instruction; no service frame or
-// return value is created.
+// Natively applies the two exact, source-verified copy routines whose inputs
+// are fully local: the PRG DATA interval into loader BSS, then the proved
+// DATA/BSS source to $77000. The established zeroed BSS tail is represented
+// in memory only. Materialization stops before the first GEMDOS instruction;
+// no service frame or return value is created.
 [[nodiscard]] MillenniumAtariBootstrapExecution
 execute_millennium_atari_bootstrap_prefix(std::span<const std::uint8_t> bytes,
     const AtariStPrg& prg, const MillenniumAtariBootstrap& bootstrap,

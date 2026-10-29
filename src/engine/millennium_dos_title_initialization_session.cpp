@@ -1051,6 +1051,10 @@ constexpr auto mode_four_normalizer_sha =
     "515520598575ae941301a7206f70bc7505f0799acbd74ba83ed7f1a17f001a6d";
 constexpr auto mode_four_planar_body_sha =
     "416385b5fd03b0fec92663dea3d60f6d556c6310a4af97db9d5bd52874abba49";
+constexpr auto post_vector_bios_pair_sha =
+    "53452425d5cebeaeb44f629eb284f14e0196ac84075d384ff94cedf2c6fb91b7";
+constexpr auto post_vector_bios_caller_sha =
+    "8e9933fc8751a312d2c247e94987439ae91db1d7e288c14190035b2d6c3da1c8";
 }
 
 MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession(
@@ -1137,6 +1141,10 @@ MillenniumDosTitleInitializationSession::MillenniumDosTitleInitializationSession
             != vector_four_query_sha
         || to_hex(sha256(titles_executable.subspan(0x100d,18)))
             != vector_four_install_sha
+        || to_hex(sha256(titles_executable.subspan(0x19b3,0x11)))
+            != post_vector_bios_pair_sha
+        || to_hex(sha256(titles_executable.subspan(0x1af2,3)))
+            != post_vector_bios_caller_sha
         || to_hex(sha256(titles_executable.subspan(0x101f,5)))
             != vector_setup_return_sha
         || to_hex(sha256(titles_executable.subspan(0x19b3,8)))
@@ -1233,6 +1241,7 @@ observe_selected_callee_private_interrupt_result(
     }
     selected_callee_observed_ax_=observation.ax;
     selected_callee_observed_flags_=observation.flags;
+    selected_callee_observed_flags_known_=observation.flags_known;
     selected_followup_call_address_=expected_return;
     selected_followup_call_target_=static_cast<std::uint16_t>(
         selected_call_target_==0x1ac6?0x044c:0x0487);
@@ -1293,8 +1302,27 @@ void MillenniumDosTitleInitializationSession::observe_bios_palette_result(
             ||titles_executable.size()!=7022||to_hex(sha256(titles_executable))!=titles_sha)
             throw std::runtime_error("Detached Millennium DOS library palette BIOS result");
         auto next=*this;
+        const auto es=latest_register_value(next.effects_,"ES");
+        const auto& bios=next.bios_boundary_;
+        if(bios.interrupt!=0x10||bios.ax!=0x1012||bios.bx!=0
+            ||bios.cx!=0x00ff||bios.dx_known_mask!=0xffff
+            ||bios.dx_known_value!=0x014c||bios.source_address!=0x014c
+            ||es!=std::optional<std::uint16_t>{next.child_code_segment_})
+            throw std::runtime_error("Millennium DOS block DAC request differs from its recovered inputs");
+        for(std::uint16_t index=0;index<0x00ff;++index){
+            const auto source=static_cast<std::uint16_t>(0x014c+index*3U);
+            const auto red=owned_palette_byte(next.memory_effects_,next.child_code_segment_,source);
+            const auto green=owned_palette_byte(next.memory_effects_,next.child_code_segment_,
+                static_cast<std::uint16_t>(source+1U));
+            const auto blue=owned_palette_byte(next.memory_effects_,next.child_code_segment_,
+                static_cast<std::uint16_t>(source+2U));
+            if(red>63||green>63||blue>63)
+                throw std::runtime_error("Millennium DOS block DAC source is outside RGB6");
+            next.dac_writes_.push_back({observation.sequence,static_cast<std::uint8_t>(index),
+                red,green,blue});
+        }
         next.bios_results_.push_back({observation.sequence,0x0fd8,0x0fda,
-            observation.ax,observation.flags});
+            observation.ax,observation.flags,observation.ax_known,observation.flags_known});
         next.bios_boundary_.result_observed=true;
         next.effects_.insert(next.effects_.end(),{{0x0fdb,"DS",child_code_segment_},
             {0x0fdd,"ES",child_code_segment_}});
@@ -1318,8 +1346,28 @@ void MillenniumDosTitleInitializationSession::observe_bios_palette_result(
         ||palette_loop_results>=(post_video_repeat_?32U:16U)){
         throw std::runtime_error("Detached Millennium DOS title BIOS result");
     }
+    if (bios_boundary_.interrupt_address == 0x046d) {
+        const auto red = static_cast<std::uint8_t>(bios_boundary_.dx_known_value >> 8U);
+        const auto green = static_cast<std::uint8_t>(bios_boundary_.cx >> 8U);
+        const auto blue = static_cast<std::uint8_t>(bios_boundary_.cx);
+        if (bios_boundary_.ax != 0x1010 || bios_boundary_.interrupt != 0x10
+            || bios_boundary_.bx >= 16 || bios_boundary_.dx_known_mask != 0xff00
+            || bios_boundary_.source_address
+                != static_cast<std::uint16_t>(0x014c + bios_boundary_.bx * 3U)
+            || red > 63 || green > 63 || blue > 63) {
+            throw std::runtime_error("Millennium DAC write does not match the bounded VGA service");
+        }
+    }
     bios_results_.push_back({observation.sequence,observation.interrupt_address,
-        observation.return_address,observation.ax,observation.flags});
+        observation.return_address,observation.ax,observation.flags,
+        observation.ax_known,observation.flags_known});
+    if (bios_boundary_.interrupt_address == 0x046d) {
+        dac_writes_.push_back({observation.sequence,
+            static_cast<std::uint8_t>(bios_boundary_.bx),
+            static_cast<std::uint8_t>(bios_boundary_.dx_known_value >> 8U),
+            static_cast<std::uint8_t>(bios_boundary_.cx >> 8U),
+            static_cast<std::uint8_t>(bios_boundary_.cx)});
+    }
     bios_boundary_.result_observed=true;
     last_sequence_=observation.sequence;
     const auto next_index=(palette_loop_results+1U)%16U;
@@ -1832,26 +1880,15 @@ void MillenniumDosTitleInitializationSession::execute_post_library_setup(
 void MillenniumDosTitleInitializationSession::observe_dos_vector_result(
     const MillenniumDosTitleDosVectorResultObservation& observation){
     if((state_!=MillenniumDosTitleInitializationState::dos_get_vector_zero_result_boundary
-            &&state_!=MillenniumDosTitleInitializationState::dos_set_vector_zero_result_boundary
-            &&state_!=MillenniumDosTitleInitializationState::dos_get_vector_four_result_boundary
-            &&state_!=MillenniumDosTitleInitializationState::dos_set_vector_four_result_boundary)
+            &&state_!=MillenniumDosTitleInitializationState::dos_get_vector_four_result_boundary)
         ||observation.sequence!=last_sequence_+1
         ||observation.interrupt_address!=dos_boundary_.interrupt_address
         ||observation.return_address!=dos_boundary_.return_address)
         throw std::runtime_error("Detached Millennium DOS vector-zero result");
     dos_vector_results_.push_back({observation.sequence,observation.interrupt_address,
         observation.return_address,observation.ax,observation.bx,observation.es,
-        observation.flags});
+        observation.flags, observation.eon_virtual_ivt_policy});
     last_sequence_=observation.sequence;
-    if(state_==MillenniumDosTitleInitializationState::dos_set_vector_four_result_boundary){
-        effects_.insert(effects_.end(),{{0x1ab3,"AH",1},{0x1ab5,"AL",0x1b},
-            {0x1ab7,"BL",0x46}});
-        setup_bios_boundary_={0x1ab9,0x1abb,0x15,0xffff,0x011b,0xffff,
-            static_cast<std::uint16_t>((observation.bx&0xff00U)|0x0046U),false};
-        continuation_address_=0x1ab9;
-        state_=MillenniumDosTitleInitializationState::bios_int15_first_result_boundary;
-        return;
-    }
     if(state_==MillenniumDosTitleInitializationState::dos_get_vector_four_result_boundary){
         memory_effects_.push_back({0x110d,0x10e8,
             MillenniumDosTitleInitializationEffectWidth::word,observation.bx});
@@ -1860,17 +1897,9 @@ void MillenniumDosTitleInitializationSession::observe_dos_vector_result(
         effects_.insert(effects_.end(),{{0x1115,"DS",child_code_segment_},
             {0x1117,"AX",0x2504},{0x111a,"DX",0x1124}});
         dos_boundary_={0x111d,0x111f,0x21,0x25,0xffff,0x2504,
-            observation.bx,child_code_segment_,0x1124,false};
+            0,child_code_segment_,0x1124,false};
         continuation_address_=0x111d;
         state_=MillenniumDosTitleInitializationState::dos_set_vector_four_result_boundary;
-        return;
-    }
-    if(state_==MillenniumDosTitleInitializationState::dos_set_vector_zero_result_boundary){
-        effects_.push_back({0x1108,"AX",0x3504});
-        dos_boundary_={0x110b,0x110d,0x21,0x35,0xffff,0x3504,
-            observation.bx,observation.es,0,false};
-        continuation_address_=0x110b;
-        state_=MillenniumDosTitleInitializationState::dos_get_vector_four_result_boundary;
         return;
     }
     memory_effects_.push_back({0x10f6,0x10e4,
@@ -1880,9 +1909,58 @@ void MillenniumDosTitleInitializationSession::observe_dos_vector_result(
     effects_.insert(effects_.end(),{{0x10fe,"DS",child_code_segment_},
         {0x1100,"AX",0x2500},{0x1103,"DX",0x1124}});
     dos_boundary_={0x1106,0x1108,0x21,0x25,0xffff,0x2500,
-        observation.bx,child_code_segment_,0x1124,false};
+        0,child_code_segment_,0x1124,false};
     continuation_address_=0x1106;
     state_=MillenniumDosTitleInitializationState::dos_set_vector_zero_result_boundary;
+}
+
+void MillenniumDosTitleInitializationSession::execute_dos_set_vector_compatibility(
+    const std::uint64_t sequence) {
+    const bool vector_zero = state_
+        == MillenniumDosTitleInitializationState::dos_set_vector_zero_result_boundary;
+    const bool vector_four = state_
+        == MillenniumDosTitleInitializationState::dos_set_vector_four_result_boundary;
+    const std::uint16_t expected_call = vector_zero ? 0x1106 : 0x111d;
+    const std::uint16_t expected_return = vector_zero ? 0x1108 : 0x111f;
+    const std::uint8_t expected_vector = vector_zero ? 0 : 4;
+    const std::uint16_t expected_ax = vector_zero ? 0x2500 : 0x2504;
+    if ((!vector_zero && !vector_four) || sequence != last_sequence_ + 1
+        || continuation_address_ != expected_call
+        || dos_boundary_.interrupt_address != expected_call
+        || dos_boundary_.return_address != expected_return
+        || dos_boundary_.interrupt != 0x21 || dos_boundary_.service != 0x25
+        || dos_boundary_.ax_known_mask != 0xffff
+        || dos_boundary_.ax_known_value != expected_ax
+        || static_cast<std::uint8_t>(dos_boundary_.ax_known_value) != expected_vector
+        || dos_boundary_.segment != child_code_segment_
+        || dos_boundary_.dx != 0x1124) {
+        throw std::runtime_error("Detached Millennium DOS AH=25 Set Vector service");
+    }
+
+    const auto ivt_offset = static_cast<std::uint16_t>(expected_vector * 4U);
+    memory_effects_.push_back({expected_call, ivt_offset,
+        MillenniumDosTitleInitializationEffectWidth::word, dos_boundary_.dx, 0, true});
+    memory_effects_.push_back({expected_call, static_cast<std::uint16_t>(ivt_offset + 2U),
+        MillenniumDosTitleInitializationEffectWidth::word, child_code_segment_, 0, true});
+    vector_installs_.push_back({sequence, expected_vector, dos_boundary_.dx,
+        child_code_segment_});
+    last_sequence_ = sequence;
+
+    if (vector_zero) {
+        effects_.push_back({0x1108, "AX", 0x3504});
+        dos_boundary_ = {0x110b, 0x110d, 0x21, 0x35, 0xffff, 0x3504,
+            0, child_code_segment_, 0, false};
+        continuation_address_ = 0x110b;
+        state_ = MillenniumDosTitleInitializationState::dos_get_vector_four_result_boundary;
+        return;
+    }
+
+    effects_.insert(effects_.end(), {{0x1ab3, "AH", 1}, {0x1ab5, "AL", 0x1b},
+        {0x1ab7, "BL", 0x46}});
+    setup_bios_boundary_ = {0x1ab9, 0x1abb, 0x15, 0xffff, 0x011b, 0x00ff,
+        0x0046, false};
+    continuation_address_ = 0x1ab9;
+    state_ = MillenniumDosTitleInitializationState::bios_int15_first_result_boundary;
 }
 
 void MillenniumDosTitleInitializationSession::observe_setup_bios_result(
@@ -1907,6 +1985,55 @@ void MillenniumDosTitleInitializationSession::observe_setup_bios_result(
         static_cast<std::uint16_t>((observation.bx&0xff00U)|0x0046U),false};
     continuation_address_=0x1ac1;
     state_=MillenniumDosTitleInitializationState::bios_int15_second_result_boundary;
+}
+
+void MillenniumDosTitleInitializationSession::observe_setup_bios_return(
+    const MillenniumDosTitleSetupBiosReturnObservation& observation) {
+    if ((state_ != MillenniumDosTitleInitializationState::bios_int15_first_result_boundary
+            && state_ != MillenniumDosTitleInitializationState::bios_int15_second_result_boundary)
+        || observation.sequence != last_sequence_ + 1
+        || observation.interrupt_address != setup_bios_boundary_.interrupt_address
+        || observation.return_address != setup_bios_boundary_.return_address) {
+        throw std::runtime_error("Detached Millennium DOS setup BIOS return");
+    }
+
+    auto next = *this;
+    next.setup_bios_returns_.push_back({observation.sequence,
+        observation.interrupt_address, observation.return_address,
+        MillenniumDosTitleSetupBiosReturnProvenance::external_return_observation});
+    next.setup_bios_boundary_.result_observed = true;
+    next.last_sequence_ = observation.sequence;
+    if (next.state_ == MillenniumDosTitleInitializationState::bios_int15_second_result_boundary) {
+        next.continuation_address_ = 0x1bf2;
+        next.state_ = MillenniumDosTitleInitializationState::post_library_next_setup_call_boundary;
+    } else {
+        next.effects_.insert(next.effects_.end(), {{0x1abb,"AH",1},{0x1abd,"AL",0x1c},
+            {0x1abf,"BL",0x46}});
+        next.setup_bios_boundary_ = {0x1ac1,0x1ac3,0x15,0xffff,0x011c,
+            0x00ff,0x0046,false};
+        next.continuation_address_ = 0x1ac1;
+        next.state_ = MillenniumDosTitleInitializationState::bios_int15_second_result_boundary;
+    }
+    *this = std::move(next);
+}
+
+void MillenniumDosTitleInitializationSession::execute_setup_bios_compatibility_noop(
+    const std::uint64_t sequence) {
+    const auto& boundary = setup_bios_boundary_;
+    if ((state_ != MillenniumDosTitleInitializationState::bios_int15_first_result_boundary
+            && state_ != MillenniumDosTitleInitializationState::bios_int15_second_result_boundary)
+        || sequence != last_sequence_ + 1
+        || boundary.interrupt != 0x15 || boundary.ax_known_mask != 0xffff
+        || (boundary.ax_known_value & 0xff00U) != 0x0100U
+        || (boundary.interrupt_address != 0x1ab9
+            && boundary.interrupt_address != 0x1ac1)) {
+        throw std::runtime_error("Detached Millennium DOS AH=01 compatibility service");
+    }
+    const auto interrupt_address = boundary.interrupt_address;
+    const auto return_address = boundary.return_address;
+    observe_setup_bios_return({sequence, interrupt_address, return_address});
+    setup_bios_returns_.back().provenance =
+        MillenniumDosTitleSetupBiosReturnProvenance::eon_ah01_cassette_off_compatibility_noop;
 }
 
 void MillenniumDosTitleInitializationSession::execute_next_setup(
@@ -1971,6 +2098,8 @@ void MillenniumDosTitleInitializationSession::observe_far_words(
         ||boundary_state==MillenniumDosTitleInitializationState::post_descriptor_next_loop_far_read_boundary
         ||boundary_state==MillenniumDosTitleInitializationState::post_descriptor_second_loop_far_read_boundary;
     if(descriptor_read){
+        if (!observation.first_word_known || !observation.second_word_known)
+            throw std::runtime_error("Millennium DOS descriptor words must be observed");
         const auto expected_first=admitted_loop_pair_?admitted_loop_pair_->first:static_cast<std::uint16_t>(
             boundary_state==MillenniumDosTitleInitializationState::graphics_descriptor_far_read_boundary
                 ?0x0006:boundary_state==MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary
@@ -2026,10 +2155,12 @@ void MillenniumDosTitleInitializationSession::observe_far_words(
         return;
     }
     if(boundary_state==MillenniumDosTitleInitializationState::video_vector_far_read_boundary){
-        memory_effects_.push_back({0x12ad,0x1266,
-            MillenniumDosTitleInitializationEffectWidth::word,observation.first_word});
-        memory_effects_.push_back({0x12ae,0x1268,
-            MillenniumDosTitleInitializationEffectWidth::word,observation.second_word});
+        if (observation.first_word_known)
+            memory_effects_.push_back({0x12ad,0x1266,
+                MillenniumDosTitleInitializationEffectWidth::word,observation.first_word});
+        if (observation.second_word_known)
+            memory_effects_.push_back({0x12ae,0x1268,
+                MillenniumDosTitleInitializationEffectWidth::word,observation.second_word});
         memory_effects_.push_back({0x12b9,0x0024,
             MillenniumDosTitleInitializationEffectWidth::word,0x126a,0,true});
         memory_effects_.push_back({0x12bc,0x0026,
@@ -2042,10 +2173,12 @@ void MillenniumDosTitleInitializationSession::observe_far_words(
         state_=MillenniumDosTitleInitializationState::post_video_hook_mode_call_boundary;
         return;
     }
-    memory_effects_.push_back({0x115d,0x10dc,
-        MillenniumDosTitleInitializationEffectWidth::word,observation.first_word});
-    memory_effects_.push_back({0x115e,0x10de,
-        MillenniumDosTitleInitializationEffectWidth::word,observation.second_word});
+    if (observation.first_word_known)
+        memory_effects_.push_back({0x115d,0x10dc,
+            MillenniumDosTitleInitializationEffectWidth::word,observation.first_word});
+    if (observation.second_word_known)
+        memory_effects_.push_back({0x115e,0x10de,
+            MillenniumDosTitleInitializationEffectWidth::word,observation.second_word});
     memory_effects_.push_back({0x1168,0x0070,
         MillenniumDosTitleInitializationEffectWidth::word,0x11d8,0,true});
     memory_effects_.push_back({0x116b,0x0072,
@@ -2647,7 +2780,7 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_two_second_lookup_byte_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_header_byte_boundary
             &&boundary_state!=MillenniumDosTitleInitializationState::post_descriptor_first_loop_mode_four_header_second_byte_boundary
-            &&observation.byte!=(boundary_state==MillenniumDosTitleInitializationState::graphics_record_byte_read_boundary?0x23:0x00)))
+            &&observation.byte!=(boundary_state==MillenniumDosTitleInitializationState::graphics_record_byte_read_boundary?0x23:0x02)))
         throw std::runtime_error("Detached Millennium DOS record byte");
     const auto second_record_header=boundary_state
         ==MillenniumDosTitleInitializationState::post_descriptor_second_loop_second_byte_read_boundary;
@@ -2988,7 +3121,7 @@ void MillenniumDosTitleInitializationSession::observe_far_byte(
             {0x1750,0x134f,MillenniumDosTitleInitializationEffectWidth::word,0},
             {0x175a,0x133d,MillenniumDosTitleInitializationEffectWidth::word,0x00c8},
             {0x175b,0x133f,MillenniumDosTitleInitializationEffectWidth::word,0x0140}});
-        effects_.insert(effects_.end(),{{0x13f2,"AL",0},{0x1401,"AH",0},
+        effects_.insert(effects_.end(),{{0x13f2,"AL",observation.byte},{0x1401,"AH",0},
             {0x1404,"DS",child_code_segment_},{0x1740,"AX",0},
             {0x1742,"DS",child_code_segment_},{0x1744,"ES",child_code_segment_},
             {0x1745,"SI",0x170c},{0x174a,"AX",0},{0x174f,"AX",0},
@@ -3152,13 +3285,191 @@ void MillenniumDosTitleInitializationSession::execute_selected_callee_start(
 
 void MillenniumDosTitleInitializationSession::observe_private_interrupt_result(
     const MillenniumDosTitlePrivateInterruptResultObservation& observation) {
+    observe_private_interrupt_result_impl(observation, false);
+}
+
+void MillenniumDosTitleInitializationSession::execute_graphics_record_function_six_return(
+    const std::uint64_t sequence) {
+    if (state_ != MillenniumDosTitleInitializationState::graphics_record_private_interrupt_result_boundary
+        || sequence != last_sequence_ + 1U || continuation_address_ != 0x0127
+        || boundary_.interrupt_address != 0x0127 || boundary_.interrupt != 0x91
+        || boundary_.function != 0x0006 || boundary_.record_segment != child_code_segment_
+        || boundary_.record_offset != 0x1349 || boundary_.result_observed) {
+        throw std::runtime_error("Detached Millennium DOS owned function-six return");
+    }
+    // $1764 calls the wrapper; after IRET, $1767 returns to the caller. The
+    // caller's $1004 MOV AX,CS is the next AX definition, and no flags branch
+    // occurs on this edge. Keep the interrupt result unknown rather than
+    // placing a convenient value in the receipt.
+    effects_.insert(effects_.end(), {{0x1004,"AX",child_code_segment_},
+        {0x1006,"ES",child_code_segment_},{0x1008,"BX",0x0fdf},
+        {0x100e,"AX",0x001a}});
+    memory_effects_.push_back({0x100b,0x0fe7,
+        MillenniumDosTitleInitializationEffectWidth::word,child_code_segment_});
+    boundary_={0x1011,0x0122,0x0127,0x91,0x001a,
+        child_code_segment_,0x0fdf,false,false};
+    last_sequence_=sequence;
+    continuation_address_=0x0127;
+    state_=MillenniumDosTitleInitializationState::post_descriptor_private_interrupt_result_boundary;
+}
+
+void MillenniumDosTitleInitializationSession::execute_graphics_record_function_twenty_six_return(
+    const std::uint64_t sequence, const MillenniumDosMcgaFunctionTwentySixReturn& result) {
+    if (state_ != MillenniumDosTitleInitializationState::post_descriptor_private_interrupt_result_boundary
+        || sequence != last_sequence_ + 1U || continuation_address_ != 0x0127
+        || boundary_.interrupt_address != 0x0127 || boundary_.interrupt != 0x91
+        || boundary_.function != 0x001a || boundary_.record_segment != child_code_segment_
+        || boundary_.record_offset != 0x0fdf || boundary_.result_observed
+        || result.driver_entry_address != 0x0b67 || result.handler_dispatch_offset != 0x0032
+        || result.phase_count != 25 || result.dac_writes.size() != 25U * 255U
+        || !result.caller_flags_restored_unknown
+        || !result.retrace_wait_durations_abstracted_by_eon) {
+        throw std::runtime_error("Detached Millennium DOS owned function-twenty-six return");
+    }
+    for (std::size_t index = 0; index < result.dac_writes.size(); ++index) {
+        const auto& write = result.dac_writes[index];
+        if (write.phase != index / 255U || write.register_index != index % 255U
+            || write.red > 63U || write.green > 63U || write.blue > 63U) {
+            throw std::runtime_error("Invalid Millennium DOS function-twenty-six DAC trace");
+        }
+        dac_writes_.push_back({sequence,write.register_index,write.red,write.green,write.blue});
+    }
+    const std::vector<std::uint8_t> record{0x00,0x00,0xff,0x00,0x19,0x00,0x4c,0x01,
+        static_cast<std::uint8_t>(child_code_segment_),
+        static_cast<std::uint8_t>(child_code_segment_ >> 8U)};
+    advance_post_descriptor_loop(sequence, record, false);
+}
+
+void MillenniumDosTitleInitializationSession::execute_descriptor_loop_wait_function_thirteen_return(
+    const std::uint64_t sequence, const MillenniumDosVideoFunction13Outcome& outcome) {
+    if (state_ != MillenniumDosTitleInitializationState::descriptor_loop_wait_private_interrupt_boundary
+        || sequence != last_sequence_ + 1U || continuation_address_ != 0x0127
+        || boundary_.call_address != 0x1937 || boundary_.wrapper_address != 0x0122
+        || boundary_.interrupt_address != 0x0127 || boundary_.interrupt != 0x91
+        || boundary_.function != 0x0013 || boundary_.record_segment != 0
+        || boundary_.record_offset != 0 || boundary_.result_observed
+        || outcome.ret_instruction_address != 0x0912 || outcome.reads.size() != 2U
+        || outcome.reads[0] != MillenniumDosVideoFunction13PortRead{1,0x0908,0x03da,0}
+        || outcome.reads[1] != MillenniumDosVideoFunction13PortRead{2,0x090d,0x03da,0x08}) {
+        throw std::runtime_error("Detached Millennium DOS owned function-thirteen return");
+    }
+    // The handler changes only AL/DX while polling and the wrapper restores
+    // saved registers. The caller at $193a consumes neither output; preserve
+    // AX/FLAGS as unknown and expose the next original call.
+    boundary_.result_observed = true;
+    last_sequence_ = sequence;
+    continuation_address_ = 0x1917;
+    state_ = MillenniumDosTitleInitializationState::descriptor_loop_post_wait_animation_call_boundary;
+}
+
+void MillenniumDosTitleInitializationSession::execute_descriptor_loop_animation_selector(
+    const MillenniumDosTitleAnimationSelectorObservation& observation) {
+    if (state_ != MillenniumDosTitleInitializationState::descriptor_loop_post_wait_animation_call_boundary
+        || continuation_address_ != 0x1917 || observation.sequence != last_sequence_ + 1U) {
+        throw std::runtime_error("Detached Millennium DOS post-wait animation selector");
+    }
+
+    // $18f9: AX = ([1181] + [18f7]) & $03ff; AL = CS:[AX]; AL &= $3f;
+    // while (AL >= $24) AL -= $18.  $1917 then increments AL and $1712
+    // multiplies it by $0170 before entering the dynamic record pair at $174a.
+    // AX is at most $03ff, so CS:[AX] is in the DOS child prefix, not in the
+    // COM image at CS:$0100 onward. Its live byte is an explicit input.
+    const auto accumulator = static_cast<std::uint16_t>((
+        static_cast<std::uint32_t>(observation.selector_state_word)
+        + observation.selector_accumulator_word) & 0x03ffU);
+    auto selector = static_cast<std::uint8_t>(observation.selector_source_byte & 0x3fU);
+    while (selector >= 0x24U)
+        selector = static_cast<std::uint8_t>(selector - 0x18U);
+    const auto resource_index = static_cast<std::uint8_t>(selector + 1U);
+    const auto record_displacement = static_cast<std::uint16_t>(
+        static_cast<std::uint16_t>(resource_index) * 0x0170U);
+    const auto record_offset = static_cast<std::uint16_t>(0x170cU + record_displacement);
+
+    effects_.insert(effects_.end(), {
+        {0x18f9, "AX", observation.selector_state_word},
+        {0x18fd, "AX", static_cast<std::uint16_t>(
+            observation.selector_state_word + observation.selector_accumulator_word)},
+        {0x1901, "AX", accumulator},
+        {0x1907, "SI", accumulator},
+        {0x1909, "AL", observation.selector_source_byte},
+        {0x190b, "AX", static_cast<std::uint16_t>(observation.selector_source_byte & 0x3fU)},
+        {0x1916, "AL", selector},
+        {0x1924, "AL", resource_index},
+        {0x1713, "CX", 0x0170},
+        {0x1718, "AX", record_displacement},
+        {0x1745, "SI", 0x170c},
+        {0x1748, "SI", record_offset},
+    });
+    memory_effects_.push_back({0x1904, 0x18f7,
+        MillenniumDosTitleInitializationEffectWidth::word, accumulator});
+    memory_effects_.push_back({0x171a, 0x1341,
+        MillenniumDosTitleInitializationEffectWidth::word, record_displacement});
+    far_read_boundary_ = {0x174a, child_code_segment_, record_offset, 2,
+        child_code_segment_, 0x1351};
+    last_sequence_ = observation.sequence;
+    continuation_address_ = 0x174a;
+    state_ = MillenniumDosTitleInitializationState::descriptor_loop_animation_record_word_boundary;
+}
+
+void MillenniumDosTitleInitializationSession::advance_post_descriptor_loop(
+    const std::uint64_t sequence, const std::vector<std::uint8_t>& record_bytes,
+    const bool record_was_observed) {
+    const auto owned_word=[this](const std::uint16_t offset){
+        for(auto it=memory_effects_.rbegin();it!=memory_effects_.rend();++it)
+            if(!it->explicit_segment&&it->offset==offset
+                &&it->width==MillenniumDosTitleInitializationEffectWidth::word)
+                return it->value;
+        throw std::runtime_error("Missing Millennium DOS first-loop pointer");
+    };
+    const auto source_offset=owned_word(0x0e4a);
+    const auto source_segment=owned_word(0x0e4c);
+    const auto destination_segment=owned_word(0x0e48);
+    constexpr std::uint16_t destination_offset=0;
+    constexpr std::uint16_t first_output=0x0170;
+    constexpr std::uint16_t second_output=0x0170;
+    post_descriptor_observed_record_=record_bytes;
+    boundary_.result_observed=true;
+    if (record_was_observed) {
+        for(std::size_t i=0;i<record_bytes.size();++i)
+            memory_effects_.push_back({0x0127,static_cast<std::uint16_t>(0x0fdf+i),
+                MillenniumDosTitleInitializationEffectWidth::byte,record_bytes[i]});
+    }
+    memory_effects_.push_back({0x1950,0x010c,
+        MillenniumDosTitleInitializationEffectWidth::word,first_output});
+    memory_effects_.push_back({0x1959,0x0110,
+        MillenniumDosTitleInitializationEffectWidth::word,second_output});
+    effects_.insert(effects_.end(),{{0x1941,"CX",0x0025},{0x1944,"DX",0x0170},
+        {0x1949,"SI",0x010c},{0x194c,"AX",first_output},{0x1952,"SI",0x0110},
+        {0x1955,"AX",second_output},{0x195b,"AX",0x0026},{0x195e,"AX",0x0001},
+        {0x1390,"CX",0x000c},{0x1393,"AX",0x000c},{0x1395,"SI",
+            static_cast<std::uint16_t>(source_offset+0x000c)},{0x1395,"DS",source_segment},
+        {0x139a,"DI",destination_offset},{0x139a,"ES",destination_segment},
+        {0x139f,"DX",destination_segment},{0x13a1,"BX",destination_offset},
+        {0x13a4,"ES",child_code_segment_},{0x13a5,"DI",0x138c}});
+    far_read_boundary_={0x13aa,source_segment,static_cast<std::uint16_t>(source_offset+0x000c),2,
+        child_code_segment_,0x138c};
+    last_sequence_=sequence;
+    continuation_address_=0x13aa;
+    state_=MillenniumDosTitleInitializationState::post_descriptor_first_loop_far_read_boundary;
+    descriptor_loop_iteration_=1;
+}
+
+void MillenniumDosTitleInitializationSession::observe_private_interrupt_result_after_owned_dispatch(
+    const MillenniumDosTitlePrivateInterruptResultObservation& observation) {
+    observe_private_interrupt_result_impl(observation, true);
+}
+
+void MillenniumDosTitleInitializationSession::observe_private_interrupt_result_impl(
+    const MillenniumDosTitlePrivateInterruptResultObservation& observation,
+    const bool allow_sequence_gap) {
     const auto result_state=state_;
     if ((result_state
             != MillenniumDosTitleInitializationState::private_interrupt_result_boundary
             &&result_state!=MillenniumDosTitleInitializationState::post_video_private_interrupt_result_boundary
             &&result_state!=MillenniumDosTitleInitializationState::graphics_record_private_interrupt_result_boundary
             &&result_state!=MillenniumDosTitleInitializationState::post_descriptor_private_interrupt_result_boundary)
-        || observation.sequence != last_sequence_ + 1
+        || (allow_sequence_gap ? observation.sequence <= last_sequence_
+                               : observation.sequence != last_sequence_ + 1)
         || observation.interrupt_address != 0x0127
         || observation.return_address != 0x0129) {
         throw std::runtime_error("Detached Millennium DOS title private-interrupt result");
@@ -3241,6 +3552,7 @@ void MillenniumDosTitleInitializationSession::observe_private_interrupt_result(
     if(result_state==MillenniumDosTitleInitializationState::post_video_private_interrupt_result_boundary){
         post_video_observed_ax_=observation.ax;
         post_video_observed_flags_=observation.flags;
+        post_video_observed_flags_known_=true;
         boundary_.result_observed=true;
         effects_.push_back({0x1c14,"AX",0});
         last_sequence_=observation.sequence;
@@ -3250,6 +3562,7 @@ void MillenniumDosTitleInitializationSession::observe_private_interrupt_result(
     }
     observed_ax_ = observation.ax;
     observed_flags_ = observation.flags;
+    observed_flags_known_ = observation.flags_known;
     selected_mode_ = static_cast<std::uint8_t>(observation.ax >> 8U);
     memory_effects_ = {
         {0x1b98,0x1a9c,MillenniumDosTitleInitializationEffectWidth::word,
@@ -3271,6 +3584,99 @@ void MillenniumDosTitleInitializationSession::observe_private_interrupt_result(
     boundary_.result_observed = true;
     last_sequence_ = observation.sequence;
     state_ = MillenniumDosTitleInitializationState::selected_local_call_boundary;
+}
+
+void MillenniumDosTitleInitializationSession::execute_post_video_ega_function_nineteen_return(
+    const std::uint64_t sequence, const std::uint16_t interrupt_address,
+    const std::uint16_t wrapper_return_address,
+    const std::uint16_t driver_entry_address, const std::uint16_t dispatch_offset,
+    const std::uint16_t returned_ax) {
+    if (state_ != MillenniumDosTitleInitializationState::post_video_private_interrupt_result_boundary
+        || sequence != last_sequence_ + 1U || interrupt_address != 0x0127
+        || wrapper_return_address != 0x0129 || boundary_.call_address != 0x1000
+        || boundary_.wrapper_address != 0x0122 || boundary_.interrupt_address != 0x0127
+        || boundary_.interrupt != 0x91 || boundary_.function != 0x0019
+        || boundary_.record_segment != child_code_segment_
+        || boundary_.record_offset != 0x0fe9 || driver_entry_address != 0x0234
+        || dispatch_offset != 0x0032 || returned_ax != 0x0032) {
+        throw std::runtime_error("Detached EGA function-$19 native RET continuation");
+    }
+    post_video_observed_ax_ = returned_ax;
+    post_video_observed_flags_ = 0;
+    post_video_observed_flags_known_ = false;
+    post_video_ega_function_nineteen_return_native_ = true;
+    boundary_.result_observed = true;
+    effects_.push_back({0x1c14, "AX", 0});
+    last_sequence_ = sequence;
+    continuation_address_ = 0x1c17;
+    state_ = MillenniumDosTitleInitializationState::post_video_followup_call_boundary;
+}
+
+void MillenniumDosTitleInitializationSession::execute_post_video_mcga_function_nineteen_return(
+    const std::uint64_t sequence, const std::uint16_t driver_segment,
+    const MillenniumDosMcgaFunctionNineteenReturn& result) {
+    if (state_ != MillenniumDosTitleInitializationState::post_video_private_interrupt_result_boundary
+        || sequence != last_sequence_ + 1U || driver_segment == 0
+        || boundary_.call_address != 0x1000 || boundary_.wrapper_address != 0x0122
+        || boundary_.interrupt_address != 0x0127 || boundary_.interrupt != 0x91
+        || boundary_.function != 0x0019 || boundary_.record_segment != child_code_segment_
+        || boundary_.record_offset != 0x0fe9 || result.driver_entry_address != 0x09ee
+        || result.handler_dispatch_offset != 0x0032 || result.handler_return_ax != 0x0100
+        || result.first_dac_index != 0 || result.dac_entry_count != 0x00ff
+        || result.dac_component_value != 0
+        || !result.caller_flags_restored_unknown
+        || !result.retrace_wait_durations_abstracted_by_eon) {
+        throw std::runtime_error("Detached MCGA function-$19 native continuation");
+    }
+
+    // The function writes zero RGB triplets to DAC indices 0..254. Eon has no
+    // VGA beam, so it applies the final ordered state before the next title
+    // frame and records that the two source retrace durations are abstracted.
+    for (std::uint16_t index = 0; index < result.dac_entry_count; ++index) {
+        dac_writes_.push_back({sequence,
+            static_cast<std::uint8_t>(result.first_dac_index + index),
+            result.dac_component_value, result.dac_component_value,
+            result.dac_component_value});
+    }
+
+    // The known return words and saved DS/ES are source-defined; saved
+    // SI/DI/BP and interrupt FLAGS remain unknown and are not initialized in
+    // guest memory. The handler's bounded scratch buffers are volatile and are
+    // not carried into later title state; any future read must be separately
+    // source-admitted before that continuation can advance.
+    memory_effects_.insert(memory_effects_.end(), {
+        {0x1c11, 0xd9fe, MillenniumDosTitleInitializationEffectWidth::word,
+            0x1c14, child_code_segment_, true},
+        {0x1000, 0xd9fc, MillenniumDosTitleInitializationEffectWidth::word,
+            0x1003, child_code_segment_, true},
+        {0x0127, 0xd9fa, MillenniumDosTitleInitializationEffectWidth::word,
+            child_code_segment_, child_code_segment_, true},
+        {0x0127, 0xd9f2, MillenniumDosTitleInitializationEffectWidth::word,
+            child_code_segment_, child_code_segment_, true},
+        {0x0127, 0xd9ec, MillenniumDosTitleInitializationEffectWidth::word,
+            0x0129, child_code_segment_, true},
+        {0x0127, 0xd9ee, MillenniumDosTitleInitializationEffectWidth::word,
+            child_code_segment_, child_code_segment_, true},
+        {0x000e, 0xd9ea, MillenniumDosTitleInitializationEffectWidth::word,
+            0x0012, child_code_segment_, true},
+        {0x09f3, 0x09bc, MillenniumDosTitleInitializationEffectWidth::word,
+            0xd9ea, driver_segment, true},
+        {0x0012, 0x01e4, MillenniumDosTitleInitializationEffectWidth::byte,
+            0, driver_segment, true},
+    });
+    effects_.insert(effects_.end(), {
+        {0x0b5b, "AX", 0x0100}, {0x0b5b, "BX", 0x0100},
+        {0x0b5b, "CX", 0x00ff}, {0x0b5b, "DX", 0x03c9},
+        {0x1c14, "AX", 0},
+    });
+    post_video_observed_ax_ = result.handler_return_ax;
+    post_video_observed_flags_ = 0;
+    post_video_observed_flags_known_ = false;
+    post_video_mcga_function_nineteen_return_native_ = true;
+    boundary_.result_observed = true;
+    last_sequence_ = sequence;
+    continuation_address_ = 0x1c17;
+    state_ = MillenniumDosTitleInitializationState::post_video_followup_call_boundary;
 }
 
 void MillenniumDosTitleInitializationSession::execute_exact_startup(
@@ -3308,14 +3714,18 @@ MillenniumDosTitleInitializationSession::checkpoint() const {
         selected_call_address_,selected_call_target_,selected_callee_boundary_,
         selected_callee_observed_ax_,selected_callee_observed_flags_,
         selected_followup_call_address_,selected_followup_call_target_,
-        bios_boundary_,bios_results_,title_main_call_address_,
+        bios_boundary_,bios_results_,dac_writes_,title_main_call_address_,
         title_main_call_target_,dos_boundary_,dos_results_,dos_file_results_,
-        dos_vector_results_,setup_bios_boundary_,setup_bios_results_,
+        dos_vector_results_,vector_installs_,setup_bios_boundary_,setup_bios_results_,setup_bios_returns_,
         far_read_boundary_,far_word_observations_,far_single_word_observations_,far_byte_boundary_,far_byte_observations_,failure_address_,
         continuation_address_,post_video_observed_ax_,post_video_observed_flags_,
         graphics_record_observed_ax_,graphics_record_observed_flags_,
         post_descriptor_observed_ax_,post_descriptor_observed_flags_,
-        post_descriptor_observed_record_,title_library_cursor_,title_library_read_index_};
+        post_descriptor_observed_record_,title_library_cursor_,title_library_read_index_,
+        observed_flags_known_,selected_callee_observed_flags_known_,
+        post_video_ega_function_nineteen_return_native_,
+        post_video_mcga_function_nineteen_return_native_,
+        post_video_observed_flags_known_};
 }
 
 } // namespace eon

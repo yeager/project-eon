@@ -55,6 +55,27 @@ MillenniumDosCompatibilityRunner::remaining_title_paragraphs() const {
   return static_cast<std::uint16_t>(arena.end_segment_exclusive -
                                     arena.next_segment);
 }
+MillenniumDosVirtualVectorTarget
+MillenniumDosCompatibilityRunner::get_virtual_vector(const std::uint8_t vector) {
+  auto& target = virtual_ivt_[vector];
+  if (!target.initialized) {
+    if (!opaque_handler_allocation_) {
+      const auto allocation = allocate_paragraphs(1);
+      if (!allocation.allocation)
+        throw std::runtime_error("DOS virtual IVT handler allocation failed: " + allocation.error);
+      opaque_handler_allocation_ = *allocation.allocation;
+    }
+    // This points into Eon's generation-owned, opaque handler slot. It is a
+    // virtual DOS address, not a historical BIOS/DOS vector or executable
+    // machine-code implementation. Invocation remains an explicit boundary.
+    target = {0, opaque_handler_allocation_->segment, true};
+  }
+  return target;
+}
+void MillenniumDosCompatibilityRunner::set_virtual_vector(
+    const std::uint8_t vector, const std::uint16_t offset, const std::uint16_t segment) {
+  virtual_ivt_[vector] = {offset, segment, true};
+}
 MillenniumDosCompatibilityRunnerCheckpoint
 MillenniumDosCompatibilityRunner::checkpoint(
     const MillenniumDosSoundDriverLoadState state,

@@ -38,6 +38,7 @@ enum class NativeSessionState {
     deuteros_amiga_opening,
     deuteros_amiga_title_stage_boundary,
     deuteros_amiga_title_program_entry,
+    deuteros_amiga_bootstrap_graphics_boundary,
     deuteros_amiga_title_display_trace_boundary,
     deuteros_atari_bootstrap,
     returning_to_menu,
@@ -67,6 +68,21 @@ public:
     [[nodiscard]] std::optional<MillenniumDosSoundDriverLoadCheckpoint> millennium_dos_sound_driver_load_checkpoint() const;
     [[nodiscard]] MillenniumDosVideoDriverLoadObservationResult observe_millennium_dos_video_driver_load(MillenniumDosVideoDriverLoadObservation);
     [[nodiscard]] std::optional<MillenniumDosVideoDriverLoadCheckpoint> millennium_dos_video_driver_load_checkpoint() const;
+    [[nodiscard]] std::optional<MillenniumDosVideoInt91FunctionZeroDispatch>
+    millennium_dos_video_int91_function_zero_dispatch() const;
+    [[nodiscard]] MillenniumDosVideoFunctionZeroObservationResult
+    begin_millennium_dos_video_int91_function_zero_dispatch();
+    [[nodiscard]] MillenniumDosVideoFunctionZeroObservationResult
+    observe_millennium_dos_video_function_zero_bios_result(
+        MillenniumDosVideoFunctionZeroBiosResult);
+    [[nodiscard]] MillenniumDosVideoFunctionZeroObservationResult
+    advance_millennium_dos_video_function_zero_success_postlude();
+    [[nodiscard]] MillenniumDosVideoFunctionZeroObservationResult
+    advance_millennium_dos_video_function_zero_mcga_single_count_store();
+    [[nodiscard]] MillenniumDosVideoFunctionZeroObservationResult
+    advance_millennium_dos_video_function_zero_mcga_return_chain();
+    [[nodiscard]] std::optional<MillenniumDosVideoFunctionZeroCheckpoint>
+    millennium_dos_video_function_zero_checkpoint() const;
     [[nodiscard]] std::optional<MillenniumDosCompatibilityRunnerCheckpoint> tick_millennium_dos_compatibility_runner();
     [[nodiscard]] MillenniumDosSessionDriveResult
     drive_millennium_dos_session(std::uint32_t step_limit = 64);
@@ -98,6 +114,24 @@ public:
     [[nodiscard]] MillenniumDosNativeProcessObservationResult
     observe_millennium_dos_native_bios_interrupt_return(
         MillenniumDosNativeBiosInterruptReturnObservation);
+    [[nodiscard]] MillenniumDosNativeProcessObservationResult
+    observe_millennium_dos_native_dos_interrupt_return(
+        MillenniumDosNativeDosInterruptReturnObservation);
+    [[nodiscard]] MillenniumDosNativeProcessObservationResult
+    observe_millennium_dos_static_data_loader_entry(
+        MillenniumDosStaticDataLoaderEntryObservation);
+    [[nodiscard]] MillenniumDosNativeProcessObservationResult
+    observe_millennium_dos_static_data_load_dos_interrupt_return(
+        MillenniumDosNativeDosInterruptReturnObservation);
+    [[nodiscard]] MillenniumDosNativeProcessObservationResult
+    observe_millennium_dos_static_data_loader_return(
+        MillenniumDosStaticDataLoaderCallReturnObservation);
+    [[nodiscard]] std::optional<MillenniumDosStaticDataLoadCheckpoint>
+    millennium_dos_static_data_load_checkpoint() const;
+    [[nodiscard]] MillenniumDosNativeProcessObservationResult
+    observe_millennium_dos_native_runtime_byte(MillenniumDosNativeRuntimeByteObservation);
+    [[nodiscard]] MillenniumDosNativeProcessObservationResult
+    execute_millennium_dos_native_runtime_byte_from_owned_memory();
     [[nodiscard]] std::optional<MillenniumDosTitleToGameCheckpoint> millennium_dos_title_to_game_checkpoint() const;
     [[nodiscard]] std::optional<MillenniumDosStaticDispatchDiagnostics>
     millennium_dos_static_dispatch_diagnostics() const;
@@ -202,8 +236,10 @@ public:
     [[nodiscard]] DeuterosAmigaInterruptWorkerObservationResult
     observe_deuteros_amiga_interrupt_worker(
         DeuterosAmigaInterruptWorkerEntryObservation observation);
+    [[nodiscard]] DeuterosAmigaVertbObservationResult observe_deuteros_amiga_vertb_entry(
+        DeuterosAmigaVertbEntryObservation observation);
     [[nodiscard]] ActiveNativeSessionDriveResult
-    drive_active_native_session(std::uint32_t step_limit = 64);
+    drive_active_native_session(std::uint32_t step_limit = 4096);
     // The 50 Hz opening scheduler is native-session lifecycle state. SDL
     // supplies a monotonic timestamp, receives only immutable VM events, and
     // cannot retain a runner that outlives a source switch or teardown.
@@ -225,7 +261,29 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaBootstrapFrameSnapshot> deuteros_amiga_bootstrap_frame() const;
     [[nodiscard]] DeuterosAmigaMainStageFrame deuteros_amiga_main_stage_frame() const;
     [[nodiscard]] std::optional<DeuterosAmigaTitleProgramEntrySnapshot> deuteros_amiga_title_program_entry() const;
+    [[nodiscard]] std::optional<DeuterosAmigaBootstrapGraphicsBoundarySnapshot>
+    deuteros_amiga_bootstrap_graphics_boundary() const;
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    observe_deuteros_amiga_bootstrap_availmem_return(
+        DeuterosAmigaBootstrapAvailMemReturnObservation observation);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    observe_deuteros_amiga_bootstrap_second_availmem_return(
+        DeuterosAmigaBootstrapSecondAvailMemReturnObservation observation);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    advance_deuteros_amiga_bootstrap_graphics_compatibility();
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    advance_deuteros_amiga_bootstrap_eon_memory_services();
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    advance_deuteros_amiga_bootstrap_view_pair_native();
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    observe_deuteros_amiga_bootstrap_makevport_return(
+        DeuterosAmigaObservedMakeVPortReturn observation);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    advance_deuteros_amiga_bootstrap_makevport_prefix();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_program_entry();
+    [[nodiscard]] DeuterosAmigaComputedDispatchResult
+    observe_deuteros_amiga_title_computed_dispatch(
+        DeuterosAmigaComputedDispatchObservation);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_local_prefix();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_exec_return(DeuterosAmigaObservedExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_open_library_return(DeuterosAmigaObservedOpenLibraryReturn);
@@ -233,6 +291,14 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_display_base(DeuterosAmigaObservedDisplayBaseRead);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_custom_chip_write(DeuterosAmigaObservedCustomChipWrite);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_callback_exec_return(DeuterosAmigaObservedCallbackExecReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    observe_deuteros_amiga_title_callback_producer(
+        DeuterosAmigaObservedTitleCallbackProducer);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    observe_deuteros_amiga_title_move_sprite(DeuterosAmigaObservedTitleMoveSpriteCall);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    observe_deuteros_amiga_title_response_queue(
+        DeuterosAmigaObservedTitleResponseQueue);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_service_setup_exec_return(DeuterosAmigaObservedServiceSetupExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_second_service_exec_return(DeuterosAmigaObservedServiceSetupExecReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_third_service_exec_return(DeuterosAmigaObservedServiceSetupExecReturn);
@@ -269,7 +335,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_call_return(DeuterosAmigaObservedTitleCommandCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_planar_write(DeuterosAmigaObservedTitleCommandPlanarWrite);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_planar_variant_write(DeuterosAmigaObservedTitleCommandPlanarVariantWrite);
-    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_negative_service(DeuterosAmigaObservedTitleCommandNegativeService);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_command_negative_phase(DeuterosAmigaObservedTitleCommandNegativePhase);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_pointer_route(DeuterosAmigaObservedTitlePostCommandPointerRoute);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_title_post_command_graphics_return(DeuterosAmigaObservedGraphicsVectorReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult advance_deuteros_amiga_title_post_command_first_dispatch();
@@ -442,7 +508,10 @@ public:
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_palette_recurrence(MillenniumAtariGameInitPaletteRecurrenceObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_palette_rts(MillenniumAtariGameInitPaletteRtsObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_fopen(MillenniumAtariGemdosSelector61Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult service_millennium_atari_game_init_second_config_fopen();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_fread(MillenniumAtariGemdosSelector63Observation);
+    [[nodiscard]] MillenniumAtariConfigConsumerResult service_millennium_atari_game_init_second_config_fread();
+    [[nodiscard]] MillenniumAtariConfigConsumerResult service_millennium_atari_game_init_second_config_fclose();
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_fclose(MillenniumAtariGemdosSelector62Observation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_rts(MillenniumAtariGameInitSecondConfigRtsObservation);
     [[nodiscard]] MillenniumAtariConfigConsumerResult observe_millennium_atari_game_init_second_config_xbios_38(MillenniumAtariXbiosSelector38Observation);

@@ -7,6 +7,7 @@
 #include "data/deuteros_amiga_alternate_renderer.hpp"
 #include "data/deuteros_amiga_frame.hpp"
 #include "data/deuteros_amiga_loader.hpp"
+#include "data/deuteros_amiga_interrupt_worker.hpp"
 #include "engine/deuteros_amiga_title_stage_session.hpp"
 #include "engine/deuteros_amiga_title_bootstrap_session.hpp"
 #include "game_text_localization.hpp"
@@ -70,6 +71,12 @@ public:
                 return disk_.bytes(offset,length);
         throw std::runtime_error("Deuteros bootstrap read does not match a recovered load profile");
     }
+    // Disk 1 is the explicitly identified source for the recovered title
+    // ETD_READ profile. The caller still has to validate the full ADF identity
+    // and the request's unit/device binding before applying these bytes.
+    [[nodiscard]] std::span<const std::uint8_t> system_disk_image() const noexcept {
+        return disk_.bytes(0, AmigaAdf::standard_size);
+    }
     [[nodiscard]] std::span<const std::uint8_t> bootstrap_auxiliary_payload(
         std::uint32_t destination,std::uint32_t length,std::uint32_t offset) const {
         if(destination!=0x1fe00||length!=0x1800||offset!=0xb000)
@@ -111,6 +118,7 @@ public:
     // state. Parsing it does not imply that the vector was invoked.
     [[nodiscard]] DeuterosAmigaInstalledInterruptWorker
     installed_interrupt_worker() const;
+    [[nodiscard]] DeuterosAmigaVertbHandlerProfile vertb_handler_profile() const;
     [[nodiscard]] const DeuterosAmigaSoundBank& sound_bank() const { return sound_bank_; }
     // Copy-only, hash-bound tokens for the recovered system prompt table.
     // Presentation mode never enters this source-to-catalogue boundary.
@@ -145,13 +153,78 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance>
     reenter_title_stage_profile_five();
     [[nodiscard]] std::optional<DeuterosAmigaTitleStageSession::LocalPrefixAdvance> advance_title_local_prefix() { return title_stage_session_ ? title_stage_session_->execute_local_prefix() : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleNativePrivilegeTransition>
+    execute_title_native_privilege_transition() {
+        return title_stage_session_
+            ? title_stage_session_->execute_native_privilege_transition() : std::nullopt;
+    }
     [[nodiscard]] std::optional<DeuterosAmigaTitleExecBoundaryCheckpoint> observe_title_exec_return(const DeuterosAmigaObservedExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_exec_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleOpenLibraryBoundaryCheckpoint> observe_title_open_library_return(const DeuterosAmigaObservedOpenLibraryReturn& o) { return title_stage_session_ ? title_stage_session_->observe_open_library_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleOpenLibraryBoundaryCheckpoint>
+    provide_title_native_open_library_service_return(
+        const DeuterosAmigaNativeOpenLibraryServiceReturn& service_return,
+        const std::uint64_t runtime_generation) {
+        return title_stage_session_
+            ? title_stage_session_->provide_native_open_library_service_return(
+                service_return, runtime_generation)
+            : std::nullopt;
+    }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostOpenLibraryLocalAdvance> advance_title_post_open_library_local_path() { return title_stage_session_ ? title_stage_session_->advance_post_open_library_local_path() : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleDisplayLocalAdvance> observe_title_display_base(const DeuterosAmigaObservedDisplayBaseRead& o) { return title_stage_session_ ? title_stage_session_->observe_display_base_and_advance(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleDisplayLocalAdvance>
+    provide_title_native_display_surface(
+        const DeuterosAmigaNativeDisplaySurface& surface,
+        const std::uint64_t runtime_generation) {
+        return title_stage_session_
+            ? title_stage_session_->provide_native_display_surface(
+                surface, runtime_generation)
+            : std::nullopt;
+    }
     [[nodiscard]] std::optional<DeuterosAmigaTitleCallbackRegistrationLocalPlan> observe_title_custom_chip_write(const DeuterosAmigaObservedCustomChipWrite& o) { return title_stage_session_ ? title_stage_session_->observe_custom_chip_write(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaNativeDisplayInitialization>
+    initialize_title_native_display(const std::uint64_t runtime_generation,
+        const std::uint32_t base_address, const std::uint32_t byte_count) {
+        return title_stage_session_ ? title_stage_session_->initialize_native_display(
+            runtime_generation, base_address, byte_count) : std::nullopt;
+    }
+    [[nodiscard]] bool accept_title_native_input_handler_registration(
+        const DeuterosAmigaNativeInputHandlerRegistration& registration) {
+        return title_stage_session_
+            && title_stage_session_->accept_native_input_handler_registration(registration);
+    }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCallbackRegistrationAdvance> observe_title_callback_exec_return(const DeuterosAmigaObservedCallbackExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_callback_exec_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCallbackProducerRuntimePlan>
+    observe_title_callback_producer(
+        const DeuterosAmigaObservedTitleCallbackProducer& o) {
+        return title_stage_session_
+            ? title_stage_session_->observe_callback_producer(o) : std::nullopt;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleMoveSpriteRuntimePlan>
+    observe_title_callback_move_sprite(
+        const DeuterosAmigaObservedTitleMoveSpriteCall& o) {
+        return title_stage_session_
+            ? title_stage_session_->observe_callback_move_sprite(o) : std::nullopt;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleResponseQueueRuntimePlan>
+    observe_title_response_queue(
+        const DeuterosAmigaObservedTitleResponseQueue& o) {
+        return title_stage_session_
+            ? title_stage_session_->observe_response_queue(o) : std::nullopt;
+    }
     [[nodiscard]] std::optional<DeuterosAmigaTitleServiceSetupLocalPlan> observe_title_service_setup_exec_return(const DeuterosAmigaObservedServiceSetupExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_service_setup_exec_return(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleNativeServiceSetupReceipt>
+    accept_title_native_exec_service_setup(
+        const DeuterosAmigaExecCompatibilityGraph& graph,
+        const DeuterosAmigaExecCompatibilityTaskResult& task,
+        const DeuterosAmigaExecCompatibilityPortResult& first_port,
+        const DeuterosAmigaExecCompatibilityOpenResult& first_open,
+        const DeuterosAmigaExecCompatibilityPortResult& second_port,
+        const DeuterosAmigaExecCompatibilityOpenResult& second_open) {
+        return title_stage_session_
+            ? title_stage_session_->accept_native_exec_service_setup(
+                graph, task, first_port, first_open, second_port, second_open)
+            : std::nullopt;
+    }
     [[nodiscard]] std::optional<DeuterosAmigaTitleSecondServiceLocalPlan> observe_title_second_service_exec_return(const DeuterosAmigaObservedServiceSetupExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_second_service_exec_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleThirdServiceLocalPlan> observe_title_third_service_exec_return(const DeuterosAmigaObservedServiceSetupExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_third_service_exec_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleFourthServiceLocalPlan> observe_title_fourth_service_exec_return(const DeuterosAmigaObservedServiceSetupExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_fourth_service_exec_return(o) : std::nullopt; }
@@ -174,6 +247,8 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadServiceLocalPlan> observe_title_load_service_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_load_service_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDoIoReturnPlan> observe_title_load_doio_return(const DeuterosAmigaObservedTitleLoadDoIoReturn& o) { return title_stage_session_ ? title_stage_session_->observe_load_doio_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDoIoStatusPlan> observe_title_load_doio_status(const DeuterosAmigaObservedTitleLoadDoIoStatus& o) { return title_stage_session_ ? title_stage_session_->observe_load_doio_status(o) : std::nullopt; }
+    [[nodiscard]] std::optional<std::uint32_t> next_native_title_load_doio_ordinal() const noexcept { return title_stage_session_ ? title_stage_session_->next_native_load_doio_ordinal() : std::nullopt; }
+    [[nodiscard]] bool complete_native_title_load_doio_ordinal(const std::uint32_t ordinal) noexcept { return title_stage_session_ && title_stage_session_->complete_native_load_doio_ordinal(ordinal); }
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadServiceSelectorPlan> observe_title_load_selector(const DeuterosAmigaObservedLoadSelector& o) { return title_stage_session_ ? title_stage_session_->observe_load_selector(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadCopyChunkPlan> observe_title_load_copy_chunk(const DeuterosAmigaObservedLoadCopyChunk& o) { return title_stage_session_ ? title_stage_session_->observe_load_copy_chunk(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleLoadDispatchTableBasePlan> observe_title_load_dispatch_table_base(const DeuterosAmigaObservedLoadDispatchTableBase& o) { return title_stage_session_ ? title_stage_session_->observe_load_dispatch_table_base(o) : std::nullopt; }
@@ -187,7 +262,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandCallReturnPlan> observe_title_command_call_return(const DeuterosAmigaObservedTitleCommandCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_command_call_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandPlanarWritePlan> observe_title_command_planar_write(const DeuterosAmigaObservedTitleCommandPlanarWrite& o) { return title_stage_session_ ? title_stage_session_->observe_command_planar_write(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleCommandPlanarVariantWritePlan> observe_title_command_planar_variant_write(const DeuterosAmigaObservedTitleCommandPlanarVariantWrite& o) { return title_stage_session_ ? title_stage_session_->observe_command_planar_variant_write(o) : std::nullopt; }
-    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandNegativeServicePlan> observe_title_command_negative_service(const DeuterosAmigaObservedTitleCommandNegativeService& o) { return title_stage_session_ ? title_stage_session_->observe_command_negative_service(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaTitleCommandNegativeServicePlan> observe_title_command_negative_service_phase(const DeuterosAmigaObservedTitleCommandNegativePhase& o) { return title_stage_session_ ? title_stage_session_->observe_command_negative_service_phase(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandPointerRoutePlan> observe_title_post_command_pointer_route(const DeuterosAmigaObservedTitlePostCommandPointerRoute& o) { return title_stage_session_ ? title_stage_session_->observe_post_command_pointer_route(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandGraphicsReturnPlan> observe_title_post_command_graphics_return(const DeuterosAmigaObservedGraphicsVectorReturn& o) { return title_stage_session_ ? title_stage_session_->observe_post_command_graphics_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitlePostCommandFirstDispatchPlan> advance_title_post_command_first_dispatch() { return title_stage_session_ ? title_stage_session_->advance_post_command_first_dispatch() : std::nullopt; }
@@ -258,6 +333,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaTitleTailBootstrapPlan> observe_title_tail_controller_long(const DeuterosAmigaObservedTitleTailControllerLong& o) { return title_stage_session_ ? title_stage_session_->observe_title_tail_controller_long(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaTitleProfileTwoBootstrapPlan> advance_title_profile_two_bootstrap() { return title_stage_session_ ? title_stage_session_->advance_title_profile_two_bootstrap() : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageReentryPrefixPlan> observe_main_stage_reentry_d0(const DeuterosAmigaObservedMainStageReentryD0& o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_reentry_d0(o) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageReentryPrefixPlan> advance_main_stage_reentry_d0() { return title_stage_session_ ? title_stage_session_->advance_main_stage_reentry_d0() : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageFirstExecReturnPlan> observe_main_stage_first_exec_return(const DeuterosAmigaObservedMainStageExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_first_exec_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageSecondExecReturnPlan> observe_main_stage_second_exec_return(const DeuterosAmigaObservedMainStageExecReturn& o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_second_exec_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageFirstLocalReturnPlan> observe_main_stage_first_local_return(const DeuterosAmigaObservedLocalCallReturn& o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_first_local_return(o) : std::nullopt; }
@@ -271,6 +347,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaMainStageResourceLoadPlan> observe_main_stage_resource_load(const DeuterosAmigaObservedMainStageResourceLoad&o,std::uint32_t restart_d0=0) { return title_stage_session_ ? title_stage_session_->observe_main_stage_resource_load(o,restart_d0) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainResourceTransfer> main_resource_transfer(const std::uint16_t index) const { return read_deuteros_amiga_main_resource(disk_,load_plan_,index); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopServiceReturnPlan> observe_main_stage_loop_service_return(const DeuterosAmigaObservedLocalCallReturn&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_loop_service_return(o) : std::nullopt; }
+    [[nodiscard]] bool advance_main_stage_loop_service_native() { return title_stage_session_ && title_stage_session_->advance_main_stage_loop_service_native(); }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareBodyPlan> advance_main_stage_loop_prepare_body(const std::uint32_t a1=0,const std::uint32_t a6=0) { return title_stage_session_ ? title_stage_session_->advance_main_stage_loop_prepare_body(a1,a6) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> observe_main_stage_outer_input(const DeuterosAmigaObservedOuterInput&o,DeuterosAmigaOuterInputRoute route) { return title_stage_session_ ? title_stage_session_->observe_main_stage_outer_input(o,route) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> advance_main_stage_command_palette(std::uint32_t palette,std::uint32_t library) { return title_stage_session_ ? title_stage_session_->advance_main_stage_command_palette(palette,library) : std::nullopt; }
@@ -288,6 +365,7 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> advance_main_stage_loop_request_return(const DeuterosAmigaObservedLoopRequestService&o,std::uint32_t pointer) { return title_stage_session_ ? title_stage_session_->advance_main_stage_loop_request_return(o,pointer) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> observe_main_stage_optional_resource_cia(const DeuterosAmigaObservedOptionalResourceCia&o,const DeuterosAmigaOptionalResourceInitResult&r) { return title_stage_session_ ? title_stage_session_->observe_main_stage_optional_resource_cia(o,r) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> advance_main_stage_loop_graphics_return(const DeuterosAmigaObservedMainStageExecReturn&o,std::uint32_t a1,std::uint32_t a6) { return title_stage_session_ ? title_stage_session_->advance_main_stage_loop_graphics_return(o,a1,a6) : std::nullopt; }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan> advance_main_stage_loop_graphics_native_service(std::uint32_t a1,std::uint32_t a6) { return title_stage_session_ ? title_stage_session_->advance_main_stage_loop_graphics_native_service(a1,a6) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopPrepareReturnPlan> observe_main_stage_loop_prepare_return(const DeuterosAmigaObservedLocalCallReturn&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_loop_prepare_return(o) : std::nullopt; }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopSchedulerReturnPlan> observe_main_stage_loop_scheduler_return(const DeuterosAmigaObservedLocalCallReturn&o) { return title_stage_session_ ? title_stage_session_->observe_main_stage_loop_scheduler_return(o) : std::nullopt; }
     [[nodiscard]] const std::optional<DeuterosAmigaTitleBootstrapSession>&

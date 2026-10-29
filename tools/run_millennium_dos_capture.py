@@ -74,17 +74,138 @@ EXPERIMENTAL_OBSERVER_PROTOCOLS = {
         "57020c1138879a6f53394f592b6f88bcd69875bfc06c98f7cd9b9a64372e8404",
         "942f30f2199350a51d0ff1e7c024f4e226d29b5576dc6ea0d61b7556c12468e8",
     }),
+    "millennium-dos-en-driver-load-return-v2": frozenset({
+        "a03a43372a31b89514007c5053a8890c2b13a653c1562c379c3eaee6edc030e6",
+    }),
+    # Bounded DOS INT 21h return-register pairs at four hash-bound TITLES.EXE
+    # sites. This is an external diagnostic only; it stops before guest IRET.
+    "millennium-dos-ah48-handler-return-v1": frozenset({
+        "3c3b6d9312d59cfada0f4b75466f90da5193e61e0450271cbe268fbb2b85c65c",
+    }),
+    # Separately built observer bound only to the third allocator call at
+    # TITLES.EXE:$1b4f. Its binary and v3 sidecar grammar do not widen v1.
+    "millennium-dos-ah48-site-1b4f-v2": frozenset({
+        "75ddc62f68817bfb37cb59d8a283ea06e89cf8d46104bf3458c0d99fcfa2b6ef",
+    }),
+    "millennium-dos-ah48-sites-1bca-1bd5-v3": frozenset({
+        "c8d0795e32e566a7a998ef9f26542fd85652f27b957144a06858181ae9379d41",
+    }),
+    # The separately pinned v4 recorder adds a bounded, hash-linked SDL host
+    # input receipt. It remains experimental and recovery-inadmissible.
+    "millennium-dos-ah48-sites-1bca-1bd5-v4-host-input": frozenset({
+        "6e32911220bfa480c4890c59729ebb4ef399e7b8d1da6841d959817f19e312f9",
+    }),
+    "millennium-dos-ah48-sites-1bca-1bd5-v5-after-iret": frozenset({
+        "0ebf895c90fe0fbaddadf5303e96aaf3cb5bd1dea45b6650a9024add4b23ec2c",
+    }),
+    "millennium-dos-title-library-v6": frozenset({
+        "a67ea94cf02abb786ad070b28a41b168c3217a9a9893059b179f3d528b42eeef",
+    }),
 }
 EXPERIMENTAL_OBSERVER_SIZES = {
     "millennium-dos-en-driver-load-return-v1": {
         "57020c1138879a6f53394f592b6f88bcd69875bfc06c98f7cd9b9a64372e8404": 15_809_768,
         "942f30f2199350a51d0ff1e7c024f4e226d29b5576dc6ea0d61b7556c12468e8": 132_933_552,
     },
+    "millennium-dos-en-driver-load-return-v2": {
+        "a03a43372a31b89514007c5053a8890c2b13a653c1562c379c3eaee6edc030e6": 132_934_416,
+    },
+    "millennium-dos-ah48-handler-return-v1": {
+        "3c3b6d9312d59cfada0f4b75466f90da5193e61e0450271cbe268fbb2b85c65c": 122_502_752,
+    },
+    "millennium-dos-ah48-site-1b4f-v2": {
+        "75ddc62f68817bfb37cb59d8a283ea06e89cf8d46104bf3458c0d99fcfa2b6ef": 122_505_616,
+    },
+    "millennium-dos-ah48-sites-1bca-1bd5-v3": {
+        "c8d0795e32e566a7a998ef9f26542fd85652f27b957144a06858181ae9379d41": 134_030_152,
+    },
+    "millennium-dos-ah48-sites-1bca-1bd5-v4-host-input": {
+        "6e32911220bfa480c4890c59729ebb4ef399e7b8d1da6841d959817f19e312f9": 19_598_136,
+    },
+    "millennium-dos-ah48-sites-1bca-1bd5-v5-after-iret": {
+        "0ebf895c90fe0fbaddadf5303e96aaf3cb5bd1dea45b6650a9024add4b23ec2c": 22_842_648,
+    },
+    "millennium-dos-title-library-v6": {
+        "a67ea94cf02abb786ad070b28a41b168c3217a9a9893059b179f3d528b42eeef": 123_683_760,
+    },
 }
 EXPERIMENTAL_OBSERVER_RECEIPT_VERSIONS = {
     "millennium-dos-en-driver-load-return-v1": "22",
+    "millennium-dos-en-driver-load-return-v2": "22",
+    "millennium-dos-ah48-handler-return-v1": "22",
+    "millennium-dos-ah48-site-1b4f-v2": "22",
+    "millennium-dos-ah48-sites-1bca-1bd5-v3": "22",
+    "millennium-dos-ah48-sites-1bca-1bd5-v4-host-input": "22",
+    "millennium-dos-ah48-sites-1bca-1bd5-v5-after-iret": "22",
+    "millennium-dos-title-library-v6": "22",
 }
 EXPERIMENTAL_ONLY_PROTOCOLS = frozenset(EXPERIMENTAL_OBSERVER_RECEIPT_VERSIONS)
+DRIVER_LOAD_RETURN_PROTOCOLS = frozenset({
+    "millennium-dos-en-driver-load-return-v1",
+    "millennium-dos-en-driver-load-return-v2",
+})
+DRIVER_LOAD_RETURN_GRACEFUL_CLOSE_PROTOCOL = "millennium-dos-en-driver-load-return-v2"
+AH48_HANDLER_RETURN_PROTOCOL = "millennium-dos-ah48-handler-return-v1"
+AH48_SITE_1B4F_RETURN_PROTOCOL = "millennium-dos-ah48-site-1b4f-v2"
+AH48_SITES_1BCA_1BD5_RETURN_PROTOCOL = "millennium-dos-ah48-sites-1bca-1bd5-v3"
+AH48_SITES_1BCA_1BD5_V4_HOST_INPUT_PROTOCOL = (
+    "millennium-dos-ah48-sites-1bca-1bd5-v4-host-input")
+AH48_SITES_1BCA_1BD5_V5_AFTER_IRET_PROTOCOL = (
+    "millennium-dos-ah48-sites-1bca-1bd5-v5-after-iret")
+AH48_TITLE_LIBRARY_V6_PROTOCOL = "millennium-dos-title-library-v6"
+BUFFERED_HOST_INPUT_RECEIPT_PROTOCOLS = frozenset({
+    AH48_SITES_1BCA_1BD5_V4_HOST_INPUT_PROTOCOL,
+    AH48_SITES_1BCA_1BD5_V5_AFTER_IRET_PROTOCOL,
+    AH48_TITLE_LIBRARY_V6_PROTOCOL,
+})
+AH48_HANDLER_RETURN_PROTOCOLS = frozenset({
+    AH48_HANDLER_RETURN_PROTOCOL, AH48_SITE_1B4F_RETURN_PROTOCOL,
+    AH48_SITES_1BCA_1BD5_RETURN_PROTOCOL,
+    AH48_SITES_1BCA_1BD5_V4_HOST_INPUT_PROTOCOL,
+    AH48_SITES_1BCA_1BD5_V5_AFTER_IRET_PROTOCOL,
+    AH48_TITLE_LIBRARY_V6_PROTOCOL,
+})
+GRACEFUL_WINDOW_CLOSE_PROTOCOLS = frozenset({
+    DRIVER_LOAD_RETURN_GRACEFUL_CLOSE_PROTOCOL,
+    *AH48_HANDLER_RETURN_PROTOCOLS,
+})
+AH48_MAX_BYTES = 4 * 1024 * 1024
+AH48_MAX_EVENTS = 4096
+AH48_HEADER = (
+    b"# schema=project-eon.dos-ah48-observer/v2;image=TITLES.EXE;"
+    b"sha256=3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6;"
+    b"capture-point=DOS_21Handler-return-before-IRET;guest-memory-dump=none\n"
+)
+AH48_EXPECTED_AH = {0x1B26: 0x4A, 0x1B2D: 0x48, 0x1B38: 0x49, 0x1B3F: 0x48}
+AH48_SITE_1B4F_HEADER = (
+    b"# schema=project-eon.dos-ah48-observer/v3;image=TITLES.EXE;"
+    b"sha256=3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6;"
+    b"capture-point=DOS_21Handler-return-before-IRET;guest-memory-dump=none\n"
+)
+AH48_SITE_1B4F_EXPECTED_AH = {0x1B4F: 0x48}
+AH48_SITES_1BCA_1BD5_HEADER = (
+    b"# schema=project-eon.dos-ah48-observer/v4;image=TITLES.EXE;"
+    b"sha256=3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6;"
+    b"capture-point=DOS_21Handler-return-before-IRET;guest-memory-dump=none\n"
+)
+AH48_SITES_1BCA_1BD5_EXPECTED_AH = {0x1BCA: 0x48, 0x1BD5: 0x49}
+AH48_IRET_HEADER = (
+    b"# schema=project-eon.dos-ah48-observer/v5;image=TITLES.EXE;"
+    b"sha256=3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6;"
+    b"capture-point=TITLES-caller-after-DOS_21-IRET;guest-memory-dump=none\n"
+)
+AH48_TITLE_LIBRARY_HEADER = (
+    b"# schema=project-eon.dos-ah48-observer/v6;image=TITLES.EXE;"
+    b"sha256=3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6;"
+    b"capture-point=DOS_21Handler-return-before-IRET;guest-memory-dump=none\n"
+)
+AH48_TITLE_LIBRARY_IRET_HEADER = (
+    b"# schema=project-eon.dos-ah48-observer/v6;image=TITLES.EXE;"
+    b"sha256=3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6;"
+    b"capture-point=TITLES-caller-after-DOS_21-IRET;guest-memory-dump=none\n"
+)
+AH48_IRET_REGISTER_NAMES = (
+    "ax", "bx", "cx", "dx", "si", "di", "bp", "cs", "ip", "ds", "es", "ss", "sp", "flags")
 GAME_ROOT = "millennium-return-to-earth-2-2"
 MACHINE_PROFILES = {"svga_s3", "ega"}
 # A new capture must state whether it is an intentionally no-input diagnostic
@@ -328,7 +449,9 @@ def require_visible_operator_input(environment: dict[str, str]) -> None:
 
 
 def recorder_config(game_root: Path, machine_profile: str = "svga_s3", *,
-                    release_sha256: str | None = None) -> str:
+                    release_sha256: str | None = None,
+                    graceful_host_close: bool = False,
+                    readonly_cdrom_archive: bool = False) -> str:
     """Return the fixed, evidence-reviewed configuration with one read-only game root.
 
     Millennium's 16-bit startup reaches a documented word copy from the last
@@ -350,6 +473,7 @@ def recorder_config(game_root: Path, machine_profile: str = "svga_s3", *,
         "[dosbox]",
         f"machine={machine_profile}",
         "memsize=16",
+        *(('quit warning=false',) if graceful_host_close else ()),
         "",
         "[render]",
         "aspect=false",
@@ -362,9 +486,18 @@ def recorder_config(game_root: Path, machine_profile: str = "svga_s3", *,
         "[sblaster]",
         "sbtype=none",
         "",
+        # DOSBox-X's repeated INT 6 callback otherwise floods captured stderr
+        # with one error line per emulated instruction. Logging is host-side
+        # diagnostics; route it away and suppress only the CPU log group while
+        # leaving the observer's dedicated, bounded raw sidecars untouched.
+        "[log]",
+        "logfile=/dev/null",
+        "cpu=never",
+        "",
         "[autoexec]",
         "@echo off",
-        f'mount c "{game_root.as_posix()}"',
+        (f'mount c "{game_root.as_posix()}" -t cdrom -noioctl'
+         if readonly_cdrom_archive else f'mount c "{game_root.as_posix()}"'),
         "",
     ]
     if release_sha256 is not None:
@@ -438,7 +571,8 @@ def input_receipt_status(path: Path) -> str:
             f"host_input_receipt_records={record_count}\n")
 
 
-def capture_intent_status(intent: str, receipt_status: str, observed_during_capture: bool) -> str:
+def capture_intent_status(intent: str, receipt_status: str, observed_during_capture: bool,
+                          *, allow_finalized_receipt: bool = False) -> str:
     """Bind a declared operator session type to external recorder evidence.
 
     This is deliberately a classification of the capture procedure, not a
@@ -451,15 +585,23 @@ def capture_intent_status(intent: str, receipt_status: str, observed_during_capt
     fields = dict(line.split("=", 1) for line in receipt_status.splitlines())
     state = fields.get("host_input_receipt")
     if intent == "physical-input":
-        if state != "present" or not observed_during_capture:
+        if state != "present":
+            raise CaptureError("physical-input capture requires an observed non-empty host-input receipt")
+        if observed_during_capture:
+            evidence = "observed-during-capture"
+        elif allow_finalized_receipt:
+            evidence = "finalized-recorder-receipt"
+        else:
             raise CaptureError("physical-input capture requires an observed non-empty host-input receipt")
         requirement = "required"
     else:
         if state not in {"absent", "empty"} or observed_during_capture:
             raise CaptureError("diagnostic-no-input capture must not retain host input")
         requirement = "forbidden"
+        evidence = "none"
     return (f"capture_intent={intent}\n"
-            f"capture_intent_input_requirement={requirement}\n")
+            f"capture_intent_input_requirement={requirement}\n"
+            f"capture_intent_input_observation={evidence}\n")
 
 
 def capture_operator_instructions(intent: str) -> tuple[str, str, str]:
@@ -486,6 +628,336 @@ def experimental_driver_return_operator_instructions() -> tuple[str, str, str]:
         "Leave the emulator untouched during the capture window. When prompted, close DOSBox-X with the operating-system window controls so it can finalize the bounded sidecar; do not click the guest surface or press emulator keys.",
         "No AUTOTYPE, debugger input, guest-memory injection, or guest-file writes are permitted.",
     )
+
+
+def experimental_ah48_operator_instructions() -> tuple[str, str, str]:
+    """Collect the bounded DOS return sidecar during visible manual input."""
+    return (
+        "EXPERIMENTAL DIAGNOSTIC  visible manual input required; no gameplay state is collected",
+        "Focus the visible DOSBox-X window yourself and press/release ordinary keys only there. When prompted, close DOSBox-X with the operating-system window controls so it can finalize the bounded sidecar.",
+        "No AUTOTYPE, debugger input, or guest-memory injection is permitted.",
+    )
+
+
+def require_ah48_cache_output(output: Path, environment: dict[str, str]) -> None:
+    """The recorder accepts only a private direct child of the user's cache."""
+    home = environment.get("HOME")
+    if not home:
+        raise CaptureError("AH48 observer requires HOME for its private cache receipt")
+    cache = Path(home) / ".cache"
+    try:
+        cache_info = cache.lstat()
+    except OSError as error:
+        raise CaptureError(f"AH48 observer cache root is unavailable: {error}") from error
+    if (stat.S_ISLNK(cache_info.st_mode) or not stat.S_ISDIR(cache_info.st_mode)
+            or cache_info.st_uid != os.geteuid() or cache_info.st_mode & 0o022):
+        raise CaptureError("AH48 observer requires an owned, non-group/world-writable ~/.cache")
+    try:
+        resolved_cache = cache.resolve(strict=True)
+    except OSError as error:
+        raise CaptureError(f"AH48 observer cache root is unavailable: {error}") from error
+    if output.parent != resolved_cache:
+        raise CaptureError("AH48 capture output must be a direct child of the private ~/.cache root")
+
+
+def ah48_handler_return_status(path: Path, recorder_protocol: str) -> str:
+    """Validate the hash-bound, bounded pre-IRET register sidecar as raw facts."""
+    if recorder_protocol not in AH48_HANDLER_RETURN_PROTOCOLS:
+        return ""
+    if recorder_protocol == AH48_HANDLER_RETURN_PROTOCOL:
+        expected_header = AH48_HEADER
+        expected_ah = AH48_EXPECTED_AH
+        required_sites: frozenset[int] = frozenset()
+        boundary = "dos-handler-before-iret"
+    elif recorder_protocol in {
+            AH48_SITES_1BCA_1BD5_RETURN_PROTOCOL,
+            AH48_SITES_1BCA_1BD5_V4_HOST_INPUT_PROTOCOL,
+            AH48_SITES_1BCA_1BD5_V5_AFTER_IRET_PROTOCOL,
+            AH48_TITLE_LIBRARY_V6_PROTOCOL}:
+        if recorder_protocol == AH48_TITLE_LIBRARY_V6_PROTOCOL:
+            expected_header = AH48_TITLE_LIBRARY_HEADER
+            expected_ah = {
+                0x1AF9: 0x3D, 0x1B09: 0x42, 0x1B12: 0x3E,
+                0x1B64: 0x48, 0x1B74: 0x48, 0x1BCA: 0x48,
+                0x1BD5: 0x49, 0x0549: 0x3D, 0x057C: 0x3F,
+                0x059C: 0x3E,
+            }
+            required_sites = frozenset({
+                0x1AF9, 0x1B09, 0x1B12, 0x1B64,
+                0x1B74, 0x1BCA, 0x1BD5, 0x0549,
+            })
+            boundary = "dos-handler-before-iret-title-library-v6"
+        else:
+            expected_header = AH48_SITES_1BCA_1BD5_HEADER
+            expected_ah = AH48_SITES_1BCA_1BD5_EXPECTED_AH
+            required_sites = frozenset(expected_ah)
+            boundary = "dos-handler-before-iret-sites-1bca-1bd5"
+    elif recorder_protocol == AH48_SITE_1B4F_RETURN_PROTOCOL:
+        expected_header = AH48_SITE_1B4F_HEADER
+        expected_ah = AH48_SITE_1B4F_EXPECTED_AH
+        required_sites = frozenset({0x1B4F})
+        boundary = "dos-handler-before-iret-site-1b4f"
+    else:
+        return ""
+    if path.is_dir():
+        try:
+            candidates = sorted(path.glob("dos-ah48-*.tsv"))
+        except OSError as error:
+            raise CaptureError(f"AH48 return sidecar directory is unavailable: {error}") from error
+        if len(candidates) != 1:
+            raise CaptureError("AH48 observer must produce exactly one uniquely named sidecar")
+        generated = candidates[0]
+        fixed = path / "dos-ah48-return.raw"
+    else:
+        generated = path
+        fixed = path
+    try:
+        info = generated.lstat()
+    except OSError as error:
+        raise CaptureError(f"AH48 return sidecar is unavailable: {error}") from error
+    if (stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode)
+            or info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) != 0o600):
+        raise CaptureError("AH48 return sidecar must be a private regular file")
+    if info.st_size > AH48_MAX_BYTES:
+        raise CaptureError("AH48 return sidecar exceeds the 4 MiB recorder bound")
+    try:
+        fd = os.open(generated, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                     | getattr(os, "O_NONBLOCK", 0))
+        with os.fdopen(fd, "rb") as stream:
+            opened = os.fstat(stream.fileno())
+            if (not stat.S_ISREG(opened.st_mode) or opened.st_uid != os.geteuid()
+                    or opened.st_dev != info.st_dev or opened.st_ino != info.st_ino):
+                raise CaptureError("AH48 return sidecar changed during verification")
+            raw = stream.read(AH48_MAX_BYTES + 1)
+    except CaptureError:
+        raise
+    except OSError as error:
+        raise CaptureError(f"AH48 return sidecar is unavailable: {error}") from error
+    if len(raw) > AH48_MAX_BYTES:
+        raise CaptureError("AH48 return sidecar exceeds the 4 MiB recorder bound")
+    if not raw.startswith(expected_header) or not raw.endswith(b"\n") or b"\r" in raw:
+        raise CaptureError("AH48 return sidecar has an invalid header or line ending")
+    try:
+        lines = raw[len(expected_header):].decode("ascii").splitlines(keepends=True)
+    except UnicodeDecodeError as error:
+        raise CaptureError("AH48 return sidecar is not ASCII") from error
+    if len(lines) < 2:
+        raise CaptureError("AH48 return sidecar has no event and completion records")
+    records: list[tuple[int, int]] = []
+    caller_cs: str | None = None
+    footer: tuple[str, int] | None = None
+    overflow = False
+    register_names = ("ax", "bx", "cx", "dx", "si", "di", "bp", "cs", "ip", "ds", "es", "ss", "sp", "flags")
+    for index, line in enumerate(lines):
+        if line.startswith("overflow\t"):
+            if index != len(lines) - 2 or line not in {
+                    f"overflow\treason=event-limit\tevents={len(records)}\n",
+                    f"overflow\treason=byte-limit\tevents={len(records)}\n"}:
+                raise CaptureError("AH48 return sidecar has an invalid overflow record")
+            overflow = True
+            continue
+        if line.startswith("end\t"):
+            match = re.fullmatch(r"end\tstatus=(complete|overflow)\tevents=(0|[1-9][0-9]*)\n", line)
+            if index != len(lines) - 1 or not match or footer is not None:
+                raise CaptureError("AH48 return sidecar completion record is invalid")
+            footer = match.group(1), int(match.group(2))
+            continue
+        if overflow or footer is not None:
+            raise CaptureError("AH48 return sidecar has records after its terminal marker")
+        parts = line.rstrip("\n").split("\t")
+        if len(parts) != 5 + 2 * len(register_names) or parts[0] != "event":
+            raise CaptureError("AH48 return sidecar event has an invalid field count")
+        fields: dict[str, str] = {}
+        for part in parts[1:]:
+            if part.count("=") != 1:
+                raise CaptureError("AH48 return sidecar event has an invalid field")
+            key, value = part.split("=", 1)
+            if key in fields:
+                raise CaptureError("AH48 return sidecar event has duplicate fields")
+            fields[key] = value
+        expected_keys = {"sequence", "site", "observed_return_ip", "dispatch_return"}
+        expected_keys |= {f"{phase}_{register}" for phase in ("pre", "post") for register in register_names}
+        if set(fields) != expected_keys or fields["dispatch_return"] != "before-IRET":
+            raise CaptureError("AH48 return sidecar event does not match the reviewed register grammar")
+        if not re.fullmatch(r"[1-9][0-9]{0,3}", fields["sequence"]):
+            raise CaptureError("AH48 return sidecar sequence is invalid")
+        sequence = int(fields["sequence"])
+        if sequence != len(records) + 1 or sequence > AH48_MAX_EVENTS:
+            raise CaptureError("AH48 return sidecar sequence exceeds its reviewed event cap")
+        if not re.fullmatch(r"[0-9a-f]{4}", fields["site"]):
+            raise CaptureError("AH48 return sidecar site is invalid")
+        site = int(fields["site"], 16)
+        if (site not in expected_ah
+                or fields["observed_return_ip"] != f"{site + 2:04x}"
+                or fields["pre_ip"] != fields["observed_return_ip"]
+                or fields["pre_ax"][:2] != f"{expected_ah[site]:02x}"):
+            raise CaptureError("AH48 return sidecar event does not match an exact reviewed INT 21h site")
+        for key, value in fields.items():
+            if key.startswith(("pre_", "post_")) and not re.fullmatch(r"[0-9a-f]{4}", value):
+                raise CaptureError("AH48 return sidecar register is not a 16-bit hex value")
+        if caller_cs is None:
+            caller_cs = fields["pre_cs"]
+        elif caller_cs != fields["pre_cs"]:
+            raise CaptureError("AH48 return sidecar changed TITLES.EXE caller segment")
+        records.append((sequence, site))
+    if footer is None or footer[1] != len(records) or footer[0] != ("overflow" if overflow else "complete"):
+        raise CaptureError("AH48 return sidecar footer does not match its observations")
+    if overflow:
+        raise CaptureError("AH48 return sidecar overflowed its bounded recorder contract")
+    if not records:
+        raise CaptureError("AH48 return sidecar contains no DOS return observations")
+    site_counts: dict[int, int] = {}
+    for _, site in records:
+        site_counts[site] = site_counts.get(site, 0) + 1
+    if not required_sites.issubset(site_counts):
+        raise CaptureError("AH48 return sidecar is missing its exact required DOS site")
+    if recorder_protocol == AH48_TITLE_LIBRARY_V6_PROTOCOL:
+        sites = [site for _, site in records]
+        fixed_prefix = [0x1AF9, 0x1B09, 0x1B12, 0x1B64,
+                        0x1B74, 0x1BCA, 0x1BD5, 0x0549]
+        if sites[:len(fixed_prefix)] != fixed_prefix:
+            raise CaptureError("AH48 v6 sidecar does not follow the exact TITLES loader call order")
+        tail = sites[len(fixed_prefix):]
+        reads = 0
+        while reads < len(tail) and tail[reads] == 0x057C:
+            reads += 1
+        if reads > 9 or tail[reads:] not in ([], [0x059C]):
+            raise CaptureError("AH48 v6 title-library read/close sequence exceeds its exact bound")
+    counts = ",".join(f"0x{site:04x}:{site_counts[site]}" for site in expected_ah if site in site_counts)
+    digest = hashlib.sha256(raw).hexdigest()
+    if generated != fixed:
+        if fixed.exists() or fixed.is_symlink():
+            raise CaptureError("AH48 normalized sidecar path already exists")
+        os.rename(generated, fixed)
+    return ("ah48_return=present\n"
+            f"ah48_return_sha256={digest}\n"
+            f"ah48_return_bytes={len(raw)}\n"
+            f"ah48_return_events={len(records)}\n"
+            f"ah48_return_site_counts={counts}\n"
+            f"ah48_return_boundary={boundary}\n")
+
+
+def ah48_after_iret_status(directory: Path, recorder_protocol: str) -> str:
+    """Validate the exact TITLES caller snapshots after DOS IRET restores FLAGS."""
+    if recorder_protocol not in {
+            AH48_SITES_1BCA_1BD5_V5_AFTER_IRET_PROTOCOL,
+            AH48_TITLE_LIBRARY_V6_PROTOCOL}:
+        return ""
+    fixed = directory / "dos-ah48-iret.raw"
+    try:
+        candidates = ([fixed] if fixed.exists() or fixed.is_symlink()
+                      else sorted(directory.glob("dos-ah48-iret-*.raw")))
+    except OSError as error:
+        raise CaptureError(f"AH48 post-IRET sidecar directory is unavailable: {error}") from error
+    if len(candidates) != 1:
+        raise CaptureError("AH48 post-IRET observer must produce exactly one sidecar")
+    generated = candidates[0]
+    try:
+        info = generated.lstat()
+    except OSError as error:
+        raise CaptureError(f"AH48 post-IRET sidecar is unavailable: {error}") from error
+    if (stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode)
+            or info.st_uid != os.geteuid() or stat.S_IMODE(info.st_mode) != 0o600):
+        raise CaptureError("AH48 post-IRET sidecar must be a private regular file")
+    if info.st_size > AH48_MAX_BYTES:
+        raise CaptureError("AH48 post-IRET sidecar exceeds the 4 MiB recorder bound")
+    try:
+        fd = os.open(generated, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                     | getattr(os, "O_NONBLOCK", 0))
+        with os.fdopen(fd, "rb") as stream:
+            opened = os.fstat(stream.fileno())
+            if (not stat.S_ISREG(opened.st_mode) or opened.st_uid != os.geteuid()
+                    or opened.st_dev != info.st_dev or opened.st_ino != info.st_ino):
+                raise CaptureError("AH48 post-IRET sidecar changed during verification")
+            raw = stream.read(AH48_MAX_BYTES + 1)
+    except CaptureError:
+        raise
+    except OSError as error:
+        raise CaptureError(f"AH48 post-IRET sidecar is unavailable: {error}") from error
+    if len(raw) > AH48_MAX_BYTES:
+        raise CaptureError("AH48 post-IRET sidecar exceeds the 4 MiB recorder bound")
+    expected_header = (AH48_TITLE_LIBRARY_IRET_HEADER
+                       if recorder_protocol == AH48_TITLE_LIBRARY_V6_PROTOCOL
+                       else AH48_IRET_HEADER)
+    if not raw.startswith(expected_header) or not raw.endswith(b"\n") or b"\r" in raw:
+        raise CaptureError("AH48 post-IRET sidecar has an invalid header or line ending")
+    try:
+        lines = raw[len(expected_header):].decode("ascii").splitlines(keepends=True)
+    except UnicodeDecodeError as error:
+        raise CaptureError("AH48 post-IRET sidecar is not ASCII") from error
+    if recorder_protocol == AH48_TITLE_LIBRARY_V6_PROTOCOL:
+        handler_path = directory / "dos-ah48-return.raw"
+        try:
+            handler_lines = handler_path.read_text(encoding="ascii").splitlines()
+        except OSError as error:
+            raise CaptureError("AH48 v6 handler sidecar is unavailable for cross-check") from error
+        expected_sites = tuple(
+            int(match.group(1), 16)
+            for line in handler_lines if line.startswith("event\t")
+            if (match := re.search(r"(?:^|\t)site=([0-9a-f]{4})(?:\t|$)", line)))
+        if len(expected_sites) < 8 or len(expected_sites) > 18:
+            raise CaptureError("AH48 v6 handler/IRET event count is outside its reviewed bound")
+    else:
+        expected_sites = (0x1BCA, 0x1BD5)
+    if len(lines) != len(expected_sites) + 1:
+        raise CaptureError("AH48 post-IRET event count differs from the handler sidecar")
+    rows: dict[int, dict[str, str]] = {}
+    ordered_rows: list[dict[str, str]] = []
+    caller_cs: str | None = None
+    for sequence, (line, site) in enumerate(zip(lines[:-1], expected_sites), start=1):
+        parts = line.rstrip("\n").split("\t")
+        if not parts or parts[0] != "event":
+            raise CaptureError("AH48 post-IRET sidecar has an invalid event record")
+        fields: dict[str, str] = {}
+        for part in parts[1:]:
+            if part.count("=") != 1:
+                raise CaptureError("AH48 post-IRET event has an invalid field")
+            key, value = part.split("=", 1)
+            if key in fields:
+                raise CaptureError("AH48 post-IRET event has duplicate fields")
+            fields[key] = value
+        expected_keys = {"sequence", "site", "return_ip", *AH48_IRET_REGISTER_NAMES}
+        if set(fields) != expected_keys:
+            raise CaptureError("AH48 post-IRET event has an unexpected register grammar")
+        if (fields["sequence"] != str(sequence)
+                or fields["site"] != f"{site:04x}"
+                or fields["return_ip"] != f"{site + 2:04x}"
+                or fields["ip"] != fields["return_ip"]):
+            raise CaptureError("AH48 post-IRET event does not match its exact caller return")
+        if any(not re.fullmatch(r"[0-9a-f]{4}", fields[name])
+               for name in AH48_IRET_REGISTER_NAMES):
+            raise CaptureError("AH48 post-IRET register is not a 16-bit hex value")
+        if caller_cs is None:
+            caller_cs = fields["cs"]
+        elif caller_cs != fields["cs"]:
+            raise CaptureError("AH48 post-IRET events changed TITLES.EXE caller segment")
+        rows[site] = fields
+        ordered_rows.append(fields)
+    footer = f"end\tstatus=complete\tevents={len(expected_sites)}\n"
+    if lines[-1] != footer:
+        raise CaptureError("AH48 post-IRET sidecar completion footer is invalid")
+    digest = hashlib.sha256(raw).hexdigest()
+    if generated != fixed:
+        if fixed.exists() or fixed.is_symlink():
+            raise CaptureError("AH48 normalized post-IRET sidecar path already exists")
+        os.rename(generated, fixed)
+    fields = [
+        "ah48_iret=present",
+        f"ah48_iret_sha256={digest}",
+        f"ah48_iret_bytes={len(raw)}",
+        f"ah48_iret_events={len(expected_sites)}",
+        f"ah48_iret_caller_cs={caller_cs}",
+    ]
+    summary_sites = ((0x1BCA, "1bca"), (0x1BD5, "1bd5"))
+    if recorder_protocol == AH48_TITLE_LIBRARY_V6_PROTOCOL:
+        summary_sites = tuple((site, f"{site:04x}_{index}")
+                              for index, site in enumerate(expected_sites, start=1))
+    for index, (site, label) in enumerate(summary_sites):
+        row = (ordered_rows[index] if recorder_protocol == AH48_TITLE_LIBRARY_V6_PROTOCOL
+               else rows[site])
+        for register in ("ax", "bx", "es", "flags", "ip"):
+            fields.append(f"ah48_iret_site_{label}_{register}={row[register]}")
+    return "\n".join(fields) + "\n"
 
 
 def input_delivery_file_observed(path: Path) -> bool:
@@ -732,7 +1204,7 @@ def driver_load_return_status(path: Path, recorder_protocol: str) -> str:
     Register values and the guest-buffer digest are preserved as opaque
     observations. This parser does not infer DOS success or file identity.
     """
-    if recorder_protocol != "millennium-dos-en-driver-load-return-v1":
+    if recorder_protocol not in DRIVER_LOAD_RETURN_PROTOCOLS:
         return ""
     try:
         info = path.lstat()
@@ -1104,9 +1576,12 @@ def run_capture(args: argparse.Namespace) -> Path:
     recorder = require_absolute_regular_file(Path(args.recorder), "recorder", executable=True)
     if args.recorder_protocol in EXPERIMENTAL_ONLY_PROTOCOLS and not args.experimental_observer:
         raise CaptureError("this DOSBox-X build is experimental-only and requires --experimental-observer")
-    if (args.recorder_protocol in EXPERIMENTAL_ONLY_PROTOCOLS
+    if (args.recorder_protocol in DRIVER_LOAD_RETURN_PROTOCOLS
             and args.capture_intent != "diagnostic-no-input"):
-        raise CaptureError("the sidecar-only experimental observer supports diagnostic-no-input only")
+        raise CaptureError("the experimental driver-load observer supports diagnostic-no-input only")
+    if (args.recorder_protocol in AH48_HANDLER_RETURN_PROTOCOLS
+            and args.capture_intent != "physical-input"):
+        raise CaptureError("the AH48 observer requires a visible physical-input capture")
     reviewed = RECORDER_PROTOCOLS.get(args.recorder_protocol)
     if reviewed is None:
         version = EXPERIMENTAL_OBSERVER_RECEIPT_VERSIONS.get(args.recorder_protocol)
@@ -1123,6 +1598,8 @@ def run_capture(args: argparse.Namespace) -> Path:
         recorder_admission = "experimental-observer-not-for-recovery"
     recorder_identity = validate_recorder(recorder, recorder_hash)
     output = reject_unsafe_output(source, Path(args.output))
+    if args.recorder_protocol in AH48_HANDLER_RETURN_PROTOCOLS:
+        require_ah48_cache_output(output, dict(os.environ))
     if not MIN_DURATION_SECONDS <= args.duration_seconds <= MAX_DURATION_SECONDS:
         raise CaptureError(f"duration must be between {MIN_DURATION_SECONDS} and {MAX_DURATION_SECONDS} seconds")
     if not 0 <= args.focus_settle_seconds <= MAX_FOCUS_SETTLE_SECONDS:
@@ -1142,8 +1619,11 @@ def run_capture(args: argparse.Namespace) -> Path:
             raise CaptureError("recognised archive does not expose its expected DOS game root")
         configuration = output / "recorder.conf"
         command_tail = output / "command-tail.txt"
-        write_exclusive(configuration, recorder_config(game_root, args.machine_profile,
-                        release_sha256=source_hash if args.recorder_protocol == "v21-int93-installation" else None))
+        write_exclusive(configuration, recorder_config(
+            game_root, args.machine_profile,
+            release_sha256=source_hash if args.recorder_protocol == "v21-int93-installation" else None,
+            graceful_host_close=args.recorder_protocol in GRACEFUL_WINDOW_CLOSE_PROTOCOLS,
+            readonly_cdrom_archive=(args.recorder_protocol == AH48_TITLE_LIBRARY_V6_PROTOCOL)))
         configuration_identity = sha256_file(configuration)
         command = [str(recorder), "-conf", str(configuration), "-fastlaunch", "-c", "c:",
                    "-c", "mill.com 0"]
@@ -1161,11 +1641,16 @@ def run_capture(args: argparse.Namespace) -> Path:
             environment["PROJECT_EON_DOSBOX_X_TITLE_TRANSFER_RECORD"] = str(output / "title-entry-transfer.raw")
         if args.recorder_protocol == "v21-int93-installation":
             environment["PROJECT_EON_DOSBOX_X_INT93_INSTALL_RECORD"] = str(output / "int93-installation.raw")
-        if args.recorder_protocol == "millennium-dos-en-driver-load-return-v1":
+        if args.recorder_protocol in DRIVER_LOAD_RETURN_PROTOCOLS:
             environment["PROJECT_EON_DOS_DRIVER_LOAD_RETURN_RECORD"] = str(output / "driver-load-return.raw")
-        instructions = (experimental_driver_return_operator_instructions()
-                        if args.recorder_protocol == "millennium-dos-en-driver-load-return-v1"
-                        else capture_operator_instructions(args.capture_intent))
+        if args.recorder_protocol in AH48_HANDLER_RETURN_PROTOCOLS:
+            environment["EON_DOS_AH48_DIR"] = str(output)
+        instructions = (
+            experimental_driver_return_operator_instructions()
+            if args.recorder_protocol in DRIVER_LOAD_RETURN_PROTOCOLS else
+            experimental_ah48_operator_instructions()
+            if args.recorder_protocol in AH48_HANDLER_RETURN_PROTOCOLS else
+            capture_operator_instructions(args.capture_intent))
         for instruction in instructions:
             print(instruction)
         print(f"The {args.focus_settle_seconds}-second focus-settle window begins now; the {args.duration_seconds}-second capture window follows.")
@@ -1220,7 +1705,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                 break
             remaining = (settle_deadline - now if deadline is None else deadline - now)
             if remaining <= 0:
-                if (args.recorder_protocol == "millennium-dos-en-driver-load-return-v1"
+                if (args.recorder_protocol in GRACEFUL_WINDOW_CLOSE_PROTOCOLS
                         and operator_shutdown_deadline is None):
                     operator_shutdown_deadline = now + MAX_OPERATOR_SHUTDOWN_SECONDS
                     deadline = operator_shutdown_deadline
@@ -1243,7 +1728,9 @@ def run_capture(args: argparse.Namespace) -> Path:
             raise CaptureError("source archive changed during capture; evidence is rejected")
         receipt_status = input_receipt_status(output / "host-input-receipt.raw")
         intent_status = capture_intent_status(args.capture_intent, receipt_status,
-                                              live_input_observed)
+            live_input_observed,
+            allow_finalized_receipt=args.recorder_protocol
+                in BUFFERED_HOST_INPUT_RECEIPT_PROTOCOLS)
         observation_status = (experimental_observer_raw_status() if args.experimental_observer else
                               raw_observation_status(output / "events.raw", "events_raw", args.recorder_protocol)
                               + raw_observation_status(output / "results.raw", "results_raw", args.recorder_protocol))
@@ -1262,9 +1749,13 @@ def run_capture(args: argparse.Namespace) -> Path:
                                                         args.recorder_protocol)
         driver_load_status = driver_load_return_status(
             output / "driver-load-return.raw", args.recorder_protocol)
-        if (args.recorder_protocol == "millennium-dos-en-driver-load-return-v1"
+        if (args.recorder_protocol in DRIVER_LOAD_RETURN_PROTOCOLS
                 and not driver_load_status.startswith("driver_load_return=present\n")):
             raise CaptureError("experimental driver-load recorder did not produce a complete sidecar")
+        ah48_return_status = ah48_handler_return_status(
+            output, args.recorder_protocol)
+        ah48_iret_status = ah48_after_iret_status(
+            output, args.recorder_protocol)
         title_checkpoint_status = ("title_input_checkpoint=not-collected\n" if args.experimental_observer else
                                    title_input_checkpoint_status(output / "results.raw",
                                        output / "host-input-receipt.raw", args.recorder_protocol))
@@ -1283,6 +1774,8 @@ def run_capture(args: argparse.Namespace) -> Path:
                         + intent_status + receipt_status + observation_status + history_status + history_boundary_status
                         + anomaly_status + int93_status + title_transfer_status + installation_status
                         + driver_load_status
+                        + ah48_return_status
+                        + ah48_iret_status
                         + title_checkpoint_status
                         + recorder_console_status(console_result[0]))
         if console_result[0].over_limit:

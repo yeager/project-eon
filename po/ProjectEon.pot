@@ -9,6 +9,26 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+#: src/main.cpp
+msgid "INTERACTIVE AMIGA FLOW IS NOT YET RECOVERED."
+msgstr ""
+
+#: src/main.cpp
+msgid "ORIGINAL ATARI ST TITLE - SOURCE DECODED"
+msgstr ""
+
+#: src/main.cpp
+msgid "320 X 200 / 4 PLANES / SOURCE RGB3 PALETTE"
+msgstr ""
+
+#: src/main.cpp
+msgid "GAMEPLAY FLOW REMAINS UNRECOVERED."
+msgstr ""
+
+#: src/main.cpp
+msgid "BOOTSTRAP BOUNDARIES ARE STATIC; TITLE PIXELS ARE SOURCE DECODED."
+msgstr ""
+
 #: src/game_text_localization.cpp
 msgid "Welcome to Millennium."
 msgstr ""

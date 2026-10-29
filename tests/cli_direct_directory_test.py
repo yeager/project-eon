@@ -37,20 +37,26 @@ def main() -> int:
     root = Path(root_text)
     if not root.is_absolute() or not root.is_dir():
         raise SystemExit("direct media root must be an absolute directory")
-    before = snapshot(root)
-    launch = run(executable, root, "--launch-check")
-    inspection = run(executable, root, "--inspect", "--inventory")
-    inspection_json = run(executable, root, "--inspect-json")
+    # A shared media root may contain several releases and original archives.
+    # When it has the canonical installed DOS directory, inspect that direct
+    # set alone so archive siblings cannot change the media-layout assertion.
+    direct_root = root / "millennium-return-to-earth-2-2"
+    if not (direct_root / "MILL.COM").is_file():
+        direct_root = root
+    before = snapshot(direct_root)
+    launch = run(executable, direct_root, "--launch-check")
+    inspection = run(executable, direct_root, "--inspect", "--inventory")
+    inspection_json = run(executable, direct_root, "--inspect-json")
     # A mistyped exact identity must not silently select the only installed
     # release.  The CLI may name the verified replacement arguments, but must
     # not leak the user's direct-media path while doing so.
     rejected = subprocess.run(
-        [executable, "--data", str(root), "--game", "millennium", "--platform", "dos",
+        [executable, "--data", str(direct_root), "--game", "millennium", "--platform", "dos",
          "--release-language", "en", "--release-sha256", "0" * 64,
          "--launch-check-json"],
         check=False, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
-    after = snapshot(root)
+    after = snapshot(direct_root)
     if before != after:
         raise SystemExit("Project Eon changed direct original media")
     if "LAUNCH CHECK  Millennium 2.2 / DOS / en / READY" not in launch:

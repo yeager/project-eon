@@ -52,6 +52,20 @@ struct DeuterosAtariBootProfile {
     std::uint16_t first_stage_sector_count = 0;
     std::size_t first_stage_offset = 0;
     std::size_t first_stage_length = 0;
+
+    // The Replicants [a] Disk 2 installs a relocated HDV_BPB hook from an
+    // overlapping boot entry. These fields describe only the hash-bound
+    // source route and low-memory cells; the copied code is not executed.
+    bool has_replicants_a_hdv_bpb_hook = false;
+    std::uint16_t replicants_a_boot_entry = 0;
+    std::size_t replicants_a_copy_byte_count = 0;
+    std::uint32_t replicants_a_copy_pointer_cell = 0;
+    std::uint32_t replicants_a_copy_addend = 0;
+    std::uint16_t replicants_a_relocated_entry_offset = 0;
+    std::uint32_t replicants_a_hdv_bpb_vector_cell = 0;
+    std::uint16_t replicants_a_callback_offset = 0;
+    std::uint16_t replicants_a_saved_vector_offset = 0;
+    std::uint16_t replicants_a_state_word_offset = 0;
 };
 
 // Disk 2's KILLER_BOOT setup contains a complete, direct relocation edge:

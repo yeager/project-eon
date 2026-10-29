@@ -1,7 +1,10 @@
 #include "engine/millennium_dos_native_process_admission.hpp"
 
 #include "data/sha256.hpp"
+#include "data/millennium_dos_video_driver.hpp"
 
+#include <algorithm>
+#include <array>
 #include <stdexcept>
 
 namespace eon {
@@ -76,6 +79,63 @@ MillenniumDosNativeProcessAdmission::checkpoint() const {
         .child_code_segment = child_code_segment_,
         .last_observation_sequence = last_observation_sequence_,
         .startup_bios_return = process_->startup_bios_return(),
+        .startup_ega_palette_write_count = process_->startup_ega_palette_session()
+            ? process_->startup_ega_palette_session()->completed_write_count() : 0,
+        .startup_dos_return = process_->startup_dos_return(),
+        .startup_allocator_second_dos_return = process_->startup_allocator_second_dos_return(),
+        .startup_allocator_free_dos_return = process_->startup_allocator_free_dos_return(),
+        .startup_allocator_third_dos_return = process_->startup_allocator_third_dos_return(),
+        .startup_file_open_request = process_->startup_file_open_request(),
+        .startup_zero_path_file_open_request =
+            process_->startup_zero_path_file_open_request(),
+        .startup_zero_path_file_open_dos_return =
+            process_->startup_zero_path_file_open_dos_return(),
+        .startup_zero_path_file_read_request =
+            process_->startup_zero_path_file_read_request(),
+        .startup_zero_path_file_read_dos_return =
+            process_->startup_zero_path_file_read_dos_return(),
+        .startup_zero_path_file_close_request =
+            process_->startup_zero_path_file_close_request(),
+        .startup_zero_path_file_close_dos_return =
+            process_->startup_zero_path_file_close_dos_return(),
+        .startup_zero_path_vector_get_request =
+            process_->startup_zero_path_vector_get_request(),
+        .startup_zero_path_vector_get_dos_return =
+            process_->startup_zero_path_vector_get_dos_return(),
+        .startup_zero_path_vector_set_request =
+            process_->startup_zero_path_vector_set_request(),
+        .startup_zero_path_vector_set_dos_return =
+            process_->startup_zero_path_vector_set_dos_return(),
+        .startup_zero_path_continuation_byte =
+            process_->startup_zero_path_continuation_byte(),
+        .startup_zero_path_selector_value = process_->startup_zero_path_continuation_byte()
+            ? std::optional<std::uint8_t>{static_cast<std::uint8_t>(
+                process_->startup_zero_path_continuation_byte()->value - 0x30U)}
+            : std::nullopt,
+        .startup_sibm_function_zero = process_->startup_sibm_function_zero(),
+        .startup_file_seek_request = process_->startup_file_seek_request(),
+        .startup_file_close_request = process_->startup_file_close_request(),
+        .startup_allocator_fourth_request = process_->startup_allocator_fourth_request(),
+        .startup_allocator_fifth_request = process_->startup_allocator_fifth_request(),
+        .startup_allocator_seventh_request = process_->startup_allocator_seventh_request(),
+        .startup_allocator_eighth_request = process_->startup_allocator_eighth_request(),
+        .startup_allocator_ninth_request = process_->startup_allocator_ninth_request(),
+        .startup_allocator_tenth_request = process_->startup_allocator_tenth_request(),
+        .startup_allocator_eleventh_request = process_->startup_allocator_eleventh_request(),
+        .startup_file_handle = process_->startup_file_handle(),
+        .startup_file_size = process_->startup_file_size(),
+        .startup_allocator_fourth_dos_return = process_->startup_allocator_fourth_dos_return(),
+        .startup_allocator_fourth_segment = process_->startup_allocator_fourth_segment(),
+        .startup_allocator_fifth_dos_return = process_->startup_allocator_fifth_dos_return(),
+        .startup_allocator_sixth_dos_return = process_->startup_allocator_sixth_dos_return(),
+        .startup_allocator_seventh_dos_return = process_->startup_allocator_seventh_dos_return(),
+        .startup_allocator_eighth_dos_return = process_->startup_allocator_eighth_dos_return(),
+        .startup_allocator_ninth_dos_return = process_->startup_allocator_ninth_dos_return(),
+        .startup_allocator_tenth_dos_return = process_->startup_allocator_tenth_dos_return(),
+        .startup_allocator_eleventh_dos_return = process_->startup_allocator_eleventh_dos_return(),
+        .startup_allocator_return_ax = process_->startup_allocator_return_ax(),
+        .startup_allocator_stored_bx = process_->startup_allocator_stored_bx(),
+        .startup_allocator_es_segment = process_->startup_allocator_es_segment(),
     };
 }
 
@@ -154,6 +214,26 @@ void MillenniumDosNativeProcessAdmission::observe_private_interrupt_return(
     process_->observe_private_interrupt_return(address, ax);
 }
 
+void MillenniumDosNativeProcessAdmission::begin_startup_ega_palette(
+    const MillenniumDosGameFunctionFourDispatchResult& function_four) {
+    require_admitted();
+    if (recovery_entry_ != MillenniumDosNativeRecoveryEntry::startup
+        || !observed_child_process_entry_ || !process_) {
+        throw std::runtime_error("EGA palette session is detached from the observed DOS child");
+    }
+    process_->begin_startup_ega_palette(function_four);
+}
+
+void MillenniumDosNativeProcessAdmission::observe_startup_allocation_request(
+    const std::uint16_t interrupt_address) {
+    require_admitted();
+    if (recovery_entry_ != MillenniumDosNativeRecoveryEntry::startup
+        || !observed_child_process_entry_) {
+        throw std::runtime_error("Millennium DOS allocation request is detached from the observed child");
+    }
+    process_->observe_startup_allocation_request(interrupt_address);
+}
+
 void MillenniumDosNativeProcessAdmission::observe_bios_interrupt_return(
     const MillenniumDosNativeBiosInterruptReturnObservation& observation) {
     require_admitted();
@@ -172,6 +252,144 @@ void MillenniumDosNativeProcessAdmission::observe_bios_interrupt_return(
             "Millennium DOS BIOS return is detached from the observed startup continuation");
     }
     process_->observe_bios_interrupt_return(observation);
+    last_observation_sequence_ = observation.sequence;
+}
+
+void MillenniumDosNativeProcessAdmission::continue_startup_ega_caller(
+    const std::uint8_t selector_value, const std::uint16_t first_return_word,
+    const std::uint16_t outer_return_word) {
+    require_admitted();
+    if (recovery_entry_ != MillenniumDosNativeRecoveryEntry::startup
+        || !observed_child_process_entry_ || !process_->startup_ega_palette_session()
+        || !process_->startup_ega_palette_session()->complete()) {
+        throw std::runtime_error("EGA caller continuation is detached from completed startup palette");
+    }
+    process_->continue_startup_ega_caller(
+        selector_value, first_return_word, outer_return_word);
+}
+
+void MillenniumDosNativeProcessAdmission::continue_startup_ega_allocator_request(
+    const std::uint16_t outer_return_word) {
+    require_admitted();
+    if (recovery_entry_ != MillenniumDosNativeRecoveryEntry::startup
+        || !observed_child_process_entry_
+        || process_->state()
+            != MillenniumDosNativeProcessState::startup_ega_caller_return_boundary) {
+        throw std::runtime_error("EGA allocator request is detached from the returned caller");
+    }
+    process_->continue_startup_ega_allocator_request(outer_return_word);
+}
+
+void MillenniumDosNativeProcessAdmission::observe_dos_interrupt_return(
+    const MillenniumDosNativeDosInterruptReturnObservation& observation) {
+    require_admitted();
+    const auto boundary = process_->boundary();
+    if (recovery_entry_ != MillenniumDosNativeRecoveryEntry::startup
+        || !observed_child_process_entry_
+        || observation.sequence <= last_observation_sequence_
+        || observation.sequence <= child_entry_sequence_
+        || boundary.kind != MillenniumDosNativeBoundaryKind::dos_interrupt
+        || boundary.address != observation.interrupt_instruction_address
+        || boundary.interrupt != observation.interrupt_number
+        || boundary.service != observation.service
+        || observation.return_code_segment != child_code_segment_
+        || observation.return_instruction_pointer
+            != static_cast<std::uint16_t>(boundary.address + 2U)) {
+        throw std::runtime_error(
+            "Millennium DOS return is detached from the observed startup INT $21 boundary");
+    }
+    process_->observe_dos_interrupt_return(observation);
+    last_observation_sequence_ = observation.sequence;
+}
+
+void MillenniumDosNativeProcessAdmission::observe_runtime_byte(
+    const std::uint64_t sequence, const std::uint16_t instruction_address,
+    const std::uint16_t runtime_address, const std::uint8_t value) {
+    require_admitted();
+    const auto boundary = process_->boundary();
+    if (recovery_entry_ != MillenniumDosNativeRecoveryEntry::startup
+        || !observed_child_process_entry_ || sequence <= last_observation_sequence_
+        || sequence <= child_entry_sequence_
+        || boundary.kind != MillenniumDosNativeBoundaryKind::runtime_byte
+        || boundary.address != instruction_address
+        || boundary.runtime_byte_address != runtime_address) {
+        throw std::runtime_error(
+            "Millennium DOS runtime byte is detached from the observed startup continuation");
+    }
+    process_->observe_runtime_byte(instruction_address, runtime_address, value, sequence);
+    last_observation_sequence_ = sequence;
+}
+
+void MillenniumDosNativeProcessAdmission::observe_startup_sibm_function_zero_prefix(
+    const MillenniumDosSibmFunctionZeroCheckpoint& result) {
+    require_admitted();
+    if (recovery_entry_ != MillenniumDosNativeRecoveryEntry::startup
+        || !observed_child_process_entry_
+        || !process_->startup_zero_path_continuation_byte()) {
+        throw std::runtime_error(
+            "SIBM function zero requires the observed native DOS startup continuation");
+    }
+    process_->observe_startup_sibm_function_zero_prefix(result);
+}
+
+void MillenniumDosNativeProcessAdmission::observe_startup_sibm_timer_vector_get_return(
+    const MillenniumDosNativeDosInterruptReturnObservation& observation,
+    const MillenniumDosSibmFunctionZeroCheckpoint& result,
+    const std::uint16_t loaded_driver_segment) {
+    require_admitted();
+    const auto boundary = process_->boundary();
+    if (recovery_entry_ != MillenniumDosNativeRecoveryEntry::startup
+        || !observed_child_process_entry_ || loaded_driver_segment == 0
+        || observation.sequence <= last_observation_sequence_
+        || observation.sequence <= child_entry_sequence_
+        || process_->state()
+            != MillenniumDosNativeProcessState::startup_sibm_timer_vector_get_boundary
+        || boundary.address != 0x0233 || boundary.interrupt != std::uint8_t{0x21}
+        || boundary.service != std::uint8_t{0x35}
+        || observation.interrupt_instruction_address != 0x0233
+        || observation.interrupt_number != 0x21 || observation.service != 0x35
+        || observation.return_code_segment != loaded_driver_segment
+        || observation.return_instruction_pointer != 0x0235
+        || result.state != MillenniumDosSibmFunctionZeroState::awaiting_timer_vector_set
+        || result.last_observation_sequence != observation.sequence) {
+        throw std::runtime_error(
+            "SIBM AH=$35 return is detached from the loaded driver or active game handoff");
+    }
+    process_->observe_startup_sibm_function_zero_vector_get(result);
+    last_observation_sequence_ = observation.sequence;
+}
+
+void MillenniumDosNativeProcessAdmission::observe_startup_sibm_timer_vector_set_return(
+    const MillenniumDosNativeDosInterruptReturnObservation& observation,
+    const MillenniumDosSibmFunctionZeroCheckpoint& result,
+    const std::uint16_t loaded_driver_segment) {
+    require_admitted();
+    const auto boundary = process_->boundary();
+    if (recovery_entry_ != MillenniumDosNativeRecoveryEntry::startup
+        || !observed_child_process_entry_ || loaded_driver_segment == 0
+        || observation.sequence <= last_observation_sequence_
+        || observation.sequence <= child_entry_sequence_
+        || process_->state()
+            != MillenniumDosNativeProcessState::startup_sibm_timer_vector_set_boundary
+        || boundary.address != 0x0246 || boundary.interrupt != std::uint8_t{0x21}
+        || boundary.service != std::uint8_t{0x25}
+        || observation.interrupt_instruction_address != 0x0246
+        || observation.interrupt_number != 0x21 || observation.service != 0x25
+        || observation.return_code_segment != loaded_driver_segment
+        || observation.return_instruction_pointer != 0x0248
+        || result.state
+            != MillenniumDosSibmFunctionZeroState::timer_vector_set_return_observed
+        || result.last_observation_sequence != observation.sequence
+        || result.timer_vector_set_return_ax != observation.ax
+        || result.timer_vector_set_return_bx != observation.bx
+        || result.timer_vector_set_return_cx != observation.cx
+        || result.timer_vector_set_return_dx != observation.dx
+        || result.timer_vector_set_return_flags != observation.flags
+        || result.timer_vector_set_return_es != observation.es) {
+        throw std::runtime_error(
+            "SIBM AH=$25 return is detached from the loaded driver or active game handoff");
+    }
+    process_->observe_startup_sibm_function_zero_vector_set_return(result);
     last_observation_sequence_ = observation.sequence;
 }
 
@@ -202,6 +420,99 @@ void MillenniumDosNativeProcessAdmission::observe_child_process_entry(
     child_entry_sequence_ = sequence;
     child_code_segment_ = code_segment;
     last_observation_sequence_ = sequence;
+}
+
+MillenniumDosNativeFunction31DispatchResult
+MillenniumDosNativeProcessAdmission::execute_startup_function_31_return(
+    const std::uint64_t sequence,
+    const std::span<const std::uint8_t> exact_driver_image,
+    const std::span<const std::uint8_t> owned_loaded_driver_image,
+    const MillenniumDosVideoDriverKind kind,
+    const std::uint16_t loaded_driver_segment,
+    const std::uint8_t vector_interrupt,
+    const std::uint16_t vector_offset,
+    const std::uint16_t vector_segment) {
+    MillenniumDosNativeFunction31DispatchResult result;
+    result.sequence = sequence;
+    try {
+        require_admitted();
+        constexpr std::uint16_t int91_return_site = 0x0129;
+        constexpr std::uint16_t int91_interrupt = 0x91;
+        constexpr std::uint16_t com_load_bias = 0x0100;
+        constexpr std::uint16_t startup_request_address = 0xd2b4;
+        constexpr std::array<std::uint8_t, 20> startup_request{
+            0x8c,0xc8,0x8e,0xd0,0xb8,0x00,0xda,0x89,0xc4,0xb8,
+            0x1f,0x00,0x0e,0x07,0xbb,0x9e,0xd1,0xe8,0x5c,0x2e};
+        const auto startup_offset = static_cast<std::size_t>(
+            startup_request_address - com_load_bias);
+        if (recovery_entry_ != MillenniumDosNativeRecoveryEntry::startup
+            || !observed_child_process_entry_
+            || process_->state() != MillenniumDosNativeProcessState::startup_first_private_interrupt
+            || process_->boundary().kind != MillenniumDosNativeBoundaryKind::private_interrupt
+            || process_->boundary().address != int91_return_site
+            || sequence <= last_observation_sequence_
+            || sequence <= child_entry_sequence_
+            || startup_offset > game_executable_.size()
+            || game_executable_.size() - startup_offset < startup_request.size()
+            || !std::equal(startup_request.begin(), startup_request.end(),
+                game_executable_.begin() + static_cast<std::ptrdiff_t>(startup_offset))) {
+            throw std::runtime_error(
+                "Startup is not at the exact first function-$1f INT $91h boundary");
+        }
+        const auto profile = parse_millennium_dos_video_driver(exact_driver_image, kind);
+        if (loaded_driver_segment == 0 || vector_interrupt != int91_interrupt
+            || vector_offset != 0 || vector_segment != loaded_driver_segment
+            || owned_loaded_driver_image.size() != exact_driver_image.size()) {
+            throw std::runtime_error("The active INT $91h vector or loaded image is detached");
+        }
+        // Only these four bytes are writable data in the covered English
+        // function-zero/function-four/handler routes. Every instruction,
+        // dispatch-table entry, and other driver byte must still be original.
+        const std::array<std::uint16_t,4> mutable_cells{
+            profile.function_thirty_one_state_address,
+            profile.function_zero_cached_mode_address,
+            profile.function_four_state_address,
+            0x01e4};
+        for (std::size_t offset = 0; offset < exact_driver_image.size(); ++offset) {
+            const auto mutable_cell = std::ranges::find(mutable_cells,
+                static_cast<std::uint16_t>(offset)) != mutable_cells.end();
+            if (!mutable_cell && owned_loaded_driver_image[offset] != exact_driver_image[offset]) {
+                throw std::runtime_error("Loaded driver has an unverified modified byte");
+            }
+        }
+        const auto dispatch_prefix_sha256 = kind == MillenniumDosVideoDriverKind::ega640
+            ? "a7d507882cf6bfe5b51db64b2dfb3ea8dd66f9d032b52622af2edac0a5ba81aa"
+            : "2892839bc9f8ed84ce14e315addef727247431c808236b413356094d2392f35c";
+        if (exact_driver_image.size() < 0x13
+            || to_hex(sha256(exact_driver_image.first(0x13))) != dispatch_prefix_sha256
+            || !std::equal(exact_driver_image.begin(), exact_driver_image.begin() + 0x13,
+                owned_loaded_driver_image.begin())) {
+            throw std::runtime_error("The private-handler DS setup differs from its source image");
+        }
+        result.target_address = profile.function_thirty_one_address;
+        result.local_state_address = profile.function_thirty_one_state_address;
+        result.local_state_value = owned_loaded_driver_image[result.local_state_address];
+        MillenniumDosVideoFunction31Session function31(exact_driver_image, kind);
+        function31.observe_local_state_read({sequence,profile.function_thirty_one_address,
+            loaded_driver_segment,profile.function_thirty_one_state_address,
+            result.local_state_value});
+        const auto outcome = function31.outcome();
+        if (!outcome || function31.state() != MillenniumDosVideoFunction31State::ret_boundary
+            || outcome->ret_instruction_address != profile.function_thirty_one_address + 5U) {
+            throw std::runtime_error("Private function-$1f did not reach its verified RET");
+        }
+        result.returned_ax = outcome->ax;
+
+        // The 2200AD wrapper restores its saved registers and returns through
+        // the source-established COM call frame. Function $1f changes AX from
+        // the local byte and the profile's literal AH; FLAGS remain external.
+        process_->observe_private_interrupt_return(int91_return_site,result.returned_ax);
+        last_observation_sequence_ = sequence;
+        result.accepted = true;
+    } catch (const std::exception& exception) {
+        result.error = exception.what();
+    }
+    return result;
 }
 
 void MillenniumDosNativeProcessAdmission::observe_runtime_byte(

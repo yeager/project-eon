@@ -110,6 +110,12 @@ struct LaunchRequest {
     // for preservation diagnostics. It exits immediately afterwards and is
     // never a gameplay, emulator, input, or renderer route.
     bool native_step_diagnostics_json = false;
+    // Optional bounded instruction-step budget for one native-step diagnostic
+    // pass. It cannot alter the live SDL frame budget or supply guest results.
+    std::optional<std::uint32_t> native_step_limit;
+    // Runs an isolated synthetic AL-only MCGA probe to find the next
+    // hash-bound request. It never feeds the live coordinator or memory.
+    bool native_video_probe = false;
     // A literal user-provided Millennium startup choice for the bounded
     // native-step diagnostic only. It is not an emulator input channel and
     // cannot supply any DOS/BIOS/driver/title result.

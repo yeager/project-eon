@@ -11,7 +11,7 @@ import stat
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33"}
+CAPTURE_RECEIPT_VERSIONS = {"2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}
 
 
 def load_tool(name: str):
@@ -47,13 +47,13 @@ def receipt(path: Path) -> dict[str, str]:
     if len(data) > 64 * 1024:
         raise ValueError("run-status.txt exceeds the bounded receipt contract")
     fields: dict[str, str] = {}
-    # The runner emits an empty post-input summary for a diagnostic capture
-    # when no input-linked records exist.  Keep that one state explicit while
+    # A phased trace can legitimately have no samples on either side of the
+    # host-input boundary. Keep those empty summaries explicit while
     # continuing to reject blank identities and other malformed fields.
-    empty_allowed = {"raw_pc_post_input_site_counts", "late_input_pc_site_counts",
+    empty_allowed = {"raw_pc_pre_input_site_counts", "raw_pc_post_input_site_counts", "late_input_pc_site_counts",
                      "driver_load_return_site_counts"}
     for line in data.decode("utf-8").splitlines():
-        if line.count("=") != 1:
+        if "=" not in line:
             raise ValueError("receipt contains an invalid line")
         key, value = line.split("=", 1)
         if not key or (not value and key not in empty_allowed) or key in fields:
@@ -80,7 +80,8 @@ def is_sha256(value: str | None) -> bool:
     return value is not None and len(value) == 64 and all(character in "0123456789abcdef" for character in value)
 
 
-def verify_file(fields: dict[str, str], directory: Path, key: str, filename: str) -> None:
+def verify_file(fields: dict[str, str], directory: Path, key: str, filename: str,
+                *, max_bytes: int | None = None) -> None:
     state = fields.get(key)
     path = directory / filename
     if state == "absent":
@@ -89,6 +90,8 @@ def verify_file(fields: dict[str, str], directory: Path, key: str, filename: str
     if state not in {"present", "empty"}: raise ValueError(f"{key} has invalid state")
     info = path.lstat()
     if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode): raise ValueError(f"{key} is unsafe")
+    if max_bytes is not None and info.st_size > max_bytes:
+        raise ValueError(f"{key} exceeds its bounded file size")
     actual = digest(path)
     if state == "empty" and actual[1] != 0: raise ValueError(f"{key} is not empty")
     if state == "present" and (fields.get(key + "_sha256"), fields.get(key + "_bytes")) != (actual[0], str(actual[1])):
@@ -112,7 +115,7 @@ def verify_console(fields: dict[str, str], directory: Path) -> None:
 
 def verify_console_admission(fields: dict[str, str], version: str) -> None:
     """Reject a v4+ recorder runaway without rewriting retained evidence."""
-    if version in {"4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"} and fields.get("recorder_console_over_limit") != "false":
+    if version in {"4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"} and fields.get("recorder_console_over_limit") != "false":
         raise ValueError("recorder console exceeded its safety cap; capture is not admitted")
 
 
@@ -125,6 +128,14 @@ def verify_millennium_machine_profile(fields: dict[str, str], directory: Path) -
     configuration = (directory / "recorder.conf").read_text(encoding="utf-8")
     if f"machine={profile}\n" not in configuration:
         raise ValueError("machine profile does not match the generated configuration")
+    if (fields.get("recorder_protocol") in tool.GRACEFUL_WINDOW_CLOSE_PROTOCOLS
+            and "quit warning=false\n" not in configuration):
+        raise ValueError("graceful-close observer requires its exact host quit configuration")
+    if fields.get("recorder_protocol") == tool.AH48_TITLE_LIBRARY_V6_PROTOCOL:
+        game_root = f'{directory / "archive-ro" / tool.GAME_ROOT}'
+        expected_mount = f'mount c "{game_root}" -t cdrom -noioctl\n'
+        if expected_mount not in configuration:
+            raise ValueError("AH48 v6 must mount its immutable archive as a read-only CD-ROM drive")
 
 
 def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path, version: str) -> None:
@@ -132,15 +143,51 @@ def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path, vers
     if fields.get("raw_pc") != "present":
         return
     tool = load_tool("run_deuteros_amiga_capture")
-    raw_format = ("v9-v19-phased" if version in {"29", "30", "31", "32", "33"} else
+    raw_format = ("v9-v19-phased" if version in {"29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"} else
                   "v9-v18-phased" if version == "28" else
                   "v9-v16-phased" if version in {"26", "27"} else
                   "v9-v16" if version == "24" else
                   "v9" if version in {"9", "10", "11", "23"} else
                   "v7" if version in {"7", "8"} else "legacy")
-    if version in {"24", "26", "27", "28", "29", "30", "31", "32", "33"}:
+    if version in {"24", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
         tool_hash = load_tool("run_deuteros_amiga_capture")
-        if version == "33":
+        if version == "42":
+            expected_identity = (tool_hash.TRV2_RECORDER_V33_SERVICE_BOUNDARY_SHA256,
+                                 tool_hash.TRV2_RECORDER_V33_SERVICE_BOUNDARY_SIZE)
+            expected_protocol = "deuteros-amiga-fsuae-v33-service-boundary"
+        elif version == "41":
+            expected_identity = (tool_hash.TRV2_RECORDER_V32_TITLE_CALLBACK_SHA256,
+                                 tool_hash.TRV2_RECORDER_V32_TITLE_CALLBACK_SIZE)
+            expected_protocol = "deuteros-amiga-fsuae-v32-title-callback"
+        elif version == "40":
+            expected_identity = (tool_hash.TRV2_RECORDER_V31_RESPONSE_QUEUE_SHA256,
+                                 tool_hash.TRV2_RECORDER_V31_RESPONSE_QUEUE_SIZE)
+            expected_protocol = "deuteros-amiga-fsuae-v31-response-queue"
+        elif version == "39":
+            expected_identity = (tool_hash.TRV2_RECORDER_V30_SERVICE_RETURN_DISPLAY_SHA256,
+                                 tool_hash.TRV2_RECORDER_V30_SERVICE_RETURN_DISPLAY_SIZE)
+            expected_protocol = "deuteros-amiga-fsuae-v30-service-return-display"
+        elif version == "38":
+            expected_identity = (tool_hash.TRV2_RECORDER_V29_SERVICE_BOUNDARY_DISPLAY_SHA256,
+                                 tool_hash.TRV2_RECORDER_V29_SERVICE_BOUNDARY_DISPLAY_SIZE)
+            expected_protocol = "deuteros-amiga-fsuae-v29-service-boundary-display"
+        elif version == "37":
+            expected_identity = (tool_hash.TRV2_RECORDER_V27_CALLBACK_MEMORY_TARGETED_DISPLAY_SHA256,
+                                 tool_hash.TRV2_RECORDER_V27_CALLBACK_MEMORY_TARGETED_DISPLAY_SIZE)
+            expected_protocol = "deuteros-amiga-fsuae-v27-callback-memory-targeted-display"
+        elif version == "36":
+            expected_identity = (tool_hash.TRV2_RECORDER_V26_CALLBACK_MEMORY_SHA256,
+                                 tool_hash.TRV2_RECORDER_V26_CALLBACK_MEMORY_SIZE)
+            expected_protocol = "deuteros-amiga-fsuae-v26-callback-memory"
+        elif version == "35":
+            expected_identity = (tool_hash.TRV2_RECORDER_V25_SHA256,
+                                 tool_hash.TRV2_RECORDER_V25_SIZE)
+            expected_protocol = "deuteros-amiga-fsuae-v25"
+        elif version == "34":
+            expected_identity = (tool_hash.TRV2_RECORDER_V24_SHA256,
+                                 tool_hash.TRV2_RECORDER_V24_SIZE)
+            expected_protocol = "deuteros-amiga-fsuae-v24"
+        elif version == "33":
             expected_identity = (tool_hash.TRV2_RECORDER_V23_SHA256,
                                  tool_hash.TRV2_RECORDER_V23_SIZE)
             expected_protocol = "deuteros-amiga-fsuae-v23"
@@ -175,7 +222,7 @@ def verify_deuteros_raw_pc_summary(fields: dict[str, str], directory: Path, vers
         require_identity(fields, "recorder", expected_identity)
         if fields.get("recorder_protocol") != expected_protocol:
             raise ValueError("recorder protocol does not match the receipt schema")
-    if version in {"7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"} and fields.get("raw_pc_format") != raw_format:
+    if version in {"7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"} and fields.get("raw_pc_format") != raw_format:
         raise ValueError("raw_pc format does not match the reviewed recorder contract")
     counts = tool.parse_raw_pc_observations(directory / "raw-pc.txt", raw_format)
     expected_records = str(sum(counts.values()))
@@ -284,14 +331,14 @@ def verify_deuteros_selector_dispatch(fields: dict[str, str], directory: Path) -
 def verify_deuteros_late_sidecars(fields: dict[str, str], directory: Path) -> None:
     """Recompute late PC/cell joins with version-specific sites and exact fields."""
     version = fields.get("capture_receipt_version")
-    if version not in {"29", "30", "31", "32", "33"}:
+    if version not in {"29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
         if any(key == "late_input_pc" or key.startswith("late_input_pc_")
                or key == "late_selector_dispatch" or key.startswith("late_selector_dispatch_")
                for key in fields):
             raise ValueError("late input sidecars require receipt schema 29 through 32")
         return
     tool = load_tool("run_deuteros_amiga_capture")
-    late_version = "v20" if version in {"30", "31", "32", "33"} else "v19"
+    late_version = "v20" if version in {"30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"} else "v19"
     try:
         statuses = (tool.late_raw_pc_status(
             directory / "late-input-pc.txt", directory / "host-input-receipt.txt", late_version)
@@ -310,12 +357,35 @@ def verify_deuteros_late_sidecars(fields: dict[str, str], directory: Path) -> No
         raise ValueError("late input sidecar grammar/count receipt mismatch")
 
 
+def verify_deuteros_negative_selector(fields: dict[str, str], directory: Path) -> None:
+    """Verify schema 35's isolated negative-selector sidecar and host links."""
+    version = fields.get("capture_receipt_version")
+    if version not in {"35", "36", "37", "38", "39", "40", "41", "42"}:
+        if any(key == "negative_selector" or key.startswith("negative_selector_")
+               for key in fields):
+            raise ValueError("negative-selector sidecar requires receipt schema 35")
+        return
+    tool = load_tool("run_deuteros_amiga_capture")
+    try:
+        status = tool.negative_selector_status(
+            directory / "negative-selector.txt", directory / "host-input-receipt.txt")
+    except tool.CaptureError as error:
+        raise ValueError(f"negative-selector sidecar is invalid: {error}") from error
+    expected = dict(line.split("=", 1) for line in status.splitlines())
+    actual_keys = {key for key in fields if key == "negative_selector" or
+                   key.startswith("negative_selector_")}
+    if actual_keys != set(expected):
+        raise ValueError("negative-selector receipt fields are incomplete or unexpected")
+    if any(fields.get(key) != value for key, value in expected.items()):
+        raise ValueError("negative-selector grammar/count receipt mismatch")
+
+
 def verify_deuteros_zero_route_observation(fields: dict[str, str], directory: Path) -> None:
     """Recompute schema-31's strict diagnostic-only route receipt."""
     version = fields.get("capture_receipt_version")
     observation_keys = {key for key in fields if key == "zero_route_observation"
                         or key.startswith("zero_route_observation_")}
-    if version not in {"31", "32", "33"}:
+    if version not in {"31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
         if observation_keys:
             raise ValueError("zero-route observation requires receipt schema 31")
         return
@@ -333,15 +403,20 @@ def verify_deuteros_zero_route_observation(fields: dict[str, str], directory: Pa
 
 
 def verify_deuteros_late_display(fields: dict[str, str], directory: Path) -> None:
-    """Recompute schema-32 later-input display writes and host chronology."""
-    if fields.get("capture_receipt_version") not in {"32", "33"}:
+    """Recompute schema-32 and schema-34 later-input display observations."""
+    version = fields.get("capture_receipt_version")
+    if version not in {"32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
         if any(key == "late_display" or key.startswith("late_display_") for key in fields):
             raise ValueError("late display sidecar requires receipt schema 32")
         return
     tool = load_tool("run_deuteros_amiga_capture")
     try:
         status = tool.late_display_receipt_status(
-            directory / "late-display.txt", directory / "host-input-receipt.txt")
+            directory / "late-display.txt", directory / "host-input-receipt.txt",
+            windowed=version in {"34", "35", "36", "37", "38", "39", "40", "41", "42"},
+            target_ordinals=(tool.LATE_DISPLAY_TARGET_ORDINALS_V30 if version in {"39", "40", "41", "42"} else
+                             tool.LATE_DISPLAY_TARGET_ORDINALS_V29 if version == "38" else
+                             tool.LATE_DISPLAY_TARGET_ORDINALS_V27 if version == "37" else None))
     except tool.CaptureError as error:
         raise ValueError(f"late display sidecar is invalid: {error}") from error
     expected = dict(line.split("=", 1) for line in status.splitlines())
@@ -353,10 +428,10 @@ def verify_deuteros_late_display(fields: dict[str, str], directory: Path) -> Non
 
 
 def verify_deuteros_latch_write(fields: dict[str, str], directory: Path) -> None:
-    """Recompute schema-33's exact latch-write and host chronology receipt."""
-    if fields.get("capture_receipt_version") != "33":
+    """Recompute schema-33/34's exact latch-write and host chronology receipt."""
+    if fields.get("capture_receipt_version") not in {"33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
         if any(key == "latch_write" or key.startswith("latch_write_") for key in fields):
-            raise ValueError("latch-write sidecar requires receipt schema 33")
+            raise ValueError("latch-write sidecar requires receipt schema 33 or 34")
         return
     tool = load_tool("run_deuteros_amiga_capture")
     try:
@@ -370,6 +445,101 @@ def verify_deuteros_latch_write(fields: dict[str, str], directory: Path) -> None
         raise ValueError("latch-write receipt fields are incomplete or unexpected")
     if any(fields.get(key) != value for key, value in expected.items()):
         raise ValueError("latch-write sidecar grammar/count receipt mismatch")
+
+
+def verify_deuteros_callback_memory(fields: dict[str, str], directory: Path) -> None:
+    """Verify the separate callback and ordered caller memory sidecar."""
+    version = fields.get("capture_receipt_version")
+    sidecar = directory / "callback-memory.txt"
+    sidecar_keys = {key for key in fields if key == "callback_memory"
+                    or key.startswith("callback_memory_")}
+    if version not in {"36", "37", "38", "39", "40", "41", "42"}:
+        if sidecar_keys or sidecar.exists() or sidecar.is_symlink():
+            raise ValueError("callback-memory sidecar requires receipt schema 36 through 38")
+        return
+    tool = load_tool("run_deuteros_amiga_capture")
+    try:
+        status = tool.callback_memory_status(
+            sidecar, directory / "host-input-receipt.txt")
+    except tool.CaptureError as error:
+        raise ValueError(f"callback-memory sidecar is invalid: {error}") from error
+    expected = dict(line.split("=", 1) for line in status.splitlines())
+    if sidecar_keys != set(expected):
+        raise ValueError("callback-memory receipt fields are incomplete or unexpected")
+    if any(fields.get(key) != value for key, value in expected.items()):
+        raise ValueError("callback-memory grammar/count/hash receipt mismatch")
+
+
+def verify_deuteros_service_boundary(fields: dict[str, str], directory: Path) -> None:
+    """Recompute the v29 bounded service-boundary samples and receipt summary."""
+    version = fields.get("capture_receipt_version")
+    sidecar = directory / "service-boundary.txt"
+    sidecar_keys = {key for key in fields if key == "service_boundary"
+                    or key.startswith("service_boundary_")}
+    if version not in {"38", "39", "40", "41", "42"}:
+        if sidecar_keys or sidecar.exists() or sidecar.is_symlink():
+            raise ValueError("service-boundary sidecar requires receipt schema 38")
+        return
+    tool = load_tool("run_deuteros_amiga_capture")
+    try:
+        status = tool.service_boundary_status(
+            sidecar, directory / "host-input-receipt.txt",
+            allow_any_input=version == "42", exact_move_sprite_windows=version == "42",
+            max_sequences=(tool.MAX_SERVICE_BOUNDARY_SEQUENCES_V33 if version == "42"
+                           else tool.MAX_SERVICE_BOUNDARY_SEQUENCES))
+    except tool.CaptureError as error:
+        raise ValueError(f"service-boundary sidecar is invalid: {error}") from error
+    expected = dict(line.split("=", 1) for line in status.splitlines())
+    if sidecar_keys != set(expected):
+        raise ValueError("service-boundary receipt fields are incomplete or unexpected")
+    if any(fields.get(key) != value for key, value in expected.items()):
+        raise ValueError("service-boundary grammar/count/hash receipt mismatch")
+
+
+
+def verify_deuteros_response_queue(fields: dict[str, str], directory: Path) -> None:
+    """Recompute schema-40's ordered queue-helper trace and receipt fields."""
+    version = fields.get("capture_receipt_version")
+    sidecar = directory / "response-queue.txt"
+    sidecar_keys = {key for key in fields if key == "response_queue"
+                    or key.startswith("response_queue_")}
+    if version not in {"40", "41", "42"}:
+        if sidecar_keys or sidecar.exists() or sidecar.is_symlink():
+            raise ValueError("response-queue sidecar requires receipt schema 40")
+        return
+    tool = load_tool("run_deuteros_amiga_capture")
+    try:
+        status = tool.response_queue_status(sidecar, directory / "host-input-receipt.txt")
+    except tool.CaptureError as error:
+        raise ValueError(f"response-queue sidecar is invalid: {error}") from error
+    expected = dict(line.split("=", 1) for line in status.splitlines())
+    if sidecar_keys != set(expected):
+        raise ValueError("response-queue receipt fields are incomplete or unexpected")
+    if any(fields.get(key) != value for key, value in expected.items()):
+        raise ValueError("response-queue grammar/count/hash receipt mismatch")
+
+
+def verify_deuteros_title_callback(fields: dict[str, str], directory: Path) -> None:
+    """Recompute schema-41's bounded $00ff callback path receipt."""
+    version = fields.get("capture_receipt_version")
+    sidecar = directory / "title-callback.txt"
+    sidecar_keys = {key for key in fields if key == "title_callback"
+                    or key.startswith("title_callback_")}
+    if version != "41":
+        if sidecar_keys or sidecar.exists() or sidecar.is_symlink():
+            raise ValueError("title-callback sidecar requires receipt schema 41")
+        return
+    tool = load_tool("run_deuteros_amiga_capture")
+    try:
+        status = tool.title_callback_status_v32(
+            sidecar, directory / "host-input-receipt.txt")
+    except tool.CaptureError as error:
+        raise ValueError(f"title-callback sidecar is invalid: {error}") from error
+    expected = dict(line.split("=", 1) for line in status.splitlines())
+    if sidecar_keys != set(expected):
+        raise ValueError("title-callback receipt fields are incomplete or unexpected")
+    if any(fields.get(key) != value for key, value in expected.items()):
+        raise ValueError("title-callback grammar/count receipt mismatch")
 
 
 def verify_deuteros_host_input_summary(fields: dict[str, str], directory: Path) -> None:
@@ -413,8 +583,16 @@ def verify_capture_intent(fields: dict[str, str], tool) -> None:
     status = fields.get("host_input_receipt")
     observed = fields.get("host_input_observed_during_capture")
     if intent == "physical-input":
-        if status != "present" or observed != "true" or fields.get("capture_intent_input_requirement") != "required":
+        if status != "present" or fields.get("capture_intent_input_requirement") != "required":
             raise ValueError("physical-input capture intent does not match the host-input receipt")
+        evidence = fields.get("capture_intent_input_observation")
+        if observed == "true":
+            if evidence not in {None, "observed-during-capture"}:
+                raise ValueError("physical-input capture observation label is inconsistent")
+        elif (fields.get("recorder_protocol")
+                not in tool.BUFFERED_HOST_INPUT_RECEIPT_PROTOCOLS
+                or evidence != "finalized-recorder-receipt"):
+            raise ValueError("physical-input capture lacks an observed recorder receipt")
     elif status not in {"absent", "empty"} or observed != "false" \
             or fields.get("capture_intent_input_requirement") != "forbidden":
         raise ValueError("diagnostic-no-input capture intent does not match the host-input receipt")
@@ -522,13 +700,13 @@ def verify_millennium_int93_installation(fields: dict[str, str], directory: Path
 
 def verify_millennium_driver_load_returns(fields: dict[str, str], directory: Path) -> None:
     """Recompute the experimental raw post-INT loader return receipt."""
-    protocol = "millennium-dos-en-driver-load-return-v1"
-    if fields.get("recorder_protocol") != protocol:
+    tool = load_tool("run_millennium_dos_capture")
+    protocol = fields.get("recorder_protocol", "")
+    if protocol not in tool.DRIVER_LOAD_RETURN_PROTOCOLS:
         if any(key == "driver_load_return" or key.startswith("driver_load_return_")
                for key in fields):
             raise ValueError("driver-load return sidecar requires its exact recorder protocol")
         return
-    tool = load_tool("run_millennium_dos_capture")
     try:
         status = tool.driver_load_return_status(directory / "driver-load-return.raw", protocol)
     except tool.CaptureError as error:
@@ -544,9 +722,61 @@ def verify_millennium_driver_load_returns(fields: dict[str, str], directory: Pat
         raise ValueError("driver-load return receipt hash/count mismatch")
 
 
+def verify_millennium_ah48_returns(fields: dict[str, str], directory: Path) -> None:
+    """Recompute the experimental pre-IRET DOS register receipt."""
+    tool = load_tool("run_millennium_dos_capture")
+    protocol = fields.get("recorder_protocol", "")
+    sidecar_keys = {key for key in fields if key == "ah48_return" or key.startswith("ah48_return_")}
+    if protocol not in tool.AH48_HANDLER_RETURN_PROTOCOLS:
+        if sidecar_keys:
+            raise ValueError("AH48 return sidecar requires its exact recorder protocol")
+        if (directory / "dos-ah48-return.raw").exists() or (directory / "dos-ah48-return.raw").is_symlink():
+            raise ValueError("AH48 return sidecar is detached from its recorder protocol")
+        return
+    try:
+        verify_file(fields, directory, "ah48_return", "dos-ah48-return.raw",
+                    max_bytes=tool.AH48_MAX_BYTES)
+        status = tool.ah48_handler_return_status(
+            directory / "dos-ah48-return.raw", protocol)
+    except tool.CaptureError as error:
+        raise ValueError(f"AH48 return sidecar is invalid: {error}") from error
+    expected = dict(line.split("=", 1) for line in status.splitlines())
+    if sidecar_keys != set(expected):
+        raise ValueError("AH48 return receipt fields are incomplete or unexpected")
+    if expected.get("ah48_return") != "present":
+        raise ValueError("experimental AH48 return sidecar is missing")
+    if any(fields.get(key) != value for key, value in expected.items()):
+        raise ValueError("AH48 return sidecar hash/count receipt mismatch")
+
+
+def verify_millennium_ah48_after_iret(fields: dict[str, str], directory: Path) -> None:
+    """Recompute v5's exact post-IRET caller snapshots and restored FLAGS."""
+    tool = load_tool("run_millennium_dos_capture")
+    protocol = fields.get("recorder_protocol", "")
+    sidecar_keys = {key for key in fields if key == "ah48_iret" or key.startswith("ah48_iret_")}
+    sidecar = directory / "dos-ah48-iret.raw"
+    if protocol not in {
+            tool.AH48_SITES_1BCA_1BD5_V5_AFTER_IRET_PROTOCOL,
+            tool.AH48_TITLE_LIBRARY_V6_PROTOCOL}:
+        if sidecar_keys or sidecar.exists() or sidecar.is_symlink():
+            raise ValueError("AH48 post-IRET sidecar requires its exact v5 recorder protocol")
+        return
+    try:
+        status = tool.ah48_after_iret_status(directory, protocol)
+    except tool.CaptureError as error:
+        raise ValueError(f"AH48 post-IRET sidecar is invalid: {error}") from error
+    expected = dict(line.split("=", 1) for line in status.splitlines())
+    if sidecar_keys != set(expected):
+        raise ValueError("AH48 post-IRET receipt fields are incomplete or unexpected")
+    if expected.get("ah48_iret") != "present":
+        raise ValueError("AH48 post-IRET sidecar is missing")
+    if any(fields.get(key) != value for key, value in expected.items()):
+        raise ValueError("AH48 post-IRET sidecar hash/register receipt mismatch")
+
+
 def verify_deuteros_source_contract(fields: dict[str, str], version: str, tool) -> None:
     """Bind v23+ provenance to the physical source layout without inventing a ZIP."""
-    if version not in {"23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
+    if version not in {"23", "24", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
         require_identity(fields, "source_release", (tool.EXPECTED_RELEASE_SHA256, tool.EXPECTED_RELEASE_SIZE))
         return
     if fields.get("content_release_sha256") != tool.EXPECTED_RELEASE_SHA256:
@@ -573,6 +803,66 @@ def verify_deuteros_source_contract(fields: dict[str, str], version: str, tool) 
 def verify_deuteros_recorder_identity(fields: dict[str, str], version: str, tool) -> None:
     """Bind the recorder generation to its receipt grammar, preserving old receipts."""
     digest = fields.get("recorder_sha256")
+    if version == "34":
+        require_identity(fields, "recorder", (tool.TRV2_RECORDER_V24_SHA256,
+                                                 tool.TRV2_RECORDER_V24_SIZE))
+        if fields.get("recorder_protocol") != "deuteros-amiga-fsuae-v24":
+            raise ValueError("recorder protocol does not match the v24 receipt schema")
+        return
+    if version == "36":
+        require_identity(fields, "recorder", (tool.TRV2_RECORDER_V26_CALLBACK_MEMORY_SHA256,
+                                                 tool.TRV2_RECORDER_V26_CALLBACK_MEMORY_SIZE))
+        if fields.get("recorder_protocol") != "deuteros-amiga-fsuae-v26-callback-memory":
+            raise ValueError("recorder protocol does not match the v26 callback-memory schema")
+        return
+    if version == "37":
+        require_identity(fields, "recorder", (tool.TRV2_RECORDER_V27_CALLBACK_MEMORY_TARGETED_DISPLAY_SHA256,
+                                                 tool.TRV2_RECORDER_V27_CALLBACK_MEMORY_TARGETED_DISPLAY_SIZE))
+        if fields.get("recorder_protocol") != "deuteros-amiga-fsuae-v27-callback-memory-targeted-display":
+            raise ValueError("recorder protocol does not match the v27 targeted-display schema")
+        return
+    if version == "40":
+        require_identity(fields, "recorder", (tool.TRV2_RECORDER_V31_RESPONSE_QUEUE_SHA256,
+                                                 tool.TRV2_RECORDER_V31_RESPONSE_QUEUE_SIZE))
+        if fields.get("recorder_protocol") != "deuteros-amiga-fsuae-v31-response-queue":
+            raise ValueError("recorder protocol does not match the v31 response-queue schema")
+        return
+    if version == "42":
+        if (tool.TRV2_RECORDER_V33_SERVICE_BOUNDARY_SHA256 == "UNPINNED"
+                or tool.TRV2_RECORDER_V33_SERVICE_BOUNDARY_SIZE <= 0):
+            raise ValueError("schema-42 recorder identity is unavailable until v33 is independently pinned")
+        require_identity(fields, "recorder", (tool.TRV2_RECORDER_V33_SERVICE_BOUNDARY_SHA256,
+                                                 tool.TRV2_RECORDER_V33_SERVICE_BOUNDARY_SIZE))
+        if fields.get("recorder_protocol") != "deuteros-amiga-fsuae-v33-service-boundary":
+            raise ValueError("recorder protocol does not match the v33 service-boundary schema")
+        return
+    if version == "41":
+        if (tool.TRV2_RECORDER_V32_TITLE_CALLBACK_SHA256 == "UNPINNED"
+                or tool.TRV2_RECORDER_V32_TITLE_CALLBACK_SIZE <= 0):
+            raise ValueError("schema-41 recorder identity is unavailable until v32 is independently pinned")
+        require_identity(fields, "recorder", (tool.TRV2_RECORDER_V32_TITLE_CALLBACK_SHA256,
+                                                 tool.TRV2_RECORDER_V32_TITLE_CALLBACK_SIZE))
+        if fields.get("recorder_protocol") != "deuteros-amiga-fsuae-v32-title-callback":
+            raise ValueError("recorder protocol does not match the v32 title-callback schema")
+        return
+    if version == "39":
+        require_identity(fields, "recorder", (tool.TRV2_RECORDER_V30_SERVICE_RETURN_DISPLAY_SHA256,
+                                                 tool.TRV2_RECORDER_V30_SERVICE_RETURN_DISPLAY_SIZE))
+        if fields.get("recorder_protocol") != "deuteros-amiga-fsuae-v30-service-return-display":
+            raise ValueError("recorder protocol does not match the v30 service-return schema")
+        return
+    if version == "38":
+        require_identity(fields, "recorder", (tool.TRV2_RECORDER_V29_SERVICE_BOUNDARY_DISPLAY_SHA256,
+                                                 tool.TRV2_RECORDER_V29_SERVICE_BOUNDARY_DISPLAY_SIZE))
+        if fields.get("recorder_protocol") != "deuteros-amiga-fsuae-v29-service-boundary-display":
+            raise ValueError("recorder protocol does not match the v29 service-boundary schema")
+        return
+    if version == "35":
+        require_identity(fields, "recorder", (tool.TRV2_RECORDER_V25_SHA256,
+                                                 tool.TRV2_RECORDER_V25_SIZE))
+        if fields.get("recorder_protocol") != "deuteros-amiga-fsuae-v25":
+            raise ValueError("recorder protocol does not match the v25 receipt schema")
+        return
     if version == "33":
         require_identity(fields, "recorder", (tool.TRV2_RECORDER_V23_SHA256,
                                                  tool.TRV2_RECORDER_V23_SIZE))
@@ -629,6 +919,8 @@ def verify_deuteros_recorder_identity(fields: dict[str, str], version: str, tool
         # narrower historical grammar when raw_pc is absent or omits $218cc.
         if digest == tool.TRV2_RECORDER_V16_SHA256:
             raise ValueError("v16 recorder requires receipt schema 24")
+        if digest == tool.TRV2_RECORDER_V24_SHA256:
+            raise ValueError("v24 recorder requires receipt schema 34")
         if digest not in set(tool.reviewed_recorder_hashes().values()) - {tool.TRV2_RECORDER_V16_SHA256}:
             raise ValueError("schema 23 recorder identity is not a reviewed pre-v16 build")
         protocol = fields.get("recorder_protocol")
@@ -644,7 +936,7 @@ def verify(kind: str, directory: Path, *, allow_experimental_observer: bool = Fa
         raise ValueError("capture directory must be an absolute non-symlink directory")
     fields = receipt(directory / "run-status.txt")
     version = require_receipt_schema(fields)
-    if version in {"31", "32", "33"} and kind != "deuteros-amiga":
+    if version in {"31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"} and kind != "deuteros-amiga":
         raise ValueError(f"capture receipt schema {version} is only supported for Deuteros Amiga")
     if version == "25":
         if kind != "millennium-dos":
@@ -747,9 +1039,12 @@ def verify(kind: str, directory: Path, *, allow_experimental_observer: bool = Fa
                 verify_millennium_int93_installation(fields, directory)
             elif fields.get("int93_installation") != "absent":
                 raise ValueError("INT 93h installation receipt has an invalid optional state")
-        if version == "22" and recorder_protocol == "millennium-dos-en-driver-load-return-v1":
+        if version == "22" and recorder_protocol in tool.DRIVER_LOAD_RETURN_PROTOCOLS:
             verify_file(fields, directory, "driver_load_return", "driver-load-return.raw")
             verify_millennium_driver_load_returns(fields, directory)
+        if version == "22":
+            verify_millennium_ah48_returns(fields, directory)
+            verify_millennium_ah48_after_iret(fields, directory)
         if version == "22":
             verify_capture_intent(fields, tool)
     else:
@@ -757,7 +1052,7 @@ def verify(kind: str, directory: Path, *, allow_experimental_observer: bool = Fa
         verify_deuteros_source_contract(fields, version, tool)
         verify_deuteros_recorder_identity(fields, version, tool)
         require_identity(fields, "kickstart_archive", (tool.EXPECTED_KICKSTART_SHA256, tool.EXPECTED_KICKSTART_SIZE))
-        if version not in {"23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
+        if version not in {"23", "24", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
             require_identity(fields, "disk1_archive", (tool.EXPECTED_DISK1_ARCHIVE_SHA256,
                                                          tool.EXPECTED_DISK1_ARCHIVE_SIZE))
             require_identity(fields, "disk2_archive", (tool.EXPECTED_DISK2_ARCHIVE_SHA256,
@@ -767,42 +1062,63 @@ def verify(kind: str, directory: Path, *, allow_experimental_observer: bool = Fa
         require_identity(fields, "recorder", (fields["recorder_sha256"], int(fields["recorder_bytes"])))
         verify_file(fields, directory, "raw_pc", "raw-pc.txt")
         verify_file(fields, directory, "host_input_receipt", "host-input-receipt.txt")
-        if version in {"10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
+        if version in {"10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
             verify_file(fields, directory, "title_display", "title-display.txt")
         if version in {"27", "28"}:
             verify_file(fields, directory, "selector_dispatch", "selector-dispatch.txt")
-        if version in {"29", "30", "31", "32", "33"}:
+        if version in {"29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
             verify_file(fields, directory, "late_input_pc", "late-input-pc.txt")
             verify_file(fields, directory, "late_selector_dispatch", "late-selector-dispatch.txt")
-        if version in {"3", "4", "5", "6", "7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
+        if version in {"35", "36", "37", "38", "39", "40", "41", "42"}:
+            verify_file(fields, directory, "negative_selector", "negative-selector.txt",
+                        max_bytes=load_tool("run_deuteros_amiga_capture").MAX_NEGATIVE_SELECTOR_BYTES)
+        if version in {"3", "4", "5", "6", "7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
             verify_deuteros_raw_pc_summary(fields, directory, version)
-        if version in {"5", "6", "7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
+        if version in {"5", "6", "7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
             verify_deuteros_host_input_summary(fields, directory)
-        if version in {"6", "7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
+        if version in {"6", "7", "8", "9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
             verify_deuteros_timing_profile(fields, directory)
         if version == "8" and fields.get("raw_pc") == "present":
             verify_deuteros_raw_pc_opcode_pairs(fields, directory)
-        if version in {"9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"} and fields.get("raw_pc") == "present":
-            raw_format = ("v9-v19-phased" if version in {"29", "30", "31", "32", "33"} else
+        if version in {"9", "10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"} and fields.get("raw_pc") == "present":
+            raw_format = ("v9-v19-phased" if version in {"29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"} else
                           "v9-v18-phased" if version == "28" else
                           "v9-v16-phased" if version in {"26", "27"} else
                           "v9-v16" if version == "24" else "v9")
             verify_deuteros_raw_pc_opcode_pairs(fields, directory, raw_format)
             verify_deuteros_raw_pc_input_chronology(fields, directory, raw_format)
-        if version in {"10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
+        if version in {"10", "11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
             verify_deuteros_title_display(fields, directory)
         if version in {"27", "28"}:
             verify_deuteros_selector_dispatch(fields, directory)
         verify_deuteros_late_sidecars(fields, directory)
+        verify_deuteros_negative_selector(fields, directory)
         verify_deuteros_zero_route_observation(fields, directory)
-        if version in {"32", "33"}:
-            verify_file(fields, directory, "late_display", "late-display.txt")
+        if version in {"32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
+            late_display_limit = (tool.MAX_LATE_DISPLAY_RECEIPT_BYTES_V24
+                                  if version in {"34", "35", "36", "37", "38", "39", "40", "41", "42"}
+                                  else tool.MAX_LATE_DISPLAY_RECEIPT_BYTES)
+            verify_file(fields, directory, "late_display", "late-display.txt",
+                        max_bytes=late_display_limit)
             verify_deuteros_late_display(fields, directory)
-        if version == "33":
+        if version in {"33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
             verify_file(fields, directory, "latch_write", "latch-write.txt")
             verify_deuteros_latch_write(fields, directory)
-        if version in {"11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33"}:
+        if version in {"11", "23", "24", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42"}:
             verify_capture_intent(fields, tool)
+        if version in {"38", "39", "40", "41", "42"}:
+            verify_file(fields, directory, "service_boundary", "service-boundary.txt",
+                        max_bytes=tool.MAX_SERVICE_BOUNDARY_BYTES)
+        if version in {"40", "41", "42"}:
+            verify_file(fields, directory, "response_queue", "response-queue.txt",
+                        max_bytes=tool.MAX_RESPONSE_QUEUE_BYTES)
+        if version == "41":
+            verify_file(fields, directory, "title_callback", "title-callback.txt",
+                        max_bytes=tool.MAX_TITLE_CALLBACK_BYTES_V32)
+    verify_deuteros_callback_memory(fields, directory)
+    verify_deuteros_service_boundary(fields, directory)
+    verify_deuteros_response_queue(fields, directory)
+    verify_deuteros_title_callback(fields, directory)
     verify_console(fields, directory)
     verify_console_admission(fields, version)
     config = directory / ("recorder.conf" if kind == "millennium-dos" else "deuteros-amiga-capture.fs-uae")

@@ -400,6 +400,13 @@ bool validate_millennium_dos_title_handoff_events(const std::filesystem::path& p
         validate_millennium_dos_title_handoff_reference_events, error);
 }
 
+bool validate_millennium_dos_title_exec_entry_events(const std::filesystem::path& path,
+    const std::uintmax_t expected_size, const std::string_view expected_sha256,
+    MillenniumDosTitleExecEntryTraceDiagnostics& diagnostics, std::string& error) {
+    return validate_adapter_events(path, expected_size, expected_sha256, diagnostics,
+        validate_millennium_dos_title_exec_entry_reference_events, error);
+}
+
 bool validate_deuteros_atari_events(const std::filesystem::path& path,
                                     const std::uintmax_t expected_size,
                                     const std::string_view expected_sha256,
@@ -617,6 +624,9 @@ ReferenceTraceValidation validate_reference_trace(
     const bool millennium_dos_title_handoff_v3 = fields.contains("format")
         && fields.at("format") == "project-eon-reference-trace-v3"
         && fields.contains("adapter") && fields.at("adapter") == "millennium-dos-en-title-handoff-v3";
+    const bool millennium_dos_title_exec_entry_v4 = fields.contains("format")
+        && fields.at("format") == "project-eon-reference-trace-v4"
+        && fields.contains("adapter") && fields.at("adapter") == "millennium-dos-en-title-exec-entry-v4";
     const bool deuteros_atari_v2 = fields.contains("format")
         && fields.at("format") == "project-eon-reference-trace-v2"
         && fields.contains("adapter") && fields.at("adapter") == "deuteros-atari-st-boot-v1";
@@ -646,7 +656,7 @@ ReferenceTraceValidation validate_reference_trace(
     };
     if (!(v1 ? manifest_has_exact_fields(v1_required_fields)
              : (millennium_dos_v2 || millennium_dos_gx_v2 || millennium_dos_title_init_v2
-                 || millennium_dos_title_handoff_v3)
+                 || millennium_dos_title_handoff_v3 || millennium_dos_title_exec_entry_v4)
                  ? manifest_has_exact_fields(v2_required_fields)
              : deuteros_atari_v2 ? manifest_has_exact_fields(deuteros_atari_v2_required_fields)
              : deuteros_amiga_v2 ? manifest_has_exact_fields(deuteros_amiga_v2_required_fields)
@@ -722,6 +732,11 @@ ReferenceTraceValidation validate_reference_trace(
             || source->sha256 != "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123")) {
         return {{}, "Reference trace title-handoff adapter does not match the clean English Millennium DOS release"};
     }
+    if (millennium_dos_title_exec_entry_v4 && (source->game != Game::millennium || source->platform != Platform::dos
+            || source->language != "en"
+            || source->sha256 != "e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123")) {
+        return {{}, "Reference trace EXEC-entry adapter does not match the clean English Millennium DOS release"};
+    }
     if (deuteros_atari_v2 && (source->game != Game::deuteros || source->platform != Platform::atari_st
             || source->language != "en"
             || source->sha256 != "c6856d0a7ccda925289c60f0675e7aaed616f8a0289c74698e87e1ee11e6c653"
@@ -782,6 +797,7 @@ ReferenceTraceValidation validate_reference_trace(
     MillenniumDosGxStartupReferenceTraceDiagnostics millennium_dos_gx_diagnostics;
     MillenniumDosTitleInitReferenceTraceDiagnostics millennium_dos_title_init_diagnostics;
     MillenniumDosTitleHandoffReferenceTraceDiagnostics millennium_dos_title_handoff_diagnostics;
+    MillenniumDosTitleExecEntryTraceDiagnostics millennium_dos_title_exec_entry_diagnostics;
     DeuterosAtariReferenceTraceDiagnostics deuteros_diagnostics;
     MillenniumAmigaReferenceTraceDiagnostics amiga_diagnostics;
     DeuterosAmigaReferenceTraceDiagnostics deuteros_amiga_diagnostics;
@@ -802,6 +818,9 @@ ReferenceTraceValidation validate_reference_trace(
             : millennium_dos_title_handoff_v3
                 ? validate_millennium_dos_title_handoff_events(events_path, event_size, fields.at("event_sha256"),
                     millennium_dos_title_handoff_diagnostics, error)
+            : millennium_dos_title_exec_entry_v4
+                ? validate_millennium_dos_title_exec_entry_events(events_path, event_size,
+                    fields.at("event_sha256"), millennium_dos_title_exec_entry_diagnostics, error)
             : deuteros_atari_v2
                 ? validate_deuteros_atari_events(events_path, event_size, fields.at("event_sha256"),
                     deuteros_diagnostics, error)
@@ -855,6 +874,7 @@ ReferenceTraceValidation validate_reference_trace(
     if (millennium_dos_gx_v2) event_count = millennium_dos_gx_diagnostics.event_count;
     if (millennium_dos_title_init_v2) event_count = millennium_dos_title_init_diagnostics.event_count;
     if (millennium_dos_title_handoff_v3) event_count = millennium_dos_title_handoff_diagnostics.event_count;
+    if (millennium_dos_title_exec_entry_v4) event_count = millennium_dos_title_exec_entry_diagnostics.event_count;
     if (deuteros_atari_v2) event_count = deuteros_diagnostics.event_count;
     if (millennium_amiga_v2) event_count = amiga_diagnostics.event_count;
     if (deuteros_amiga_v2) event_count = deuteros_amiga_diagnostics.event_count;

@@ -254,6 +254,19 @@ public:
         const MillenniumDosVideoFunction13McgaCallbackRegisterStackInput& input);
     void observe_mcga_callback_zero_counter_pointer(
         const MillenniumDosVideoFunction13McgaCallbackFarPointerRead& read);
+    void observe_mcga_callback_zero_counter_descriptor_word(
+        const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void observe_mcga_callback_zero_counter_descriptor_byte(
+        const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void observe_mcga_callback_zero_counter_length(
+        const MillenniumDosVideoFunction13McgaCallbackRead& read);
+    void execute_mcga_callback_zero_counter_copy(std::uint64_t sequence,
+        std::uint16_t instruction_address, std::uint16_t segment,
+        std::uint16_t source_offset, std::span<const std::uint8_t> source_bytes);
+    void execute_mcga_callback_zero_counter_descriptor_store(std::uint64_t sequence,
+        std::uint16_t instruction_address);
+    void execute_mcga_callback_zero_counter_retrace_setup(std::uint64_t sequence,
+        std::uint16_t instruction_address);
     void observe_mcga_callback_alternate_cx_read(
         const MillenniumDosVideoFunction13McgaCallbackRead& read);
     void observe_mcga_callback_alternate_pointer(
@@ -368,6 +381,11 @@ private:
     std::optional<std::uint16_t> callback_palette_outer_cx_;
     std::optional<std::uint16_t> callback_zero_stack_ss_;
     std::optional<std::uint16_t> callback_zero_stack_sp_;
+    std::optional<MillenniumDosVideoFunction13McgaCallbackFarPointerRead>
+        callback_zero_pointer_;
+    std::optional<std::uint16_t> callback_zero_descriptor_word_;
+    std::optional<std::uint8_t> callback_zero_descriptor_byte_;
+    std::optional<std::uint8_t> callback_zero_length_;
     std::uint8_t callback_return_pop_count_ = 0;
     bool callback_iret_pending_ = false;
     std::uint16_t callback_next_instruction_ = 0;

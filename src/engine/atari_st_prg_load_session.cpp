@@ -154,6 +154,16 @@ MillenniumAtariPrgLoadSession::MillenniumAtariPrgLoadSession(
         || checkpoint_.relocation_effects.back().relocated_value != 0x239c8U) {
         throw std::runtime_error("Unexpected Millennium Atari ST native PRG load result");
     }
+    constexpr std::uint32_t address_limit_exclusive = 0x01000000U;
+    const auto image_end = static_cast<std::uint64_t>(checkpoint_.load_base)
+        + checkpoint_.image.size();
+    const auto screen_end = static_cast<std::uint64_t>(native_screen_base)
+        + low_resolution_screen_bytes;
+    if ((native_screen_base & 0xffU) != 0U || native_screen_base < image_end
+        || screen_end > address_limit_exclusive
+        || screen_end > 0x00ff8000U) {
+        throw std::runtime_error("Millennium Atari native screen reservation overlaps guest hardware or PRG memory");
+    }
 }
 
 } // namespace eon

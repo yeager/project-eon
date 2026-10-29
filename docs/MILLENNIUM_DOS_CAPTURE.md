@@ -1009,6 +1009,12 @@ Use the returned path verbatim as `--recorder`; a no-match result is not
 permission to substitute another binary.
 
 ```sh
+python3 tools/locate_capture_recorder.py \
+  --kind millennium-dos \
+  --recorder-protocol millennium-dos-ah48-handler-return-v1 \
+  --experimental-observer \
+  --root /home/trv2/.cache/project-eon-tools
+
 python3 tools/run_millennium_dos_capture.py \
   --source-release /absolute/path/to/Millennium-Return-to-Earth_DOS_EN.zip \
   --recorder /absolute/path/to/reviewed/dosbox-x \
@@ -1047,6 +1053,63 @@ The output directory is a new evidence boundary and must not already exist.
 If preflight reports `output directory must not exist`, choose a fresh,
 descriptive suffix below the scoped external cache; do not
 reuse, clear, or overwrite a prior capture directory.
+
+#### Experimental AH=48 return-register sidecar
+
+The separately pinned `millennium-dos-ah48-handler-return-v1` recorder may be
+used only with `--experimental-observer --capture-intent physical-input`.
+Its bounded sidecar records pre/post register snapshots at four exact
+`TITLES.EXE` DOS `INT 21h` sites (`$1b26`, `$1b2d`, `$1b38`, `$1b3f`). The
+capture point is the DOS handler return before guest IRET. It does not prove
+the guest resumed, allocation memory contents, a loader handoff, or gameplay.
+The capture requires visible manual emulator input; the runner never
+generates it. Close the visible DOSBox-X window when the runner prompts, so
+the recorder can write its completion footer. The receipt is experimental
+diagnostic data and is never recovery-admissible.
+
+The AH=48 recorder accepts only a private output directory that is a direct
+child of the user's `~/.cache`. Give the runner an unused, scoped path such as
+`~/.cache/millennium-dos-capture-<UTC>`; it creates that directory with mode
+`0700`. The observer creates one `0600` sidecar there, bounded to 4 MiB and
+4,096 records, and the runner normalizes it to `dos-ah48-return.raw` before
+writing `run-status.txt`. The source archive and every result remain outside
+the repository and original media tree.
+
+```sh
+python3 tools/run_millennium_dos_capture.py \
+  --source-release /absolute/path/to/Millennium-Return-to-Earth_DOS_EN.zip \
+  --recorder /home/you/.cache/project-eon-tools/dos-ah48-observer-20261008/build-ah48/src/dosbox-x \
+  --capture-intent physical-input \
+  --recorder-protocol millennium-dos-ah48-handler-return-v1 \
+  --experimental-observer \
+  --output /home/you/.cache/millennium-dos-capture-<UTC>
+```
+
+#### Experimental third AH=48 site `$1b4f`
+
+Protocol `millennium-dos-ah48-site-1b4f-v2` uses a separate binary pin and
+sidecar header. It observes only `TITLES.EXE:$1b4f` with AH=`$48` and handler
+return IP `$1b51`; it rejects the four sites handled by v1. The x86_64 trv2
+binary hash is
+`75ddc62f68817bfb37cb59d8a283ea06e89cf8d46104bf3458c0d99fcfa2b6ef` and its
+size is 122,505,616 bytes. It is experimental, diagnostic-only, and must not
+be used to claim that the DOS allocation succeeded or that the game is
+playable.
+
+```sh
+python3 tools/run_millennium_dos_capture.py \
+  --source-release /absolute/path/to/Millennium-Return-to-Earth_DOS_EN.zip \
+  --recorder /home/you/.cache/project-eon-tools/dos-ah48-observer-20261008/bin/dosbox-x-ah48-site-1b4f-v2 \
+  --capture-intent physical-input \
+  --recorder-protocol millennium-dos-ah48-site-1b4f-v2 \
+  --experimental-observer \
+  --output /home/you/.cache/millennium-dos-ah48-1b4f-<UTC>
+```
+
+As with v1, a visible operator must provide the input and close the emulator
+window when prompted. The output directory must be a fresh direct child of
+`~/.cache`; the runner records only a bounded external sidecar and does not
+inject input or inspect guest memory.
 
 The v6 receipt binds one finite machine profile: `svga_s3` (the default) or
 `ega`. The selected profile is written as `machine_profile` and independently
@@ -1115,3 +1178,171 @@ route, record key press/release timing separately, and retain the title poll,
 local exit, parent `EXEC`, child/far return, and device results. Recorder-side
 keyboard injection, guest memory edits, and fabricated return values remain
 inadmissible.
+
+### 2026-10-08 experimental DOS-loader diagnostic attempt
+
+The documented Linux loader-return observer was restored on trv2 after its
+old path was found to hold a different identity. The rebuilt executable
+matches SHA-256 `942f30f2199350a51d0ff1e7c024f4e226d29b5576dc6ea0d61b7556c12468e8`
+and 132,933,552 bytes; the prior 133,101,000-byte file remains preserved at
+the unverified cache path documented in
+[`MILLENNIUM_DOS_DOSBOX_X_RECORDER.md`](MILLENNIUM_DOS_DOSBOX_X_RECORDER.md).
+
+The first visible no-input attempt reached DOSBox-X's repeated unhandled
+`INT 6` diagnostics and was rejected without a complete sidecar. The runner
+had retained its bounded 1 MiB console prefix. Source inspection showed that
+DOSBox-X writes error messages to stderr when no log file is configured.
+The capture configuration now sets `[log] logfile=/dev/null` and
+`cpu=never`, which changes emulator logging only; the observer's bounded raw
+sidecar path remains separate. The focused runner suite passes 28 tests.
+
+A second fresh run used the exact pinned executable and the English archive
+`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123` through
+the read-only mount route. Its config SHA-256 is
+`1f00dd9b03c4aaa059184e987e68070e431cfc273e3948b16ffce87e9ca4bfde`; the
+recorder confirmed the `/dev/null` log destination, emitted no repeated CPU
+`INT 6` messages, and retained a 4,478-byte console transcript. After the
+15-second observation window the runner waited for manual operating-system
+window closure. No closure occurred before its 120-second shutdown deadline,
+so it rejected the run without `driver-load-return.raw` or `run-status.txt`.
+This is not a verified DOS-return observation and supplies no gameplay
+evidence. The original archive remained at its recognised hash.
+
+Attempts 03 and 04 on the same pinned binary were also rejected. In 03 an
+X11 window-close operation targeted the Openbox frame; DOSBox-X's window
+vanished but the process continued with `BadWindow` errors until the runner's
+shutdown bound. Attempt 04 targeted the DOSBox-X client itself, which
+advertised `WM_DELETE_WINDOW`, but the X11 close operation destroyed the
+window instead of delivering that client message. The emulator continued
+issuing X11 requests and produced no complete sidecar. Attempt
+03 config/console hashes are
+`df87a5b6aa4bf51b54f81d94f0a6e30890a3888ca700f66f3f6a4279e9a2a4d1` /
+`07c89ec14a68c1063de06266079028a9194749985d553a01a6fc01dc1b2985b2`; attempt
+04 hashes are
+`a4ceb0642a07055428615b8180e02ffb2e2fe295bbc93ca0f6902e4bd26db1a9` /
+`93061440ca8260e2850d8601c8cc1edca8dbe579de5b8d86339436d9b2a53a77`.
+Neither attempt produced `driver-load-return.raw` or `run-status.txt`. They
+motivated the separate v2 host-close branch and true `WM_DELETE_WINDOW`
+procedure verified by capture 07 below.
+
+Capture 05 used the unchanged v1 executable with a no-input diagnostic. Adding
+`quit warning=false` to that configuration did not fix its missing SDL2
+`SDL_WINDOWEVENT_CLOSE` handling: the window disappeared, but DOSBox-X
+continued running and emitted no driver sidecar or final receipt. Capture 05
+config SHA-256 is
+`5827277f4e93af7543e49621a46def3dbf3bece16c101fd07ed095c421d058f0`; its
+bounded-console SHA-256 is
+`fa8aa750ca8260b9ad4a9de0d6a94b74cae496fe3bc6fefac2777e070c0c86d3`.
+This attempt is rejected and contributes no guest-return or gameplay evidence.
+
+A separate Linux v2 candidate was built with a reviewed SDL2 close-event
+branch. Its exact binary identity, isolated patch hash, limitations, and
+experimental-only status are recorded in
+[`MILLENNIUM_DOS_DOSBOX_X_RECORDER.md`](MILLENNIUM_DOS_DOSBOX_X_RECORDER.md).
+V1 remains unchanged; the v2 capture below is diagnostic provenance only.
+
+Capture 06 was the single bounded v2 no-input diagnostic on trv2 display `:5`.
+The attempted `xdotool windowclose` operation destroyed the X11 window resource;
+it did not send `WM_DELETE_WINDOW`. DOSBox-X then continued requesting the
+destroyed resource and logged `BadWindow`, so SDL never queued
+`SDL_WINDOWEVENT_CLOSE`. The run was rejected without `driver-load-return.raw` or
+`run-status.txt`; its config SHA-256 is
+`c282f49485874301c2f29b19f84013a433f4cae29ad5138689665449eb04b784` and its
+bounded-console SHA-256 is
+`db371049f5bda0d6124ae92ac1565a646f3078d81a9bd93e6bed3a60f5204ecf`.
+The read-only archive mount was removed during runner cleanup and the original
+archive remained at its recognised identity. This attempt does not test the
+v2 SDL close-event path. Capture 07 below used a real
+`WM_DELETE_WINDOW` client message; do not use `xdotool windowclose` again.
+V2 remains experimental, and this attempt adds no guest-return or gameplay
+evidence.
+
+### 2026-10-08 AH=48 site observer with missing host-input receipt
+
+An experimental DOSBox-X build at
+`/home/trv2/.cache/project-eon-tools/dos-ah48-observer-20261008/bin/`
+recorded the observed AH=48 and AH=49 handler returns for `TITLES.EXE`, but
+did not include the separately reviewed SDL host-input recorder. During a
+visible run on trv2 display `:6`, one Space key was sent to the focused DOSBox
+window. The output had no `host-input-receipt.raw` and no `run-status.txt`, so
+the runner could not link that operator action to the AH=48 observations and
+did not produce an admissible capture. No receipt was fabricated.
+
+The exact recorder SHA-256 is
+`c8d0795e32e566a7a998ef9f26542fd85652f27b957144a06858181ae9379d41`; its
+source commit is `234797680781567e18c374c9e62da24de5423db0`. The raw AH48
+sidecar SHA-256 is
+`446218e037123a889dd12a9c4bda3216997f7b3e2e6254944126991324411c9b` and is
+retained only in trv2's external cache under
+`project-eon-tools/dos-ah48-observer-20261008/experiments/` for diagnostics.
+The original English archive stayed read-only; the temporary mount was gone
+before the incomplete run directory was removed. This does not establish a
+gameplay path. A successor recorder must combine both observer paths, pass
+source and protocol review, and retain the runner's host-input receipt before
+it can support another physical-input capture.
+
+Capture 07 repeated the bounded no-input diagnostic using an actual
+`WM_DELETE_WINDOW` client message, after verifying that the DOSBox-X window
+advertised the protocol. DOSBox-X exited normally and wrote its footer. The
+independent verifier accepted the receipt with explicit experimental opt-in.
+Receipt SHA-256 is
+`1c25be2f50c8e22670fd7653356356653290dccebc7cea2a034f0c9bd2f00a6d`; the
+2,176-byte sidecar SHA-256 is
+`77e301c8fe0d2678c8a9754ea3d157f069352bad3146c8f34a9f13b66668f180`.
+The sidecar contains 12 records at six observed sites (`0x02d4`, `0x02ed`,
+`0x02fc`, `0x030b`, `0x0315`, `0x031b`), two records per site. The receipt
+records `exit_status=0`, `termination_reason=emulator-exit`, and no host input;
+the archive hash remained
+`e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123`.
+The verifier labels this capture `experimental-observer-not-for-recovery`.
+Registers and guest-buffer digests remain opaque observations: this does not
+establish DOS success, game progress, or playability.
+
+### 2026-10-09 AH48/AH49 visible capture with SDL input receipt
+
+The separate v4 DOSBox-X observer ran against the verified read-only English
+archive on trv2 with visible manual input. Its receipt verifies with
+experimental opt-in and records 10 SDL key events, one DOS handler snapshot
+at `TITLES.EXE:$1bca`/AH=`$48`, and one at `$1bd5`/AH=`$49`. The 1,100-byte
+AH48 sidecar SHA-256 is
+`c1c59d7e3d6391637273cdbcd172023def100c3164c51722d78237e7e0226db7`; the
+655-byte host-input receipt SHA-256 is
+`11c14c3dc73dfedb47ccb7e021e44111de003e5cf5fba390c4b9783f70e776e4`.
+The full capture remains outside Git at
+`/home/trv2/.cache/millennium-dos-ah48-v4-20261009-01/`.
+
+The visible DOSBox-X `TITLES` window remained black through ordinary key
+input, then closed normally. This establishes input receipt integrity and
+reaches the allocator/free handler sites, but the observer stops before IRET;
+it does not prove the resumed caller state or any visible game transition.
+V4 remains experimental-only and the black display remains unresolved.
+
+### 2026-10-09 TITLES caller-after-IRET receipt
+
+The v5 DOSBox-X observer adds exact post-IRET caller snapshots at `$1bcc` and
+`$1bd7`. The fresh capture at
+`/home/trv2/.cache/millennium-dos-ah48-v5-20261009-02/` passed the independent
+verifier with experimental opt-in. Its host receipt contains six SDL key
+events; the post-IRET sidecar contains exactly two events and hashes to
+`8a09e2632c883aa84dd340f81f73361b370b4b753174da46c9956b8911e7f64f`.
+TITLES resumed from `$1bca` with AX=`$0008`, BX=`$612d`, FLAGS=`$7247`, then
+from `$1bd5` with AX=`$0009`, ES=`$0008`, FLAGS=`$7247`. Both carry bits are
+set, confirming failed AH48/AH49 calls in the observed DOSBox-X session.
+
+The screen was still black, and no library I/O or display-write evidence was
+collected. This is a verified caller-state boundary, not proof of playability.
+
+### 2026-10-09 v6 title-library open and read
+
+The v6 capture at
+`/home/trv2/.cache/millennium-dos-ah48-v6-20261009-05/` is independently
+verified with experimental opt-in. The archive remains mounted read-only;
+the DOSBox-X `C:` drive is presented as a CD-ROM so the game's read/write
+`TITLE.LIB` open is safely downgraded to read-only. At `$0549` AH=`$3d`, the
+caller resumes with handle AX=`$0005` and CF clear. Nine reads at `$057c`
+return the 18,907-byte library in the first request followed by eight zero
+length reads. The visible logo advances to the `OUTER SYSTEM` planetary view
+after manual Space input. This resolves the previously black title startup
+for this exact English archive and recorder configuration. The capture
+remains experimental, and it does not cover later gameplay or all supported
+releases.
