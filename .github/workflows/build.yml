@@ -99,7 +99,7 @@ jobs:
 
   build-macos:
     name: macOS
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -310,10 +310,10 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            runner: macos-14
+            runner: macos-15
           - arch: x86_64
-            # GitHub retired the macos-13 Intel image. Keep the Intel package
-            # native instead of cross-compiling it on an arm64 runner.
+            # Keep the Intel package native instead of cross-compiling it on
+            # an arm64 runner.
             runner: macos-15-intel
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -771,7 +771,7 @@ jobs:
   package-ipados:
     name: iPadOS sideload IPA
     needs: build-macos
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0

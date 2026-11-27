@@ -62,10 +62,9 @@ struct MillenniumDosVideoDriverProfile {
     std::uint8_t function_thirty_one_return_ah = 0;
 };
 
-// Result of an AX=$001f video-driver query. The dispatcher and handler bytes
-// are validated against the selected original driver; the state byte is
-// caller-owned live driver memory supplied by the native session that owns
-// that image.
+// Result of an AX=$001f video-driver query. The full image hash and dispatcher
+// target bind the function; the state byte is caller-owned live driver memory
+// supplied by the native session that owns that image.
 struct MillenniumDosVideoDriverStateQueryResult {
     std::uint8_t function_index = 0;
     std::uint16_t handler_address = 0;

@@ -1,8 +1,6 @@
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/sha256.hpp"
 
-#include <algorithm>
-#include <array>
 #include <stdexcept>
 
 namespace eon {
@@ -177,20 +175,8 @@ MillenniumDosVideoDriverStateQueryResult evaluate_millennium_dos_video_driver_st
         throw std::runtime_error("Millennium DOS AX=$001f no longer selects function 31");
     }
 
-    constexpr std::array<std::uint8_t, 6> ega_handler{
-        0xa0, 0x8a, 0x00, 0xb4, 0x04, 0xc3};
-    constexpr std::array<std::uint8_t, 6> mcga_handler{
-        0xa0, 0xac, 0x00, 0xb4, 0x01, 0xc3};
-    const auto expected = kind == MillenniumDosVideoDriverKind::ega640
-        ? std::span<const std::uint8_t>(ega_handler)
-        : std::span<const std::uint8_t>(mcga_handler);
-    const auto body_offset = static_cast<std::size_t>(handler);
-    if (body_offset > bytes.size() || expected.size() > bytes.size() - body_offset
-        || !std::equal(expected.begin(), expected.end(), bytes.begin()
-            + static_cast<std::ptrdiff_t>(body_offset))) {
-        throw std::runtime_error("Millennium DOS function-31 handler bytes changed");
-    }
-
+    // The complete image hash and dispatch target above bind this handler to
+    // the admitted original without embedding its executable bytes here.
     return {function_index, handler,
         static_cast<std::uint16_t>((static_cast<std::uint16_t>(profile.function_thirty_one_return_ah)
             << 8U) | live_state_byte)};
