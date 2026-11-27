@@ -1,6 +1,8 @@
 #include "engine/release_runtime.hpp"
 #include "engine/release_runtime_capability.hpp"
+#include "engine/millennium_dos_video_function_31_session.hpp"
 #include "engine/deuteros_amiga_owned_alternate_renderer.hpp"
+#include "engine/deuteros_amiga_owned_commands.hpp"
 #include "engine/deuteros_amiga_owned_optional_resource.hpp"
 
 #include "platform/game_data.hpp"
@@ -402,6 +404,9 @@ bool ReleaseRuntimeCoordinator::acquire(const ResolvedLaunchRequest& launch) {
 void ReleaseRuntimeCoordinator::reset() {
     active_runtime_generation_ = 0;
     deuteros_amiga_interrupt_worker_last_sequence_ = 0;
+    deuteros_amiga_vblank_registration_generation_ = 0;
+    deuteros_amiga_vblank_tick_count_ = 0;
+    deuteros_amiga_vblank_pending_service_generation_ = 0;
     deuteros_amiga_bootstrap_frame_.reset();
     deuteros_amiga_bootstrap_frame_generation_ = 0;
     deuteros_amiga_main_stage_palette_.reset();
@@ -1125,7 +1130,7 @@ ReleaseRuntimeCoordinator::millennium_dos_sound_driver_load_checkpoint()const{
     const auto&s=*millennium_dos_sound_driver_load_;
     const auto code_segment = millennium_dos_compatibility_runner_
         ? millennium_dos_compatibility_runner_->code_segment() : std::uint16_t{0};
-    return MillenniumDosSoundDriverLoadCheckpoint{millennium_dos_sound_driver_load_generation_,millennium_dos_sound_driver_load_last_sequence_,s.state(),s.boundary(),s.driver().kind,s.memory_effects().size(),s.file_handle(),s.load_segment(),code_segment,millennium_dos_sound_driver_code_segment_provenance_,s.runtime_word_effects(),s.runtime_byte_effects()};
+    return MillenniumDosSoundDriverLoadCheckpoint{millennium_dos_sound_driver_load_generation_,millennium_dos_sound_driver_load_last_sequence_,s.state(),s.boundary(),s.driver().kind,s.memory_effects().size(),s.file_handle(),s.load_segment(),code_segment,millennium_dos_sound_driver_code_segment_provenance_,s.parent_stack_provenance(),s.runtime_word_effects(),s.runtime_byte_effects()};
 }
 
 MillenniumDosVideoDriverLoadObservationResult
@@ -1241,6 +1246,38 @@ ReleaseRuntimeCoordinator::millennium_dos_video_driver_load_checkpoint() const {
         s.ivt_observation_matches_loaded_driver()};
 }
 
+std::optional<MillenniumDosVideoFunction31Outcome>
+ReleaseRuntimeCoordinator::millennium_dos_video_function_31_checkpoint() const {
+    if (!active_ || !session_snapshot_ || !active_media_ || !native_runtime_memory_
+        || (session_snapshot_->kind != RuntimeSessionKind::millennium_dos_sound_driver_boundary
+            && session_snapshot_->kind != RuntimeSessionKind::millennium_dos_title)
+        || !millennium_dos_video_driver_load_
+        || !millennium_dos_video_driver_load_->ivt_observation_matches_loaded_driver()
+        || millennium_dos_video_driver_load_->set_vector_carry()) {
+        return std::nullopt;
+    }
+    const auto& load = *millennium_dos_video_driver_load_;
+    const auto kind = load.driver().kind;
+    const auto state_offset = load.driver().function_thirty_one_state_address;
+    const auto value = native_runtime_memory_->read_byte({
+        NativeRuntimeAddressSpace::dos_segmented, load.load_segment(), state_offset});
+    if (!value) return std::nullopt;
+
+    constexpr std::string_view ega_sha =
+        "ba003dd155fee868980f6ece933c33f9b22af68ed376cd64f4e027abd65baf6a";
+    constexpr std::string_view mcga_sha =
+        "bb5106d7412a9f139b74ffdcacfc4f8dcdf25595aa90565eaec114a4301fb228";
+    const auto source = active_media_->borrow(
+        kind == MillenniumDosVideoDriverKind::ega640 ? ega_sha : mcga_sha);
+    if (!source) return std::nullopt;
+    MillenniumDosVideoFunction31Session function(*source, kind);
+    function.observe_local_state_read({
+        millennium_dos_video_driver_load_last_sequence_ + 1,
+        load.driver().function_thirty_one_address,
+        load.load_segment(), state_offset, *value});
+    return function.outcome();
+}
+
 std::optional<MillenniumDosCompatibilityRunnerCheckpoint>
 ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner() {
   if (active_ && session_snapshot_ &&
@@ -1255,12 +1292,17 @@ ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner() {
       runner.synchronize_external_sequence(next.checkpoint().last_sequence);
       constexpr std::string_view library_hash =
           "6bc6484fbea66a8e4eaf61b53d7eeab62a358b2c76a40897cca9f80c861b7678";
+      constexpr std::string_view titles_hash =
+          "3cc57f2b12a0da44dd43220f44f06a05b9e3f009bcf008b7bb87622a5988cbe6";
       if (!active_media_) throw std::runtime_error("Active verified media is unavailable");
       const auto& media = *active_media_;
       const auto library = media.borrow(library_hash);
       if (!library)
         throw std::runtime_error(
             "Exact TITLE.LIB compatibility source is unavailable");
+      const auto titles_executable = media.borrow(titles_hash);
+      if (!titles_executable)
+        throw std::runtime_error("Exact TITLES.EXE palette source is unavailable");
       while (true) {
         const auto c = next.checkpoint();
         runner.synchronize_external_sequence(c.last_sequence);
@@ -1356,6 +1398,29 @@ ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner() {
             next.execute_post_library_setup(runner.next_sequence(), 0x1bef,
                                             0x1aac);
             runner.record_automatic_operation();
+          }
+          continue;
+        }
+        const bool palette_state =
+            c.state == MillenniumDosTitleInitializationState::bios_palette_interrupt_boundary ||
+            c.state == MillenniumDosTitleInitializationState::library_palette_bios_interrupt_boundary;
+        if (palette_state) {
+          next.execute_native_palette_bios_service(*titles_executable);
+          runner.record_automatic_operation();
+          if (next.checkpoint().state == MillenniumDosTitleInitializationState::
+                  post_library_setup_call_boundary) {
+            const auto reached = next.checkpoint();
+            next.execute_post_library_setup(reached.last_sequence + 1, 0x1bef, 0x1aac);
+          }
+          if (next.checkpoint().state == MillenniumDosTitleInitializationState::
+                  post_video_setup_call_boundary) {
+            const auto reached = next.checkpoint();
+            next.execute_post_video_setup(reached.last_sequence + 1, 0x1c0e, 0x135e);
+          }
+          if (next.checkpoint().state == MillenniumDosTitleInitializationState::
+                  post_video_graphics_call_boundary) {
+            const auto reached = next.checkpoint();
+            next.execute_post_video_graphics_call(reached.last_sequence + 1, 0x1c11, 0x0ff3);
           }
           continue;
         }
@@ -1528,6 +1593,14 @@ ReleaseRuntimeCoordinator::tick_millennium_dos_compatibility_runner() {
         runner.record_automatic_operation();
         continue;
       }
+      case MillenniumDosSoundDriverLoadState::awaiting_parent_stack:
+        // The exact English COM source resets SP to $0100 at entry. Its prior
+        // near calls return, and CALL $031c at $0240 leaves one return word
+        // active at the $032f store, so this compatibility process has SP
+        // $00fe. This is source-derived Eon state, not a captured DOS value.
+        next.apply_compatibility_parent_stack();
+        runner.record_automatic_operation();
+        continue;
       case MillenniumDosSoundDriverLoadState::title_exec_boundary: {
         if (!millennium_dos_ || !millennium_dos_->title_flow)
           throw std::runtime_error("English title flow is unavailable");
@@ -2213,6 +2286,21 @@ MillenniumDosTitleInitializationObservationResult ReleaseRuntimeCoordinator::obs
         NativeRuntimeEffectBatch batch{"millennium-dos-title-vector-"+std::to_string(observation.sequence),true,{}};
         for(std::size_t i=prior;i<checkpoint.memory_effects.size();++i){const auto& effect=checkpoint.memory_effects[i];batch.effects.push_back({batch.effects.size()+1,{NativeRuntimeAddressSpace::dos_segmented,checkpoint.child_code_segment,effect.offset},MemoryTransferElementWidth::word,NativeRuntimeByteOrder::little_endian,effect.value});}
         const auto applied=memory.apply(batch);if(!applied.accepted){result.error=applied.error;return result;}
+    }
+    // DOS function 25h installs the caller's exact CS:DX at IVT vector 0 or
+    // 4. The hash-bound caller sets DX=$1124 and has already supplied the
+    // active child CS. Mirror that committed service effect in owned memory.
+    if(observation.interrupt_address==0x1106||observation.interrupt_address==0x111d){
+        const auto vector=observation.interrupt_address==0x1106?0U:4U;
+        const auto applied=memory.apply({
+            "millennium-dos-title-install-vector-"+std::to_string(vector)+"-"+
+                std::to_string(observation.sequence),true,{{
+                1,{NativeRuntimeAddressSpace::dos_segmented,std::uint16_t{0},vector*4U},
+                MemoryTransferElementWidth::word,NativeRuntimeByteOrder::little_endian,0x1124},
+                {2,{NativeRuntimeAddressSpace::dos_segmented,std::uint16_t{0},vector*4U+2U},
+                MemoryTransferElementWidth::word,NativeRuntimeByteOrder::little_endian,
+                checkpoint.child_code_segment}}});
+        if(!applied.accepted){result.error=applied.error;return result;}
     }
     millennium_dos_title_initialization_=std::move(next);*native_runtime_memory_=std::move(memory);result.accepted=true;return result;
 }
@@ -3706,8 +3794,9 @@ RuntimeInputDisposition ReleaseRuntimeCoordinator::observe_input(
         // The old route made the visible launcher wait for a test-only host
         // injection of an arbitrary child CS.  This is now explicitly Eon's
         // compatibility-process address, not an original allocation or a
-        // captured value.  Subsequent DOS, vector, stack and title results
-        // remain typed external boundaries and are never synthesized here.
+        // captured value. Subsequent DOS results remain typed boundaries;
+        // the verified parent SP is derived from exact launcher source, while
+        // title-private results remain external boundaries.
         constexpr std::uint16_t compatibility_process_code_segment = 0xe000;
         if (!begin_millennium_dos_sound_driver_load(1,
                 compatibility_process_code_segment,
@@ -3829,6 +3918,12 @@ ReleaseRuntimeCoordinator::drive_deuteros_amiga_main_stage(const std::uint32_t s
         result.error = "Deuteros main-stage drive requires an active title session";
         return result;
     }
+    if(deuteros_amiga_vblank_pending_service_generation_==active_runtime_generation_){
+        result.accepted=true;
+        result.awaiting_external_observation=true;
+        result.stop_before_address=0x20860;
+        return result;
+    }
     result.accepted = true;
     for (; result.steps < step_limit;) {
         const auto checkpoint = deuteros_amiga_title_dependency_chain_checkpoint();
@@ -3841,8 +3936,16 @@ ReleaseRuntimeCoordinator::drive_deuteros_amiga_main_stage(const std::uint32_t s
         bool deterministic = true;
         if (checkpoint->main_stage_state == DeuterosAmigaMainStageState::awaiting_20994_entry) {
             advanced = advance_deuteros_amiga_main_stage_20994_exec_entry();
+        } else if(checkpoint->main_stage_state==DeuterosAmigaMainStageState::awaiting_loop_request_service
+            &&checkpoint->main_stage_loop_graphics
+            &&checkpoint->main_stage_loop_graphics->next_call_address==0x208b4){
+            advanced=register_deuteros_amiga_main_stage_vblank_server();
         } else if (checkpoint->main_stage_state == DeuterosAmigaMainStageState::awaiting_loop_prepare_body) {
             advanced = advance_deuteros_amiga_main_stage_loop_prepare_body();
+        } else if (checkpoint->main_stage_state == DeuterosAmigaMainStageState::awaiting_second_loop_graphics_return
+            && checkpoint->main_stage_loop_graphics
+            && checkpoint->main_stage_loop_graphics->next_call_address == 0x2132a) {
+            advanced = execute_deuteros_amiga_main_stage_load_rgb4();
         } else if (checkpoint->main_stage_state == DeuterosAmigaMainStageState::awaiting_record_loop) {
             advanced = advance_deuteros_amiga_main_stage_record_loop();
         } else if (checkpoint->main_stage_loop_graphics
@@ -6346,14 +6449,250 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_graphics_retur
     return result;
 }
 DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::register_deuteros_amiga_main_stage_vblank_server(){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!active_media_||!deuteros_amiga_||!native_runtime_memory_
+        ||!deuteros_amiga_->title_stage_session()
+        ||!session_snapshot_||session_snapshot_->kind!=RuntimeSessionKind::deuteros_amiga_title_stage){
+        result.error="Deuteros native AddIntServer requires the active title-stage session";
+        return result;
+    }
+    if(active_runtime_generation_==0
+        ||deuteros_amiga_vblank_registration_generation_==active_runtime_generation_){
+        result.error="Deuteros native AddIntServer is inactive or already registered";
+        return result;
+    }
+    try{
+        constexpr std::uint32_t code_address=0x20888;
+        constexpr std::size_t code_size=0x2c;
+        constexpr std::string_view code_sha256=
+            "4b31f3ba22021d8fdd1bbf5909614083d96c973fcfa9d5dd5eccb4fb90898a18";
+        auto memory=*native_runtime_memory_;
+        const auto code=memory.read_linear_range(code_address,code_size);
+        if(!code||to_hex(sha256(*code))!=code_sha256){
+            result.error="Deuteros AddIntServer caller bytes are not owned or hash-bound";
+            return result;
+        }
+        constexpr std::string_view call_sha256=
+            "1bc5d4252f7ba616e4c3fc2f7da46952324958dffc5850067b577a29db3fef31";
+        const auto call=memory.read_linear_range(0x208b4,6);
+        if(!call||to_hex(sha256(*call))!=call_sha256){
+            result.error="Deuteros AddIntServer JSR/RTS bytes are not owned or hash-bound";
+            return result;
+        }
+        const auto read=[&](const std::uint32_t address,const std::uint32_t width){
+            if(width==0||width>4||(width>1&&(address&1U))
+                ||address>0x1000000U-width)
+                throw std::runtime_error("Deuteros interrupt-node read is unaligned or out of bounds");
+            std::uint32_t value=0;
+            for(std::uint32_t index=0;index<width;++index){
+                const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,
+                    std::nullopt,address+index});
+                if(!byte)throw std::runtime_error("Deuteros interrupt node is not fully owned");
+                value=(value<<8U)|*byte;
+            }
+            return value;
+        };
+        const auto plan=deuteros_amiga_->title_stage_session()->main_stage_loop_graphics_plan();
+        if(!plan||plan->pending_read_instruction!=0x208b0
+            ||plan->pending_read_address!=4||plan->next_call_address!=0x208b4
+            ||plan->next_return_address!=0x208b8||plan->next_vector!=-0xa8
+            ||plan->a1_value!=0x2086a||plan->d0_value!=5
+            ||read(0x20872,1)!=2||read(0x20873,1)!=0xc4
+            ||read(0x20878,4)!=0x20880||read(0x2087c,4)!=0x207ec){
+            result.error="Deuteros AddIntServer call or owned interrupt node changed";
+            return result;
+        }
+        const auto optional_pointer=read(0x2126a,4);
+        auto pending=*deuteros_amiga_->title_stage_session();
+        if(!pending.execute_main_stage_interrupt_server_registration(optional_pointer)){
+            result.error="Deuteros native AddIntServer boundary disappeared before registration";
+            return result;
+        }
+        if(!deuteros_amiga_->execute_main_stage_interrupt_server_registration(optional_pointer)){
+            result.error="Deuteros native AddIntServer registration disappeared before commit";
+            return result;
+        }
+        deuteros_amiga_vblank_registration_generation_=active_runtime_generation_;
+        deuteros_amiga_vblank_tick_count_=0;
+        deuteros_amiga_vblank_pending_service_generation_=0;
+        result.accepted=true;
+    }catch(const std::exception& error){result.error=error.what();}
+    return result;
+}
+
+std::optional<std::uint64_t>
+ReleaseRuntimeCoordinator::deuteros_amiga_vblank_registration_generation() const{
+    if(!active_||active_runtime_generation_==0
+        ||deuteros_amiga_vblank_registration_generation_!=active_runtime_generation_
+        ||!session_snapshot_||session_snapshot_->game!=Game::deuteros
+        ||session_snapshot_->platform!=Platform::amiga)return std::nullopt;
+    return deuteros_amiga_vblank_registration_generation_;
+}
+
+DeuterosAmigaVblankTickResult ReleaseRuntimeCoordinator::tick_deuteros_amiga_vblank(
+    const std::uint64_t expected_generation){
+    DeuterosAmigaVblankTickResult result;
+    result.generation=expected_generation;
+    if(expected_generation==0||expected_generation!=active_runtime_generation_){
+        result.status=DeuterosAmigaVblankTickStatus::stale_generation;
+        result.error="Deuteros VBL tick belongs to a stale runtime generation";
+        return result;
+    }
+    if(!active_||!session_snapshot_||session_snapshot_->game!=Game::deuteros
+        ||session_snapshot_->platform!=Platform::amiga||!native_runtime_memory_){
+        result.status=DeuterosAmigaVblankTickStatus::not_applicable;
+        return result;
+    }
+    if(deuteros_amiga_vblank_registration_generation_!=expected_generation){
+        result.status=DeuterosAmigaVblankTickStatus::waiting_for_registration;
+        return result;
+    }
+    if(deuteros_amiga_vblank_pending_service_generation_==expected_generation){
+        result.status=DeuterosAmigaVblankTickStatus::pending_audio_service;
+        result.tick_index=deuteros_amiga_vblank_tick_count_+1;
+        result.stop_before_address=0x20860;
+        result.audio_service_pending=true;
+        return result;
+    }
+    if(deuteros_amiga_vblank_tick_count_==std::numeric_limits<std::uint64_t>::max()){
+        result.status=DeuterosAmigaVblankTickStatus::rejected;
+        result.error="Deuteros VBL tick counter exhausted";
+        return result;
+    }
+    try{
+        auto memory=*native_runtime_memory_;
+        const auto read=[&memory](const std::uint32_t address){
+            return memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address});
+        };
+        const auto callback=evaluate_deuteros_amiga_vblank_callback(read);
+        result.tick_index=deuteros_amiga_vblank_tick_count_+1;
+        result.counter_before=callback.counter_before;
+        result.counter_after=callback.counter_after;
+        result.palette_updated=callback.palette_flag;
+        if(callback.audio_dispatch_requested)
+            deuteros_amiga_vblank_pending_service_generation_=expected_generation;
+        NativeRuntimeEffectBatch batch{
+            "deuteros-amiga-vblank-"+std::to_string(expected_generation)+"-"+
+                std::to_string(result.tick_index),true,{}};
+        batch.effects.reserve(callback.memory_writes.size());
+        for(const auto& write:callback.memory_writes){
+            if(!memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,write.address}))
+                throw std::runtime_error("Deuteros VBL callback destination is not already owned");
+            batch.effects.push_back({batch.effects.size()+1,
+                {NativeRuntimeAddressSpace::linear,std::nullopt,write.address},
+                MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,
+                write.value});
+        }
+        if(batch.effects.empty())throw std::runtime_error("Deuteros VBL callback produced no state writes");
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted)throw std::runtime_error(applied.error);
+        if(callback.audio_dispatch_requested){
+            // The stage copy at ADF +$5800 -> RAM $20000 maps this exact
+            // routine span to $22bea. Hash it before applying its bounded,
+            // ordered descriptor and MMIO-intent effects to the private copy.
+            constexpr std::size_t audio_service_size=0x438;
+            constexpr std::string_view audio_service_sha256=
+                "ac71cc9f850f2b1165a42d7583d22c8ef7091fbc960f5610537311ee732b3dc7";
+            const auto audio_code=memory.read_linear_range(0x22bea,audio_service_size);
+            if(!audio_code||to_hex(sha256(*audio_code))!=audio_service_sha256){
+                result.status=DeuterosAmigaVblankTickStatus::pending_audio_service;
+                result.audio_service_pending=true;
+                result.stop_before_address=0x20860;
+                result.error="Deuteros $22bea runtime code is not owned or hash-bound";
+                return result;
+            }
+            std::size_t audio_write_index=0;
+            const auto audio_read=[&memory](const std::uint32_t address,
+                const std::uint32_t width){
+                if(width==0||width>4||(width>1&&(address&1U))
+                    ||address>0x1000000U-width)
+                    throw std::runtime_error("Deuteros $22bea read is unaligned or out of bounds");
+                std::uint32_t value=0;
+                for(std::uint32_t byte=0;byte<width;++byte){
+                    const auto current=memory.read_byte({NativeRuntimeAddressSpace::linear,
+                        std::nullopt,address+byte});
+                    if(!current)throw std::runtime_error("Deuteros $22bea read is not owned");
+                    value=(value<<8U)|*current;
+                }
+                return value;
+            };
+            const auto audio_write=[&memory,&audio_write_index,&result,expected_generation,
+                tick_index=result.tick_index](const std::uint32_t address,
+                    const MemoryTransferElementWidth width,const std::uint32_t value){
+                const auto count=static_cast<std::uint32_t>(width);
+                if(count==0||count>4||(count>1&&(address&1U))
+                    ||address>0x1000000U-count)
+                    throw std::runtime_error("Deuteros $22bea write is unaligned or out of bounds");
+                const bool custom_chip_intent=address==0xdff096
+                    ||(address>=0xdff0a0&&address<0xdff0e0);
+                if(custom_chip_intent){
+                    result.audio_hardware_intents.push_back({address,width,value});
+                    return;
+                }
+                for(std::uint32_t byte=0;byte<count;++byte)
+                    if(!memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+byte}))
+                        throw std::runtime_error("Deuteros $22bea RAM destination is not already owned");
+                NativeRuntimeEffectBatch effect{
+                    "deuteros-amiga-vblank-audio-"+std::to_string(expected_generation)+"-"+
+                        std::to_string(tick_index)+"-"+std::to_string(audio_write_index++),
+                    true,{{1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},width,
+                        NativeRuntimeByteOrder::big_endian,value}}};
+                const auto committed=memory.apply(effect);
+                if(!committed.accepted)throw std::runtime_error(committed.error);
+            };
+            const auto audio=consume_deuteros_amiga_owned_audio(audio_read,audio_write);
+            result.audio_dma_write_intents=audio.dma_writes;
+            result.audio_channel_register_intents=audio.channel_registers;
+            result.audio_service_dispatched=true;
+        }
+        *native_runtime_memory_=std::move(memory);
+        deuteros_amiga_vblank_tick_count_=result.tick_index;
+        deuteros_amiga_vblank_pending_service_generation_=0;
+        result.status=DeuterosAmigaVblankTickStatus::tick_applied;
+    }catch(const std::exception& error){
+        result.status=deuteros_amiga_vblank_pending_service_generation_==expected_generation
+            ?DeuterosAmigaVblankTickStatus::pending_audio_service
+            :DeuterosAmigaVblankTickStatus::rejected;
+        result.audio_service_pending=result.status==DeuterosAmigaVblankTickStatus::pending_audio_service;
+        if(result.audio_service_pending){
+            result.stop_before_address=0x20860;
+            result.audio_service_dispatched=false;
+            result.audio_dma_write_intents={};
+            result.audio_channel_register_intents={};
+            result.audio_hardware_intents.clear();
+        }
+        result.error=error.what();
+    }
+    return result;
+}
+
+DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_loop_request_service(
     const DeuterosAmigaObservedLoopRequestService o){
     DeuterosAmigaTitleDependencyObservationResult result;
+    if(o.call_address==0x208b4&&o.return_address==0x208b8&&o.vector==-0xa8){
+        result.error="Deuteros AddIntServer is handled by the owned native compatibility registration";
+        return result;
+    }
     if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
         result.error="Deuteros loop request service requires active owned memory";return result;
     }
     try{
         auto memory=*native_runtime_memory_;
+        const auto read_owned=[&](std::uint32_t address,std::uint32_t width){
+            std::uint32_t value=0;
+            for(std::uint32_t i=0;i<width;++i){
+                const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,address+i});
+                if(!byte)throw std::runtime_error("Deuteros AddIntServer node is not fully owned");
+                value=(value<<8U)|*byte;
+            }
+            return value;
+        };
+        if(o.call_address!=0x208b4||o.return_address!=0x208b8||o.vector!=-0xa8
+            ||read_owned(0x20872,1)!=2||read_owned(0x20873,1)!=0xc4
+            ||read_owned(0x20878,4)!=0x20880||read_owned(0x2087c,4)!=0x207ec)
+            throw std::runtime_error("Deuteros AddIntServer call or owned interrupt node changed");
         std::uint32_t pointer=0;
         for(std::uint32_t i=0;i<4;++i){
             const auto byte=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,0x2126a+i});
@@ -6432,6 +6771,10 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_optional_resource_cia(
 DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_record_loop(){
     DeuterosAmigaTitleDependencyObservationResult result;
+    if(deuteros_amiga_vblank_pending_service_generation_==active_runtime_generation_){
+        result.error="Deuteros record loop is stopped before pending VBL audio service at $20860";
+        return result;
+    }
     if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
         result.error="Deuteros record loop requires active owned memory";return result;
     }
@@ -6490,6 +6833,10 @@ ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_record_loop(){
 DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::advance_deuteros_amiga_main_stage_scheduler_pass(){
     DeuterosAmigaTitleDependencyObservationResult result;
+    if(deuteros_amiga_vblank_pending_service_generation_==active_runtime_generation_){
+        result.error="Deuteros scheduler is stopped before pending VBL audio service at $20860";
+        return result;
+    }
     if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()||!native_runtime_memory_){
         result.error="Deuteros scheduler requires active owned memory";return result;
     }
@@ -6626,12 +6973,11 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_frame_buffer(const DeuterosAmi
         }
         const auto frame_id=std::to_string(o.trace_sequence);
         NativeRuntimeEffectBatch batch{"deuteros-amiga-frame-clear-"+frame_id,true,{}};
-        batch.effects.reserve(8004);
+        batch.effects.reserve(8006);
         const auto add=[&](std::uint32_t address,MemoryTransferElementWidth width,std::uint32_t value){
             batch.effects.push_back({batch.effects.size()+1,{NativeRuntimeAddressSpace::linear,std::nullopt,address},
                 width,NativeRuntimeByteOrder::big_endian,value});
         };
-        add(o.port_address,MemoryTransferElementWidth::byte,o.port_value);
         add(o.pointer_address,MemoryTransferElementWidth::longword,o.buffer_address);
         add(0x21696,MemoryTransferElementWidth::word,counter);
         add(0x20128,MemoryTransferElementWidth::longword,o.buffer_address);
@@ -7245,15 +7591,9 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_view_wait(const DeuterosAmigaO
         if(!pending.observe_main_stage_view_wait(o)){
             result.error="Deuteros view wait did not match boundary";return result;
         }
-        auto memory=*native_runtime_memory_;
-        const auto applied=memory.apply({"deuteros-amiga-view-wait-"+std::to_string(o.trace_sequence),true,{{
-            1,{NativeRuntimeAddressSpace::linear,std::nullopt,o.port_address},
-            MemoryTransferElementWidth::byte,NativeRuntimeByteOrder::big_endian,o.value}}});
-        if(!applied.accepted){result.error=applied.error;return result;}
         if(!deuteros_amiga_->observe_main_stage_view_wait(o)){
             result.error="Deuteros view wait disappeared before commit";return result;
         }
-        *native_runtime_memory_=std::move(memory);
         if((o.value&0x20U)!=0&&deuteros_amiga_pending_main_stage_frame_){
             deuteros_amiga_main_stage_frame_=
                 std::make_shared<const DeuterosAmigaMainStageFrameSnapshot>(
@@ -7265,6 +7605,72 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_view_wait(const DeuterosAmigaO
     }catch(const std::exception&e){result.error=e.what();}
     return result;
 }
+
+DeuterosAmigaTitleDependencyObservationResult
+ReleaseRuntimeCoordinator::execute_deuteros_amiga_main_stage_load_rgb4(){
+    DeuterosAmigaTitleDependencyObservationResult result;
+    if(!active_||!deuteros_amiga_||!deuteros_amiga_->title_stage_session()
+        ||!native_runtime_memory_){
+        result.error="Deuteros native LoadRGB4 requires active title memory";return result;
+    }
+    try{
+        auto pending=*deuteros_amiga_->title_stage_session();
+        const auto current=pending.main_stage_loop_graphics_plan();
+        if(!current||current->next_call_address!=0x2132a||current->next_vector!=-0xc0
+            ||current->a0_value!=0x12f12||(current->d0_value&0xffffU)!=16U
+            ||current->a1_value==0){
+            result.error="Deuteros LoadRGB4 call does not match the owned 16-color ABI";return result;
+        }
+        auto memory=*native_runtime_memory_;
+        std::array<std::uint16_t,16> palette{};
+        for(std::uint32_t color=0;color<palette.size();++color){
+            const auto high=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,
+                current->a1_value+color*2U});
+            const auto low=memory.read_byte({NativeRuntimeAddressSpace::linear,std::nullopt,
+                current->a1_value+color*2U+1U});
+            if(!high||!low){result.error="Deuteros LoadRGB4 table is not owned";return result;}
+            palette[color]=static_cast<std::uint16_t>((std::uint16_t(*high)<<8U)|*low);
+            if((palette[color]&0xf000U)!=0){
+                result.error="Deuteros LoadRGB4 table contains a non-RGB4 word";return result;
+            }
+        }
+        const auto plan=pending.execute_native_main_stage_load_rgb4();
+        if(!plan){result.error="Deuteros LoadRGB4 service is detached from its call boundary";return result;}
+        NativeRuntimeEffectBatch batch{"deuteros-amiga-load-rgb4-continuation-"+
+            std::to_string(memory.diagnostics().applied_batch_count+1),true,{}};
+        for(std::size_t i=0;i<plan->write_count;++i)
+            batch.effects.push_back({i+1,{NativeRuntimeAddressSpace::linear,std::nullopt,
+                plan->write_addresses[i]},plan->write_widths[i],NativeRuntimeByteOrder::big_endian,
+                plan->write_values[i]});
+        const auto applied=memory.apply(batch);
+        if(!applied.accepted){result.error=applied.error;return result;}
+        std::optional<DeuterosAmigaMainStageFrameSnapshot> recolored_pending;
+        std::optional<DeuterosAmigaMainStageFrameSnapshot> recolored_displayed;
+        if(deuteros_amiga_pending_main_stage_frame_){
+            recolored_pending=recolor_deuteros_amiga_main_stage_frame(
+                *deuteros_amiga_pending_main_stage_frame_,palette,
+                deuteros_amiga_pending_main_stage_frame_->generation);
+            if(!recolored_pending){result.error="Deuteros LoadRGB4 pending-frame recolor failed";return result;}
+        }
+        if(deuteros_amiga_main_stage_frame_){
+            recolored_displayed=recolor_deuteros_amiga_main_stage_frame(
+                *deuteros_amiga_main_stage_frame_,palette,
+                deuteros_amiga_main_stage_frame_->generation);
+            if(!recolored_displayed){result.error="Deuteros LoadRGB4 displayed-frame recolor failed";return result;}
+        }
+        if(!deuteros_amiga_->execute_native_main_stage_load_rgb4()){
+            result.error="Deuteros LoadRGB4 session disappeared before commit";return result;
+        }
+        *native_runtime_memory_=std::move(memory);
+        deuteros_amiga_main_stage_palette_=palette;
+        if(recolored_pending)deuteros_amiga_pending_main_stage_frame_=std::move(*recolored_pending);
+        if(recolored_displayed)deuteros_amiga_main_stage_frame_=
+            std::make_shared<const DeuterosAmigaMainStageFrameSnapshot>(std::move(*recolored_displayed));
+        result.accepted=true;
+    }catch(const std::exception&e){result.error=e.what();}
+    return result;
+}
+
 DeuterosAmigaTitleDependencyObservationResult
 ReleaseRuntimeCoordinator::observe_deuteros_amiga_main_stage_loop_prepare_return(
     const DeuterosAmigaObservedLocalCallReturn o){
@@ -7305,6 +7711,10 @@ ReleaseRuntimeCoordinator::observe_deuteros_amiga_title_custom_chip_write(
         || !deuteros_amiga_ || !deuteros_amiga_->title_stage_session()
         || !deuteros_amiga_->title_stage_session()->custom_chip_boundary()) {
         result.error="Deuteros title observation requires the active custom-chip boundary";
+        return result;
+    }
+    if(deuteros_amiga_vblank_pending_service_generation_==active_runtime_generation_){
+        result.error="Deuteros scheduler is stopped before pending VBL audio service $20860";
         return result;
     }
     const auto before=deuteros_amiga_->title_stage_session()->custom_chip_boundary()->observed_write_count();

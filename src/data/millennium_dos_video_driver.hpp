@@ -62,8 +62,27 @@ struct MillenniumDosVideoDriverProfile {
     std::uint8_t function_thirty_one_return_ah = 0;
 };
 
+// Result of an AX=$001f video-driver query. The dispatcher and handler bytes
+// are validated against the selected original driver; the state byte is
+// caller-owned live driver memory supplied by the native session that owns
+// that image.
+struct MillenniumDosVideoDriverStateQueryResult {
+    std::uint8_t function_index = 0;
+    std::uint16_t handler_address = 0;
+    std::uint16_t result_ax = 0;
+    constexpr bool operator==(const MillenniumDosVideoDriverStateQueryResult&) const = default;
+};
+
 [[nodiscard]] MillenniumDosVideoDriverProfile parse_millennium_dos_video_driver(
     std::span<const std::uint8_t> bytes, MillenniumDosVideoDriverKind kind);
+
+// Executes only the hash-validated function-$31 path selected by AX=$001f.
+// It never reads the initial file byte as mutable state; the owning runtime
+// must provide the live state byte.
+[[nodiscard]] MillenniumDosVideoDriverStateQueryResult
+evaluate_millennium_dos_video_driver_state_query(
+    std::span<const std::uint8_t> bytes, MillenniumDosVideoDriverKind kind,
+    std::uint16_t request_ax, std::uint8_t live_state_byte);
 
 // Spanish FAT12 drivers are accepted only by their own content identities;
 // their matching dispatch offsets never authorize English-driver substitution.

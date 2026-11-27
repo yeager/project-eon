@@ -1286,6 +1286,103 @@ void MillenniumDosTitleInitializationSession::execute_selected_followup_start(
 void MillenniumDosTitleInitializationSession::observe_bios_palette_result(
     const MillenniumDosTitleBiosResultObservation& observation,
     const std::span<const std::uint8_t> titles_executable) {
+    complete_bios_palette_result(observation, titles_executable, false);
+}
+
+void MillenniumDosTitleInitializationSession::execute_native_palette_bios_service(
+    const std::span<const std::uint8_t> titles_executable) {
+    if (state_ != MillenniumDosTitleInitializationState::bios_palette_interrupt_boundary
+        && state_ != MillenniumDosTitleInitializationState::library_palette_bios_interrupt_boundary) {
+        throw std::runtime_error("Millennium DOS native palette service has no active INT 10h call");
+    }
+    if (last_sequence_ == std::numeric_limits<std::uint64_t>::max()
+        || titles_executable.size() != 7022
+        || to_hex(sha256(titles_executable)) != titles_sha) {
+        throw std::runtime_error("Millennium DOS native palette service source identity mismatch");
+    }
+
+    const auto sequence = last_sequence_ + 1;
+    const auto ax = bios_boundary_.ax;
+    const auto source = bios_boundary_.source_address;
+    std::vector<MillenniumDosTitlePaletteWrite> writes;
+    const auto read_source_byte = [&](const std::uint16_t address) {
+        if (post_video_repeat_) return owned_palette_byte(memory_effects_, child_code_segment_, address);
+        const auto file_offset = static_cast<std::size_t>(address - 0x0100U);
+        if (address < 0x0100U || file_offset >= titles_executable.size())
+            throw std::runtime_error("Millennium DOS palette source is outside TITLES.EXE");
+        return titles_executable[file_offset];
+    };
+
+    if (ax == 0x1000) {
+        if (bios_boundary_.interrupt_address != 0x0497
+            || bios_boundary_.bx > 0x0f00U
+            || (bios_boundary_.bx & 0x00ffU) >= 16U) {
+            throw std::runtime_error("Unsupported Millennium DOS EGA palette-register call");
+        }
+        const auto value = read_source_byte(source);
+        if (value != static_cast<std::uint8_t>(bios_boundary_.bx >> 8U))
+            throw std::runtime_error("Millennium DOS EGA palette operand contradicts its source byte");
+        writes.push_back({sequence, bios_boundary_.interrupt_address, source,
+            static_cast<std::uint16_t>(bios_boundary_.bx & 0xffU),
+            MillenniumDosTitlePaletteWriteKind::ega_palette_register, value, 0, 0, 0});
+    } else if (ax == 0x1010) {
+        if (bios_boundary_.interrupt_address != 0x046d || bios_boundary_.bx >= 256U
+            || (bios_boundary_.dx_known_mask & 0xff00U) != 0xff00U) {
+            throw std::runtime_error("Unsupported Millennium DOS DAC color-register call");
+        }
+        const auto red = read_source_byte(source);
+        const auto green = read_source_byte(static_cast<std::uint16_t>(source + 1U));
+        const auto blue = read_source_byte(static_cast<std::uint16_t>(source + 2U));
+        if (red > 63U || green > 63U || blue > 63U
+            || static_cast<std::uint8_t>(bios_boundary_.dx_known_value >> 8U) != red
+            || static_cast<std::uint8_t>(bios_boundary_.cx >> 8U) != green
+            || static_cast<std::uint8_t>(bios_boundary_.cx) != blue) {
+            throw std::runtime_error("Millennium DOS DAC operands contradict their source bytes");
+        }
+        writes.push_back({sequence, bios_boundary_.interrupt_address, source,
+            bios_boundary_.bx, MillenniumDosTitlePaletteWriteKind::dac_color_register,
+            0, red, green, blue});
+    } else if (ax == 0x1012) {
+        if (bios_boundary_.interrupt_address != 0x0fd8
+            || bios_boundary_.dx_known_mask != 0xffffU
+            || bios_boundary_.dx_known_value != source
+            || bios_boundary_.cx == 0 || bios_boundary_.cx > 256U
+            || static_cast<std::size_t>(bios_boundary_.bx) + bios_boundary_.cx > 256U) {
+            throw std::runtime_error("Unsupported Millennium DOS DAC block call");
+        }
+        const auto required = static_cast<std::size_t>(bios_boundary_.cx) * 3U;
+        if (source > std::numeric_limits<std::uint16_t>::max() - required)
+            throw std::runtime_error("Millennium DOS DAC block source wraps its segment");
+        for (std::size_t index = 0; index < bios_boundary_.cx; ++index) {
+            const auto color_source = static_cast<std::uint16_t>(source + index * 3U);
+            const auto red = owned_palette_byte(memory_effects_, child_code_segment_, color_source);
+            const auto green = owned_palette_byte(memory_effects_, child_code_segment_,
+                static_cast<std::uint16_t>(color_source + 1U));
+            const auto blue = owned_palette_byte(memory_effects_, child_code_segment_,
+                static_cast<std::uint16_t>(color_source + 2U));
+            if (red > 63U || green > 63U || blue > 63U)
+                throw std::runtime_error("Millennium DOS DAC block contains an invalid RGB6 component");
+            writes.push_back({sequence, bios_boundary_.interrupt_address, color_source,
+                static_cast<std::uint16_t>(bios_boundary_.bx + index),
+                MillenniumDosTitlePaletteWriteKind::dac_color_register, 0, red, green, blue});
+        }
+    } else {
+        throw std::runtime_error("Unsupported Millennium DOS native INT 10h palette function");
+    }
+
+    // These original paths overwrite FLAGS before testing them and do not
+    // consume AX after INT 10h. Eon's palette service therefore returns a
+    // canonical zero result; it is kept distinct from observed BIOS data.
+    complete_bios_palette_result({sequence, bios_boundary_.interrupt_address,
+        static_cast<std::uint16_t>(bios_boundary_.interrupt_address + 2U), 0, 0},
+        titles_executable, true);
+    palette_writes_.insert(palette_writes_.end(), writes.begin(), writes.end());
+}
+
+void MillenniumDosTitleInitializationSession::complete_bios_palette_result(
+    const MillenniumDosTitleBiosResultObservation& observation,
+    const std::span<const std::uint8_t> titles_executable,
+    const bool native_compatibility_result) {
     if(state_==MillenniumDosTitleInitializationState::library_palette_bios_interrupt_boundary){
         if(last_sequence_==std::numeric_limits<std::uint64_t>::max()
             ||observation.sequence!=last_sequence_+1
@@ -1294,7 +1391,7 @@ void MillenniumDosTitleInitializationSession::observe_bios_palette_result(
             throw std::runtime_error("Detached Millennium DOS library palette BIOS result");
         auto next=*this;
         next.bios_results_.push_back({observation.sequence,0x0fd8,0x0fda,
-            observation.ax,observation.flags});
+            observation.ax,observation.flags,native_compatibility_result});
         next.bios_boundary_.result_observed=true;
         next.effects_.insert(next.effects_.end(),{{0x0fdb,"DS",child_code_segment_},
             {0x0fdd,"ES",child_code_segment_}});
@@ -1319,7 +1416,7 @@ void MillenniumDosTitleInitializationSession::observe_bios_palette_result(
         throw std::runtime_error("Detached Millennium DOS title BIOS result");
     }
     bios_results_.push_back({observation.sequence,observation.interrupt_address,
-        observation.return_address,observation.ax,observation.flags});
+        observation.return_address,observation.ax,observation.flags,native_compatibility_result});
     bios_boundary_.result_observed=true;
     last_sequence_=observation.sequence;
     const auto next_index=(palette_loop_results+1U)%16U;
@@ -3308,7 +3405,7 @@ MillenniumDosTitleInitializationSession::checkpoint() const {
         selected_call_address_,selected_call_target_,selected_callee_boundary_,
         selected_callee_observed_ax_,selected_callee_observed_flags_,
         selected_followup_call_address_,selected_followup_call_target_,
-        bios_boundary_,bios_results_,title_main_call_address_,
+        bios_boundary_,bios_results_,palette_writes_,title_main_call_address_,
         title_main_call_target_,dos_boundary_,dos_results_,dos_file_results_,
         dos_vector_results_,setup_bios_boundary_,setup_bios_results_,
         far_read_boundary_,far_word_observations_,far_single_word_observations_,far_byte_boundary_,far_byte_observations_,failure_address_,

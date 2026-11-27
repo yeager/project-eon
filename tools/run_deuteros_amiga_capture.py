@@ -94,6 +94,10 @@ MAX_LATE_DISPLAY_WRITES = 2048
 MAX_LATE_DISPLAY_WRITES_PER_REGISTER = 64
 MAX_LATCH_WRITE_BYTES = 16 * 1024
 MAX_LATCH_WRITE_RECORDS = 64
+MAX_VBL_READ_BYTES = 16 * 1024
+MAX_VBL_READ_RECORDS = 64
+MAX_EXEC_BOUNDARY_BYTES = 64 * 1024
+MAX_EXEC_BOUNDARY_RECORDS = 256
 MAX_LATE_SELECTOR_RECORDS = MAX_LATE_RAW_RECORDS_PER_SITE
 LATE_INPUT_START_ORDINAL = 9
 # 2,048 fixed-format writes can exceed 128 KiB; this remains a strict cap
@@ -117,6 +121,7 @@ RAW_PC_SITES = (
 RAW_PC_V16_SITES = (*RAW_PC_SITES, 0x000218CC)
 RAW_PC_V18_SITES = (*RAW_PC_V16_SITES, 0x00021866)
 RAW_PC_V19_SITES = (*RAW_PC_V18_SITES, 0x0001FEA8)
+RAW_PC_V24_SITES = (*RAW_PC_V19_SITES, 0x0002143A)
 LATE_RAW_PC_V19_SITES = RAW_PC_V19_SITES
 LATE_RAW_PC_V20_SITES = (*LATE_RAW_PC_V19_SITES, 0x0001FC22, 0x0001FC9C)
 MAX_RAW_RECORDS = 4096
@@ -159,6 +164,9 @@ LATCH_WRITE_LINE = re.compile(
     r"latch-write ([1-9][0-9]*) cycles=([0-9]+) site=0x00021868 next_pc=0x00021870 "
     r"opcode=0x13fc target=0x00021720 before=0x00 after=0x01 "
     r"input_ordinal=([1-9][0-9]*) input_frame=(-?[0-9]+)\n")
+VBL_READ_LINE = re.compile(
+    r"vblank-read ([1-9][0-9]*) cycles=([0-9]+) pc=0x0002143a "
+    r"address=0x00dff01f value=0x([0-9a-f]{2})\n")
 TITLE_DISPLAY_REGISTERS = frozenset((
     0x0080, 0x0082, 0x008E, 0x0090, 0x0092, 0x0094,
     *range(0x00E0, 0x00F0, 2), 0x0100, 0x0108, 0x010A,
@@ -206,14 +214,35 @@ CAPTURE_RECEIPT_V20_VERSION = "30"
 CAPTURE_RECEIPT_V21_VERSION = "31"
 CAPTURE_RECEIPT_V22_VERSION = "32"
 CAPTURE_RECEIPT_V23_VERSION = "33"
+CAPTURE_RECEIPT_V24_VERSION = "34"
+CAPTURE_RECEIPT_V25_VERSION = "35"
 TRV2_RECORDER_V21_SHA256 = "2fc7f47425d0fa005bb59bf41eaeccf32d1cba284dee4f227e7e723b853e1b35"
 TRV2_RECORDER_V21_SIZE = 62_030_288
 TRV2_RECORDER_V22_SHA256 = "eb0995c70f7f355f674d448b08c0f3e647430562ffde7d179e5aeb12e5abca71"
 TRV2_RECORDER_V22_SIZE = 62_031_592
 TRV2_RECORDER_V23_SHA256 = "e4e46e84cd75eceffb28d26882fef0062582c251b0ef26baa0fccf6aff2e8dd1"
 TRV2_RECORDER_V23_SIZE = 62_039_312
+TRV2_RECORDER_V24_SHA256 = "a46be472e13a59fdbc583c6061ed8d2ce6dbf561d4f77a4df2a5be25f679f3c5"
+TRV2_RECORDER_V24_SIZE = 61_965_896
+TRV2_RECORDER_V25_EXEC_SHA256 = "c6fe574f8b7b508770bac46602f6664a7b7fecf549fac1b31061146d0369ea09"
+TRV2_RECORDER_V25_EXEC_SIZE = 61_978_520
+EXEC_BOUNDARY_SITES = {0x00040450: 0x2e7c, 0x0004045e: 0x4eb9,
+                       0x0004046c: 0x4eb9, 0x0001ed80: 0x43f9,
+                       0x0001ed8c: 0x4eae}
+EXEC_BOUNDARY_LINE = re.compile(
+    r"exec-boundary ([1-9][0-9]*) cycles=([0-9]+) pc=0x([0-9a-f]{8}) "
+    r"opcode=0x([0-9a-f]{4}) d0=0x([0-9a-f]{8}) a6=0x([0-9a-f]{8}) "
+    r"sr=0x([0-9a-f]{4}) usp=0x([0-9a-f]{8}) isp=0x([0-9a-f]{8}) sp=0x([0-9a-f]{8})\n")
 RECORDER_ZERO_ROUTE_OBSERVATION_HASHES = frozenset((
     TRV2_RECORDER_V21_SHA256, TRV2_RECORDER_V22_SHA256, TRV2_RECORDER_V23_SHA256,
+))
+# Receipt schema 34 carries the zero-route sidecar summary fields for a
+# consistent receipt shape, but v24 does not implement that observer. Keep
+# v24 out of the recorder environment allowlist and serialize the sidecar as
+# absent only.
+RECORDER_ZERO_ROUTE_STATUS_HASHES = RECORDER_ZERO_ROUTE_OBSERVATION_HASHES | frozenset((
+    TRV2_RECORDER_V24_SHA256,
+    TRV2_RECORDER_V25_EXEC_SHA256,
 ))
 SOURCE_LAYOUT_RELEASE = "nested-release-zip"
 SOURCE_LAYOUT_STANDALONE = "standalone-zip-pair"
@@ -289,6 +318,8 @@ def reviewed_recorder_hashes() -> dict[str, str]:
     hashes["reviewed-fs-uae-trv2-v21"] = TRV2_RECORDER_V21_SHA256
     hashes["reviewed-fs-uae-trv2-v22"] = TRV2_RECORDER_V22_SHA256
     hashes["reviewed-fs-uae-trv2-v23"] = TRV2_RECORDER_V23_SHA256
+    hashes["reviewed-fs-uae-trv2-v24"] = TRV2_RECORDER_V24_SHA256
+    hashes["reviewed-fs-uae-trv2-v25-exec"] = TRV2_RECORDER_V25_EXEC_SHA256
     return hashes
 
 
@@ -296,6 +327,8 @@ def raw_pc_sites_for_format(raw_format: str) -> tuple[int, ...]:
     """Keep the historical v15 grammar separate from the v16 observer site."""
     if raw_format == "v9-v18-phased":
         return RAW_PC_V18_SITES
+    if raw_format == "v9-v24-phased":
+        return RAW_PC_V24_SITES
     if raw_format == "v9-v19-phased":
         return RAW_PC_V19_SITES
     return RAW_PC_V16_SITES if raw_format in {"v9-v16", "v9-v16-phased"} else RAW_PC_SITES
@@ -325,6 +358,10 @@ def validate_recorder(path: Path) -> tuple[str, int]:
         raise CaptureError("v22 recorder size does not match the reviewed binary")
     if digest == TRV2_RECORDER_V23_SHA256 and size != TRV2_RECORDER_V23_SIZE:
         raise CaptureError("v23 recorder size does not match the reviewed binary")
+    if digest == TRV2_RECORDER_V24_SHA256 and size != TRV2_RECORDER_V24_SIZE:
+        raise CaptureError("v24 recorder size does not match the reviewed binary")
+    if digest == TRV2_RECORDER_V25_EXEC_SHA256 and size != TRV2_RECORDER_V25_EXEC_SIZE:
+        raise CaptureError("v25 exec recorder size does not match the reviewed binary")
     return digest, size
 
 
@@ -542,13 +579,13 @@ def raw_observation_status(path: Path, name: str, raw_format: str = "legacy") ->
     status = (f"{name}=present\n{name}_sha256={digest}\n{name}_bytes={size}\n"
               f"{name}_format={raw_format}\n{name}_records={sum(site_counts.values())}\n"
               f"{name}_site_counts={ordered_counts}\n")
-    if raw_format in {"v7", "v9", "v9-v16", "v9-v16-phased", "v9-v18-phased", "v9-v19-phased"}:
+    if raw_format in {"v7", "v9", "v9-v16", "v9-v16-phased", "v9-v18-phased", "v9-v19-phased", "v9-v24-phased"}:
         ordered_pairs = ",".join(
             f"0x{site:08x}:" + "+".join(
                 f"{ir:04x}/{memory:04x}" for ir, memory in sorted(site_opcode_pairs[site]))
             for site in sites if site in site_opcode_pairs)
         status += f"{name}_opcode_pairs={ordered_pairs}\n"
-    if raw_format in {"v9", "v9-v16", "v9-v16-phased", "v9-v18-phased", "v9-v19-phased"}:
+    if raw_format in {"v9", "v9-v16", "v9-v16-phased", "v9-v18-phased", "v9-v19-phased", "v9-v24-phased"}:
         status += (f"{name}_input_links={sum(ordinal != 0 for ordinal, _ in input_links)}\n"
                    f"{name}_last_input_ordinal={input_links[-1][0] if input_links else 0}\n")
         for phase, label in ((0, "pre_input"), (1, "post_input")):
@@ -582,7 +619,7 @@ def _parse_raw_pc(
         matcher = RAW_PC_LEGACY_LINE
     elif raw_format == "v7":
         matcher = RAW_PC_V7_LINE
-    elif raw_format in {"v9", "v9-v16", "v9-v16-phased", "v9-v18-phased", "v9-v19-phased"}:
+    elif raw_format in {"v9", "v9-v16", "v9-v16-phased", "v9-v18-phased", "v9-v19-phased", "v9-v24-phased"}:
         matcher = RAW_PC_V9_LINE
     else:
         raise CaptureError("raw_pc format is not a reviewed recorder grammar")
@@ -611,11 +648,11 @@ def _parse_raw_pc(
         if site not in raw_pc_sites_for_format(raw_format):
             raise CaptureError("raw_pc uses an unreviewed probe site")
         counts[site] = counts.get(site, 0) + 1
-        if raw_format in {"v7", "v9", "v9-v16", "v9-v16-phased", "v9-v18-phased", "v9-v19-phased"}:
-            if raw_format in {"v9-v18-phased", "v9-v19-phased"} and site == 0x00021866 and int(match.group(5), 16) != 0x6608:
+        if raw_format in {"v7", "v9", "v9-v16", "v9-v16-phased", "v9-v18-phased", "v9-v19-phased", "v9-v24-phased"}:
+            if raw_format in {"v9-v18-phased", "v9-v19-phased", "v9-v24-phased"} and site == 0x00021866 and int(match.group(5), 16) != 0x6608:
                 raise CaptureError("v18 input-branch site has an unexpected memory opcode")
             opcode_pairs.setdefault(site, set()).add((int(match.group(4), 16), int(match.group(5), 16)))
-        if raw_format in {"v9", "v9-v16", "v9-v16-phased", "v9-v18-phased", "v9-v19-phased"}:
+        if raw_format in {"v9", "v9-v16", "v9-v16-phased", "v9-v18-phased", "v9-v19-phased", "v9-v24-phased"}:
             input_ordinal, input_frame = int(match.group(10)), int(match.group(11))
             if input_ordinal > MAX_INPUT_RECEIPT_RECORDS:
                 raise CaptureError("raw_pc exceeds the input-recorder ordinal cap")
@@ -623,10 +660,10 @@ def _parse_raw_pc(
                 raise CaptureError("raw_pc input ordinals are not monotonic")
             if input_ordinal == 0 and input_frame != 0:
                 raise CaptureError("raw_pc no-input snapshot must use frame zero")
-            if raw_format in {"v9-v18-phased", "v9-v19-phased"} and site == 0x00021866:
+            if raw_format in {"v9-v18-phased", "v9-v19-phased", "v9-v24-phased"} and site == 0x00021866:
                 if previous_v18_sample != (0x0002185E, input_ordinal, input_frame):
                     raise CaptureError("v18 branch sample is not paired with the same input-linked bit-test")
-            if raw_format in {"v9-v18-phased", "v9-v19-phased"}:
+            if raw_format in {"v9-v18-phased", "v9-v19-phased", "v9-v24-phased"}:
                 previous_v18_sample = (site, input_ordinal, input_frame)
             input_links.append((input_ordinal, input_frame))
             phase = 1 if input_ordinal else 0
@@ -635,7 +672,7 @@ def _parse_raw_pc(
                 raise CaptureError("raw_pc exceeds the per-site phase cap")
             if raw_format == "v9-v16" and counts[site] > MAX_RAW_RECORDS_PER_SITE:
                 raise CaptureError("raw_pc exceeds the per-site recorder cap")
-            if raw_format in {"v9-v16-phased", "v9-v18-phased", "v9-v19-phased"} and counts[site] > MAX_RAW_RECORDS_PER_SITE * 2:
+            if raw_format in {"v9-v16-phased", "v9-v18-phased", "v9-v19-phased", "v9-v24-phased"} and counts[site] > MAX_RAW_RECORDS_PER_SITE * 2:
                 raise CaptureError("raw_pc exceeds the per-site recorder cap")
         elif counts[site] > MAX_RAW_RECORDS_PER_SITE:
             raise CaptureError("raw_pc exceeds the per-site recorder cap")
@@ -1477,6 +1514,115 @@ def latch_write_receipt_status(path: Path, input_path: Path) -> str:
             "latch_write_input_chronology=linked\n")
 
 
+def vblank_read_receipt_status(path: Path) -> str:
+    """Validate value transitions from the hash-bound $2143a custom-byte read."""
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return "vblank_read=absent\nvblank_read_format=v1\nvblank_read_records=0\n"
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError("VBL-read receipt is not a regular non-symlink file")
+    if info.st_size > MAX_VBL_READ_BYTES:
+        raise CaptureError("VBL-read receipt exceeds the bounded recorder contract")
+    if info.st_size == 0:
+        return "vblank_read=empty\nvblank_read_format=v1\nvblank_read_records=0\n"
+    try:
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                     | getattr(os, "O_NONBLOCK", 0))
+        with os.fdopen(fd, "rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise CaptureError("VBL-read receipt must remain a regular file")
+            payload = stream.read(MAX_VBL_READ_BYTES + 1)
+        if len(payload) > MAX_VBL_READ_BYTES:
+            raise CaptureError("VBL-read receipt exceeds the bounded recorder contract")
+        text = payload.decode("ascii")
+    except (OSError, UnicodeDecodeError) as error:
+        raise CaptureError("VBL-read receipt is not readable ASCII") from error
+    previous_cycles = -1
+    previous_value: int | None = None
+    records = 0
+    set_transitions = 0
+    clear_transitions = 0
+    for expected, line in enumerate(text.splitlines(keepends=True), start=1):
+        match = VBL_READ_LINE.fullmatch(line)
+        if not match:
+            raise CaptureError("VBL-read receipt contains an invalid recorder record")
+        ordinal, cycles, raw_value = match.groups()
+        ordinal, cycles, value = int(ordinal), int(cycles), int(raw_value, 16)
+        if ordinal != expected:
+            raise CaptureError("VBL-read receipt ordinals are not contiguous")
+        if cycles <= previous_cycles:
+            raise CaptureError("VBL-read receipt cycles are not strictly monotonic")
+        if previous_value == value:
+            raise CaptureError("VBL-read receipt contains a redundant value transition")
+        if value & 0x20:
+            set_transitions += 1
+        else:
+            clear_transitions += 1
+        previous_cycles, previous_value = cycles, value
+        records += 1
+        if records > MAX_VBL_READ_RECORDS:
+            raise CaptureError("VBL-read receipt exceeds the recorder record cap")
+    digest, size = hashlib.sha256(payload).hexdigest(), len(payload)
+    return ("vblank_read=present\nvblank_read_format=v1\n"
+            f"vblank_read_sha256={digest}\nvblank_read_bytes={size}\n"
+            f"vblank_read_records={records}\n"
+            f"vblank_read_vertb_set_values={set_transitions}\n"
+            f"vblank_read_vertb_clear_values={clear_transitions}\n")
+
+
+def exec_boundary_receipt_status(path: Path) -> str:
+    """Validate only exact pre-instruction snapshots at the five pinned PCs."""
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return "exec_boundary=absent\nexec_boundary_format=v1\nexec_boundary_records=0\n"
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise CaptureError("Exec-boundary receipt is not a regular non-symlink file")
+    if info.st_size > MAX_EXEC_BOUNDARY_BYTES:
+        raise CaptureError("Exec-boundary receipt exceeds the bounded recorder contract")
+    if info.st_size == 0:
+        return "exec_boundary=empty\nexec_boundary_format=v1\nexec_boundary_records=0\n"
+    try:
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                     | getattr(os, "O_NONBLOCK", 0))
+        with os.fdopen(fd, "rb") as stream:
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                raise CaptureError("Exec-boundary receipt must remain a regular file")
+            payload = stream.read(MAX_EXEC_BOUNDARY_BYTES + 1)
+        if len(payload) > MAX_EXEC_BOUNDARY_BYTES:
+            raise CaptureError("Exec-boundary receipt exceeds the bounded recorder contract")
+        text = payload.decode("ascii")
+    except (OSError, UnicodeDecodeError) as error:
+        raise CaptureError("Exec-boundary receipt is not readable ASCII") from error
+    previous_cycles = -1
+    counts: dict[int, int] = {}
+    for expected, line in enumerate(text.splitlines(keepends=True), start=1):
+        match = EXEC_BOUNDARY_LINE.fullmatch(line)
+        if not match:
+            raise CaptureError("Exec-boundary receipt contains an invalid recorder record")
+        ordinal, cycles, pc, opcode = (int(match.group(index), 16 if index > 2 else 10)
+                                       for index in range(1, 5))
+        if ordinal != expected:
+            raise CaptureError("Exec-boundary receipt ordinals are not contiguous")
+        if cycles <= previous_cycles:
+            raise CaptureError("Exec-boundary receipt cycles are not strictly monotonic")
+        if pc not in EXEC_BOUNDARY_SITES or opcode != EXEC_BOUNDARY_SITES[pc]:
+            raise CaptureError("Exec-boundary receipt contains an unreviewed PC/opcode pair")
+        counts[pc] = counts.get(pc, 0) + 1
+        previous_cycles = cycles
+        if ordinal > MAX_EXEC_BOUNDARY_RECORDS:
+            raise CaptureError("Exec-boundary receipt exceeds the recorder record cap")
+    if not text.endswith("\n"):
+        raise CaptureError("Exec-boundary receipt has a truncated final record")
+    digest, size = hashlib.sha256(payload).hexdigest(), len(payload)
+    site_counts = ",".join(f"0x{pc:08x}:{counts[pc]}" for pc in EXEC_BOUNDARY_SITES if pc in counts)
+    return ("exec_boundary=present\nexec_boundary_format=v1\n"
+            f"exec_boundary_sha256={digest}\nexec_boundary_bytes={size}\n"
+            f"exec_boundary_records={sum(counts.values())}\n"
+            f"exec_boundary_site_counts={site_counts}\n")
+
+
 def capture_bounded_console(stream, path: Path, over_limit: threading.Event) -> RecorderConsoleStatus:
     """Drain a console into fixed storage and signal if its total safety cap trips.
 
@@ -1624,14 +1770,20 @@ def run_capture(args: argparse.Namespace) -> Path:
     is_v21 = recorder_identity[0] == TRV2_RECORDER_V21_SHA256
     is_v22 = recorder_identity[0] == TRV2_RECORDER_V22_SHA256
     is_v23 = recorder_identity[0] == TRV2_RECORDER_V23_SHA256
+    is_v25 = recorder_identity[0] == TRV2_RECORDER_V25_EXEC_SHA256
+    is_v24 = recorder_identity[0] == TRV2_RECORDER_V24_SHA256 or is_v25
     has_zero_route_observer = recorder_identity[0] in RECORDER_ZERO_ROUTE_OBSERVATION_HASHES
-    has_late_input_sidecars = is_v19 or is_v20 or is_v21 or is_v22 or is_v23
+    has_zero_route_status = recorder_identity[0] in RECORDER_ZERO_ROUTE_STATUS_HASHES
+    has_late_input_sidecars = is_v19 or is_v20 or is_v21 or is_v22 or is_v23 or is_v24 or is_v25
     is_v16 = recorder_identity[0] == TRV2_RECORDER_V16_SHA256
-    phased_raw = is_v16 or is_v17 or is_v18 or is_v19 or is_v20 or is_v21 or is_v22 or is_v23
-    raw_format = ("v9-v19-phased" if is_v19 or is_v20 or is_v21 or is_v22 or is_v23 else
+    phased_raw = is_v16 or is_v17 or is_v18 or is_v19 or is_v20 or is_v21 or is_v22 or is_v23 or is_v24
+    raw_format = ("v9-v24-phased" if is_v24 else
+                  "v9-v19-phased" if is_v19 or is_v20 or is_v21 or is_v22 or is_v23 else
                   "v9-v18-phased" if is_v18 else
                   "v9-v16-phased" if phased_raw else "v9")
-    receipt_version = (CAPTURE_RECEIPT_V23_VERSION if is_v23 else
+    receipt_version = (CAPTURE_RECEIPT_V25_VERSION if is_v25 else
+                       CAPTURE_RECEIPT_V24_VERSION if is_v24 else
+                       CAPTURE_RECEIPT_V23_VERSION if is_v23 else
                        CAPTURE_RECEIPT_V22_VERSION if is_v22 else
                        CAPTURE_RECEIPT_V21_VERSION if is_v21 else
                        CAPTURE_RECEIPT_V20_VERSION if is_v20 else
@@ -1698,7 +1850,7 @@ def run_capture(args: argparse.Namespace) -> Path:
                 output / "late-input-pc.txt")
             environment["PROJECT_EON_FS_UAE_LATE_SELECTOR_RECORD"] = str(
                 output / "late-selector-dispatch.txt")
-        if is_v22 or is_v23:
+        if is_v22 or is_v23 or is_v24 or is_v25:
             environment["PROJECT_EON_FS_UAE_LATE_DISPLAY_RECORD"] = str(
                 output / "late-display.txt")
         else:
@@ -1711,6 +1863,16 @@ def run_capture(args: argparse.Namespace) -> Path:
                 output / "latch-write.txt")
         else:
             environment.pop("PROJECT_EON_FS_UAE_LATCH_WRITE_RECORD", None)
+        if is_v24:
+            environment["PROJECT_EON_FS_UAE_VBL_READ_RECORD"] = str(
+                output / "vblank-read.txt")
+        else:
+            environment.pop("PROJECT_EON_FS_UAE_VBL_READ_RECORD", None)
+        if is_v25:
+            environment["PROJECT_EON_FS_UAE_EXEC_BOUNDARY_RECORD"] = str(
+                output / "exec-boundary.txt")
+        else:
+            environment.pop("PROJECT_EON_FS_UAE_EXEC_BOUNDARY_RECORD", None)
         for instruction in capture_operator_instructions(
                 args.capture_intent, late_sampling=has_late_input_sidecars):
             print(instruction)
@@ -1795,7 +1957,7 @@ def run_capture(args: argparse.Namespace) -> Path:
         selector_status = (selector_dispatch_status(
             output / "selector-dispatch.txt", raw_path, input_path, raw_format)
             if is_v17 or is_v18 else "")
-        late_version = "v20" if is_v20 or is_v21 else "v19"
+        late_version = "v20" if is_v20 or is_v21 or is_v22 or is_v23 or is_v24 or is_v25 else "v19"
         late_status = (late_raw_pc_status(
                            output / "late-input-pc.txt", input_path, late_version)
                        + late_selector_dispatch_status(
@@ -1803,14 +1965,20 @@ def run_capture(args: argparse.Namespace) -> Path:
                            output / "late-input-pc.txt", input_path, late_version)
                        if has_late_input_sidecars else "")
         zero_route_status = (zero_route_observation_status(
-            output / "zero-route-observation.txt", input_path) if has_zero_route_observer else "")
+            output / "zero-route-observation.txt", input_path) if has_zero_route_status else "")
         late_display_status = (late_display_receipt_status(
-            output / "late-display.txt", input_path) if is_v22 or is_v23 else "")
+            output / "late-display.txt", input_path) if is_v22 or is_v23 or is_v24 or is_v25 else "")
         latch_write_status = (latch_write_receipt_status(
-            output / "latch-write.txt", input_path) if is_v23 else "")
+            output / "latch-write.txt", input_path) if is_v23 or is_v24 or is_v25 else "")
+        vblank_read_status = (vblank_read_receipt_status(
+            output / "vblank-read.txt") if is_v24 else "")
+        exec_boundary_status = (exec_boundary_receipt_status(
+            output / "exec-boundary.txt") if is_v25 else "")
         write_exclusive(output / "run-status.txt",
                         f"capture_receipt_version={receipt_version}\n"
-                        + ("recorder_protocol=deuteros-amiga-fsuae-v23\n" if is_v23 else
+                        + ("recorder_protocol=deuteros-amiga-fsuae-v25-exec\n" if is_v25 else
+                           "recorder_protocol=deuteros-amiga-fsuae-v24\n" if is_v24 else
+                           "recorder_protocol=deuteros-amiga-fsuae-v23\n" if is_v23 else
                            "recorder_protocol=deuteros-amiga-fsuae-v22\n" if is_v22 else
                            "recorder_protocol=deuteros-amiga-fsuae-v21\n" if is_v21 else
                            "recorder_protocol=deuteros-amiga-fsuae-v20\n" if is_v20 else
@@ -1836,6 +2004,8 @@ def run_capture(args: argparse.Namespace) -> Path:
                         + intent_status + receipt_status + observation_status + chronology_status + display_status
                         + selector_status + late_status + zero_route_status + late_display_status
                         + latch_write_status
+                        + vblank_read_status
+                        + exec_boundary_status
                         + recorder_console_status(console_result[0]))
         if console_result[0].over_limit:
             raise CaptureError(

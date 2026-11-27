@@ -174,6 +174,25 @@ struct MillenniumDosTitleBiosResultRecord {
     std::uint16_t return_address = 0;
     std::uint16_t ax = 0;
     std::uint16_t flags = 0;
+    bool native_compatibility_result = false;
+};
+
+enum class MillenniumDosTitlePaletteWriteKind {
+    ega_palette_register,
+    dac_color_register,
+};
+
+struct MillenniumDosTitlePaletteWrite {
+    std::uint64_t sequence = 0;
+    std::uint16_t interrupt_address = 0;
+    std::uint16_t source_address = 0;
+    std::uint16_t register_index = 0;
+    MillenniumDosTitlePaletteWriteKind kind{};
+    std::uint8_t value = 0;
+    std::uint8_t red = 0;
+    std::uint8_t green = 0;
+    std::uint8_t blue = 0;
+    constexpr bool operator==(const MillenniumDosTitlePaletteWrite&) const = default;
 };
 
 struct MillenniumDosTitleDosResultObservation {
@@ -391,6 +410,7 @@ struct MillenniumDosTitleInitializationCheckpoint {
     std::uint16_t selected_followup_call_target = 0;
     MillenniumDosTitleBiosInterruptBoundary bios_boundary;
     std::vector<MillenniumDosTitleBiosResultRecord> bios_results;
+    std::vector<MillenniumDosTitlePaletteWrite> palette_writes;
     std::uint16_t title_main_call_address = 0;
     std::uint16_t title_main_call_target = 0;
     MillenniumDosTitleDosBoundary dos_boundary;
@@ -443,6 +463,8 @@ public:
     void observe_bios_palette_result(
         const MillenniumDosTitleBiosResultObservation&,
         std::span<const std::uint8_t> titles_executable);
+    void execute_native_palette_bios_service(
+        std::span<const std::uint8_t> titles_executable);
     void execute_title_main_allocation_start(std::uint64_t sequence,
         std::uint16_t call_address, std::uint16_t call_target);
     void observe_dos_memory_result(
@@ -494,6 +516,11 @@ public:
     [[nodiscard]] MillenniumDosTitleInitializationCheckpoint checkpoint() const;
 
 private:
+    void complete_bios_palette_result(
+        const MillenniumDosTitleBiosResultObservation&,
+        std::span<const std::uint8_t> titles_executable,
+        bool native_compatibility_result);
+
     void advance_encoded_record_complete();
     void advance_descriptor_mode_two_return();
     [[nodiscard]] std::optional<std::uint16_t> descriptor_cached_local_word(
@@ -532,6 +559,7 @@ private:
     std::uint16_t descriptor_output_segment_ = 0;
     MillenniumDosTitleBiosInterruptBoundary bios_boundary_;
     std::vector<MillenniumDosTitleBiosResultRecord> bios_results_;
+    std::vector<MillenniumDosTitlePaletteWrite> palette_writes_;
     std::uint16_t title_main_call_address_ = 0;
     std::uint16_t title_main_call_target_ = 0;
     MillenniumDosTitleDosBoundary dos_boundary_;

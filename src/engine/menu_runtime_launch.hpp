@@ -190,6 +190,10 @@ public:
     [[nodiscard]] DeuterosAmigaInterruptWorkerObservationResult
     observe_deuteros_amiga_interrupt_worker(
         DeuterosAmigaInterruptWorkerEntryObservation observation);
+    [[nodiscard]] std::optional<std::uint64_t>
+    deuteros_amiga_vblank_registration_generation() const;
+    [[nodiscard]] DeuterosAmigaVblankTickResult
+    tick_deuteros_amiga_vblank(std::uint64_t expected_generation);
     [[nodiscard]] ActiveNativeSessionDriveResult
     drive_active_native_session(std::uint32_t step_limit = 64);
     [[nodiscard]] std::optional<std::vector<float>>
@@ -343,6 +347,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_loop_request_service(DeuterosAmigaObservedLoopRequestService);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_optional_resource_cia(DeuterosAmigaObservedOptionalResourceCia);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_loop_graphics_return(DeuterosAmigaObservedMainStageExecReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult execute_deuteros_amiga_main_stage_load_rgb4();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_loop_prepare_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_loop_scheduler_return(DeuterosAmigaObservedLocalCallReturn);
 

@@ -28,6 +28,12 @@ enum class MillenniumDosSoundDriverLoadBoundaryKind {
     dos_exec,
 };
 
+enum class MillenniumDosSoundDriverParentStackProvenance {
+    pending,
+    external_observation,
+    eon_source_derived_compatibility,
+};
+
 struct MillenniumDosSoundDriverLoadBoundary {
     MillenniumDosSoundDriverLoadBoundaryKind kind =
         MillenniumDosSoundDriverLoadBoundaryKind::dos_result;
@@ -80,6 +86,9 @@ public:
     runtime_byte_effects() const { return runtime_byte_effects_; }
     [[nodiscard]] std::uint16_t file_handle() const { return file_handle_; }
     [[nodiscard]] std::uint16_t load_segment() const { return load_segment_; }
+    [[nodiscard]] MillenniumDosSoundDriverParentStackProvenance parent_stack_provenance() const {
+        return parent_stack_provenance_;
+    }
 
     void observe_open_result(std::uint16_t instruction, bool carry, std::uint16_t ax);
     void observe_seek_end_result(std::uint16_t instruction, bool carry,
@@ -94,6 +103,10 @@ public:
         std::uint16_t dx);
     void observe_parent_stack(std::uint16_t instruction, std::uint16_t address,
         std::uint16_t value);
+    // Advance only the exact English MILL.COM path whose entry initializes
+    // SP and whose active near-call depth at $032f is established by its
+    // hash-bound source profile.
+    void apply_compatibility_parent_stack();
     void observe_title_exec_request(std::uint16_t instruction, std::uint16_t ax,
         std::uint16_t dx, std::uint16_t parameter_block);
 
@@ -109,6 +122,9 @@ private:
     std::uint16_t filename_address_ = 0;
     std::uint16_t file_handle_ = 0;
     std::uint16_t load_segment_ = 0;
+    MillenniumDosExecParentStackProfile parent_stack_profile_;
+    MillenniumDosSoundDriverParentStackProvenance parent_stack_provenance_ =
+        MillenniumDosSoundDriverParentStackProvenance::pending;
 };
 
 } // namespace eon

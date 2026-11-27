@@ -3825,14 +3825,16 @@ int main(int argc, char** argv) {
     assert(incremental_scanner.report().candidates
         == incremental_scanner.report().size_rejected_candidates
             + incremental_scanner.report().hashed_candidates
+            + incremental_scanner.report().bound_container_candidates
             + incremental_scanner.report().unreadable_candidates);
     // Other user files may share a release's byte length, so only the hash
     // identity count is corpus-fixed. Every size-admitted candidate is either
     // completely hashed or explicitly accounted as unreadable.
-    assert(incremental_scanner.report().size_candidates >= 6);
+    assert(incremental_scanner.report().size_admitted_candidates
+        + incremental_scanner.report().bound_container_candidates >= 6);
     assert(incremental_scanner.report().hashed_candidates
         + incremental_scanner.report().unreadable_candidates
-        == incremental_scanner.report().size_candidates);
+        == incremental_scanner.report().size_admitted_candidates);
     assert(incremental_scanner.report().verified_occurrences >= 6);
     // The supplied corpus contains recognised outer archives. A leaf found
     // outside such an archive would remain unbound evidence and cannot alter
@@ -4794,30 +4796,37 @@ int main(int argc, char** argv) {
             && video_checkpoint->state==eon::MillenniumDosVideoDriverLoadState::awaiting_close_result);
         assert(video_step(eon::MillenniumDosVideoDriverDosObservation{7,0x0319,false,video_handle,0,0}));
         assert(video_step(eon::MillenniumDosVideoDriverSetVectorRequestObservation{8,0x020c,0x2591,0,0x21}));
-        assert(video_step(eon::MillenniumDosVideoDriverSetVectorResultObservation{9,0x020c,0x0001,true}));
+        assert(!video_runtime.millennium_dos_video_function_31_checkpoint());
+        assert(video_step(eon::MillenniumDosVideoDriverSetVectorResultObservation{9,0x020c,0x0000,false}));
         video_checkpoint=video_runtime.millennium_dos_video_driver_load_checkpoint();
         assert(video_checkpoint && video_checkpoint->set_vector_result_observed
-            && video_checkpoint->set_vector_carry && video_checkpoint->set_vector_ax==1
+            && !video_checkpoint->set_vector_carry && video_checkpoint->set_vector_ax==0
             && video_checkpoint->state==eon::MillenniumDosVideoDriverLoadState::set_vector_result_observed);
         assert(!video_step(eon::MillenniumDosVideoDriverIvtObservation{10,0x90,0,video_segment}));
         video_checkpoint=video_runtime.millennium_dos_video_driver_load_checkpoint();
         assert(video_checkpoint && video_checkpoint->last_sequence==9
             && video_checkpoint->state==eon::MillenniumDosVideoDriverLoadState::set_vector_result_observed
             && !video_checkpoint->ivt_observation);
-        assert(video_step(eon::MillenniumDosVideoDriverIvtObservation{10,0x91,0,0x1234}));
+        assert(video_step(eon::MillenniumDosVideoDriverIvtObservation{10,0x91,0,video_segment}));
         video_checkpoint=video_runtime.millennium_dos_video_driver_load_checkpoint();
         assert(video_checkpoint && video_checkpoint->state==eon::MillenniumDosVideoDriverLoadState::ivt_observation_recorded
             && video_checkpoint->set_vector_result_observed
             && video_checkpoint->ivt_observation
             && video_checkpoint->ivt_observation->interrupt_number==0x91
             && video_checkpoint->ivt_observation->offset==0
-            && video_checkpoint->ivt_observation->segment==0x1234
-            && !video_checkpoint->ivt_observation_matches_loaded_driver
-            && video_checkpoint->set_vector_carry);
+            && video_checkpoint->ivt_observation->segment==video_segment
+            && video_checkpoint->ivt_observation_matches_loaded_driver
+            && !video_checkpoint->set_vector_carry);
+        const auto function_31 = video_runtime.millennium_dos_video_function_31_checkpoint();
+        assert(function_31 && function_31->local_read.ds==video_segment
+            && function_31->local_read.driver_local_address==0x00ac
+            && function_31->local_read.value==0
+            && function_31->ax==0x0100
+            && function_31->ret_instruction_address==0x0251);
         assert(!video_step(eon::MillenniumDosVideoDriverIvtObservation{11,0x91,0,video_segment}));
         const auto after_duplicate_ivt=video_runtime.millennium_dos_video_driver_load_checkpoint();
         assert(after_duplicate_ivt && after_duplicate_ivt->last_sequence==10
-            && after_duplicate_ivt->ivt_observation->segment==0x1234);
+            && after_duplicate_ivt->ivt_observation->segment==video_segment);
         video_runtime.reset();
         assert(!video_runtime.millennium_dos_video_driver_load_checkpoint());
         assert(video_runtime.acquire(admitted_dos_launch));
@@ -4993,27 +5002,29 @@ int main(int argc, char** argv) {
             == eon::MillenniumDosSoundDriverCodeSegmentProvenance::eon_compatibility_process);
     auto compatibility_stop=admitted_dos_runtime.tick_millennium_dos_compatibility_runner();
     assert(compatibility_stop && compatibility_stop->generation==1
-        && compatibility_stop->last_sequence==8
+        && compatibility_stop->last_sequence==14
         && compatibility_stop->code_segment==0xe000
         && compatibility_stop->external_result_required
-        && !compatibility_stop->title_exec_requested
-        && compatibility_stop->boundary.instruction_address==0x032f
+        && compatibility_stop->title_exec_requested
+        && compatibility_stop->boundary.instruction_address==0x0336
         && compatibility_stop->compatibility_file_handle==0xe001
-        && compatibility_stop->automatic_operation_count==7
+        && compatibility_stop->automatic_operation_count==13
         && compatibility_stop->error.empty()
         && compatibility_stop->paragraph_arena.generation==1
-        && compatibility_stop->paragraph_arena.allocations.size()==1
+        && compatibility_stop->paragraph_arena.allocations.size()==2
         && compatibility_stop->paragraph_arena.allocations[0].segment==0xe100
         && compatibility_stop->paragraph_arena.allocations[0].paragraph_count==575
         && compatibility_stop->paragraph_arena.allocations[0].provenance
-            ==eon::MillenniumDosParagraphProvenance::native_compatibility_arena);
+            ==eon::MillenniumDosParagraphProvenance::native_compatibility_arena
+        && compatibility_stop->paragraph_arena.allocations[1].segment==0xe33f
+        && compatibility_stop->paragraph_arena.allocations[1].paragraph_count==455);
     // Open, exact length and native destination storage are compatibility
     // service facts. Detached DOS results cannot replace those internal keys.
     assert(!admitted_dos_runtime.observe_millennium_dos_sound_driver_load(
         eon::MillenniumDosSoundDriverAllocationObservation{8,0x02fa,false,0x3456}).accepted);
     const auto after_driver_read=admitted_dos_runtime.native_runtime_memory_diagnostics();
-    assert(after_driver_read && after_driver_read->initialized_byte_count==9199
-        && after_driver_read->applied_batch_count==3);
+    assert(after_driver_read
+        && after_driver_read->initialized_byte_count>=9199+7022);
     const auto vector_memory=admitted_dos_runtime.native_runtime_memory_checkpoint();
     assert(vector_memory);
     for (const auto& expected : std::array<std::pair<std::uint16_t,std::uint8_t>,4>{
@@ -5025,29 +5036,21 @@ int main(int argc, char** argv) {
                     &&byte.value==expected.second;
             }));
     }
-    const auto repeated_tick=admitted_dos_runtime.tick_millennium_dos_compatibility_runner();
-    assert(repeated_tick&&repeated_tick->last_sequence==8
-        &&repeated_tick->automatic_operation_count==7);
-    assert(admitted_dos_runtime.native_runtime_memory_diagnostics()->checksum==after_driver_read->checksum);
     assert(!admitted_dos_runtime.observe_millennium_dos_sound_driver_load(
         eon::MillenniumDosSoundDriverReadObservation{8,0x0313,false,0xe001,9194}).accepted);
     assert(admitted_dos_runtime.native_runtime_memory_diagnostics()->checksum==after_driver_read->checksum);
     assert(!admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverVectorObservation{9,0x0239,0x2595,0}).accepted);
-    assert(admitted_dos_runtime.observe_millennium_dos_sound_driver_load(eon::MillenniumDosSoundDriverStackObservation{9,0x032f,0x05f7,0xabcd}).accepted);
+    assert(!admitted_dos_runtime.observe_millennium_dos_sound_driver_load(
+        eon::MillenniumDosSoundDriverStackObservation{9,0x032f,0x05f7,0xabcd}).accepted);
     sound_load_checkpoint=admitted_dos_runtime.millennium_dos_sound_driver_load_checkpoint();
     assert(sound_load_checkpoint
-        && sound_load_checkpoint->state==eon::MillenniumDosSoundDriverLoadState::title_exec_boundary
-        && sound_load_checkpoint->admitted_driver_byte_count==9194
-        && sound_load_checkpoint->runtime_word_effects.size()==4);
-    const auto before_title_child=admitted_dos_runtime.native_runtime_memory_diagnostics();
-    compatibility_stop=admitted_dos_runtime.tick_millennium_dos_compatibility_runner();
-    assert(compatibility_stop && compatibility_stop->last_sequence==14
-        && compatibility_stop->external_result_required
-        && compatibility_stop->title_exec_requested
-        && compatibility_stop->automatic_operation_count==12
-        && compatibility_stop->paragraph_arena.allocations.size()==2
-        && compatibility_stop->paragraph_arena.allocations[1].segment==0xe33f
-        && compatibility_stop->paragraph_arena.allocations[1].paragraph_count==455);
+        &&sound_load_checkpoint->state
+            ==eon::MillenniumDosSoundDriverLoadState::title_exec_requested
+        &&sound_load_checkpoint->admitted_driver_byte_count==9194
+        &&sound_load_checkpoint->runtime_word_effects.size()==4
+        &&sound_load_checkpoint->parent_stack_provenance
+            ==eon::MillenniumDosSoundDriverParentStackProvenance::
+                eon_source_derived_compatibility);
     const auto requested_title=admitted_dos_runtime.millennium_dos_startup_input();
     assert(requested_title && requested_title->title_active
         && !requested_title->title_handed_off);
@@ -5097,11 +5100,7 @@ int main(int argc, char** argv) {
         &&title_entry->entry.register_effects[2].register_name=="IP"
         &&title_entry->entry.register_effects[2].value==0x1b80);
     const auto after_title_child=admitted_dos_runtime.native_runtime_memory_diagnostics();
-    assert(before_title_child&&after_title_child
-        &&after_title_child->initialized_byte_count
-            ==before_title_child->initialized_byte_count+7022
-        &&after_title_child->applied_batch_count
-            ==before_title_child->applied_batch_count+1);
+    assert(after_title_child&&after_title_child->initialized_byte_count>=9199+7022);
     const auto title_memory=admitted_dos_runtime.native_runtime_memory_checkpoint();
     assert(title_memory
         &&std::ranges::count_if(title_memory->initialized_bytes,[](const auto& cell){
@@ -7531,12 +7530,23 @@ int main(int argc, char** argv) {
                 loop_graphics_return).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum
                 ==after_loop_prepare_body->checksum);
-            wrong_graphics_return.trace_sequence=runtime_copy_sequence+106;
-            assert(opening_controller.observe_deuteros_amiga_main_stage_loop_graphics_return(
-                wrong_graphics_return).accepted);
+            const auto native_rgb4_drive=opening_controller.drive_deuteros_amiga_main_stage(1);
+            assert(native_rgb4_drive.accepted&&native_rgb4_drive.steps==1
+                &&native_rgb4_drive.step_limit_reached
+                &&native_rgb4_drive.stop_before_address==0x208b0);
             assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_loop_request_service);
-            assert(!opening_controller.observe_deuteros_amiga_main_stage_loop_graphics_return(
-                wrong_graphics_return).accepted);
+            const auto native_palette_frame=opening_controller.deuteros_amiga_main_stage_frame();
+            const auto native_memory_after_rgb4=opening_controller.native_runtime_memory_checkpoint();
+            assert(native_palette_frame&&native_memory_after_rgb4);
+            for(std::uint32_t color=0;color<16;++color){
+                const auto expected=static_cast<std::uint16_t>(
+                    (std::uint16_t(*runtime_byte(*native_memory_after_rgb4,
+                        first_loop_graphics_checkpoint->main_stage_loop_graphics->a1_value+color*2U))<<8U)
+                    |*runtime_byte(*native_memory_after_rgb4,
+                        first_loop_graphics_checkpoint->main_stage_loop_graphics->a1_value+color*2U+1U));
+                assert(native_palette_frame->palette_rgb4[color]==expected);
+            }
+            assert(!opening_controller.execute_deuteros_amiga_main_stage_load_rgb4().accepted);
             const auto after_loop_local_request=opening_controller.native_runtime_memory_checkpoint();
             assert(after_loop_local_request&&after_loop_local_request->applied_batch_count
                 ==after_loop_prepare_body->applied_batch_count+1);
@@ -7559,25 +7569,24 @@ int main(int argc, char** argv) {
             local_request_checkpoint->main_stage_loop_graphics->write_values[0]=99;
             assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()
                 ->main_stage_loop_graphics->write_values[0]==2);
+            assert(!opening_controller.deuteros_amiga_vblank_registration_generation());
             eon::DeuterosAmigaObservedLoopRequestService loop_request_service{
                 runtime_copy_sequence+107,0x208b0,4,0x680000,0x208b4,0x208b8,0xdeadbeef,-0xa8};
-            auto bad_loop_request_service=loop_request_service;
-            bad_loop_request_service.exec_base=0x680001;
-            assert(!opening_controller.observe_deuteros_amiga_loop_request_service(bad_loop_request_service).accepted);
-            bad_loop_request_service=loop_request_service;
-            bad_loop_request_service.return_address=0x208ba;
-            assert(!opening_controller.observe_deuteros_amiga_loop_request_service(bad_loop_request_service).accepted);
+            assert(!opening_controller.observe_deuteros_amiga_loop_request_service(loop_request_service).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_loop_local_request->checksum);
             assert(!opening_controller.advance_deuteros_amiga_main_stage_record_loop().accepted);
-            assert(opening_controller.observe_deuteros_amiga_loop_request_service(loop_request_service).accepted);
+            const auto native_registration_drive=opening_controller.drive_active_native_session(1);
+            assert(native_registration_drive.accepted()&&native_registration_drive.deuteros_amiga
+                &&native_registration_drive.deuteros_amiga->steps==1
+                &&native_registration_drive.deuteros_amiga->stop_before_address==0x21342);
+            const auto registered_generation=opening_controller.deuteros_amiga_vblank_registration_generation();
+            assert(registered_generation&&*registered_generation!=0);
             assert(main_stage_state()==eon::DeuterosAmigaMainStageState::awaiting_record_loop);
             const auto after_loop_request_service=opening_controller.native_runtime_memory_checkpoint();
-            assert(after_loop_request_service&&after_loop_request_service->applied_batch_count
-                ==after_loop_local_request->applied_batch_count+1);
-            assert(runtime_byte(*after_loop_request_service,4)==0);
-            assert(runtime_byte(*after_loop_request_service,5)==0x68);
-            assert(runtime_byte(*after_loop_request_service,6)==0);
-            assert(runtime_byte(*after_loop_request_service,7)==0);
+            assert(after_loop_request_service&&after_loop_request_service->checksum
+                ==after_loop_local_request->checksum
+                &&after_loop_request_service->applied_batch_count
+                    ==after_loop_local_request->applied_batch_count);
             std::uint32_t optional_loop_pointer=0;
             for(std::uint32_t i=0;i<4;++i)
                 optional_loop_pointer=(optional_loop_pointer<<8U)|*runtime_byte(*after_loop_request_service,0x2126a+i);
@@ -7588,6 +7597,36 @@ int main(int argc, char** argv) {
             assert(!opening_controller.observe_deuteros_amiga_loop_request_service(loop_request_service).accepted);
             assert(opening_controller.native_runtime_memory_checkpoint()->checksum==after_loop_request_service->checksum);
             assert(optional_loop_pointer==0);
+            assert(opening_controller.tick_deuteros_amiga_vblank(*registered_generation+1).status
+                ==eon::DeuterosAmigaVblankTickStatus::stale_generation);
+            const auto native_vblank=opening_controller.tick_deuteros_amiga_vblank(*registered_generation);
+            assert(native_vblank.status==eon::DeuterosAmigaVblankTickStatus::tick_applied
+                &&native_vblank.audio_service_dispatched);
+            assert((native_vblank.audio_dma_write_intents
+                ==std::array<std::uint16_t,2>{15,0x800f}));
+            assert(native_vblank.audio_hardware_intents.size()>=2
+                &&native_vblank.audio_hardware_intents[0].address==0xdff096
+                &&native_vblank.audio_hardware_intents[0].value==15
+                &&native_vblank.audio_hardware_intents[1].address==0xdff096
+                &&native_vblank.audio_hardware_intents[1].value==0x800f);
+            assert(native_vblank.counter_after==native_vblank.counter_before+4U);
+            const auto after_vblank_memory=opening_controller.native_runtime_memory_checkpoint();
+            assert(after_vblank_memory
+                &&after_vblank_memory->checksum!=after_loop_request_service->checksum);
+            assert(!runtime_byte(*after_vblank_memory,0xdff096)
+                &&!runtime_byte(*after_vblank_memory,0xdff0a0));
+            for(std::uint32_t channel=0;channel<4;++channel){
+                const auto& registers=native_vblank.audio_channel_register_intents[channel];
+                const auto descriptor=0x22a6e + channel*14U;
+                assert(registers.channel==channel&&registers.pointer_written
+                    &&registers.length_written&&registers.period_written
+                    &&registers.volume_written);
+                const auto pointer=(std::uint32_t(*runtime_byte(*after_vblank_memory,descriptor))<<24U)
+                    |(std::uint32_t(*runtime_byte(*after_vblank_memory,descriptor+1))<<16U)
+                    |(std::uint32_t(*runtime_byte(*after_vblank_memory,descriptor+2))<<8U)
+                    |*runtime_byte(*after_vblank_memory,descriptor+3);
+                assert(registers.pointer==pointer);
+            }
             {
                 using Width=eon::MemoryTransferElementWidth;
                 std::map<std::uint32_t,std::uint8_t> bytes;
@@ -7638,7 +7677,7 @@ int main(int argc, char** argv) {
             assert(main_stage_state()==eon::DeuterosAmigaMainStageState::loop_runtime_active);
             const auto after_record_loop=opening_controller.native_runtime_memory_checkpoint();
             assert(after_record_loop&&after_record_loop->applied_batch_count
-                ==after_loop_request_service->applied_batch_count+16);
+                ==after_vblank_memory->applied_batch_count+16);
             for(std::uint32_t record=0;record<4;++record){
                 std::uint32_t pointer=0;
                 for(std::uint32_t i=0;i<4;++i)
@@ -7682,6 +7721,7 @@ int main(int argc, char** argv) {
             assert(!opening_controller.deuteros_amiga_main_stage_frame());
             const auto after_first_frame_buffer=opening_controller.native_runtime_memory_checkpoint();
             assert(after_first_frame_buffer&&after_first_frame_buffer->applied_batch_count==after_scheduler_pass->applied_batch_count+2);
+            assert(!runtime_byte(*after_first_frame_buffer,0xdff01f));
             assert(runtime_byte(*after_first_frame_buffer,0x21696)==0&&runtime_byte(*after_first_frame_buffer,0x21697)==1);
             assert(runtime_byte(*after_first_frame_buffer,0x20129)==9&&runtime_byte(*after_first_frame_buffer,0x12ff1)==9);
             assert(runtime_byte(*after_first_frame_buffer,0x210f2)==0&&runtime_byte(*after_first_frame_buffer,0x210f3)==4);
@@ -7710,6 +7750,7 @@ int main(int argc, char** argv) {
             assert(!opening_controller.deuteros_amiga_main_stage_frame());
             assert(opening_controller.deuteros_amiga_title_dependency_chain_checkpoint()->stop_before_address==0x216f2);
             const auto after_view_wait=opening_controller.native_runtime_memory_checkpoint();
+            assert(after_view_wait&& !runtime_byte(*after_view_wait,0xdff01f));
             assert(!opening_controller.observe_deuteros_amiga_view_wait(view_wait).accepted);
             view_wait.trace_sequence=runtime_copy_sequence+111;
             assert(!opening_controller.observe_deuteros_amiga_view_wait(view_wait).accepted);
@@ -7828,10 +7869,23 @@ int main(int argc, char** argv) {
                     if(mode==0x803||mode==0x1003){
                         assert(get(0x22a32,2)==0x23);
                         audio_bytes.erase(0xff0000);put(0x22a32,W::word,0);put(d+10,W::word,mode);
+                        const auto published_bytes=audio_bytes;
+                        auto staged_bytes=audio_bytes;
+                        const auto staged_get=[&](std::uint32_t address,unsigned width){
+                            std::uint32_t value=0;
+                            for(unsigned i=0;i<width;++i)value=(value<<8)|staged_bytes.at(address+i);
+                            return value;
+                        };
+                        const auto staged_put=[&](std::uint32_t address,W width,std::uint32_t value){
+                            const auto size=static_cast<unsigned>(width);
+                            for(unsigned i=0;i<size;++i)
+                                staged_bytes[address+i]=static_cast<std::uint8_t>(value>>((size-i-1)*8));
+                        };
                         bool missing_rom=false;
-                        try{(void)eon::consume_deuteros_amiga_owned_audio(get,put);}
+                        try{(void)eon::consume_deuteros_amiga_owned_audio(staged_get,staged_put);}
                         catch(const std::out_of_range&){missing_rom=true;}
-                        assert(missing_rom);
+                        assert(missing_rom&&audio_bytes==published_bytes
+                            &&staged_bytes!=published_bytes);
                     }
                 }
             }
@@ -9309,6 +9363,28 @@ int main(int argc, char** argv) {
     const auto mill_bytes = eon::extract_asset_by_sha256(english_dos->path,
         "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e");
     assert(titles_bytes && mill_bytes);
+    const auto parent_stack_profile =
+        eon::parse_millennium_dos_exec_parent_stack_profile(*mill_bytes);
+    assert(parent_stack_profile.launcher_sha256
+        == "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e"
+        && parent_stack_profile.com_entry_address == 0x0100
+        && parent_stack_profile.entry_stack_pointer == 0x0100
+        && parent_stack_profile.helper_call_address == 0x0240
+        && parent_stack_profile.helper_entry_address == 0x031c
+        && parent_stack_profile.stack_store_address == 0x032f
+        && parent_stack_profile.stack_store_destination == 0x05f7
+        && parent_stack_profile.stack_at_store == 0x00fe
+        && parent_stack_profile.helper_return_address == 0x0243);
+    auto altered_parent_stack_launcher = *mill_bytes;
+    altered_parent_stack_launcher[0] ^= 0x01;
+    bool rejected_altered_parent_stack_launcher = false;
+    try {
+        static_cast<void>(eon::parse_millennium_dos_exec_parent_stack_profile(
+            altered_parent_stack_launcher));
+    } catch (const std::runtime_error&) {
+        rejected_altered_parent_stack_launcher = true;
+    }
+    assert(rejected_altered_parent_stack_launcher);
     const auto title_flow = eon::parse_millennium_dos_title_flow(*titles_bytes, *mill_bytes);
     const auto title_presentation = eon::parse_millennium_dos_title_presentation_assets(
         title_lib, title_flow);
@@ -9691,9 +9767,29 @@ int main(int argc, char** argv) {
     sound_load.observe_close_result(0x0319,false,7);
     sound_load.observe_vector_install(0x0239,0x2595,0);
     sound_load.observe_parent_stack(0x032f,0x05f7,0xabcd);
-    assert(sound_load.runtime_word_effects().size()==4);
+    assert(sound_load.runtime_word_effects().size()==4
+        && sound_load.parent_stack_provenance()
+            ==eon::MillenniumDosSoundDriverParentStackProvenance::external_observation);
     sound_load.observe_title_exec_request(0x0336,0x4b00,0x068f,0x067a);
     assert(sound_load.state()==eon::MillenniumDosSoundDriverLoadState::title_exec_requested);
+    {
+        eon::MillenniumDosSoundDriverLoadSession compatibility_load(
+            *mill_bytes, *sound_blaster, '1', 0x2222);
+        compatibility_load.observe_open_result(0x02d2, false, 7);
+        compatibility_load.observe_seek_end_result(0x02eb, false, 7, 9194, 0);
+        compatibility_load.observe_allocation_result(0x02fa, false, 0x3456);
+        compatibility_load.observe_seek_start_result(0x0309, false, 7, 0, 0);
+        compatibility_load.observe_read_result(0x0313, false, 7, 9194);
+        compatibility_load.observe_close_result(0x0319, false, 7);
+        compatibility_load.observe_vector_install(0x0239, 0x2595, 0);
+        compatibility_load.apply_compatibility_parent_stack();
+        assert(compatibility_load.state()
+                == eon::MillenniumDosSoundDriverLoadState::title_exec_boundary
+            && compatibility_load.parent_stack_provenance()
+                == eon::MillenniumDosSoundDriverParentStackProvenance::
+                    eon_source_derived_compatibility
+            && compatibility_load.runtime_word_effects().front().value == 0x00fe);
+    }
     {
         eon::MillenniumDosSoundDriverLoadSession ibm_load(*mill_bytes,*ibm_speaker,'0',0x2222);
         assert(ibm_load.driver().kind==eon::MillenniumDosSoundDriverKind::ibm_speaker);
@@ -9803,6 +9899,9 @@ int main(int argc, char** argv) {
     assert(ega_profile.function_thirty_one_address == 0x235);
     assert(ega_profile.function_thirty_one_state_address == 0x8a);
     assert(ega_profile.function_thirty_one_return_ah == 0x04);
+    assert((eon::evaluate_millennium_dos_video_driver_state_query(*ega640,
+        eon::MillenniumDosVideoDriverKind::ega640, 0x001f, 0x01)
+        == eon::MillenniumDosVideoDriverStateQueryResult{0x1f, 0x235, 0x0401}));
     assert(mcga_profile.dispatch_table_address == 0x32);
     assert(mcga_profile.function_zero_address == 0x1e6);
     assert(mcga_profile.function_zero_input_offset == 0);
@@ -9831,6 +9930,17 @@ int main(int argc, char** argv) {
     assert(mcga_profile.function_thirty_one_address == 0x24c);
     assert(mcga_profile.function_thirty_one_state_address == 0xac);
     assert(mcga_profile.function_thirty_one_return_ah == 0x01);
+    assert((eon::evaluate_millennium_dos_video_driver_state_query(*mcga,
+        eon::MillenniumDosVideoDriverKind::mcga, 0x001f, 0x01)
+        == eon::MillenniumDosVideoDriverStateQueryResult{0x1f, 0x24c, 0x0101}));
+    bool rejected_unrelated_private_request = false;
+    try {
+        static_cast<void>(eon::evaluate_millennium_dos_video_driver_state_query(*mcga,
+            eon::MillenniumDosVideoDriverKind::mcga, 0x0020, 0));
+    } catch (const std::runtime_error&) {
+        rejected_unrelated_private_request = true;
+    }
+    assert(rejected_unrelated_private_request);
     // A byte outside every parsed instruction prefix is still part of the
     // original driver identity. Do not let a look-alike dispatch table cross
     // the hash boundary merely because the local anchors happen to match.

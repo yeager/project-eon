@@ -304,6 +304,14 @@ LauncherRuntimeController::observe_deuteros_amiga_interrupt_worker(
     DeuterosAmigaInterruptWorkerEntryObservation observation) {
     return coordinator_.observe_deuteros_amiga_interrupt_worker(observation);
 }
+std::optional<std::uint64_t>
+LauncherRuntimeController::deuteros_amiga_vblank_registration_generation() const {
+    return coordinator_.deuteros_amiga_vblank_registration_generation();
+}
+DeuterosAmigaVblankTickResult LauncherRuntimeController::tick_deuteros_amiga_vblank(
+    const std::uint64_t expected_generation) {
+    return coordinator_.tick_deuteros_amiga_vblank(expected_generation);
+}
 ActiveNativeSessionDriveResult
 LauncherRuntimeController::drive_active_native_session(const std::uint32_t step_limit) {
     return coordinator_.drive_active_native_session(step_limit);
@@ -487,6 +495,7 @@ EON_LAUNCHER_DEUTEROS_TITLE(advance_deuteros_amiga_main_stage_record_loop,(),())
 EON_LAUNCHER_DEUTEROS_TITLE(observe_deuteros_amiga_loop_request_service,(const DeuterosAmigaObservedLoopRequestService o),(o))
 EON_LAUNCHER_DEUTEROS_TITLE(observe_deuteros_amiga_optional_resource_cia,(const DeuterosAmigaObservedOptionalResourceCia o),(o))
 EON_LAUNCHER_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_loop_graphics_return,(const DeuterosAmigaObservedMainStageExecReturn o),(o))
+EON_LAUNCHER_DEUTEROS_TITLE(execute_deuteros_amiga_main_stage_load_rgb4,(),())
 EON_LAUNCHER_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_loop_prepare_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_LAUNCHER_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_loop_scheduler_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 #undef EON_LAUNCHER_DEUTEROS_TITLE

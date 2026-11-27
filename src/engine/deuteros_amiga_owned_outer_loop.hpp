@@ -109,22 +109,20 @@ DeuterosAmigaOuterInputRoute execute_deuteros_amiga_owned_secondary_input(
         throw std::runtime_error("Deuteros secondary input stopped at an unsupported instruction");
     if (branches.size() > 5U)
         throw std::runtime_error("Deuteros secondary input exceeded its bounded branch trace");
-    const auto commit_input_writes = [&]() {
-        write(0xbfe001, MemoryTransferElementWidth::byte, port_value);
-        if (latch_store_executed)
-            write(0x21720, MemoryTransferElementWidth::byte, latch[0]);
-    };
-
     if(state.pc==transition){
         auto route=execute_deuteros_amiga_owned_outer_transition(
             transition,state.data[0],read,write);
-        commit_input_writes();
+        write(0xbfe001, MemoryTransferElementWidth::byte, port_value);
+        if (latch_store_executed)
+            write(0x21720, MemoryTransferElementWidth::byte, latch[0]);
         route.status_register=state.sr;
         route.instructions_executed=instructions;
         route.branch_checkpoints=std::move(branches);
         return route;
     }
-    commit_input_writes();
+    write(0xbfe001, MemoryTransferElementWidth::byte, port_value);
+    if (latch_store_executed)
+        write(0x21720, MemoryTransferElementWidth::byte, latch[0]);
     DeuterosAmigaOuterInputRoute route;
     route.next_instruction = state.pc;
     route.d0 = state.data[0];

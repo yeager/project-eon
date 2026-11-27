@@ -363,6 +363,22 @@ RuntimeHost::observe_deuteros_amiga_interrupt_worker(
     }
     return NativeSessionController::observe_deuteros_amiga_interrupt_worker(observation);
 }
+std::optional<std::uint64_t>
+RuntimeHost::deuteros_amiga_vblank_registration_generation() const {
+    if(revoking())return std::nullopt;
+    return NativeSessionController::deuteros_amiga_vblank_registration_generation();
+}
+DeuterosAmigaVblankTickResult RuntimeHost::tick_deuteros_amiga_vblank(
+    const std::uint64_t expected_generation) {
+    if(revoking()){
+        DeuterosAmigaVblankTickResult result;
+        result.status=DeuterosAmigaVblankTickStatus::stale_generation;
+        result.generation=expected_generation;
+        result.error="Deuteros VBL tick rejected during source revocation";
+        return result;
+    }
+    return NativeSessionController::tick_deuteros_amiga_vblank(expected_generation);
+}
 ActiveNativeSessionDriveResult
 RuntimeHost::drive_active_native_session(const std::uint32_t step_limit) {
     ActiveNativeSessionDriveResult result;

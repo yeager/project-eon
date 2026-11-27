@@ -99,15 +99,25 @@ eon::MillenniumDosTitleInitializationSession make_mode_four_descriptor_fixture(
     session.observe_private_interrupt_result({step(),0x0127,0x0129,0xabcd,0x0246});
     session.execute_post_video_followup(step(),0x1c17,0x1725);
 
-    // These typed far-memory and INT 91h observations are fixture-only
-    // external results. The first descriptor-loop record itself is then read
-    // by the hash-bound TITLE.LIB driver.
-    session.observe_far_words({step(),0x13aa,0x3481,0x0003,6,0});
-    session.observe_far_word({step(),0x13cd,0x3000,0x001e,0x0140});
-    session.observe_far_word({step(),0x13d0,0x3000,0x001c,0x00c8});
-    session.observe_far_word({step(),0x13e2,0x3000,0x001a,0});
-    session.observe_far_byte({step(),0x13e9,0x3000,0x0007,0x23});
-    session.observe_far_byte({step(),0x13f2,0x3000,0x000a,0});
+    // Bind reads whose far-address provenance is established to the supplied
+    // original TITLE.LIB bytes. The `$3000:$000a` mapping is not file-bound;
+    // retain that one read as fixture input rather than substituting file +$a.
+    const auto library_word = [&](const std::size_t offset) {
+        assert(offset + 1 < title_library.size());
+        return static_cast<std::uint16_t>(title_library[offset]
+            | (static_cast<std::uint16_t>(title_library[offset + 1]) << 8U));
+    };
+    assert(library_word(0x4813) == 0x0006 && library_word(0x4815) == 0x0000);
+    assert(library_word(0x001e) == 0x0140 && library_word(0x001c) == 0x00c8
+        && library_word(0x001a) == 0x0000);
+    assert(title_library[0x0007] == 0x23);
+    session.observe_far_words({step(),0x13aa,0x3481,0x0003,
+        library_word(0x4813),library_word(0x4815)});
+    session.observe_far_word({step(),0x13cd,0x3000,0x001e,library_word(0x001e)});
+    session.observe_far_word({step(),0x13d0,0x3000,0x001c,library_word(0x001c)});
+    session.observe_far_word({step(),0x13e2,0x3000,0x001a,library_word(0x001a)});
+    session.observe_far_byte({step(),0x13e9,0x3000,0x0007,title_library[0x0007]});
+    session.observe_far_byte({step(),0x13f2,0x3000,0x000a,0x00});
     session.observe_private_interrupt_result({step(),0x0127,0x0129,0x1357,0x0246});
     const std::vector<std::uint8_t> function_001a_record{
         0x10,0x20,0x30,0x40,0x50,0x60,0x70,0x80,0x68,0x24};

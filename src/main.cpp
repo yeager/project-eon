@@ -1041,6 +1041,8 @@ void report_inspection_json(const std::vector<eon::ReleaseArchive>& releases,
         << scan_snapshot.unique_unbound_direct_media_count;
     std::cout << ",\"candidates\":" << scan_snapshot.candidate_count
         << ",\"size_rejected_candidates\":" << scan.size_rejected_candidates
+        << ",\"size_admitted_candidates\":" << scan.size_admitted_candidates
+        << ",\"bound_container_candidates\":" << scan.bound_container_candidates
         << ",\"manifest_size_matches\":" << scan.size_candidates
         << ",\"direct_media_size_matches\":" << scan.direct_media_size_candidates
         << ",\"hashed\":" << scan.hashed_candidates
@@ -4501,6 +4503,8 @@ int main(int argc, char** argv) {
             std::cout << "SCAN SUMMARY  " << eon::name(report.source_kind) << " source; "
                 << report.candidates << " candidates; "
                 << report.size_rejected_candidates << " size-rejected (not hashed); "
+                << report.bound_container_candidates << " already verified container members; "
+                << report.size_admitted_candidates << " size-admitted; "
                 << report.size_candidates << " manifest-size matches; "
                 << report.hashed_candidates << " hashed; "
                 << report.hash_rejected_candidates << " hash-rejected; "
@@ -5370,6 +5374,13 @@ int main(int argc, char** argv) {
     // a diagnostic can never survive a source revocation or a new launch.
     std::optional<std::pair<std::uint64_t, eon::ActiveNativeSessionDriveResult>>
         active_native_session_drive;
+    std::optional<std::uint64_t> deuteros_vblank_clock_generation;
+    std::optional<std::uint64_t> deuteros_vblank_registration_clock_generation;
+    std::optional<std::pair<std::uint64_t,eon::DeuterosAmigaVblankTickResult>>
+        active_deuteros_vblank_tick;
+    std::uint64_t deuteros_vblank_last_ns = SDL_GetTicksNS();
+    std::uint64_t deuteros_vblank_accumulator_ns = 0;
+    bool deuteros_vblank_audio_blocked = false;
     const auto reset_active_runtime = [&] {
         // Leaving a launch or changing its source is a hard preservation
         // boundary. Nothing derived from the former exact archive may remain
@@ -5387,6 +5398,12 @@ int main(int argc, char** argv) {
         runtime.finish_source_revocation();
         sdl_resource_generation = runtime.generation();
         active_native_session_drive.reset();
+        deuteros_vblank_clock_generation.reset();
+        deuteros_vblank_registration_clock_generation.reset();
+        active_deuteros_vblank_tick.reset();
+        deuteros_vblank_last_ns = SDL_GetTicksNS();
+        deuteros_vblank_accumulator_ns = 0;
+        deuteros_vblank_audio_blocked = false;
         launcher_runtime_admission = std::string(
             eon::release_runtime_admission_label(runtime.admission()));
         launcher_runtime_rejection = std::string(
@@ -5710,6 +5727,25 @@ int main(int argc, char** argv) {
                 << " S3=" << (chain->third_service_local_plan ? "Y" : "N")
                 << " S4=" << (chain->fourth_service_local_plan ? "Y" : "N")
                 << " S5=" << (chain->fifth_service_local_plan ? "Y" : "N");
+            if(active_deuteros_vblank_tick
+                &&active_deuteros_vblank_tick->first==runtime_view.generation){
+                const auto& tick=active_deuteros_vblank_tick->second;
+                summary << " VBL#" << std::dec << tick.tick_index << '=';
+                switch(tick.status){
+                case eon::DeuterosAmigaVblankTickStatus::tick_applied:
+                    summary << "APPLIED";break;
+                case eon::DeuterosAmigaVblankTickStatus::pending_audio_service:
+                    summary << "WAIT @$" << std::hex << tick.stop_before_address;break;
+                case eon::DeuterosAmigaVblankTickStatus::waiting_for_registration:
+                    summary << "NO SERVER";break;
+                case eon::DeuterosAmigaVblankTickStatus::stale_generation:
+                    summary << "STALE";break;
+                case eon::DeuterosAmigaVblankTickStatus::rejected:
+                    summary << "REJECTED";break;
+                case eon::DeuterosAmigaVblankTickStatus::not_applicable:
+                    summary << "INACTIVE";break;
+                }
+            }
             diagnostics.deuteros_amiga_title_dependency_chain = summary.str();
         }
         {
@@ -6326,6 +6362,70 @@ int main(int argc, char** argv) {
                     event.tfinger.y * static_cast<float>(window_height), &x, &y);
                 handle_menu_pointer_down(x, y);
             }
+        }
+
+        // The native main-stage timer follows the Amiga PAL VBL cadence,
+        // independently of the render pacing (including 120 Hz). It starts
+        // only after this runtime generation completes native AddIntServer
+        // registration, and carries elapsed time rather than counting frames.
+        if (screen == Screen::launching && selected == eon::Game::deuteros
+            && runtime.state() == eon::NativeSessionState::deuteros_amiga_title_stage_boundary) {
+            constexpr std::uint64_t pal_vblank_period_ns = 1'000'000'000ULL / 50ULL;
+            constexpr std::uint32_t maximum_vblank_catch_up_per_frame = 8;
+            const auto now_ns = SDL_GetTicksNS();
+            const auto current_generation = runtime.snapshot().generation;
+            if (deuteros_vblank_clock_generation != current_generation) {
+                deuteros_vblank_clock_generation = current_generation;
+                deuteros_vblank_registration_clock_generation.reset();
+                deuteros_vblank_last_ns = now_ns;
+                deuteros_vblank_accumulator_ns = 0;
+                deuteros_vblank_audio_blocked = false;
+                active_deuteros_vblank_tick.reset();
+            }
+            const auto registration_generation =
+                runtime.deuteros_amiga_vblank_registration_generation();
+            if (!registration_generation || *registration_generation != current_generation) {
+                deuteros_vblank_registration_clock_generation.reset();
+                deuteros_vblank_last_ns = now_ns;
+                deuteros_vblank_accumulator_ns = 0;
+            } else if (deuteros_vblank_registration_clock_generation != registration_generation) {
+                deuteros_vblank_registration_clock_generation = registration_generation;
+                deuteros_vblank_last_ns = now_ns;
+                deuteros_vblank_accumulator_ns = 0;
+                deuteros_vblank_audio_blocked = false;
+            } else if (!deuteros_vblank_audio_blocked) {
+                const auto elapsed = now_ns >= deuteros_vblank_last_ns
+                    ? now_ns - deuteros_vblank_last_ns : 0;
+                deuteros_vblank_last_ns = now_ns;
+                deuteros_vblank_accumulator_ns = elapsed
+                    > std::numeric_limits<std::uint64_t>::max()-deuteros_vblank_accumulator_ns
+                    ? std::numeric_limits<std::uint64_t>::max()
+                    : deuteros_vblank_accumulator_ns+elapsed;
+                std::uint32_t delivered = 0;
+                while (deuteros_vblank_accumulator_ns >= pal_vblank_period_ns
+                    && delivered < maximum_vblank_catch_up_per_frame) {
+                    auto tick = runtime.tick_deuteros_amiga_vblank(current_generation);
+                    if (tick.status == eon::DeuterosAmigaVblankTickStatus::tick_applied) {
+                        deuteros_vblank_accumulator_ns -= pal_vblank_period_ns;
+                        ++delivered;
+                        active_deuteros_vblank_tick.emplace(current_generation,std::move(tick));
+                        continue;
+                    }
+                    if (tick.status == eon::DeuterosAmigaVblankTickStatus::pending_audio_service) {
+                        deuteros_vblank_accumulator_ns -= pal_vblank_period_ns;
+                        deuteros_vblank_audio_blocked = true;
+                    }
+                    active_deuteros_vblank_tick.emplace(current_generation,std::move(tick));
+                    break;
+                }
+            }
+        } else {
+            deuteros_vblank_clock_generation.reset();
+            deuteros_vblank_registration_clock_generation.reset();
+            active_deuteros_vblank_tick.reset();
+            deuteros_vblank_last_ns = SDL_GetTicksNS();
+            deuteros_vblank_accumulator_ns = 0;
+            deuteros_vblank_audio_blocked = false;
         }
 
         // Advance the currently admitted deterministic native path exactly
@@ -7223,6 +7323,32 @@ int main(int argc, char** argv) {
                                       << ".b=0x" << prefix_state.writes[1].value
                                       << "; A7=0x" << exec_prelude.stack_pointer_value;
                     draw_text(renderer, 64, 326, prefix_provenance.str());
+                    std::ostringstream vblank_provenance;
+                    if (active_deuteros_vblank_tick
+                        && active_deuteros_vblank_tick->first == runtime.snapshot().generation) {
+                        const auto& tick = active_deuteros_vblank_tick->second;
+                        if (tick.status == eon::DeuterosAmigaVblankTickStatus::tick_applied) {
+                            vblank_provenance << "VBL=" << tick.tick_index << " APPLIED $2079e=0x"
+                                << std::hex << tick.counter_after;
+                            if (tick.audio_service_dispatched) {
+                                vblank_provenance << "; $22bea INTENT="
+                                    << std::hex << tick.audio_dma_write_intents[0] << "/"
+                                    << tick.audio_dma_write_intents[1];
+                            }
+                        } else if (tick.status == eon::DeuterosAmigaVblankTickStatus::pending_audio_service) {
+                            vblank_provenance << "VBL=" << tick.tick_index << " WAIT $22bea @0x"
+                                << std::hex << tick.stop_before_address;
+                        } else if (tick.status == eon::DeuterosAmigaVblankTickStatus::waiting_for_registration) {
+                            vblank_provenance << "VBL=WAIT REGISTRATION";
+                        } else if (tick.status == eon::DeuterosAmigaVblankTickStatus::stale_generation) {
+                            vblank_provenance << "VBL=STALE GENERATION";
+                        } else {
+                            vblank_provenance << "VBL=STOP";
+                        }
+                    } else {
+                        vblank_provenance << "VBL=WAIT REGISTRATION";
+                    }
+                    draw_text(renderer, 64, 338, vblank_provenance.str());
                     const auto& palette = title_stage->graphics_setup_palette;
                     for (std::size_t index = 0; index < palette.size(); ++index) {
                         const auto& color = palette[index];
@@ -7236,7 +7362,7 @@ int main(int argc, char** argv) {
                 }
                 if (title_stage && title_stage->alternate_renderer_trace) {
                     const auto& trace = *title_stage->alternate_renderer_trace;
-                    draw_text(renderer, 64, title_stage ? 342 : 284, tr("ORIGINAL $20580 STREAM: +0x")
+                    draw_text(renderer, 64, title_stage ? 356 : 284, tr("ORIGINAL $20580 STREAM: +0x")
                         + [&] { std::ostringstream stream; stream << std::hex << trace.stream_offset;
                             return stream.str(); }()
                         + " - " + std::to_string(trace.glyph_codes.size()));

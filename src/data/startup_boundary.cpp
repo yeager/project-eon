@@ -8,7 +8,7 @@
 namespace eon {
 namespace {
 constexpr std::array boundaries{
-    StartupBoundary{"e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-launcher", "MILL.COM+0x0", "DOS, driver, child-process and private-interrupt results"},
+    StartupBoundary{"e6e7044b25877fdf8b10d16d2f395886d9957953144ae15ca630cda9cab2a123", "millennium-dos-launcher", "MILL.COM+0x0", "DOS EXEC outcome, driver and private-interrupt results"},
     StartupBoundary{"b40cc2f2c39cdb476b4a82bda7bffed1c80decdfb7fe41b1a38bf54343e0c0a4", "millennium-dos-spanish-startup", "disk+0x0", "FAT12 executable-chain and DOS ABI observations"},
     StartupBoundary{"2e27d7aeb8b8b7f2a75eda45b456ab42775a706aa85516c85e61ce94ec9eb400", "millennium-amiga-defjam-bootstrap", "ADF+0x400", "raw-stage invocation, relocation and Amiga ABI"},
     StartupBoundary{"ec0424445d494809d2661492e289af71b056a429dde13b053a472ccc8347d4dd", "millennium-amiga-defjam-direct-bootstrap", "ADF+0x400", "raw-stage invocation, relocation and Amiga ABI"},

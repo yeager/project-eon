@@ -523,6 +523,23 @@ NativeSessionController::observe_deuteros_amiga_interrupt_worker(
     return runtime_.observe_deuteros_amiga_interrupt_worker(observation);
 }
 
+std::optional<std::uint64_t>
+NativeSessionController::deuteros_amiga_vblank_registration_generation() const {
+    if (state_ != NativeSessionState::deuteros_amiga_title_stage_boundary)
+        return std::nullopt;
+    return runtime_.deuteros_amiga_vblank_registration_generation();
+}
+
+DeuterosAmigaVblankTickResult NativeSessionController::tick_deuteros_amiga_vblank(
+    const std::uint64_t expected_generation) {
+    if (state_ != NativeSessionState::deuteros_amiga_title_stage_boundary) {
+        DeuterosAmigaVblankTickResult result;
+        result.status=DeuterosAmigaVblankTickStatus::not_applicable;
+        return result;
+    }
+    return runtime_.tick_deuteros_amiga_vblank(expected_generation);
+}
+
 ActiveNativeSessionDriveResult
 NativeSessionController::drive_active_native_session(const std::uint32_t step_limit) {
     switch (state_) {
@@ -755,6 +772,7 @@ EON_NATIVE_DEUTEROS_TITLE(advance_deuteros_amiga_main_stage_record_loop,(),())
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_loop_request_service,(const DeuterosAmigaObservedLoopRequestService o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_optional_resource_cia,(const DeuterosAmigaObservedOptionalResourceCia o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_loop_graphics_return,(const DeuterosAmigaObservedMainStageExecReturn o),(o))
+EON_NATIVE_DEUTEROS_TITLE(execute_deuteros_amiga_main_stage_load_rgb4,(),())
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_loop_prepare_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 EON_NATIVE_DEUTEROS_TITLE(observe_deuteros_amiga_main_stage_loop_scheduler_return,(const DeuterosAmigaObservedLocalCallReturn o),(o))
 #undef EON_NATIVE_DEUTEROS_TITLE

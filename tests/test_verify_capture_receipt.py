@@ -18,6 +18,96 @@ SPEC.loader.exec_module(TOOL)
 
 
 class ReceiptVerifierTests(LfTextFixtureWrites, unittest.TestCase):
+    def test_schema35_binds_v25_exec_boundary_recorder_and_sidecar(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        identity = {
+            "recorder_sha256": runner.TRV2_RECORDER_V25_EXEC_SHA256,
+            "recorder_bytes": str(runner.TRV2_RECORDER_V25_EXEC_SIZE),
+            "recorder_protocol": "deuteros-amiga-fsuae-v25-exec",
+        }
+        self.assertIsNone(TOOL.verify_deuteros_recorder_identity(identity, "35", runner))
+        with self.assertRaisesRegex(ValueError, "v25 receipt schema"):
+            TOOL.verify_deuteros_recorder_identity({**identity, "recorder_protocol": "deuteros-amiga-fsuae-v24"}, "35", runner)
+        with temporary_directory() as directory:
+            root = Path(directory)
+            CanonicalReceiptPath(root / "exec-boundary.txt").write_text(
+                "exec-boundary 1 cycles=10 pc=0x00040450 opcode=0x2e7c d0=0x00000001 "
+                "a6=0x00000002 sr=0x2000 usp=0x00070000 isp=0x00080000 sp=0x00080000\n",
+                encoding="ascii")
+            fields = {"capture_receipt_version": "35"}
+            fields.update(dict(line.split("=", 1) for line in
+                runner.exec_boundary_receipt_status(root / "exec-boundary.txt").splitlines()))
+            TOOL.verify_deuteros_exec_boundary(fields, root)
+            fields["exec_boundary_records"] = "2"
+            with self.assertRaisesRegex(ValueError, "grammar/count"):
+                TOOL.verify_deuteros_exec_boundary(fields, root)
+
+    def test_schema34_pins_candidate_identity_without_promoting_it_to_capture(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        identity = {
+            "recorder_sha256": runner.TRV2_RECORDER_V24_SHA256,
+            "recorder_bytes": str(runner.TRV2_RECORDER_V24_SIZE),
+            "recorder_protocol": "deuteros-amiga-fsuae-v24",
+        }
+        self.assertIsNone(TOOL.verify_deuteros_recorder_identity(identity, "34", runner))
+        with self.assertRaisesRegex(ValueError, "v24 receipt schema"):
+            TOOL.verify_deuteros_recorder_identity({
+                **identity, "recorder_protocol": "deuteros-amiga-fsuae-v23",
+            }, "34", runner)
+        with temporary_directory() as directory:
+            root = Path(directory)
+            fields = {"capture_receipt_version": "34"}
+            fields.update(dict(line.split("=", 1) for line in
+                               runner.vblank_read_receipt_status(
+                                   root / "vblank-read.txt").splitlines()))
+            TOOL.verify_deuteros_vblank_read(fields, root)
+            fields["vblank_read_records"] = "1"
+            with self.assertRaisesRegex(ValueError, "grammar/count"):
+                TOOL.verify_deuteros_vblank_read(fields, root)
+
+    def test_schema34_reuses_v23_latch_write_verification(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        with temporary_directory() as directory:
+            root = Path(directory)
+            (root / "host-input-receipt.txt").write_text(
+                "host-input 1 frame=80 line=2 action=149 state=1\n", encoding="ascii")
+            (root / "latch-write.txt").write_text(
+                "latch-write 1 cycles=100 site=0x00021868 next_pc=0x00021870 "
+                "opcode=0x13fc target=0x00021720 before=0x00 after=0x01 "
+                "input_ordinal=1 input_frame=80\n", encoding="ascii")
+            fields = {"capture_receipt_version": "34"}
+            fields.update(dict(line.split("=", 1) for line in
+                runner.latch_write_receipt_status(
+                    root / "latch-write.txt", root / "host-input-receipt.txt").splitlines()))
+            TOOL.verify_deuteros_latch_write(fields, root)
+            fields["latch_write_records"] = "2"
+            with self.assertRaisesRegex(ValueError, "grammar/count"):
+                TOOL.verify_deuteros_latch_write(fields, root)
+
+    def test_schema34_raw_pc_summary_pins_v24_not_v16(self) -> None:
+        runner = TOOL.load_tool("run_deuteros_amiga_capture")
+        with temporary_directory() as directory:
+            root = Path(directory)
+            (root / "raw-pc.txt").write_text(
+                "raw-pc 1 cycles=100 pc=0x0002143a ir_opcode=0x1039 memory_opcode=0x1039 "
+                "d0=0x00000000 a0=0x00000000 a6=0x00000000 sr=0x0000 "
+                "input_ordinal=0 input_frame=0\n", encoding="ascii")
+            fields = {
+                "capture_receipt_version": "34",
+                "recorder_sha256": runner.TRV2_RECORDER_V24_SHA256,
+                "recorder_bytes": str(runner.TRV2_RECORDER_V24_SIZE),
+                "recorder_protocol": "deuteros-amiga-fsuae-v24",
+                "raw_pc": "present",
+                "raw_pc_format": "v9-v24-phased",
+                "raw_pc_records": "1",
+                "raw_pc_site_counts": "0x0002143a:1",
+                "raw_pc_post_input_site_counts": "",
+            }
+            TOOL.verify_deuteros_raw_pc_summary(fields, root, "34")
+            fields["recorder_protocol"] = "deuteros-amiga-fsuae-v16"
+            with self.assertRaisesRegex(ValueError, "receipt schema"):
+                TOOL.verify_deuteros_raw_pc_summary(fields, root, "34")
+
     def test_schema33_pins_v23_and_recomputes_latch_write_fields(self) -> None:
         runner = TOOL.load_tool("run_deuteros_amiga_capture")
         identity = {

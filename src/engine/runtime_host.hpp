@@ -78,6 +78,10 @@ public:
     [[nodiscard]] DeuterosAmigaInterruptWorkerObservationResult
     observe_deuteros_amiga_interrupt_worker(
         DeuterosAmigaInterruptWorkerEntryObservation observation);
+    [[nodiscard]] std::optional<std::uint64_t>
+    deuteros_amiga_vblank_registration_generation() const;
+    [[nodiscard]] DeuterosAmigaVblankTickResult
+    tick_deuteros_amiga_vblank(std::uint64_t expected_generation);
     [[nodiscard]] ActiveNativeSessionDriveResult
     drive_active_native_session(std::uint32_t step_limit = 64);
     [[nodiscard]] NativeCodeImageRegistryDiagnostics native_code_image_registry_diagnostics() const;

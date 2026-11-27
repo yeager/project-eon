@@ -496,7 +496,10 @@ bool ReleaseScanner::advance(std::size_t max_files) {
             // Full split sets were verified before this incremental archive
             // pass. They are a recognised original-media layout, not loose
             // archives whose size should be reported as rejected.
-            if (is_bound_container_path(bound_container_media_paths_, candidate)) continue;
+            if (is_bound_container_path(bound_container_media_paths_, candidate)) {
+                ++report_.bound_container_candidates;
+                continue;
+            }
             const auto manifest = release_manifest();
             const bool outer_size_matches = std::any_of(manifest.begin(), manifest.end(),
                 [size](const auto& known) { return known.size == size; });
@@ -505,6 +508,7 @@ bool ReleaseScanner::advance(std::size_t max_files) {
                 ++report_.size_rejected_candidates;
                 continue;
             }
+            ++report_.size_admitted_candidates;
             if (outer_size_matches) ++report_.size_candidates;
             if (direct_size_matches) ++report_.direct_media_size_candidates;
             const auto fingerprint = to_hex(sha256_file(candidate));

@@ -1,6 +1,8 @@
 #include "data/millennium_dos_video_driver.hpp"
 #include "data/sha256.hpp"
 
+#include <algorithm>
+#include <array>
 #include <stdexcept>
 
 namespace eon {
@@ -151,6 +153,47 @@ MillenniumDosVideoDriverProfile parse_driver_profile(
 MillenniumDosVideoDriverProfile parse_millennium_dos_video_driver(
     const std::span<const std::uint8_t> bytes, const MillenniumDosVideoDriverKind kind) {
     return parse_driver_profile(bytes, kind, false);
+}
+
+MillenniumDosVideoDriverStateQueryResult evaluate_millennium_dos_video_driver_state_query(
+    const std::span<const std::uint8_t> bytes, const MillenniumDosVideoDriverKind kind,
+    const std::uint16_t request_ax, const std::uint8_t live_state_byte) {
+    const auto profile = parse_millennium_dos_video_driver(bytes, kind);
+    if (request_ax != 0x001f) {
+        throw std::runtime_error("Millennium DOS video-driver state query requires AX=$001f");
+    }
+
+    // The original entry doubles AX, compares it with $4e, and uses the
+    // doubled value as the word offset from the driver's dispatch table.
+    // AX=$001f therefore selects function 31 at table+$3e.
+    constexpr std::uint8_t function_index = 0x1f;
+    const auto table_offset = static_cast<std::size_t>(profile.dispatch_table_address)
+        + static_cast<std::size_t>(function_index) * 2U;
+    if (table_offset > bytes.size() || bytes.size() - table_offset < 2U) {
+        throw std::runtime_error("Millennium DOS state-query dispatch entry is outside driver");
+    }
+    const auto handler = little16(bytes, table_offset);
+    if (handler != profile.function_thirty_one_address) {
+        throw std::runtime_error("Millennium DOS AX=$001f no longer selects function 31");
+    }
+
+    constexpr std::array<std::uint8_t, 6> ega_handler{
+        0xa0, 0x8a, 0x00, 0xb4, 0x04, 0xc3};
+    constexpr std::array<std::uint8_t, 6> mcga_handler{
+        0xa0, 0xac, 0x00, 0xb4, 0x01, 0xc3};
+    const auto expected = kind == MillenniumDosVideoDriverKind::ega640
+        ? std::span<const std::uint8_t>(ega_handler)
+        : std::span<const std::uint8_t>(mcga_handler);
+    const auto body_offset = static_cast<std::size_t>(handler);
+    if (body_offset > bytes.size() || expected.size() > bytes.size() - body_offset
+        || !std::equal(expected.begin(), expected.end(), bytes.begin()
+            + static_cast<std::ptrdiff_t>(body_offset))) {
+        throw std::runtime_error("Millennium DOS function-31 handler bytes changed");
+    }
+
+    return {function_index, handler,
+        static_cast<std::uint16_t>((static_cast<std::uint16_t>(profile.function_thirty_one_return_ah)
+            << 8U) | live_state_byte)};
 }
 
 MillenniumDosVideoDriverProfile parse_millennium_dos_spanish_video_driver(

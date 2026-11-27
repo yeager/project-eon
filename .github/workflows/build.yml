@@ -320,7 +320,13 @@ jobs:
       - name: Install dependencies
         run: brew install cmake ninja sdl3 zlib libpng
       - name: Build native application bundle
+        env:
+          PACKAGE_VERSION: ${{ inputs.package_version || format('0.1.8.{0}', github.run_number) }}
         run: |
+          if [[ ! "$PACKAGE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "Invalid macOS bundle version: $PACKAGE_VERSION" >&2
+            exit 1
+          fi
           # Configure the selected target explicitly. A future runner-image
           # migration must not produce a host-default Mach-O under the wrong
           # architecture artifact name.
@@ -433,8 +439,9 @@ jobs:
           cat > "$APP/Contents/Info.plist" <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0"><dict><key>CFBundleExecutable</key><string>ProjectEon</string><key>CFBundleIdentifier</key><string>com.yeager.projecteon</string><key>CFBundleName</key><string>Project Eon</string><key>CFBundleIconFile</key><string>project-eon.icns</string><key>CFBundleVersion</key><string>0.1.7</string></dict></plist>
+          <plist version="1.0"><dict><key>CFBundleExecutable</key><string>ProjectEon</string><key>CFBundleIdentifier</key><string>com.yeager.projecteon</string><key>CFBundleName</key><string>Project Eon</string><key>CFBundleIconFile</key><string>project-eon.icns</string><key>CFBundleVersion</key><string>0.1.8</string></dict></plist>
           PLIST
+          plutil -replace CFBundleVersion -string "$PACKAGE_VERSION" "$APP/Contents/Info.plist"
           codesign --force --deep -s - "$APP"
           # This checks every Mach-O object in the completed bundle, including
           # dependencies expressed through LC_RPATH.  It rejects an artifact
@@ -642,7 +649,7 @@ jobs:
       - name: Create Inno Setup installer
         shell: pwsh
         env:
-          PACKAGE_VERSION: ${{ inputs.package_version || format('0.1.7-ci.{0}', github.run_number) }}
+          PACKAGE_VERSION: ${{ inputs.package_version || format('0.1.8-ci.{0}', github.run_number) }}
         run: |
           if ($env:PACKAGE_VERSION -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(-ci\.[0-9]+)?$') {
             throw "Invalid package version"

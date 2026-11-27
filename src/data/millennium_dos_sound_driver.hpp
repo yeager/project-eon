@@ -58,10 +58,32 @@ struct MillenniumDosSoundSelectionEvidence {
     std::string_view missing_srol_filename;
 };
 
+// Source-derived Eon compatibility contract for the active English MILL.COM
+// route. The program sets SP itself at COM entry, returns from the preceding
+// local calls, then enters $031c with one near-call return word still active
+// when $032f stores SP. This is not a captured DOS process value.
+struct MillenniumDosExecParentStackProfile {
+    std::string_view launcher_sha256;
+    std::uint16_t com_entry_address = 0;
+    std::uint16_t entry_stack_pointer = 0;
+    std::uint16_t helper_call_address = 0;
+    std::uint16_t helper_entry_address = 0;
+    std::uint16_t stack_store_address = 0;
+    std::uint16_t stack_store_destination = 0;
+    std::uint16_t stack_at_store = 0;
+    std::uint16_t helper_return_address = 0;
+};
+
 // Validate the exact English MILL.COM selection routine and its literal file
 // tables. This parser admits no guessed hardware policy or interactive input.
 [[nodiscard]] MillenniumDosSoundSelectionEvidence
 parse_millennium_dos_sound_selection(std::span<const std::uint8_t> mill_com);
+
+// Validate the exact bytes that establish the compatibility SP stored by
+// MILL.COM at its first DOS EXEC request. No DOS PSP, allocation, or EXEC
+// result is modeled by this profile.
+[[nodiscard]] MillenniumDosExecParentStackProfile
+parse_millennium_dos_exec_parent_stack_profile(std::span<const std::uint8_t> mill_com);
 
 // Return the byte-locked, DOS `$`-terminated sound-selection prompt from the
 // supplied launcher without translating, normalising, or retaining it. The

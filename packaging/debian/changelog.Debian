@@ -1,3 +1,9 @@
+project-eon (0.1.8-1) unstable; urgency=medium
+
+  * Advance evidence-bound Millennium DOS and Deuteros Amiga runtime paths.
+
+ -- Daniel Nylander <1206564+yeager@users.noreply.github.com>  Fri, 27 Nov 2026 00:00:00 +0000
+
 project-eon (0.1.7-1) unstable; urgency=medium
 
   * Package the verified 0.1.7 release.

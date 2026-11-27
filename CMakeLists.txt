@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(project_eon VERSION 0.1.7 LANGUAGES C CXX)
+project(project_eon VERSION 0.1.8 LANGUAGES C CXX)
 
 option(EON_DEVELOPER_RESOURCE_FALLBACKS
     "Allow launcher resource lookup to fall back to the source checkout" OFF)
@@ -204,6 +204,7 @@ add_executable(project-eon
     src/data/deuteros_amiga_data_disk.cpp
     src/data/deuteros_amiga_audio.cpp
     src/data/deuteros_amiga_interrupt_worker.cpp
+    src/data/deuteros_amiga_vblank_callback.cpp
     src/data/deuteros_amiga_channel_vm.cpp
     src/data/deuteros_amiga_alternate_renderer.cpp
     src/data/deuteros_amiga_frame.cpp
@@ -679,6 +680,7 @@ if(BUILD_TESTING)
         src/data/amiga_ofs.cpp
         src/data/deuteros_amiga_data_disk.cpp
         src/data/deuteros_amiga_interrupt_worker.cpp
+        src/data/deuteros_amiga_vblank_callback.cpp
         src/data/deuteros_amiga_loader.cpp
         src/data/sha256.cpp
         src/data/zip_archive.cpp)
@@ -689,9 +691,9 @@ if(BUILD_TESTING)
     else()
         target_compile_options(eon-deuteros-amiga-interrupt-worker-media-test PRIVATE -UNDEBUG)
     endif()
-    if(EON_REAL_DATA_DIR)
+    if(EON_DIRECT_DATA_DIR)
         add_test(NAME deuteros-amiga-interrupt-worker-real-media
-            COMMAND eon-deuteros-amiga-interrupt-worker-media-test "${EON_REAL_DATA_DIR}")
+            COMMAND eon-deuteros-amiga-interrupt-worker-media-test "${EON_DIRECT_DATA_DIR}")
     endif()
     add_executable(eon-atari-st-prg-load-session-test
         tests/atari_st_prg_load_session_test.cpp
@@ -784,7 +786,7 @@ if(BUILD_TESTING)
             COMMAND "${Python3_EXECUTABLE}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_direct_directory_test.py"
                 "$<TARGET_FILE:project-eon>"
-                "${EON_DIRECT_DATA_DIR}")
+                "${EON_DIRECT_DATA_DIR}/millennium-return-to-earth-2-2")
         set_tests_properties(cli-real-direct-directory-start PROPERTIES
             ENVIRONMENT "EON_TEST_TMPDIR=${EON_TEST_TMPDIR}"
             TIMEOUT 180)

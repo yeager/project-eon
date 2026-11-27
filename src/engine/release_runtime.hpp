@@ -7,6 +7,8 @@
 #include "engine/deuteros_amiga_bootstrap_frame.hpp"
 #include "engine/deuteros_amiga_main_stage_frame.hpp"
 #include "engine/deuteros_amiga_paula.hpp"
+#include "engine/deuteros_amiga_owned_commands.hpp"
+#include "data/deuteros_amiga_vblank_callback.hpp"
 #include "engine/deuteros_amiga_title_display_trace_session.hpp"
 #include "engine/deuteros_amiga_title_planar_patch.hpp"
 #include "engine/runtime_session.hpp"
@@ -20,6 +22,7 @@
 #include "engine/millennium_dos_sound_selection_session.hpp"
 #include "engine/millennium_dos_sound_driver_load_session.hpp"
 #include "engine/millennium_dos_video_driver_load_session.hpp"
+#include "engine/millennium_dos_video_function_31_session.hpp"
 #include "engine/millennium_dos_compatibility_runner.hpp"
 #include "engine/millennium_dos_title_exec_entry_session.hpp"
 #include "engine/millennium_dos_title_child_compatibility_service.hpp"
@@ -147,6 +150,37 @@ struct DeuterosAmigaMainStageDriveResult {
     // Report the exact recovered instruction boundary so callers can surface
     // useful diagnostics without inspecting mutable coordinator internals.
     std::uint32_t stop_before_address = 0;
+    std::string error;
+};
+
+enum class DeuterosAmigaVblankTickStatus : std::uint8_t {
+    not_applicable,
+    stale_generation,
+    waiting_for_registration,
+    tick_applied,
+    pending_audio_service,
+    rejected,
+};
+
+struct DeuterosAmigaVblankTickResult {
+    DeuterosAmigaVblankTickStatus status = DeuterosAmigaVblankTickStatus::not_applicable;
+    std::uint64_t generation = 0;
+    std::uint64_t tick_index = 0;
+    std::uint32_t counter_before = 0;
+    std::uint32_t counter_after = 0;
+    std::uint32_t stop_before_address = 0;
+    bool palette_updated = false;
+    bool audio_service_pending = false;
+    bool audio_service_dispatched = false;
+    std::array<std::uint16_t, 2> audio_dma_write_intents{};
+    std::array<DeuterosAmigaOwnedAudioResult::ChannelRegisters, 4>
+        audio_channel_register_intents{};
+    struct HardwareIntent {
+        std::uint32_t address = 0;
+        MemoryTransferElementWidth width = MemoryTransferElementWidth::byte;
+        std::uint32_t value = 0;
+    };
+    std::vector<HardwareIntent> audio_hardware_intents;
     std::string error;
 };
 
@@ -448,6 +482,8 @@ struct MillenniumDosSoundDriverLoadCheckpoint {
     std::uint16_t file_handle=0,load_segment=0,code_segment=0;
     MillenniumDosSoundDriverCodeSegmentProvenance code_segment_provenance=
         MillenniumDosSoundDriverCodeSegmentProvenance::external_observation;
+    MillenniumDosSoundDriverParentStackProvenance parent_stack_provenance=
+        MillenniumDosSoundDriverParentStackProvenance::pending;
     std::vector<MillenniumDosSoundDriverRuntimeWordEffect> runtime_word_effects;
     std::vector<MillenniumDosSoundDriverRuntimeByteEffect> runtime_byte_effects;
 };
@@ -913,6 +949,12 @@ public:
     [[nodiscard]] std::optional<MillenniumDosSoundDriverLoadCheckpoint> millennium_dos_sound_driver_load_checkpoint() const;
     [[nodiscard]] MillenniumDosVideoDriverLoadObservationResult observe_millennium_dos_video_driver_load(MillenniumDosVideoDriverLoadObservation);
     [[nodiscard]] std::optional<MillenniumDosVideoDriverLoadCheckpoint> millennium_dos_video_driver_load_checkpoint() const;
+    // Evaluates the hash-bound private function-$1f prefix only after the
+    // loaded driver is confirmed at INT $91 and its current state byte is
+    // present in owned DOS memory. This is a native capability checkpoint,
+    // not evidence that TITLES.EXE or 2200AD.EXE called it.
+    [[nodiscard]] std::optional<MillenniumDosVideoFunction31Outcome>
+    millennium_dos_video_function_31_checkpoint() const;
     [[nodiscard]] std::optional<MillenniumDosCompatibilityRunnerCheckpoint> tick_millennium_dos_compatibility_runner();
     [[nodiscard]] MillenniumDosSessionDriveResult
     drive_millennium_dos_session(std::uint32_t step_limit = 64);
@@ -990,6 +1032,12 @@ public:
     [[nodiscard]] std::optional<DeuterosAmigaVmEvents> tick_deuteros_amiga_opening();
     [[nodiscard]] DeuterosAmigaMainStageDriveResult
     drive_deuteros_amiga_main_stage(std::uint32_t step_limit = 64);
+    [[nodiscard]] std::optional<std::uint64_t>
+    deuteros_amiga_vblank_registration_generation() const;
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult
+    register_deuteros_amiga_main_stage_vblank_server();
+    [[nodiscard]] DeuterosAmigaVblankTickResult
+    tick_deuteros_amiga_vblank(std::uint64_t expected_generation);
     [[nodiscard]] DeuterosAmigaSessionDriveResult
     drive_deuteros_amiga_session(std::uint32_t step_limit = 64);
     // Runs the hash-admitted worker translator only over caller-supplied,
@@ -1174,6 +1222,7 @@ public:
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_loop_request_service(DeuterosAmigaObservedLoopRequestService);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_optional_resource_cia(DeuterosAmigaObservedOptionalResourceCia);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_loop_graphics_return(DeuterosAmigaObservedMainStageExecReturn);
+    [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult execute_deuteros_amiga_main_stage_load_rgb4();
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_loop_prepare_return(DeuterosAmigaObservedLocalCallReturn);
     [[nodiscard]] DeuterosAmigaTitleDependencyObservationResult observe_deuteros_amiga_main_stage_loop_scheduler_return(DeuterosAmigaObservedLocalCallReturn);
 
@@ -1571,6 +1620,9 @@ private:
     std::unique_ptr<DeuterosAmigaNativeAudioMixer> deuteros_amiga_native_audio_mixer_;
     std::uint64_t deuteros_amiga_native_audio_generation_=0;
     std::uint64_t deuteros_amiga_interrupt_worker_last_sequence_ = 0;
+    std::uint64_t deuteros_amiga_vblank_registration_generation_ = 0;
+    std::uint64_t deuteros_amiga_vblank_tick_count_ = 0;
+    std::uint64_t deuteros_amiga_vblank_pending_service_generation_ = 0;
     std::optional<DeuterosAmigaTitleDisplayTraceSession>
         deuteros_amiga_title_display_trace_;
     bool deuteros_amiga_opening_input_held_ = false;

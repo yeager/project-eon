@@ -68,6 +68,32 @@ MillenniumDosSoundSelectionEvidence parse_millennium_dos_sound_selection(
     };
 }
 
+MillenniumDosExecParentStackProfile parse_millennium_dos_exec_parent_stack_profile(
+    const std::span<const std::uint8_t> mill_com) {
+    constexpr std::string_view launcher_sha256 =
+        "4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e";
+    // Flat COM addresses below are translated to source offsets by subtracting
+    // $0100. The first instruction explicitly replaces any DOS-provided SP.
+    constexpr ExecutableByteAnchor<6> entry{
+        "b2a3216c3d554c7ff4dbd3586f1bef2ff7a829c062e585e7e9a1dd55cad4b370"};
+    constexpr ExecutableByteAnchor<3> exec_helper_call{
+        "7c2e9106615467d5e1f6a2c9481b309310ba21477395e9af7eac6c48da966877"};
+    constexpr ExecutableByteAnchor<23> helper_prefix{
+        "40ee2774a06e31d436288dc2d83e93ab7786bb2a20cd60ef7e315fbb9292ff64"};
+    if (mill_com.size() != 1445 || to_hex(sha256(mill_com)) != launcher_sha256
+        || !has_bytes(mill_com, 0x0000, entry)
+        || !has_bytes(mill_com, 0x0140, exec_helper_call)
+        || !has_bytes(mill_com, 0x021c, helper_prefix)) {
+        throw std::runtime_error("Unsupported Millennium DOS EXEC parent-stack path");
+    }
+    // Verified path: SP is set to $0100 at entry; earlier calls return and
+    // push/pop pairs balance. CALL $031c at $0240 contributes one word before
+    // the helper's MOV [$05f7],SP at $032f. This derives $00fe for Eon's
+    // compatibility address space; it does not claim a DOS observation.
+    return {launcher_sha256, 0x0100, 0x0100, 0x0240, 0x031c, 0x032f,
+        0x05f7, 0x00fe, 0x0243};
+}
+
 std::string extract_millennium_dos_sound_selection_prompt(
     const std::span<const std::uint8_t> mill_com,
     const MillenniumDosSoundSelectionEvidence& evidence) {

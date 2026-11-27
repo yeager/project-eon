@@ -134,6 +134,10 @@ struct ReleaseScanReport {
     // content identity. Neither is a supported release or a fallback.
     std::size_t size_rejected_candidates = 0;
     std::size_t size_candidates = 0;
+    std::size_t size_admitted_candidates = 0;
+    // Members of an already verified split-container set are accounted
+    // separately and are not redundantly hashed as loose candidates.
+    std::size_t bound_container_candidates = 0;
     std::size_t hashed_candidates = 0;
     std::size_t hash_rejected_candidates = 0;
     // Direct physical media are independently hash-addressed against leaf

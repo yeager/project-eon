@@ -106,6 +106,7 @@ def analyze_context_reachable(
     preserve_int91_wrapper_stack: bool = False,
     preserve_bios_ds_at_046d: bool = False,
     return_from_dos_int21_at_1b26: bool = False,
+    return_from_dos_ah48_at_1b2d: bool = False,
 ) -> dict[str, object]:
     """Explore candidate instruction paths with a matched near-call stack.
 
@@ -118,7 +119,9 @@ def analyze_context_reachable(
     sequence and BIOS INT 10h return are named scenarios at exact TITLES.EXE
     sites; neither is an emulator or runtime claim. The BIOS scenario assumes
     an IRET to $046f, restoration of the caller stack, and preservation of
-    active near-call return words. All other tracked registers/flags and
+    active near-call return words. The AH=48h scenario at $1b2d assumes only a
+    return to $1b2f with that stack intact; result registers, flags, allocation
+    effects, and later DOS calls remain unknown. All other tracked state and
     memory/device effects remain unknown or unmodeled.
     """
     if not data or not 0 <= entry_ip <= 0xFFFF:
@@ -343,6 +346,13 @@ def analyze_context_reachable(
                         None, None, None, int91_index, None, ss_equals_cs,
                         stack_pointer_base, False, None, None, None,
                         "scenario-dos-int21-return-at-1b26;effects-opaque")
+                continue
+            if (ip == 0x1B2D and vector == 0x21 and ah_constant == 0x48
+                    and return_from_dos_ah48_at_1b2d):
+                enqueue(state, next_ip, call_stack, stack_delta,
+                        None, None, None, int91_index, None, ss_equals_cs,
+                        stack_pointer_base, False, None, None, None,
+                        "scenario-dos-ah48-return-at-1b2d;carry-and-effects-opaque")
                 continue
             block(state, "software-interrupt-opaque", vector=vector)
             continue
@@ -592,6 +602,7 @@ def analyze_context_reachable(
         "int91_wrapper_stack_preserved": preserve_int91_wrapper_stack,
         "bios_ds_preserved_at_046d": preserve_bios_ds_at_046d,
         "dos_int21_return_at_1b26": return_from_dos_int21_at_1b26,
+        "dos_ah48_return_at_1b2d": return_from_dos_ah48_at_1b2d,
         "state_count": len(parents),
         "instruction_count": len(instructions),
         "instructions": instructions,
@@ -680,13 +691,18 @@ def write_report(path: Path, data: bytes, result: dict[str, object]) -> str:
         ("# scenario-dos-int21-1b26=opaque" if not result["dos_int21_return_at_1b26"] else
          "# scenario-dos-int21-1b26=return-to-1b28;restore-caller-CS-IP-SS-SP-and-preserve-active-return-words;"
          "registers-flags-and-memory-effects-unknown;assumption-only;not-runtime-proof"),
+        ("# scenario-dos-ah48-1b2d=opaque" if not result["dos_ah48_return_at_1b2d"] else
+         "# scenario-dos-ah48-1b2d=return-to-1b2f;caller-stack-and-active-return-words-preserved;"
+         "registers-flags-memory-and-allocation-effects-unknown;conditional-flags-unknown;"
+         "candidate-branches-forked-if-present;"
+         "assumption-only;not-runtime-proof"),
         f"# entry_ip=0x{ENTRY_IP:04x};state_count={result['state_count']};instructions={result['instruction_count']}",
         f"# limits=call_depth:{DEFAULT_CALL_DEPTH};states:{DEFAULT_STATE_LIMIT}",
         "# memory_alias=CS-absolute-or-DS-absolute-when-DS-equals-CS-or-DS:SI;"
         "only-when-provably-disjoint-from-return-words;"
         "memory-values-and-effects-unmodeled;LODSB-SI-direction-forks-when-DF-unknown",
         "# semantics=near-call-return-candidates;active-frame-memory-opaque-except-proven-disjoint-CS-absolute-or-DS-absolute-when-DS=CS-or-DS:SI;memory-effects-not-modeled;"
-        "INT91-0127-AX,INT10-046D-IRET,and-INT21-1B26-return-only-when-scenario-provided;"
+        "INT91-0127-AX,INT10-046D-IRET,INT21-1B26,and-DOS-AH48-1B2D-return-only-when-scenario-provided;"
         "BIOS-DOS-register-flags-memory-device-effects-unknown;"
         "INT91-wrapper-saved-DS-and-BIOS-DS-preserved-only-when-scenario-provided;"
         "AL-AH-constants;CMP-TEST-ZF-only;"
@@ -753,6 +769,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="Additionally assume BIOS INT 10h at 0x046d preserves the incoming DS value")
     parser.add_argument("--scenario-return-from-dos-int21-at-1b26", action="store_true",
                         help="Assume DOS INT 21h at TITLES.EXE runtime 0x1b26 returns to 0x1b28 with the caller stack and active return words intact; all other effects stay unknown")
+    parser.add_argument("--scenario-return-from-dos-ah48-at-1b2d", action="store_true",
+                        help="Assume DOS AH=48h at TITLES.EXE runtime 0x1b2d returns to 0x1b2f with the caller stack and active return words intact; carry, registers, allocation, and other effects stay unknown and conditional paths fork")
     args = parser.parse_args(argv)
     try:
         media = verify_direct_directory(args.media_root, DIRECT_MEDIA_SET_SHA256)
@@ -765,7 +783,8 @@ def main(argv: list[str] | None = None) -> int:
             return_from_bios_int10_at_046d=args.scenario_return_from_bios_int10_at_046d,
             preserve_int91_wrapper_stack=args.scenario_preserve_int91_wrapper_stack,
             preserve_bios_ds_at_046d=args.scenario_preserve_bios_ds_at_046d,
-            return_from_dos_int21_at_1b26=args.scenario_return_from_dos_int21_at_1b26)
+            return_from_dos_int21_at_1b26=args.scenario_return_from_dos_int21_at_1b26,
+            return_from_dos_ah48_at_1b2d=args.scenario_return_from_dos_ah48_at_1b2d)
         digest = write_report(args.output, data, result)
     except (OSError, ContextReachabilityError, ValueError) as error:
         print(f"DOS CONTEXT REACHABILITY REJECTED  {error}", file=sys.stderr)
@@ -785,6 +804,9 @@ def main(argv: list[str] | None = None) -> int:
     if result["dos_int21_return_at_1b26"]:
         print("  scenario DOS INT 21h at TITLES.EXE:0x1b26 returns to 0x1b28; "
               "register and memory effects unknown")
+    if result["dos_ah48_return_at_1b2d"]:
+        print("  scenario DOS AH=48h at TITLES.EXE:0x1b2d returns to 0x1b2f; "
+              "carry, registers, and allocation effects unknown; conditional paths fork")
     for target in TARGETS:
         reach = result["targets"][target]  # type: ignore[index]
         print(f"  {target:04x}: reachable={str(reach['reachable']).lower()}")

@@ -5170,6 +5170,37 @@ public:
         return plan;
     }
     [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    execute_native_main_stage_load_rgb4(){
+        if(!main_stage_loop_prepare_body_plan_||main_stage_loop_graphics_returns_!=1
+            ||main_stage_state_!=DeuterosAmigaMainStageState::awaiting_second_loop_graphics_return
+            ||!main_stage_loop_graphics_plan_
+            ||main_stage_loop_graphics_plan_->next_call_address!=0x2132a
+            ||main_stage_loop_graphics_plan_->next_vector!=-0xc0
+            ||main_stage_loop_graphics_plan_->a0_value!=0x12f12
+            ||(main_stage_loop_graphics_plan_->d0_value&0xffffU)!=16U
+            ||main_stage_loop_graphics_plan_->a1_value==0
+            ||last_command_sequence_==std::numeric_limits<std::uint64_t>::max())
+            return std::nullopt;
+        // LoadRGB4 returns void and the caller consumes none of its scratch
+        // registers. Record only the proven local continuation after the
+        // native palette service; do not invent an observed library D0.
+        DeuterosAmigaMainStageLoopGraphicsPlan plan{
+            0x208b4,0x208b8,0,0x2086a,0,5,-0xa8,0x20888};
+        plan.pending_read_instruction=0x208b0;
+        plan.pending_read_address=4;
+        plan.write_addresses={0x20872,0x20873,0x20878,0x2087c};
+        plan.write_values={2,0xc4,0x20880,0x207ec};
+        plan.write_widths={MemoryTransferElementWidth::byte,
+            MemoryTransferElementWidth::byte,MemoryTransferElementWidth::longword,
+            MemoryTransferElementWidth::longword};
+        plan.write_count=4;
+        ++main_stage_loop_graphics_returns_;
+        main_stage_state_=DeuterosAmigaMainStageState::awaiting_loop_request_service;
+        ++last_command_sequence_;
+        main_stage_loop_graphics_plan_=plan;
+        return plan;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
     observe_main_stage_view_wait(const DeuterosAmigaObservedViewWait&o){
         if(!main_stage_loop_graphics_plan_)return std::nullopt;
         const auto& current=*main_stage_loop_graphics_plan_;
@@ -5595,6 +5626,34 @@ public:
         }else plan.next_instruction_address=0x21342;
         main_stage_loop_graphics_plan_=plan;
         main_stage_loop_request_returned_=true;last_command_sequence_=o.trace_sequence;
+        main_stage_state_=optional_pointer?
+            DeuterosAmigaMainStageState::awaiting_optional_resource_cia:
+            DeuterosAmigaMainStageState::awaiting_record_loop;
+        return plan;
+    }
+    [[nodiscard]] std::optional<DeuterosAmigaMainStageLoopGraphicsPlan>
+    execute_main_stage_interrupt_server_registration(const std::uint32_t optional_pointer){
+        if(!main_stage_loop_graphics_plan_||main_stage_loop_graphics_returns_!=2
+            ||main_stage_loop_request_returned_
+            ||(main_stage_state_!=DeuterosAmigaMainStageState::awaiting_loop_request_service
+                &&main_stage_state_!=DeuterosAmigaMainStageState::loop_runtime_active))
+            return std::nullopt;
+        const auto& current=*main_stage_loop_graphics_plan_;
+        if(current.pending_read_instruction!=0x208b0||current.pending_read_address!=4
+            ||current.next_call_address!=0x208b4||current.next_return_address!=0x208b8
+            ||current.next_vector!=-0xa8||current.a1_value!=0x2086a||current.d0_value!=5)
+            throw std::runtime_error("Deuteros AddIntServer registration does not match owned call");
+        // Native compatibility registration is a local deterministic service
+        // effect. ExecBase/A6 and the library result registers remain unknown;
+        // the caller reloads its optional pointer after RTS.
+        DeuterosAmigaMainStageLoopGraphicsPlan plan;
+        plan.d0_value=optional_pointer;
+        if(optional_pointer){
+            plan.next_call_address=0x2133c;plan.next_return_address=0x21342;
+            plan.local_call_target=0x22330;
+        }else plan.next_instruction_address=0x21342;
+        main_stage_loop_graphics_plan_=plan;
+        main_stage_loop_request_returned_=true;
         main_stage_state_=optional_pointer?
             DeuterosAmigaMainStageState::awaiting_optional_resource_cia:
             DeuterosAmigaMainStageState::awaiting_record_loop;

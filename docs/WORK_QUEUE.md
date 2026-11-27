@@ -1,6 +1,34 @@
 # Project Eon P0 work queue
 
+## Completed native Deuteros VBL callback and `$22bea` service
+
+The installed VBL wrapper and `$207fe` callback are now hash-bound in
+`PRESERVATION.md`. The callback advances `$2079e`, conditionally updates two
+palette structures through `$207ea`, and calls the already modeled audio
+consumer `$22bea` through `$207eb`. The native title-stage path now verifies
+both the 44-byte AddIntServer caller prefix and its six-byte JSR/RTS, checks
+the original interrupt node, registers within the active runtime generation,
+and clocks the callback at 50 Hz independently of rendering. Stale generation
+ticks are rejected. The main-stage loader maps ADF `+$5800` to RAM `$20000`,
+making runtime `$22bea` ADF `+$83ea`; the owned 1080-byte routine span is
+hash-checked before the bounded native consumer runs. Callback and consumer
+RAM effects publish atomically, while custom-chip writes remain ordered result
+intents only. Failed or unowned service inputs stop before `$20860` and
+generation-block later scheduler work. Native tests cover counter progress,
+descriptors, DMA intents, and that MMIO addresses are not materialized in
+runtime RAM. Keep the opening's independent tick phase and native main-stage
+phase separate; do not equate renderer frames with VBLs or infer hardware audio
+behavior.
+
 ## Current DOS descriptor continuation
+
+Millennium's exact DOS `Set Vector` result boundaries now commit the
+hash-bound caller's `CS:$1124` handler pointer into owned IVT memory for
+vectors 0 and 4. Existing get-vector observations remain separately preserved
+at their caller cells. This does not prove captured DOS execution or handler
+dispatch; the typed result is the explicit service input. Continue the
+non-mode-1 initialization at `$114e` and trace the opaque setup/handler work
+from owned media and observed service returns before claiming title playability.
 
 Mode one's palette source is now corrected to TITLE.LIB `[$25f9,$28f9)`.
 The original LDS restores library-base:$0006; the former `$4865` overread
@@ -410,10 +438,14 @@ by hash and enter their shared bounded file-loader prefix. Choice `0` was
 previously a dead end despite being a literal original option. Each choice
 creates a labelled Eon compatibility process at `$e000`, then lets the
 existing deterministic loader consume only the selected hash-admitted leaf.
-That segment is engine-owned state, never an original allocation claim; the
-first original-dependent parent-stack result and every later driver/device
-ABI boundary remain blocked pending evidence. This does not claim SIBM
-initialization or audio playback.
+That segment is engine-owned state, never an original allocation claim. For
+the exact English MILL.COM, entry sets SP to `$0100` and the active near call
+at `$0240` leaves `$00fe` at the `$032f` store. This source-derived value is
+labelled as Eon compatibility state and is distinct from external DOS
+observation. Startup now reaches the hash-bound TITLES.EXE child and its first
+private INT `$91` result boundary. Later driver/device ABI boundaries remain
+blocked pending evidence. This does not claim SIBM initialization or audio
+playback.
 
 The clean Deuteros Amiga path now accumulates the zero/zero route and all three
 remaining deterministic non-negative `$1fbe6` planar routes into a sparse
@@ -763,9 +795,11 @@ the caller's typed re-entry D0 supplies that selector through `$21704` and
 probe/body transfer, and observed released `$2196e` hardware retry into owned
 `$2ad24/$32a24` memory. The earlier typed OpenLibrary return now owns `$12fec`
 only through its exact post-return store, so `$21276` can consume both owned
-sources. Ordered typed returns at `$21310` and `$2132a` now continue to the
-local `$2132e->$20888` call and its four native stores. Continue from the
-typed `$208b0` ExecBase read and `-$a8` return, then the owned `$2126a`
+sources. The typed `$21310` return is followed by a native `LoadRGB4` service
+at `$2132a` using the owned 16-word RGB4 table; its void result is not
+fabricated. The driver reaches the local `$2132e->$20888` call and its four
+native stores, then stops at the typed `$208b0` ExecBase read. Continue from
+that exact result and `-$a8` return, then the owned `$2126a`
 conditional: `$2133c->$22330` when nonzero or local `$21342` when zero. The
 nonzero branch now executes the complete native optional-resource initializer,
 bounded maximum scan and 15-record relocation transaction before joining the
@@ -1389,14 +1423,15 @@ scripted guest input.
 
 ### 2026-10-07 Deuteros Exec interrupt-server boundary
 
-The hash-bound post-Exec call at `$204f4` uses Exec LVO `-$a8`, which the
-Exec Autodocs identify as `AddIntServer(D0, A1)`. The call registers a handler
-on a priority-ordered Paula interrupt chain; the handler then runs when its
-interrupt is dispatched. This rules out treating the call as a no-op typed
-return, but does not identify its actual D0 interrupt number, A1 structure,
-registered code, or invocation cadence. Model this OS list and interrupt path
-only after those operands and handler effects are tied to the admitted guest
-state. No new gameplay behavior is admitted by the LVO identification.
+The main-stage `$208b4` LVO `-$a8` caller now has hash-bound operands D0=5
+and A1=`$2086a`; its owned interrupt node fields match type `$02`, priority
+`$c4`, data `$20880`, and code `$207ec`. The typed service boundary rejects
+missing or changed node fields before continuing. Its D0 return is discarded
+by the next caller instructions, which reload the optional pointer from
+`$2126a`. A native interrupt-list registration and interrupt cadence are
+still not modeled as full Exec behavior. Continue by connecting the already
+modeled native callback effects to a precisely bounded scheduler event, and
+keep the Exec registration distinction explicit.
 
 ### 2026-10-08 Deuteros VNC follow-up
 
@@ -1480,3 +1515,118 @@ Its raw-PC trace is byte-identical to prior runs and contains only pre-input
 poll sites; it does not demonstrate display/game-state progress. Keep requiring
 visible manual input and a later verified state/frame change before claiming
 Deuteros playability.
+
+### 2026-11-27 Millennium DOS allocator continuation
+
+The context-sensitive analyzer now has an exact-site scenario for a hypothetical
+return from TITLES `$1b2d` (`INT 21h/AH=48h`). With the existing explicitly
+named predecessor assumptions, it follows the candidate instructions through
+`$1b36` and stops at the next opaque DOS call, `$1b38` (`AH=$49`). No allocation
+result, flags, memory effects, or free-call result are modeled, and the source
+does not test carry before `$1b38`. This narrows the next capture boundary but
+does not unlock native execution; capture the actual AH=$48h and AH=$49h DOS
+results before extending the path. The hash and uncertainty record is in
+`PRESERVATION.md#2026-11-27-millennium-dos-ah48h-return-boundary`.
+
+### 2026-11-27 Deuteros Kickstart Exec-vector boundary
+
+The exact supplied Kickstart 1.3 ROM was read in place and its Exec vector
+entries and bodies for `SuperState` (`-$96`) and `UserState` (`-$9c`) were
+hash-verified. They route through `Supervisor` and alter privilege/stack state;
+they are not scalar returns that can be filled with a compatibility constant.
+The game overwrites the first call's D0 with `$7fff0` before its UserState call,
+but the title-stage runtime has no incoming SR, USP/SSP pair, owned ExecBase,
+or supervisor state. Keep the existing `$40456` stop and pursue a native bridge
+only after the startup CPU/Exec context is evidenced. ROM offsets and exact
+hashes are recorded in `PRESERVATION.md` at the Deuteros title Exec boundary.
+
+### 2026-11-27 Millennium DOS function-$1f native primitive
+
+The exact English EGA640 and MCGA driver dispatch entries for request AX
+`$001f` now route to the hash-bound function-$31 bodies at `$0235` and `$024c`.
+A bounded native evaluator returns AH `$04` (EGA) or `$01` (MCGA) plus an
+explicit live driver-state byte. It rejects other requests and does not take
+the zero byte from either source file as runtime state. This is a native leaf
+primitive only: the release coordinator now exposes it after successful
+SetVect, a matching INT `$91` IVT segment, and retrieval of the state byte
+from owned segmented runtime memory. This proves the loaded driver image is
+installed in the admitted model and allows the exact six-byte `$1f` prefix
+to be evaluated. It does not prove an original caller invoked `$1f`.
+Function-$00 mutations are not yet carried through the shared driver image
+into the later `2200AD.EXE` startup, so the initial loaded byte is not the
+later gameplay value and the original startup still cannot advance
+automatically.
+
+### 2026-11-27 Deuteros custom-chip read remains hardware state
+
+The frame-buffer and view-wait admission paths no longer write the typed
+`$2143a/$dff01f` or `$216f2/$dff01f` bit-5 samples into linear RAM. They retain
+the read in their typed observations, and the view wait uses the observed bit
+to publish an already prepared frame. The frame-buffer path still commits the
+real RAM pointer, counter and buffer-clear effects. A native regression checks
+that `$dff01f` remains unowned after each accepted path. The 24-test CTest suite
+and 514 Python tests pass with the supplied real-media directory; `gitleaks`,
+the repository artifact verifier and `git diff --check` pass. This repairs the
+native hardware/RAM distinction; the active Deuteros title still stops at
+unresolved Exec or display-library state, and the Millennium DOS title still
+needs actual DOS/BIOS returns before its startup can advance.
+
+## Native playability boundary audit, 2026-11-27
+
+The current SDL launch path has not completed an interactive native game for
+either target. Deuteros Amiga displays its recovered opening and forwards the
+held Space/Enter signal through the original channel VM; that exact handoff
+changes the session to title stage, where execution stops at the unresolved
+Exec vectors `$4045a/-$96` and `$40468/-$9c`. Historical visible-input captures
+reach `$4046c` and the entry `$1ed80` of `OpenLibrary`, but lack the first
+`$4045e` return and any `$1ed8c` OpenLibrary return record. Those call-entry
+registers cannot stand in for returns. The installed VBL callback and `$22bea`
+audio consumer are native once the main stage has installed its AddIntServer
+node; the title path still needs Exec/OpenLibrary, GraphicsBase and AddIntServer
+state. The fresh reviewed v24 capture only observes one `$dff01f` read at
+`$2143a`; it does not supply those startup values or prove the native main-stage
+loop is interactive.
+
+Millennium's public DOS launch is also incomplete. It selects/loads the chosen
+driver through a labelled Eon compatibility service, then stops at the genuine
+English title's private INT `$91` and DOS/BIOS result boundaries unless those
+results have separate observations. Existing F1-F10 native function code is
+not reached by the launcher and does not provide an SDL capability for the
+post-overlay state. The old DOSBox-X driver-return report is explicitly
+experimental and has no `events_raw`/DOS return sidecar, so it cannot authorize
+those inputs.
+
+Next work must advance both paths from real, correctly ordered service-return
+records: for Deuteros capture the two exact Exec returns (including actual
+stack/SR state required by Kickstart), then OpenLibrary return, and continue to
+the first actionable selector; for Millennium capture the private-handler
+and BIOS/DOS returns through title handoff and into the first game process.
+Only then map physical SDL inputs and frame/audio checkpoints. Current evidence
+does not establish playability for either game.
+
+Validation of the current working tree on 2026-11-27: CMake/Ninja already
+up-to-date, CTest 24/24, Python preservation suite 515 passed / 6 skipped,
+gitleaks no findings, repository artifact policy PASS, and `git diff --check`
+PASS. These tests validate bounded components and invariants, not end-to-end
+playability.
+
+## Next capture boundary for both native runtimes
+
+The trv2 FS-UAE v25 recorder is independently reviewed and pinned in
+`tools/run_deuteros_amiga_capture.py`; schema 35 validates a separate bounded
+snapshot at five exact Exec/OpenLibrary PCs alongside the VBL observer. The
+new snapshots include registers and active/user/interrupt stack pointers, but
+remain pre-instruction raw observations and do not substitute for call-return
+proof. The first isolated 30-second visible no-input run passed schema 35 and
+showed the original credits, but produced no raw-PC or Exec-boundary records.
+The next useful Deuteros capture must continue via ordinary visible human input
+to reach `$40450/$4045e`, `$4046c`, and `$1ed80/$1ed8c`; do not infer missing
+SuperState/UserState effects. Keep custom-chip VBL read evidence separate from
+execution and playability evidence.
+
+Millennium remains stopped at opaque DOS and BIOS result boundaries in the
+English DOS title. Extend or locate a reviewed recorder that captures the
+actual DOS calls and their return registers/flags at `$1b26`, `$1b2d` and
+`$1b38`; feed only those observed results into the native session. The local
+`.projecteon` direct-media corpus passes all 24 CTest cases, but neither game's
+interactive playability has been established.

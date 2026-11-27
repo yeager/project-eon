@@ -29,6 +29,8 @@ configuration and supplied media remain outside this repository.
 | Rebuilt trv2 v21 recorder | x86_64 Linux, 62,030,288 bytes, SHA-256 `2fc7f47425d0fa005bb59bf41eaeccf32d1cba284dee4f227e7e723b853e1b35`; adds complete zero-route memory observations; schema 31; physical04 receipt verified, but no accepted game action established |
 | Rebuilt trv2 v22 recorder | x86_64 Linux, 62,031,592 bytes, SHA-256 `eb0995c70f7f355f674d448b08c0f3e647430562ffde7d179e5aeb12e5abca71`; adds a separate later-input display-write sidecar after host-input ordinal 20; schema 32; visible no-input diagnostic verified 2026-10-07, no game action established |
 | Rebuilt trv2 v23 recorder | x86_64 Linux, 62,039,312 bytes, SHA-256 `e4e46e84cd75eceffb28d26882fef0062582c251b0ef26baa0fccf6aff2e8dd1`; adds bounded observation of the exact `$21868` write to `$21720`; schema 33; visible attempt rejected 2026-10-07 for no host input |
+| Reviewed v24 diagnostic recorder | trv2 x86_64 Linux, 61,965,896 bytes, SHA-256 `a46be472e13a59fdbc583c6061ed8d2ce6dbf561d4f77a4df2a5be25f679f3c5`; VBL observer only at `$2143a` reading `$dff01f`, transition-only sidecar, allocation-free path validation, componentwise `openat` with no-follow/exclusive creation; independently reviewed for visible no-input diagnostics only |
+| Reviewed v25 Exec-boundary recorder | trv2 x86_64 Linux, 61,978,520 bytes, SHA-256 `c6fe574f8b7b508770bac46602f6664a7b7fecf549fac1b31061146d0369ea09`; v24-compatible observers plus register/stack snapshots at five exact PCs; independently reviewed for raw visible-capture evidence only; no game behavior or ABI effect is inferred |
 
 The v16 source patch SHA-256 is
 `1fa61e7984fe5535b42c07614be4f10a219323bf8536a3dc271a80c0b6f5f361`.
@@ -129,6 +131,74 @@ path, short write, or I/O error disables observation. It never overwrites an
 output, follows a final-component symlink, writes to guest memory, alters
 registers or flags, changes vectors, inserts input, changes event scheduling,
 or writes a disk.
+
+### v24 VBL-status read candidate
+
+The reviewed v24 diagnostic recorder is a hook-only successor from upstream commit
+`4ae7ddaec50b567ed80d71ffbff067cb58e945a3`. Its only source modification is
+in `src/custom.cpp`: after `custom_bget()` selects the byte lane returned by
+the custom-chip read, it calls an external bounded observer. The observer
+accepts only PC `$2143a` and odd address `$dff01f`, corresponding to the
+low-byte read of `INTREQR()`; it records the actual returned byte and emulated
+cycle count only when that byte changes. It has a 64-record/16-KiB cap and
+creates a new mode-0600 file. The standalone harness records transitions and
+ignores repeated values; it is a parser/observer test, not a game capture.
+
+The reviewed binary hash and size are documented in the table above. Its source
+header and build logs remain outside the repository. Schema 34 binds a separate
+raw-PC site set and validates the optional transition sidecar; focused
+runner/verifier/locator tests cover the exact binary identity. An independent
+review confirmed the byte lane and PC source against both normal and
+cycle-exact dispatch paths. The observer validates the canonical parent and
+then traverses each component with `openat(O_NOFOLLOW)`; it creates the leaf
+exclusively with mode `0600`. Source patch, observer header, binary and build
+logs remain under the scoped external cache. Approval is limited to a visible
+`diagnostic-no-input` run through the capture runner. This does not admit a
+game-input trace or establish game behavior. The first verified 60-second run
+is recorded below; its receipt has no raw-PC, host-input, or title-display
+sidecar, because this v24 binary contains only the VBL-read observer.
+
+The 2026-11-27 no-input capture used the exact English Disk 1 and Disk 2 ZIPs
+and Kickstart 1.3 ZIP read in place from `/home/trv2/.projecteon`; both disks
+were mounted read-only and Disk 2 was also configured in DF1 for this
+diagnostic. The visible FS-UAE window showed the Deuteros intro. Schema 34
+receipt verification passed. The run-status file is 2,268 bytes, SHA-256
+`085eea8bf31f6c9412f4021274faa5f85120d72253827860c7a545b8648d0867`.
+The 77-byte VBL sidecar, SHA-256
+`30a0216e14711f1d6f8e9d56a71da2d422147e8d94d6de528678d747fc29b6d7`, records
+one low-byte read at PC `$2143a`, address `$dff01f`, value `$80`, emulated cycle
+`33917847552`. No further value transition was recorded. No host input was
+sent. This confirms only that the hook observed that exact custom-register
+read while the intro was visible; it does not establish an Exec return, title
+selection, accepted action, game state, or playability. Artifacts remain under
+`/home/trv2/.cache/project-eon-tools/deuteros-diagnostic-noinput-v24-20261127-02/`.
+
+### v25 Exec-boundary observer
+
+The v25 successor was built from the pinned upstream FS-UAE commit and keeps
+the v24 observer set while adding a separate `exec-boundary.txt` sidecar. The
+hook runs at the existing pre-instruction point in both normal and cycle-exact
+68000 loops and accepts only these PC/opcode pairs: `$40450/2e7c`,
+`$4045e/4eb9`, `$4046c/4eb9`, `$1ed80/43f9`, and `$1ed8c/4eae`. It records
+emulated cycles, PC, opcode, D0, A6, SR, USP, ISP and active A7. It has a
+256-record/64-KiB cap and uses exclusive mode-0600 output with no-follow path
+component handling. The hook only reads CPU state; it does not write guest
+state or assign semantics to call-entry/return snapshots. In particular,
+the two continuation PCs remain pre-instruction observations until ordered
+call/return and stack evidence demonstrates their meaning.
+
+Receipt schema 35 binds this exact binary and validates the finite sidecar
+grammar, opcode/site allowlist, monotonic cycles, size/count limits and hash.
+Focused runner/verifier tests pass. A visible 30-second no-input run on the
+isolated trv2 X display showed the original Deuteros credits and verified as
+schema 35. Its run-status file (2,342 bytes) has SHA-256
+`e49346667e74369c7f9578f482aa6fc8fffe3f45581a0333f63022540d1d3512`; the
+77-byte VBL sidecar retains the already observed low-byte read, while
+`exec-boundary` and raw-PC are absent. Thus no target Exec/OpenLibrary PC was
+reached during this no-input intro run. No host input was sent, so the run
+does not determine the input-driven startup boundary or establish playability.
+The receipt and configuration are external under
+`/home/trv2/.cache/project-eon-tools/deuteros-v25-captures/input-01/`.
 
 The raw grammar is intentionally outside all Project Eon reference-trace
 versions. Recorder v9 adds a delivery chronology snapshot, not guest input

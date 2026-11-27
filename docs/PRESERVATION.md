@@ -2949,6 +2949,45 @@ counter `$240` and returns/seeds `$0011`. A VBL can race the very first
 scheduler call on original hardware, so an alternate startup phase remains an
 explicit runtime parameter rather than being erased from the evidence model.
 
+The installed main-stage wrapper `$207ec..$207fd` maps to ADF `+$5fec`, is
+18 bytes, and hashes to
+`c0ecf9daaaa819323440cc2eff30be3c2984a8554d9fdb5307e7ea2af85f43fa`.
+It saves D0-D7/A0-A6, calls `$207fe`, restores them and returns D0=0. The
+callback `$207fe..$20869` maps to ADF `+$5ffe`, is 108 bytes, and hashes to
+`0e1f71cfdcd6b0d5e5f206ab945a56a260e7bb9fa09abe85dfc519eab9170813`.
+Each invocation adds four to `$2079e`. When `$207ea` is nonzero it increments
+word `$207b0`, selects one of four 10-byte rows at `$207b2`, and copies two
+words into each palette structure addressed by `$2197a/$2197e` at offsets
+`+$2a` and `+$2e`. When `$207eb` is nonzero it calls `$22bea` before returning.
+The isolated deterministic helper verifies the callback hash from owned
+memory and stages its counter/palette writes. The exact main-stage loader maps
+ADF `+$5800..+$99ff` to RAM `$20000..$241ff`, so runtime `$22bea` maps to ADF
+`+$83ea`. On the admitted disk-1 ADF SHA-256
+`6ea0cc68d3af37203a885032eddf7c28e839e6abb59d8c9cd3792f1308bdec38`, the
+1080-byte runtime routine span `$22bea..$23021` hashes to
+`ac71cc9f850f2b1165a42d7583d22c8ef7091fbc960f5610537311ee732b3dc7`. Its
+first 1072 bytes hash to `204033c2290a8457ed1b7c84191ed1794219d24278753be58c7173269e67a7a8`;
+the 1082-byte source admission span at ADF `+$83ea` hashes to
+`6f4ad399c05cf86ca968ca4dbfd8009c1219dc44eabd67bde05de17369ba19f7`.
+At VBL, the coordinator rechecks the 1080 owned runtime bytes before invoking
+the bounded `consume_deuteros_amiga_owned_audio` model. Callback RAM writes and
+consumer descriptor/seed writes remain private until all reads and writes
+succeed. Custom-chip writes are returned as ordered hardware intents, not
+stored as RAM or executed against hardware; this path does not start host
+audio. Any hash, ownership, or missing-ROM failure leaves native memory
+unchanged, retains the stop before `$20860`, and blocks later scheduler work.
+Native tests cover the callback counter plus consumer descriptor writes and
+the `$dff096` intents while asserting those addresses are not present in
+runtime RAM. Direct-media tests cover counter wrap, all four ring rows, both
+palette roots, missing memory, invalid pointers and altered callback code. The
+native launch path verifies the 44-byte AddIntServer caller span and separate
+six-byte JSR/RTS span, checks the owned interrupt-node fields, and records
+registration against the active runtime generation. Its SDL loop uses a
+50 Hz elapsed-time accumulator, independent of presentation cadence, and
+resets it on generation changes. Stale generation ticks are rejected. Keep
+the opening's independent tick phase and native main-stage phase separate;
+do not equate renderer frames with VBLs or infer hardware audio behavior.
+
 Command `$10` has a deliberately narrower meaning than its former
 `transition_requested` event name suggested. The original dispatcher at
 `$2162a` writes `$ffff` to `$210f4`; after `$21380` returns, the main loop
@@ -3842,8 +3881,17 @@ batch. M68000 long addition is represented by unsigned 32-bit wraparound.
 The resulting pointers are retained as raw values and are not dereferenced.
 The exact A0, derived A1, D0, and owned A6 values for the pending first
 `-$c0(A6)` call at `$21310` (return `$21314`) remain in the owned plan so a
-later typed return can resume without reconstructing inputs. No graphics or
-resource meaning is inferred for that call. The caller relationship is now
+later typed return can resume without reconstructing inputs. The library
+base comes from the admitted nonzero `OpenLibrary` result stored at `$12fec`.
+The original `-$c0(A6)` call resolves to graphics.library `LoadRGB4` in the
+Amiga OS LVO table ([autodoc](https://d0.se/autodocs/graphics.library/LoadRGB4)).
+Its inputs are A0=ViewPort, A1=RGB4 word table, and the
+low word of D0=count. On the second call the recovered A0 is `$12f12`, A1 is
+reloaded from owned `$21266`, and D0 low word is `$0010`. LoadRGB4 returns
+void; the caller preserves the first call's D0 high word while setting the
+low word to 16, and consumes no result from the second call. This standard
+LVO identification does not establish the in-memory ViewPort layout. The
+caller relationship is now
 explicit: `$217ec` reads the typed re-entry D0 low word preserved at `$21704`,
 `$217f2` enters `$21926`, and its fall-through reaches `$21932`; there is no
 intervening RTS. Only selector zero or one is accepted against the two bounded
@@ -3895,17 +3943,17 @@ offset `$6b14` (runtime `$21314..$21333`) hash to
 After the first return, Eon reloads A1 from owned `$21266` and A6 from owned
 `$12fec`, sets A0 to `$12f12`, and changes only D0's low word to `$0010`.
 Its high word comes from the typed return, not from a fabricated zero.
-After the second return, execution enters the local `$2132e->$20888` call
-without asserting an opaque callee return. Its 44 bytes at ADF offset `$6088`
+After the second LoadRGB4 call is executed natively from the owned palette,
+execution enters the local `$2132e->$20888` call without asserting an opaque
+library return. Its 44 bytes at ADF offset `$6088`
 hash to `4b31f3ba22021d8fdd1bbf5909614083d96c973fcfa9d5dd5eccb4fb90898a18`.
 The native prefix writes bytes `$02/$c4` at `$20872/$20873` and longwords
 `$20880/$207ec` at `$20878/$2087c` as one atomic big-endian batch. A1 becomes
 `$2086a` and the entire D0 becomes 5. Execution stops at the `$208b0` read of
 ExecBase at address 4, before the `-$a8(A6)` call at `$208b4`. No library base
 or service result is fabricated. Out-of-order, mismatched, and replayed returns
-do not advance the session or repeat the stores. The first graphics-return
-continuation remains register-only, and library-internal effects are not
-synthesized.
+do not advance the session or repeat the stores. The first graphics return
+remains typed because its D0 high word is preserved into the second call.
 
 The owned dependency-chain checkpoint now includes value copies of the loop
 preparation and graphics-continuation plans. After preparation its stop is
@@ -3916,6 +3964,18 @@ the existing developer-panel summary. Copy mutation cannot change runtime
 ownership. Tests also check the retained D0 high word (`$12340010` for an
 observed `$12345678`) and the exact owned A6 value.
 
+The native Deuteros main-stage driver now executes the second palette call at
+`$2132a` as the void graphics.library `LoadRGB4` service when its owned plan
+has A0 `$12f12`, the exact `-$c0` vector, A1 pointing to 16 initialized
+big-endian RGB4 words, and D0 low word 16. It copies those 16 palette values
+into native renderer state, recolors any owned pending/displayed frame, then
+follows only the source-bound local stores through the owned ExecBase read at
+`$208b0`. It records no fabricated library return registers. The first
+`$21310` LoadRGB4 call still requires its typed return because the next caller
+instructions preserve that return's D0 high word. This native compatibility
+service reproduces the recovered palette effect, not full Amiga copper-list
+behavior; the ExecBase read remains an external boundary.
+
 The `$208b0` ExecBase read and `$208b4/-$a8` return now have one typed
 service observation. It requires the exact read address 4, even nonzero
 24-bit base, call, vector, return `$208b8`, and increasing sequence. Existing
@@ -3923,6 +3983,14 @@ owned base bytes must agree. The observed base is committed atomically with
 the session advance; it is not a guessed OS address. The six-byte call/RTS
 span at ADF `$60b4` has SHA-256
 `1bc5d4252f7ba616e4c3fc2f7da46952324958dffc5850067b577a29db3fef31`.
+The mapped caller bytes prove D0=5 and A1=`$2086a`; the owned node at
+`$2086a` has type `$02`, priority `$c4`, `is_Data=$20880`, and
+`is_Code=$207ec` at offsets `$08/$09/$0e/$12`. The service boundary now
+checks those owned node fields before accepting the return, so this path
+represents a registered interrupt node instead of treating AddIntServer as a
+no-op. The original caller overwrites D0 from `$2126a` at `$21334`, so its
+AddIntServer return value is not consumed. Native registration and callback
+cadence remain distinct from full Exec behavior; do not claim OS equivalence.
 The following 14-byte caller span at ADF `$6b34` hashes to
 `2b80d3a7163220dee854c81927ae70652eac4a0b9d39ac4582de7220ee9a23d4`.
 It overwrites the service result D0 with the owned longword at `$2126a`.
@@ -4054,6 +4122,16 @@ batches and the session transition publish atomically. The supplied opening
 resource takes the four-active/no-draw route and reaches `$216d0`, before its
 view-selection and library call. This is not a displayed-frame or parity claim.
 
+The typed `$2143a/$dff01f` sample is a hardware-register read used to admit the
+buffer switch, not a RAM store. The runtime retains it only in the typed
+observation/session transition; it does not create an initialized linear-memory
+byte at `$dff01f`. The subsequent `$216f2` wait likewise uses its observed bit 5
+to publish an already prepared frame without writing the custom-chip address
+into RAM. Regression coverage asserts `$dff01f` remains unowned after both
+accepted paths while the actual RAM pointer, counter, buffer clear, and frame
+effects still commit. This corrects memory modeling only; no new runtime
+observation or gameplay behavior is claimed.
+
 The view-selection prefix is now locally executable from those owned values.
 The 34 bytes at ADF `$6ed0` hash to
 `7c319ba8ad1cc091e22888583653e0edb3657dd007626b4590ca3f000b550585`.
@@ -4073,8 +4151,10 @@ Each sample is the exact bit-5 read at `$216f2/$dff01f`. A clear bit retains
 the wait and requires a fresh sample, without accepting another library
 return; a set bit follows `$216fc`, the caller RTS at `$214a8`, and the
 initial `$2181c->$21380` continuation; the following view call instead
-returns to the outer caller at `$21822`. Samples commit the observed byte and
-session state atomically. Replay and changed call metadata commit nothing.
+returns to the outer caller at `$21822`. Samples commit their typed hardware
+observation and session state atomically. They do not materialize the
+custom-chip read as ordinary linear RAM. Replay and changed call metadata
+commit nothing.
 Tests cover two clear-bit samples followed by release. The next processing
 pass now executes the owned `$214aa` command route described below. No synthetic wait result,
 displayed frame, or graphics-library side effect is implied.
@@ -5683,10 +5763,11 @@ three independently hash-identified supplied leaves. Literal choice `0` can
 now enter the same bounded `MILL.COM` file-loader model as choices `1` and `2`;
 it derives the original filename address `$062a`, slot `$00`, and exact SIBM
 leaf length before accepting a complete read. The loader checkpoint stops at
-the unresolved driver-initialisation/parent-stack boundary. It does not mean
-SIBM was initialized and supplies no sound playback or hardware result. This
-is deliberately not an audio-device selector: no host hardware is inspected,
-and no selection is presented as a completed driver initialization.
+the unresolved driver-initialisation boundary after the source-derived parent
+stack and literal child EXEC request. It does not mean SIBM was initialized
+and supplies no sound playback or hardware result. This is deliberately not
+an audio-device selector: no host hardware is inspected, and no selection is
+presented as a completed driver initialization.
 
 For the three hash-admitted driver choices, the normal launcher route
 now creates one explicitly **Eon-owned compatibility process** at DOS code
@@ -5694,16 +5775,19 @@ segment `$e000`. This segment is labelled `eon_compatibility_process` in the
 runtime checkpoint; it is neither an observed original process allocation nor
 parity evidence. Its only purpose is to let the native engine begin the
 already proven deterministic loader route after the user's literal original
-selection. The first original-dependent result (the parent stack value at
-`$032f/$05f7`) remains an external boundary, as do later DOS/BIOS/vector,
-private-interrupt, rendering, audio, and gameplay results.
+selection. The parent stack value at `$032f/$05f7` is now derived for Eon's
+compatibility process from the exact English `MILL.COM` source. This is
+labelled `eon_source_derived_compatibility`, not an external DOS observation.
+Later DOS/BIOS/vector, private-interrupt, rendering, audio, and gameplay
+results remain separate boundaries.
 
 For reproducible native-boundary diagnosis, `--native-step-diagnostics-json`
 may be paired with `--native-startup-input 0|1|2`. The option accepts exactly
 one literal chooser byte and exits after the first bounded native pass; it is
 not a general input, capture, replay, emulator, or observation-injection
-interface. With exact English DOS media, choice `1` proves only that the
-native SSBL loader reaches the unresolved parent-stack boundary at `$032f`.
+interface. With exact English DOS media, choice `1` now follows the
+source-derived parent stack through the literal `TITLES.EXE` request and stops
+at the first unresolved private INT `$91` result in title initialization.
 
 The selected external-driver continuation is now a separate hash-admitted
 native recomp session. `MillenniumDosSoundDriverLoadSession` requires the
@@ -5724,27 +5808,36 @@ paragraph arena allocates the exact rounded-up leaf size without overlap and
 labels the resulting segment as compatibility provenance; the segment is an
 Eon address-space key, never a claimed DOS capture. One tick performs open,
 exact-length discovery, arena allocation, rewind, complete read, atomic byte
-commit, close, and process-local INT 95h vector installation, then stops at
-the parent-SP observation. Arena exhaustion,
+commit, close, process-local INT 95h vector installation, then applies the
+hash-bound source-derived parent SP. Arena exhaustion,
 zero/overflowing requests, and detached sequences fail without partial state.
 The vector installation is a native compatibility operation: hash-verified
 `MILL.COM:$02fe` leaves DS at the driver allocation, `$0234` zeros DX, and
 `$0236..$023a` selects `AX=$2595; INT $21`. The tick requires the destination
 segment to belong to its arena and atomically installs offset zero and that
 segment at Eon's segmented `0000:$0254..$0257`. This is not an observed DOS
-vector or a call to the driver. Repeated ticks at the stack boundary leave
-both sequence and memory unchanged. Parent stack data, EXEC outcome, and child
-entry still require their respective observation or compatibility contracts.
+vector or a call to the driver. Repeated ticks after the source-derived stack
+step leave sequence and memory unchanged. Parent EXEC success and child entry still
+require their respective compatibility contracts.
+
+The source profile locks the complete 1,445-byte `MILL.COM` by SHA-256
+`4edc491db60d18ba74cda380c7ce99705b262801298829b63b09932f23f8667e`, confirms
+`MOV SP,$0100` at COM entry `$0100`, and confirms the near `CALL $031c` at
+`$0240`. That active call contributes one return word at the helper's
+`MOV [$05f7],SP` at `$032f`, deriving `$00fe` for Eon's compatibility process.
+Earlier helper calls return and the inspected push/pop pairs balance. The
+profile makes no claim about DOS's initial PSP stack, actual DOS memory layout,
+or a captured runtime SP.
 Reset destroys the generation-owned arena, and revocation
 prevents its state or allocator from being reached.
 
 Only after the exact read result does the session expose byte effects for the
 original leaf at observed allocation segment offset zero. These are transient
 runtime-memory effects, never writes to the archive or game-data directory.
-The following vector-install observation is exactly `$0239`, `AX=$2595`,
-`DX=0`; it records the original INT 95h vector request but does not claim DOS
-accepted it or execute driver code. The common EXEC helper then requires an
-explicit parent SP observation at `$032f/$05f7`, records the three original
+The following vector installation is exactly `$0239`, `AX=$2595`,
+`DX=0`; it follows the source-level INT 95h vector request but does not claim
+DOS accepted it or execute driver code. The common EXEC helper applies the
+source-derived parent SP at `$032f/$05f7`, records the three original
 parameter-block segment words `$067e/$0682/$0686` from explicit CS, and stops
 at the literal title request `$0336`, `AX=$4b00`, `DX=$068f`, parameter block
 `$067a` (`TITLES.EXE`). Reaching `title_exec_requested` is the only safe point
@@ -5752,13 +5845,14 @@ at which the production coordinator may construct the already hash-bound
 English title session. It is not an invented EXEC return, title frame, driver
 initialization callback, audio capability, or later game handoff.
 
-Once that SP observation is accepted, the native tick owns the literal EXEC
-request and runs the existing bounded child compatibility service without a
-second external register observation. The 28 original bytes at file
+Once that compatibility SP is applied, the native tick owns the literal EXEC
+request and runs the existing bounded child compatibility service without an
+external register observation. The 28 original bytes at file
 `+$021c..+$0237` (runtime `$031c..$0337`) have SHA-256
 `9cc0adcb9586fa4913bdd6ced15d67e807245b4d4bf88d67c88b49e72857c9a3`.
-In particular `$032f` is `MOV [$05f7],SP`, a store of the observed register,
-not a read of a previously saved stack word. The exact CS parameter words,
+In particular `$032f` is `MOV [$05f7],SP`, storing the source-derived
+compatibility register, not a read of a previously saved stack word. The
+exact CS parameter words,
 `BX=$067a`, caller DX `$068f`, and literal AX `$4b00` define the request.
 Pending title objects remain local until successful native-tick commit;
 missing media or child allocation failure cannot publish a partial title
@@ -5937,11 +6031,14 @@ The non-mode-1 setup prefix is now hash-bound through DOS get-vector request
 remain external typed boundaries.
 The typed get-vector result now atomically preserves returned ES:BX in
 `$10e6:$10e4` and reaches set-vector service `$2500` with `DS:DX=CS:$1124`
-at `$1106`; no vector installation result is inferred.
-That set result is now retained raw but otherwise ignored exactly; execution
+at `$1106`. On that exact result boundary, the owned DOS memory now records
+the installed pointer at IVT cell `$0000:$0000`; it does not substitute the
+earlier observed vector-zero value.
+That set result is retained raw but otherwise ignored exactly; execution
 continues only to the next get-vector request `AX=$3504` at `$110b`.
 Its typed ES:BX result is atomically preserved at `$10ea:$10e8`; the native
-path then stops at the matching `$2504` set-vector request at `$111d`.
+path then stops at the matching `$2504` set-vector request at `$111d`. Its
+exact result boundary records `CS:$1124` at IVT cell `$0000:$0010`.
 The ignored `$2504` result now returns through the owned `$1ab0->$10ec` call
 and reaches the first BIOS `$15` request with `AX=$011b`, `BL=$46`; no BIOS
 result or second request is inferred.
@@ -6239,9 +6336,27 @@ value and the exact profile AH, and stops at the RET opcode. Neither the
 on-disk zero nor a calculated runtime value is substituted, and no caller
 return or driver installation is claimed. This is a driver-specific,
 read-only ABI fact, not permission to select a driver, fix `$da05`, or execute
-the startup/GX path. It remains a strict SDL-adapter boundary for requested
-video mode and a masked driver-local option; Project Eon executes neither the
-driver, BIOS call, nor any path-dependent initial presentation.
+the startup/GX path. A bounded evaluator now validates the exact `$001f`
+dispatch: EGA's table word at file `+$005e` selects `$0235`; MCGA's word at
+`+$0070` selects `$024c`. It executes only the six-byte `MOV AL,[state]; MOV
+AH,constant; RET` effect when given an owning runtime's live state byte. The
+state byte is not loaded from the original file as a runtime value, and the
+evaluator is not yet connected to the title-to-game coordinator. No other
+driver body, BIOS call, or path-dependent initial presentation executes; the
+unknown title-created driver state remains the next integration boundary.
+
+The release coordinator now exposes a read-only function-$1f capability
+checkpoint after the video-driver loader has admitted every driver byte, DOS
+SetVect returned success, the observed INT `$91` IVT segment matches the
+allocated driver segment, and the driver's state byte exists in owned
+segmented runtime memory. It rehashes the selected source and runs only the
+six-byte function-$1f prefix. For the tested MCGA path this reports the
+loaded image's current `$00ac` byte and derived AX at the RET boundary
+`$0251`. A failed vector install, mismatched vector, absent memory byte, or
+missing exact driver source yields no checkpoint. This does not claim that
+either title or game called function `$1f`; function-$00 state mutations are
+still not carried across calls, so the initial loaded byte is not evidence of
+the later gameplay value.
 
 The caller sites that request private functions `$02` and `$04` leave the
 pointed `ES:BX` records inside the original executable image, but the supplied
@@ -8005,6 +8120,25 @@ reach custom-register literal `$dff000` and setup offsets `$40`, `$42`, `$9a`
 and `$96`. That conditional post-boundary code is recorded solely as raw
 preservation evidence; Project Eon does not cross the Exec ABI or claim a
 visual hardware effect.
+
+The supplied Kickstart 1.3 archive was separately read in place and hash-bound:
+archive SHA-256 `c9521c114900633c09317ca6ff979db7b9df34d3cb537de062f5d51811c42c04`,
+ROM member SHA-256 `ee05862d8102a08436ac4056da7d549db31625c7d47b24dfb7b3c9a5c113ca53`
+(262,144 bytes). The Exec vector table at ROM offset `$1a7c` contains the
+`-$96` entry at `$1aac` (`f708`, table-relative target ROM `+$1184`) and the
+`-$9c` entry at `$1aae` (`f734`, target ROM `+$11b0`). The 44-byte SuperState
+body at ROM `+$1184` hashes to
+`93ac3f036396eaaa80b4d09dcc025e345990d46a0b79cb058c222e7546e30094`; the
+26-byte UserState body at ROM `+$11b0` hashes to
+`20e1d0a1403bb3b7cb0bbd9ef1bcc87a47d1d2907de17bd765d5e2c3ccc8e8e8`.
+Both use Exec's `Supervisor` vector (`-$1e`) with a callback. Their code
+branches on the saved supervisor bit and changes the active user/system stack;
+UserState consumes D0 as a supervisor-stack value. In this title sequence the
+first call's D0 is overwritten by literal `$7fff0` before UserState, but the
+required incoming SR, USP/SSP, ExecBase contents, supervisor callback state,
+and resulting PC/stack state are not available. The ROM listing itself remains
+outside the repository. Therefore these hashes explain the OS boundary but do
+not authorize a synthetic return or an Eon runtime transition.
 
 The conditional static continuation extends through `$40573` / ADF `+0x9b46c`
 for 264 bytes (SHA-256
@@ -11166,3 +11300,86 @@ remain at eight pre-input sites; no title-display, selector, or later-input
 transition is established. Software OpenGL setup and a valid receipt improve
 the diagnostic path, but this run supplies no game input, frame change, or
 playability evidence.
+
+### 2026-11-27 Millennium DOS AH=48h return boundary
+
+The context-sensitive TITLES analyzer now has a separately named static
+scenario for the exact DOS `INT 21h/AH=48h` at runtime `$1b2d` (file offset
+`$1a2d`) in the hash-identified English `TITLES.EXE` above. The scenario assumes
+only return to `$1b2f` with the active near-call return word and caller stack
+intact. It clears tracked result-register and flag facts, models no DOS memory
+allocation or register effects, and leaves following conditional outcomes
+unknown. The emitted external report is
+`/home/trv2/.cache/project-eon-tools/millennium-ah48-carry-20261127/ah48-return-candidates-v2.tsv`
+(SHA-256
+`bf60d25e821e0538b7803c97f47d0eaedbcb1f7665b179238632d580958973c2`, 11,341
+bytes, mode `0600`). Its explicitly hypothetical predecessor assumptions are
+the two observed INT `$91` AX values, preservation of that wrapper's saved
+stack, return from BIOS INT `$10` at `$046d` with DS preserved, and return from
+the DOS resize call at `$1b26` with the active stack intact. From those
+assumptions, the report reaches `$1b38` (file offset `$1a38`), the next opaque
+DOS `INT 21h` after candidate instructions `$1b2f..$1b36`. The intervening
+instructions do not test carry; `$1b38` is the `AH=$49` free-memory call. This
+does not establish that `$1b2d` or `$1b38` ran, that the allocation succeeded,
+or that the subsequent free call had any effect. Native DOS execution remains
+stopped pending a recorder-backed trace of the actual calls and DOS results.
+
+### 2026-11-27 Deuteros v24 diagnostic recorder review
+
+The v24 FS-UAE x86_64 diagnostic recorder was rebuilt on trv2 from upstream
+FS-UAE commit `4ae7ddaec50b567ed80d71ffbff067cb58e945a3` after replacing dynamic
+path strings in the optional VBL observer with fixed buffers and explicit
+`openat()` component traversal. The final binary is 61,965,896 bytes, SHA-256
+`a46be472e13a59fdbc583c6061ed8d2ce6dbf561d4f77a4df2a5be25f679f3c5`; its
+observer header is SHA-256
+`0a115c49f043e2e8bd20096119e823787e1ceeb075808fae66b9397e14d31c24`.
+Independent review confirmed that the hook observes the actual low byte of
+`$dff01f` only at PC `$2143a`, records value transitions within a 64-record
+cap, and does not alter guest registers, memory, timing or input. The observer
+rejects symlinked path components and existing output through no-follow,
+exclusive creation with mode `0600`. A standalone harness passed with
+`-Wall -Wextra -Werror`, emitted only three value transitions, and rejected a
+symlink parent. The runner's fresh external output path remains required.
+
+The exact binary is admitted in the runner only for a visible, explicit
+`diagnostic-no-input` session. A fresh visible 60-second run used read-only
+English Deuteros Amiga Disk 1/Disk 2 ZIPs and the supplied Kickstart 1.3 ZIP,
+with Disk 2 also configured in DF1. FS-UAE visibly displayed the original
+Deuteros intro. Receipt schema 34 verified against binary hash and size above.
+The external run-status file is 2,268 bytes, SHA-256
+`085eea8bf31f6c9412f4021274faa5f85120d72253827860c7a545b8648d0867`; the
+77-byte `vblank-read.txt` is SHA-256
+`30a0216e14711f1d6f8e9d56a71da2d422147e8d94d6de528678d747fc29b6d7`. It
+contains one transition record: cycle `33917847552`, PC `$2143a`, address
+`$dff01f`, value `$80`. No raw-PC, host-input, or title-display sidecar was
+present; no input was sent. This validates the recorder's exact hardware-read
+hook at the visible intro, not an Exec return, title transition, accepted game
+action, or playable state. Evidence is external at
+`/home/trv2/.cache/project-eon-tools/deuteros-diagnostic-noinput-v24-20261127-02/`.
+The next Deuteros evidence target remains the early Exec/OpenLibrary route;
+Millennium still requires genuine DOS/BIOS return observations.
+### 2026-11-27 Deuteros v25 no-input execution-boundary probe
+
+The independently reviewed trv2 FS-UAE v25 recorder (61,978,520 bytes,
+SHA-256 `c6fe574f8b7b508770bac46602f6664a7b7fecf549fac1b31061146d0369ea09`)
+adds a bounded pre-instruction observer at PCs `$40450`, `$4045e`, `$4046c`,
+`$1ed80`, and `$1ed8c`. The raw fields are cycles, opcode, D0, A6, SR, USP,
+ISP, and active A7; source header SHA-256 is
+`a6da2117c4514ed79d3e433b7f04def4c060cbccd397cd5fa54c7ba6ff45a2d7`. Its
+256-record, 64-KiB sidecar accepts only the reviewed PC/opcode pairs and does
+not change CPU state. The pre-instruction snapshots do not by themselves
+establish call-return semantics.
+
+A visible 30-second realtime diagnostic-no-input run used the English Deuteros
+Amiga disk archives and Kickstart 1.3 archives read in place from
+`/home/trv2/.projecteon`. Their hashes are respectively
+`7ecaa0457ad2b61b417bbe62943a4a11b4d164acfbc5a5097e95f8f7d1360533`,
+`b98ee3c36141773485c5e03dd8bb4aa59784eaf08a1363fa6a2951a5eb5fdc0a`, and
+`c9521c114900633c09317ca6ff979db7b9df34d3cb537de062f5d51811c42c04`.
+The visible screen displayed the original Deuteros credits. Schema 35 verified
+successfully. The 2,342-byte `run-status.txt` SHA-256 is
+`e49346667e74369c7f9578f482aa6fc8fffe3f45581a0333f63022540d1d3512`; it
+records no host input, no raw-PC data, no Exec-boundary data, and one VBL read
+record. This no-input intro run does not reach the input-driven Exec route and
+does not establish playability. All raw outputs remain external under
+`/home/trv2/.cache/project-eon-tools/deuteros-v25-captures/input-01/`.

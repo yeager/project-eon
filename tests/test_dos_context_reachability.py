@@ -185,6 +185,46 @@ class DosContextReachabilityTests(unittest.TestCase):
             return_from_dos_int21_at_1b26=True)
         self.assertNotIn(0x102, other_site["instructions"])
 
+    def test_dos_ah48_return_keeps_results_unknown_at_exact_site(self):
+        data = bytearray(b"\x90" * (0x1B40 - 0x0100))
+        code = bytes.fromhex("b448cd217202cd91cd93")
+        offset = 0x1B2B - 0x0100
+        data[offset:offset + len(code)] = code
+        opaque = analyze_context_reachable(bytes(data), 0x1B2B)
+        self.assertEqual(opaque["first_blocked"]["ip"], 0x1B2D)
+        self.assertEqual(opaque["first_blocked"]["interrupt_vector"], 0x21)
+        self.assertEqual(opaque["first_blocked"]["ah_constant"], 0x48)
+
+        scenario = analyze_context_reachable(
+            bytes(data), 0x1B2B, return_from_dos_ah48_at_1b2d=True)
+        stops = {(stop["ip"], stop.get("interrupt_vector"))
+                 for stop in scenario["stops"]}
+        self.assertEqual(stops, {(0x1B31, 0x91), (0x1B33, 0x93)})
+        self.assertTrue(scenario["dos_ah48_return_at_1b2d"])
+        self.assertEqual(scenario["first_blocked"]["al_constant"], None)
+        self.assertEqual(scenario["first_blocked"]["ah_constant"], None)
+        branch_kinds = {edge[2] for edge in scenario["edges"]
+                        if edge[0] == 0x1B2F}
+        self.assertEqual(branch_kinds, {
+            "conditional-taken-flags-unknown",
+            "conditional-fallthrough-flags-unknown",
+        })
+
+        wrong_ah = bytearray(data)
+        wrong_ah[offset:offset + len(code)] = bytes.fromhex("b449cd217202cd91cd93")
+        rejected = analyze_context_reachable(
+            bytes(wrong_ah), 0x1B2B, return_from_dos_ah48_at_1b2d=True)
+        self.assertEqual(rejected["first_blocked"]["ip"], 0x1B2D)
+        self.assertEqual(rejected["first_blocked"]["reason"],
+                         "software-interrupt-opaque")
+
+        other_site = analyze_context_reachable(
+            bytes.fromhex("b448cd21"), 0x0100,
+            return_from_dos_ah48_at_1b2d=True)
+        self.assertEqual(other_site["first_blocked"]["ip"], 0x0102)
+        self.assertEqual(other_site["first_blocked"]["reason"],
+                         "software-interrupt-opaque")
+
     def test_observed_int91_scenario_tracks_al_and_known_jne_without_runtime_claim(self):
         # The only injected scenario boundary is the observed TITLES.EXE
         # wrapper at $0127. The values select distinct locally decoded paths;

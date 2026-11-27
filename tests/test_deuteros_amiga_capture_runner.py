@@ -24,6 +24,52 @@ SPEC.loader.exec_module(TOOL)
 
 
 class DeuterosAmigaCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
+    def test_v25_exec_boundary_sidecar_is_strict_and_hash_addressed(self) -> None:
+        with temporary_directory() as directory:
+            sidecar = CanonicalReceiptPath(Path(directory) / "exec-boundary.txt")
+            self.assertIn("exec_boundary=absent\n", TOOL.exec_boundary_receipt_status(sidecar))
+            sidecar.write_text(
+                "exec-boundary 1 cycles=10 pc=0x00040450 opcode=0x2e7c d0=0x00000001 "
+                "a6=0x00000002 sr=0x2000 usp=0x00070000 isp=0x00080000 sp=0x00080000\n"
+                "exec-boundary 2 cycles=20 pc=0x0004045e opcode=0x4eb9 d0=0x00000001 "
+                "a6=0x00000002 sr=0x2000 usp=0x00070000 isp=0x00080000 sp=0x00080000\n",
+                encoding="ascii")
+            status = dict(line.split("=", 1) for line in
+                          TOOL.exec_boundary_receipt_status(sidecar).splitlines())
+            self.assertEqual(status["exec_boundary"], "present")
+            self.assertEqual(status["exec_boundary_records"], "2")
+            self.assertEqual(status["exec_boundary_site_counts"],
+                             "0x00040450:1,0x0004045e:1")
+            valid = sidecar.read_text(encoding="ascii")
+            sidecar.write_text(valid.replace("pc=0x0004045e", "pc=0x0004045f"), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "unreviewed PC/opcode"):
+                TOOL.exec_boundary_receipt_status(sidecar)
+            sidecar.write_text(valid.replace("cycles=20", "cycles=9"), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "strictly monotonic"):
+                TOOL.exec_boundary_receipt_status(sidecar)
+
+    def test_v25_recorder_pin_and_size_are_exact(self) -> None:
+        self.assertEqual(TOOL.reviewed_recorder_hashes()["reviewed-fs-uae-trv2-v25-exec"],
+                         TOOL.TRV2_RECORDER_V25_EXEC_SHA256)
+        with temporary_directory() as directory:
+            recorder = Path(directory) / "reviewed-fs-uae"
+            recorder.write_bytes(b"reviewed")
+            recorder.chmod(0o700)
+            with mock.patch.object(TOOL, "sha256_file", return_value=(
+                    TOOL.TRV2_RECORDER_V25_EXEC_SHA256, TOOL.TRV2_RECORDER_V25_EXEC_SIZE)):
+                self.assertEqual(TOOL.validate_recorder(recorder), (
+                    TOOL.TRV2_RECORDER_V25_EXEC_SHA256, TOOL.TRV2_RECORDER_V25_EXEC_SIZE))
+            with mock.patch.object(TOOL, "sha256_file", return_value=(
+                    TOOL.TRV2_RECORDER_V25_EXEC_SHA256, TOOL.TRV2_RECORDER_V25_EXEC_SIZE - 1)):
+                with self.assertRaisesRegex(TOOL.CaptureError, "v25 exec recorder size"):
+                    TOOL.validate_recorder(recorder)
+
+    def test_v24_reviewed_hash_is_available_for_diagnostic_capture(self) -> None:
+        self.assertIn(TOOL.TRV2_RECORDER_V24_SHA256,
+                      TOOL.reviewed_recorder_hashes().values())
+        self.assertEqual(TOOL.reviewed_recorder_hashes()["reviewed-fs-uae-trv2-v24"],
+                         TOOL.TRV2_RECORDER_V24_SHA256)
+
     def test_zero_route_observer_sidecar_is_enabled_for_v21_through_v23(self) -> None:
         self.assertEqual(TOOL.RECORDER_ZERO_ROUTE_OBSERVATION_HASHES, frozenset((
             TOOL.TRV2_RECORDER_V21_SHA256,
@@ -32,6 +78,21 @@ class DeuterosAmigaCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
         )))
         self.assertNotIn(TOOL.TRV2_RECORDER_V20_SHA256,
                          TOOL.RECORDER_ZERO_ROUTE_OBSERVATION_HASHES)
+
+    def test_v24_has_absent_zero_route_summary_without_enabling_that_observer(self) -> None:
+        self.assertNotIn(TOOL.TRV2_RECORDER_V24_SHA256,
+                         TOOL.RECORDER_ZERO_ROUTE_OBSERVATION_HASHES)
+        self.assertIn(TOOL.TRV2_RECORDER_V24_SHA256,
+                      TOOL.RECORDER_ZERO_ROUTE_STATUS_HASHES)
+        with temporary_directory() as directory:
+            root = Path(directory)
+            status = TOOL.zero_route_observation_status(
+                root / "zero-route-observation.txt", root / "host-input-receipt.txt")
+            self.assertEqual(status,
+                "zero_route_observation=absent\n"
+                "zero_route_observation_format=v1\n"
+                "zero_route_observation_records=0\n"
+                "zero_route_observation_invocations=0\n")
 
     def test_latch_write_receipt_is_bounded_exact_and_input_linked(self) -> None:
         with temporary_directory() as directory:
@@ -65,6 +126,55 @@ class DeuterosAmigaCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
             sidecar.write_bytes(b"x" * (TOOL.MAX_LATCH_WRITE_BYTES + 1))
             with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
                 TOOL.latch_write_receipt_status(sidecar, host)
+
+    def test_vblank_read_receipt_tracks_only_monotonic_status_transitions(self) -> None:
+        with temporary_directory() as directory:
+            sidecar = CanonicalReceiptPath(Path(directory) / "vblank-read.txt")
+            self.assertIn("vblank_read=absent\n", TOOL.vblank_read_receipt_status(sidecar))
+            record = ("vblank-read 1 cycles=100 pc=0x0002143a address=0x00dff01f value=0x00\n"
+                      "vblank-read 2 cycles=21000 pc=0x0002143a address=0x00dff01f value=0x20\n"
+                      "vblank-read 3 cycles=35000 pc=0x0002143a address=0x00dff01f value=0x00\n")
+            sidecar.write_text(record, encoding="ascii")
+            status = dict(line.split("=", 1) for line in
+                          TOOL.vblank_read_receipt_status(sidecar).splitlines())
+            self.assertEqual(status["vblank_read"], "present")
+            self.assertEqual(status["vblank_read_records"], "3")
+            self.assertEqual(status["vblank_read_vertb_set_values"], "1")
+            self.assertEqual(status["vblank_read_vertb_clear_values"], "2")
+            sidecar.write_text(record.replace("pc=0x0002143a", "pc=0x0002143b", 1), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "invalid recorder record"):
+                TOOL.vblank_read_receipt_status(sidecar)
+
+    def test_vblank_read_receipt_rejects_replay_nonmonotonic_and_oversized(self) -> None:
+        with temporary_directory() as directory:
+            sidecar = CanonicalReceiptPath(Path(directory) / "vblank-read.txt")
+            header = "vblank-read 1 cycles=100 pc=0x0002143a address=0x00dff01f value=0x20\n"
+            sidecar.write_text(header + header.replace("1 cycles=100", "2 cycles=200"), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "redundant value transition"):
+                TOOL.vblank_read_receipt_status(sidecar)
+            sidecar.write_text(header + header.replace(
+                "vblank-read 1 cycles=100", "vblank-read 2 cycles=99").replace(
+                    "value=0x20", "value=0x00"), encoding="ascii")
+            with self.assertRaisesRegex(TOOL.CaptureError, "strictly monotonic"):
+                TOOL.vblank_read_receipt_status(sidecar)
+            sidecar.write_bytes(b"x" * (TOOL.MAX_VBL_READ_BYTES + 1))
+            with self.assertRaisesRegex(TOOL.CaptureError, "bounded recorder contract"):
+                TOOL.vblank_read_receipt_status(sidecar)
+
+    def test_v24_reviewed_hash_requires_the_exact_binary_size(self) -> None:
+        with temporary_directory() as directory:
+            recorder = Path(directory) / "reviewed-fs-uae"
+            recorder.write_bytes(b"reviewed")
+            recorder.chmod(0o700)
+            digest = TOOL.TRV2_RECORDER_V24_SHA256
+            with mock.patch.object(TOOL, "sha256_file",
+                                   return_value=(digest, TOOL.TRV2_RECORDER_V24_SIZE)):
+                self.assertEqual(TOOL.validate_recorder(recorder),
+                                 (digest, TOOL.TRV2_RECORDER_V24_SIZE))
+            with mock.patch.object(TOOL, "sha256_file",
+                                   return_value=(digest, TOOL.TRV2_RECORDER_V24_SIZE - 1)):
+                with self.assertRaisesRegex(TOOL.CaptureError, "v24 recorder size"):
+                    TOOL.validate_recorder(recorder)
 
     @staticmethod
     def _zero_route_observation_payload() -> str:
@@ -664,7 +774,7 @@ class DeuterosAmigaCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
             for path in (disk1, disk2, kickstart, recorder):
                 path.write_bytes(b"placeholder")
             recorder.chmod(0o700)
-            output = cache / "capture"
+            output = (cache / "capture").resolve()
             args = SimpleNamespace(source_release=None, disk1_archive=str(disk1),
                                    disk2_archive=str(disk2), kickstart_archive=str(kickstart),
                                    recorder=str(recorder), output=str(output), duration_seconds=15,
@@ -725,7 +835,7 @@ class DeuterosAmigaCaptureRunnerTests(LfTextFixtureWrites, unittest.TestCase):
             for path in (disk1, disk2, kickstart, recorder):
                 path.write_bytes(b"placeholder")
             recorder.chmod(0o700)
-            output = cache / "capture"
+            output = (cache / "capture").resolve()
             args = SimpleNamespace(source_release=None, disk1_archive=str(disk1),
                                    disk2_archive=str(disk2), kickstart_archive=str(kickstart),
                                    recorder=str(recorder), output=str(output), duration_seconds=15,
